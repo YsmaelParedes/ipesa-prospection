@@ -27,11 +27,11 @@ function formatWhatsApp(phone: string): string | null {
   return null
 }
 
-async function geocodeCP(cp: string): Promise<{ lat: number; lng: number; ciudad: string } | null> {
+async function geocodeLocation(location: string): Promise<{ lat: number; lng: number; ciudad: string } | null> {
   if (!GOOGLE_API_KEY) return null
   try {
     const { data } = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
-      params: { address: `${cp}, Mexico`, key: GOOGLE_API_KEY },
+      params: { address: `${location}, Mexico`, key: GOOGLE_API_KEY },
       timeout: 10000,
     })
     if (data.status === 'OK' && data.results.length > 0) {
@@ -111,16 +111,19 @@ async function searchINEGI(term: string, lat: number, lng: number, radius: numbe
 
 export async function POST(req: NextRequest) {
   try {
-    const { query, cp, source } = await req.json()
+    const { query, location, locationType, source } = await req.json()
 
-    if (!cp) {
-      return NextResponse.json({ error: 'Se requiere código postal' }, { status: 400 })
+    if (!location) {
+      return NextResponse.json({ error: 'Se requiere código postal o municipio' }, { status: 400 })
     }
 
-    const coords = await geocodeCP(cp)
+    const coords = await geocodeLocation(location)
     if (!coords) {
-      return NextResponse.json({ error: `No se encontró el código postal ${cp}` }, { status: 400 })
+      return NextResponse.json({ error: `No se encontró la ubicación "${location}"` }, { status: 400 })
     }
+
+    // Para búsqueda por ciudad usamos radio ligeramente mayor
+    const isCiudad = locationType === 'ciudad'
 
     // ── GOOGLE MAPS ──────────────────────────────────────────────────────────
     if (source === 'google_maps') {
@@ -128,16 +131,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Google Maps API key no configurada' }, { status: 500 })
       }
 
+      const locationLabel = isCiudad ? location : `código postal ${location}`
       const { data } = await axios.post(
         'https://places.googleapis.com/v1/places:searchText',
         {
-          textQuery: `${query} código postal ${cp} México`,
+          textQuery: `${query} ${locationLabel} México`,
           languageCode: 'es',
           maxResultCount: 20,
           locationBias: {
             circle: {
               center: { latitude: coords.lat, longitude: coords.lng },
-              radius: 5000.0,
+              radius: isCiudad ? 8000.0 : 5000.0,
             },
           },
         },
@@ -180,7 +184,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'INEGI API key no configurada' }, { status: 500 })
       }
 
-      const radius = 5000 // 5 km — radio óptimo (10km aborta el stream de INEGI)
+      const radius = isCiudad ? 5000 : 5000 // 5 km siempre — 10km aborta el stream de INEGI
       const terms = expandQueryTerms(query)
 
       // Buscar secuencialmente para no saturar la API de INEGI

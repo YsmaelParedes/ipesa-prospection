@@ -1,24 +1,57 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Navbar from '@/components/Navbar'
 import { importContacts } from '@/lib/supabase'
 import toast from 'react-hot-toast'
-import { Search, Download, MapPin, Phone, Wifi } from 'lucide-react'
+import { Search, Download, MapPin, Phone, Wifi, Filter, X, SlidersHorizontal } from 'lucide-react'
+
+type LocationType = 'cp' | 'ciudad'
 
 export default function Scraper() {
-  const [form, setForm] = useState({ query: '', cp: '', source: 'inegi' })
+  // ── Formulario ──────────────────────────────────────────────────────────────
+  const [form, setForm] = useState({ query: '', location: '', locationType: 'cp' as LocationType, source: 'inegi' })
   const [results, setResults] = useState<any[]>([])
   const [ciudad, setCiudad] = useState('')
   const [hint, setHint] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingMsg, setLoadingMsg] = useState('')
-  const [selected, setSelected] = useState<Set<number>>(new Set())
 
+  // ── Selección ───────────────────────────────────────────────────────────────
+  const [selected, setSelected] = useState<Set<number>>(new Set()) // índices en results[]
+
+  // ── Filtros post-búsqueda ───────────────────────────────────────────────────
+  const [showFilters, setShowFilters] = useState(false)
+  const [filterPhone, setFilterPhone] = useState(false)
+  const [filterWA, setFilterWA] = useState(false)
+  const [filterSegment, setFilterSegment] = useState('')
+  const [filterSearch, setFilterSearch] = useState('')
+
+  // resultados con índice original preservado
+  const filteredResults = useMemo(() => {
+    return results
+      .map((r, i) => ({ ...r, _idx: i }))
+      .filter(r => {
+        if (filterPhone && !r.phone) return false
+        if (filterWA && !r.whatsapp) return false
+        if (filterSegment && r.segment !== filterSegment) return false
+        if (filterSearch) {
+          const q = filterSearch.toLowerCase()
+          if (!(r.name?.toLowerCase().includes(q) || r.address?.toLowerCase().includes(q) || r.activity?.toLowerCase().includes(q))) return false
+        }
+        return true
+      })
+  }, [results, filterPhone, filterWA, filterSegment, filterSearch])
+
+  const activeFilterCount = [filterPhone, filterWA, !!filterSegment, !!filterSearch].filter(Boolean).length
+
+  const uniqueSegments = useMemo(() => [...new Set(results.map(r => r.segment).filter(Boolean))].sort(), [results])
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.query || !form.cp) {
-      toast.error('Ingresa giro y código postal')
+    if (!form.query || !form.location) {
+      toast.error('Ingresa giro y ' + (form.locationType === 'cp' ? 'código postal' : 'municipio/ciudad'))
       return
     }
     try {
@@ -26,12 +59,13 @@ export default function Scraper() {
       setHint('')
       setResults([])
       setSelected(new Set())
-      setLoadingMsg('Geolocalizar código postal...')
+      setFilterPhone(false); setFilterWA(false); setFilterSegment(''); setFilterSearch('')
+      setLoadingMsg(form.locationType === 'cp' ? 'Geolocalizar código postal...' : 'Geolocalizar municipio...')
 
       const res = await fetch('/api/scraper', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ query: form.query, location: form.location, locationType: form.locationType, source: form.source }),
       })
 
       setLoadingMsg('Buscando negocios en el área...')
@@ -45,7 +79,7 @@ export default function Scraper() {
       if (data.data?.length > 0) {
         toast.success(`${data.data.length} resultados encontrados`)
       } else {
-        toast.error('Sin resultados — prueba con otro término')
+        toast.error('Sin resultados — prueba con otro término o zona')
       }
     } catch (error: any) {
       toast.error(error.message || 'Error al buscar')
@@ -56,13 +90,17 @@ export default function Scraper() {
   }
 
   const toggleSelect = (idx: number) => {
-    const next = new Set(selected)
-    next.has(idx) ? next.delete(idx) : next.add(idx)
-    setSelected(next)
+    setSelected(prev => { const n = new Set(prev); n.has(idx) ? n.delete(idx) : n.add(idx); return n })
   }
 
   const toggleAll = () => {
-    setSelected(selected.size === results.length ? new Set() : new Set(results.map((_, i) => i)))
+    const allVisible = filteredResults.map(r => r._idx)
+    const allSelected = allVisible.every(i => selected.has(i))
+    setSelected(prev => {
+      const n = new Set(prev)
+      allSelected ? allVisible.forEach(i => n.delete(i)) : allVisible.forEach(i => n.add(i))
+      return n
+    })
   }
 
   const handleImport = async () => {
@@ -90,12 +128,14 @@ export default function Scraper() {
 
   const withPhone = results.filter(r => r.phone).length
   const withWA = results.filter(r => r.whatsapp).length
+  const allVisibleSelected = filteredResults.length > 0 && filteredResults.every(r => selected.has(r._idx))
+  const selectedInView = filteredResults.filter(r => selected.has(r._idx)).length
 
   return (
     <>
       <Navbar />
 
-      {/* Loading bar — debajo del navbar, en el flujo normal */}
+      {/* Loading bar */}
       {loading && (
         <div className="w-full">
           <div className="h-1 bg-blue-100 dark:bg-blue-900/40">
@@ -108,15 +148,33 @@ export default function Scraper() {
       )}
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 dark-mode-transition">
-
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Scraper de Prospectos</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Busca negocios en INEGI DENUE o Google Maps por código postal</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Busca negocios por código postal o municipio en INEGI DENUE / Google Maps</p>
           </div>
 
-          {/* Formulario */}
+          {/* ── Formulario ───────────────────────────────────────────────────── */}
           <form onSubmit={handleSearch} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6 dark-mode-transition">
+
+            {/* Toggle CP / Ciudad */}
+            <div className="flex gap-1 mb-4 bg-gray-100 dark:bg-gray-700 rounded-lg p-1 w-fit">
+              {(['cp', 'ciudad'] as const).map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setForm({ ...form, locationType: t, location: '' })}
+                  className={`px-4 py-1.5 rounded-md text-sm font-semibold transition ${
+                    form.locationType === t
+                      ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  {t === 'cp' ? 'Código Postal' : 'Municipio / Ciudad'}
+                </button>
+              ))}
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
               <div>
                 <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
@@ -131,22 +189,35 @@ export default function Scraper() {
                   required
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-                  Código Postal
+                  {form.locationType === 'cp' ? 'Código Postal' : 'Municipio / Ciudad'}
                 </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="ej: 64000"
-                  value={form.cp}
-                  onChange={e => setForm({ ...form, cp: e.target.value.replace(/\D/g, '').slice(0, 5) })}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white dark-mode-transition focus:outline-none focus:border-blue-500 text-sm"
-                  maxLength={5}
-                  required
-                />
+                {form.locationType === 'cp' ? (
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="ej: 64000"
+                    value={form.location}
+                    onChange={e => setForm({ ...form, location: e.target.value.replace(/\D/g, '').slice(0, 5) })}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white dark-mode-transition focus:outline-none focus:border-blue-500 text-sm"
+                    maxLength={5}
+                    required
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="ej: Monterrey, Nuevo León"
+                    value={form.location}
+                    onChange={e => setForm({ ...form, location: e.target.value })}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white dark-mode-transition focus:outline-none focus:border-blue-500 text-sm"
+                    required
+                  />
+                )}
               </div>
+
               <div>
                 <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Fuente</label>
                 <select
@@ -158,6 +229,7 @@ export default function Scraper() {
                   <option value="google_maps">Google Maps</option>
                 </select>
               </div>
+
               <button
                 type="submit"
                 disabled={loading}
@@ -167,10 +239,11 @@ export default function Scraper() {
                 {loading ? 'Buscando...' : 'Buscar'}
               </button>
             </div>
+
             {ciudad && (
               <div className="flex items-center gap-1.5 mt-3 text-sm text-gray-500 dark:text-gray-400">
                 <MapPin size={14} />
-                <span><strong className="text-gray-700 dark:text-gray-200">{ciudad}</strong></span>
+                <strong className="text-gray-700 dark:text-gray-200">{ciudad}</strong>
               </div>
             )}
           </form>
@@ -184,14 +257,14 @@ export default function Scraper() {
             </div>
           )}
 
-          {/* Hint when no results */}
+          {/* Hint */}
           {!loading && hint && (
             <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl text-sm text-amber-800 dark:text-amber-300">
               💡 {hint}
             </div>
           )}
 
-          {/* Resultados */}
+          {/* ── Resultados ───────────────────────────────────────────────────── */}
           {!loading && results.length > 0 && (
             <>
               {/* Stats */}
@@ -216,16 +289,117 @@ export default function Scraper() {
                 </div>
               </div>
 
-              {/* Acciones */}
+              {/* ── Panel de filtros ─────────────────────────────────────────── */}
+              <div className="mb-3">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold border transition ${
+                    activeFilterCount > 0
+                      ? 'border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300'
+                  }`}
+                >
+                  <SlidersHorizontal size={15} />
+                  Filtrar resultados
+                  {activeFilterCount > 0 && (
+                    <span className="bg-blue-600 text-white text-xs rounded-full px-1.5 py-0.5 leading-none">{activeFilterCount}</span>
+                  )}
+                </button>
+
+                {showFilters && (
+                  <div className="mt-2 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm dark-mode-transition">
+                    <div className="flex flex-wrap gap-3 items-center">
+
+                      {/* Toggle: Solo con teléfono */}
+                      <button
+                        type="button"
+                        onClick={() => setFilterPhone(!filterPhone)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                          filterPhone
+                            ? 'bg-green-600 border-green-600 text-white'
+                            : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-green-500'
+                        }`}
+                      >
+                        <Phone size={12} /> Solo con teléfono
+                      </button>
+
+                      {/* Toggle: Solo con WhatsApp */}
+                      <button
+                        type="button"
+                        onClick={() => setFilterWA(!filterWA)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                          filterWA
+                            ? 'bg-emerald-600 border-emerald-600 text-white'
+                            : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-emerald-500'
+                        }`}
+                      >
+                        <Wifi size={12} /> Solo con WhatsApp
+                      </button>
+
+                      {/* Segmento */}
+                      {uniqueSegments.length > 1 && (
+                        <select
+                          value={filterSegment}
+                          onChange={e => setFilterSegment(e.target.value)}
+                          className="px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:border-blue-500 dark-mode-transition"
+                        >
+                          <option value="">Todos los segmentos</option>
+                          {uniqueSegments.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      )}
+
+                      {/* Búsqueda en resultados */}
+                      <div className="relative flex-1 min-w-[180px]">
+                        <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Buscar en resultados..."
+                          value={filterSearch}
+                          onChange={e => setFilterSearch(e.target.value)}
+                          className="w-full pl-7 pr-7 py-1.5 rounded-full text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:outline-none focus:border-blue-500 dark-mode-transition"
+                        />
+                        {filterSearch && (
+                          <button onClick={() => setFilterSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <X size={11} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Limpiar filtros */}
+                      {activeFilterCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => { setFilterPhone(false); setFilterWA(false); setFilterSegment(''); setFilterSearch('') }}
+                          className="text-xs text-gray-400 hover:text-red-500 transition underline"
+                        >
+                          Limpiar
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Resumen de filtros activos */}
+                    {activeFilterCount > 0 && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        Mostrando <strong>{filteredResults.length}</strong> de {results.length} negocios
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Barra de acciones ────────────────────────────────────────── */}
               <div className="flex justify-between items-center mb-3">
                 <div className="flex gap-2 items-center">
                   <input
                     type="checkbox"
-                    checked={selected.size === results.length && results.length > 0}
+                    checked={allVisibleSelected}
                     onChange={toggleAll}
                     className="w-4 h-4 accent-blue-600"
                   />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">{selected.size} seleccionados</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {selected.size > 0 ? `${selected.size} seleccionados` : `${filteredResults.length} resultados`}
+                    {activeFilterCount > 0 && selected.size === 0 && ` (filtrado de ${results.length})`}
+                  </span>
                 </div>
                 {selected.size > 0 && (
                   <button
@@ -233,7 +407,7 @@ export default function Scraper() {
                     className="flex items-center gap-1.5 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-semibold transition"
                   >
                     <Download size={15} />
-                    Importar {selected.size} contactos
+                    Importar {selected.size} contacto{selected.size !== 1 ? 's' : ''}
                   </button>
                 )}
               </div>
@@ -252,20 +426,14 @@ export default function Scraper() {
                     </tr>
                   </thead>
                   <tbody>
-                    {results.map((r, idx) => (
+                    {filteredResults.map(r => (
                       <tr
-                        key={idx}
-                        className={`border-b border-gray-100 dark:border-gray-700 cursor-pointer transition ${selected.has(idx) ? 'bg-blue-50 dark:bg-blue-950/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}`}
-                        onClick={() => toggleSelect(idx)}
+                        key={r._idx}
+                        className={`border-b border-gray-100 dark:border-gray-700 cursor-pointer transition ${selected.has(r._idx) ? 'bg-blue-50 dark:bg-blue-950/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}`}
+                        onClick={() => toggleSelect(r._idx)}
                       >
                         <td className="px-3 py-3">
-                          <input
-                            type="checkbox"
-                            checked={selected.has(idx)}
-                            onChange={() => toggleSelect(idx)}
-                            onClick={e => e.stopPropagation()}
-                            className="w-4 h-4 accent-blue-600"
-                          />
+                          <input type="checkbox" checked={selected.has(r._idx)} onChange={() => toggleSelect(r._idx)} onClick={e => e.stopPropagation()} className="w-4 h-4 accent-blue-600" />
                         </td>
                         <td className="px-3 py-3 font-medium text-gray-900 dark:text-white max-w-[200px] truncate">{r.name}</td>
                         <td className="px-3 py-3">
@@ -284,22 +452,27 @@ export default function Scraper() {
                     ))}
                   </tbody>
                 </table>
+                {filteredResults.length === 0 && (
+                  <div className="py-12 text-center text-gray-400 dark:text-gray-500 text-sm">
+                    Ningún resultado coincide con los filtros activos
+                  </div>
+                )}
               </div>
 
               {/* Cards mobile */}
               <div className="md:hidden space-y-2">
-                {results.map((r, idx) => (
+                {filteredResults.map(r => (
                   <div
-                    key={idx}
-                    onClick={() => toggleSelect(idx)}
+                    key={r._idx}
+                    onClick={() => toggleSelect(r._idx)}
                     className={`rounded-xl border-2 p-3 cursor-pointer transition dark-mode-transition ${
-                      selected.has(idx)
+                      selected.has(r._idx)
                         ? 'border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-950/30'
                         : 'border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800'
                     }`}
                   >
                     <div className="flex items-start gap-2.5">
-                      <input type="checkbox" checked={selected.has(idx)} onChange={() => toggleSelect(idx)} onClick={e => e.stopPropagation()} className="mt-1 w-4 h-4 accent-blue-600 flex-shrink-0" />
+                      <input type="checkbox" checked={selected.has(r._idx)} onChange={() => toggleSelect(r._idx)} onClick={e => e.stopPropagation()} className="mt-1 w-4 h-4 accent-blue-600 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{r.name}</p>
                         {r.phone && <p className="font-mono text-sm text-gray-600 dark:text-gray-300 mt-0.5">{r.phone}</p>}
@@ -314,6 +487,11 @@ export default function Scraper() {
                     </div>
                   </div>
                 ))}
+                {filteredResults.length === 0 && (
+                  <div className="py-10 text-center text-gray-400 dark:text-gray-500 text-sm">
+                    Ningún resultado coincide con los filtros activos
+                  </div>
+                )}
               </div>
             </>
           )}
