@@ -86,13 +86,13 @@ export default function Segmentos() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-5xl mx-auto px-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 sm:py-8 dark-mode-transition">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4">
 
-          <div className="flex justify-between items-start mb-8">
+          <div className="flex flex-wrap gap-3 justify-between items-start mb-6 sm:mb-8">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-1">Segmentos</h1>
-              <p className="text-gray-500">Clasifica tus contactos por categoría de negocio</p>
+              <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-1">Segmentos</h1>
+              <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">Clasifica tus contactos por categoría de negocio</p>
             </div>
             <Button variant="primary" onClick={() => setShowForm(!showForm)}>
               <Plus size={18} /> Nuevo Segmento
@@ -100,32 +100,32 @@ export default function Segmentos() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
-              <p className="text-2xl font-bold text-gray-900">{segments.length}</p>
-              <p className="text-xs text-gray-500 mt-0.5">Segmentos activos</p>
+          <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-3 sm:p-4 text-center dark-mode-transition">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{segments.length}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Segmentos activos</p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
-              <p className="text-2xl font-bold text-gray-900">{withSegment.toLocaleString()}</p>
-              <p className="text-xs text-gray-500 mt-0.5">Contactos clasificados</p>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-3 sm:p-4 text-center dark-mode-transition">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{withSegment.toLocaleString()}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Clasificados</p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 text-center">
-              <p className="text-2xl font-bold" style={{ color: withoutSegment > 0 ? '#d97706' : '#15803d' }}>{withoutSegment.toLocaleString()}</p>
-              <p className="text-xs text-gray-500 mt-0.5">Sin segmento</p>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-3 sm:p-4 text-center dark-mode-transition">
+              <p className="text-xl sm:text-2xl font-bold" style={{ color: withoutSegment > 0 ? '#d97706' : '#15803d' }}>{withoutSegment.toLocaleString()}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Sin segmento</p>
             </div>
           </div>
 
           {/* New segment form */}
           {showForm && (
-            <Card variant="elevated" className="p-6 mb-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Nuevo Segmento</h2>
+            <Card variant="elevated" className="p-5 sm:p-6 mb-6">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Nuevo Segmento</h2>
               <form onSubmit={handleAdd}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <Input label="Nombre *" placeholder="ej: Pintor, Herrero, Mayorista" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
                   <Input label="Descripción" placeholder="Breve descripción del segmento" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Color</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Color</label>
                   <div className="flex items-center gap-2 flex-wrap">
                     {PRESET_COLORS.map(c => (
                       <button
@@ -153,9 +153,9 @@ export default function Segmentos() {
             </div>
           ) : segments.length === 0 ? (
             <Card className="p-16 text-center">
-              <Tag size={48} className="text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-400 text-lg">No hay segmentos creados</p>
-              <p className="text-gray-300 text-sm mt-1">Crea el primero para empezar a clasificar tus contactos</p>
+              <Tag size={48} className="text-gray-200 dark:text-gray-700 mx-auto mb-3" />
+              <p className="text-gray-400 dark:text-gray-500 text-lg">No hay segmentos creados</p>
+              <p className="text-gray-300 dark:text-gray-600 text-sm mt-1">Crea el primero para empezar a clasificar tus contactos</p>
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -174,13 +174,13 @@ export default function Segmentos() {
                             <input
                               value={editForm.name}
                               onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 font-semibold"
+                              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 font-semibold dark-mode-transition"
                               placeholder="Nombre"
                             />
                             <input
                               value={editForm.description}
                               onChange={e => setEditForm({ ...editForm, description: e.target.value })}
-                              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark-mode-transition"
                               placeholder="Descripción"
                             />
                           </div>
@@ -202,15 +202,15 @@ export default function Segmentos() {
                             <div className="flex items-center gap-2.5">
                               <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
                               <div>
-                                <h3 className="font-bold text-gray-900">{seg.name}</h3>
-                                {seg.description && <p className="text-xs text-gray-500 mt-0.5">{seg.description}</p>}
+                                <h3 className="font-bold text-gray-900 dark:text-white">{seg.name}</h3>
+                                {seg.description && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{seg.description}</p>}
                               </div>
                             </div>
                             <div className="flex gap-1.5">
-                              <button onClick={() => startEdit(seg)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition">
+                              <button onClick={() => startEdit(seg)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition">
                                 <Edit2 size={14} />
                               </button>
-                              <button onClick={() => handleDelete(seg)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition">
+                              <button onClick={() => handleDelete(seg)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition">
                                 <Trash2 size={14} />
                               </button>
                             </div>
@@ -218,11 +218,11 @@ export default function Segmentos() {
 
                           <div className="flex items-center gap-2 mb-2">
                             <Users size={14} className="text-gray-400" />
-                            <span className="text-sm font-semibold text-gray-700">{count.toLocaleString()} contactos</span>
-                            <span className="text-xs text-gray-400">({pct}%)</span>
+                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{count.toLocaleString()} contactos</span>
+                            <span className="text-xs text-gray-400 dark:text-gray-500">({pct}%)</span>
                           </div>
 
-                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                             <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: seg.color }} />
                           </div>
                         </>

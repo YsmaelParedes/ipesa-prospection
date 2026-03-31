@@ -51,9 +51,9 @@ export default function FollowUpTemplateSelector({ stage, channel, contact }: Pr
   if (!template) return null
 
   return (
-    <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-400">
-      <p className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-2">Mensaje sugerido</p>
-      <p className="text-gray-800 text-sm whitespace-pre-line leading-relaxed">
+    <div className="bg-blue-50 dark:bg-blue-950/40 p-4 rounded-lg border-l-4 border-blue-400 dark:border-blue-600">
+      <p className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider mb-2">Mensaje sugerido</p>
+      <p className="text-gray-800 dark:text-gray-200 text-sm whitespace-pre-line leading-relaxed">
         {replaceVars(template, contact)}
       </p>
     </div>

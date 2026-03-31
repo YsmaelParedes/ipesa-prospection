@@ -173,22 +173,22 @@ export default function Seguimiento() {
   }
 
   const statCards = stats ? [
-    { title: 'Sin Contactar', value: primerContacto.length, icon: User, bg: '#fefce8', border: '#fde68a', iconColor: '#b45309' },
-    { title: 'Acciones Pendientes', value: stats.pendingActions, icon: Clock, bg: '#fffbeb', border: '#fed7aa', iconColor: '#ea580c' },
-    { title: 'Leads Interesados', value: stats.interestedLeads, icon: TrendingUp, bg: '#eff6ff', border: '#bfdbfe', iconColor: '#1d4ed8' },
-    { title: 'Completados', value: stats.completedFollowUps, icon: CheckCircle, bg: '#f0fdf4', border: '#bbf7d0', iconColor: '#15803d' },
+    { title: 'Sin Contactar', value: primerContacto.length, icon: User, cardClass: 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800', iconClass: 'text-amber-700 dark:text-amber-400', textClass: 'text-gray-900 dark:text-white' },
+    { title: 'Acciones Pendientes', value: stats.pendingActions, icon: Clock, cardClass: 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800', iconClass: 'text-orange-600 dark:text-orange-400', textClass: 'text-gray-900 dark:text-white' },
+    { title: 'Leads Interesados', value: stats.interestedLeads, icon: TrendingUp, cardClass: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800', iconClass: 'text-blue-700 dark:text-blue-300', textClass: 'text-gray-900 dark:text-white' },
+    { title: 'Completados', value: stats.completedFollowUps, icon: CheckCircle, cardClass: 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800', iconClass: 'text-green-700 dark:text-green-300', textClass: 'text-gray-900 dark:text-white' },
   ] : []
 
   return (
     <>
       <Navbar />
-      <div className="min-h-screen py-8" style={{ backgroundColor: '#f8fafc' }}>
-        <div className="max-w-7xl mx-auto px-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 sm:py-8 dark-mode-transition">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4">
 
-          <div className="flex justify-between items-start mb-8">
+          <div className="flex flex-wrap gap-3 justify-between items-start mb-6 sm:mb-8">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-1">Sistema de Seguimiento</h1>
-              <p className="text-gray-500">Motor de seguimiento comercial — 6 intentos en 12 días</p>
+              <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-1">Sistema de Seguimiento</h1>
+              <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">Motor de seguimiento comercial — 6 intentos en 12 días</p>
             </div>
             <Button variant="primary" onClick={() => setNewPlanModal(true)}>
               <Plus size={18} /> Nuevo Plan
@@ -197,18 +197,18 @@ export default function Seguimiento() {
 
           {/* Stats */}
           {stats && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
               {statCards.map((s, i) => {
                 const Icon = s.icon
                 return (
-                  <div key={i} className="rounded-xl shadow border p-5" style={{ backgroundColor: s.bg, borderColor: s.border }}>
+                  <div key={i} className={`rounded-xl shadow border p-4 sm:p-5 dark-mode-transition ${s.cardClass}`}>
                     <div className="flex justify-between items-start mb-3">
-                      <div className="p-2 rounded-lg bg-white shadow-sm">
-                        <Icon size={20} style={{ color: s.iconColor }} />
+                      <div className="p-2 rounded-lg bg-white/70 dark:bg-white/10 shadow-sm">
+                        <Icon size={20} className={s.iconClass} />
                       </div>
                     </div>
-                    <p className="text-gray-600 text-xs font-medium mb-1">{s.title}</p>
-                    <p className="text-3xl font-bold text-gray-900">{s.value}</p>
+                    <p className="text-gray-600 dark:text-gray-400 text-xs font-medium mb-1">{s.title}</p>
+                    <p className={`text-2xl sm:text-3xl font-bold ${s.textClass}`}>{s.value}</p>
                   </div>
                 )
               })}
@@ -216,24 +216,28 @@ export default function Seguimiento() {
           )}
 
           {/* Tabs */}
-          <div className="flex gap-1 mb-6 bg-white rounded-xl p-1 shadow border border-gray-100 w-fit">
+          <div className="flex gap-1 mb-6 bg-white dark:bg-gray-800 rounded-xl p-1 shadow border border-gray-100 dark:border-gray-700 w-fit max-w-full overflow-x-auto dark-mode-transition">
             {([
-              { key: 'primer_contacto', label: 'Primer Contacto', count: primerContacto.length, countStyle: { bg: '#fef9c3', color: '#854d0e' } },
-              { key: 'pendientes', label: 'Acciones Pendientes', count: actions.length, countStyle: { bg: '#fee2e2', color: '#dc2626' } },
-              { key: 'planes', label: 'Todos los Planes', count: allPlans.length, countStyle: { bg: '#e0e7ff', color: '#3730a3' } },
+              { key: 'primer_contacto', label: 'Primer Contacto', count: primerContacto.length },
+              { key: 'pendientes', label: 'Pendientes', count: actions.length },
+              { key: 'planes', label: 'Planes', count: allPlans.length },
             ] as const).map(t => (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className="px-5 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5"
-                style={{ backgroundColor: tab === t.key ? '#0369a1' : 'transparent', color: tab === t.key ? '#fff' : '#6b7280' }}
+                className={`px-3 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-1.5 whitespace-nowrap ${
+                  tab === t.key
+                    ? 'bg-primary-700 text-white'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
               >
                 {t.label}
                 {t.count > 0 && (
-                  <span
-                    className="text-xs rounded-full px-1.5 py-0.5 font-bold"
-                    style={tab === t.key ? { backgroundColor: 'rgba(255,255,255,0.25)', color: '#fff' } : t.countStyle}
-                  >
+                  <span className={`text-xs rounded-full px-1.5 py-0.5 font-bold ${
+                    tab === t.key
+                      ? 'bg-white/25 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                  }`}>
                     {t.count}
                   </span>
                 )}
@@ -249,50 +253,48 @@ export default function Seguimiento() {
             // ── TAB PRIMER CONTACTO ──
             primerContacto.length === 0 ? (
               <Card className="p-12 text-center">
-                <CheckCircle size={48} className="text-green-300 mx-auto mb-3" />
-                <p className="text-gray-400 text-lg">Sin prospectos nuevos</p>
-                <p className="text-gray-400 text-sm mt-1">Todos los contactos han sido abordados</p>
+                <CheckCircle size={48} className="text-green-300 dark:text-green-700 mx-auto mb-3" />
+                <p className="text-gray-400 dark:text-gray-500 text-lg">Sin prospectos nuevos</p>
+                <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Todos los contactos han sido abordados</p>
               </Card>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-gray-500 mb-2">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
                   {primerContacto.length} prospecto{primerContacto.length !== 1 ? 's' : ''} sin contactar — inicia la conversación y documenta la respuesta para activar el seguimiento automático.
                 </p>
                 {primerContacto.map(contact => (
-                  <Card key={contact.id} variant="elevated" className="p-5 hover:shadow-lg transition duration-200">
-                    <div className="flex justify-between items-start gap-4">
+                  <Card key={contact.id} variant="elevated" className="p-4 sm:p-5 hover:shadow-lg transition duration-200">
+                    <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-3 sm:gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <div className="flex items-center gap-1.5 font-bold text-gray-900">
+                          <div className="flex items-center gap-1.5 font-bold text-gray-900 dark:text-white">
                             <User size={16} className="text-gray-400" />
                             {contact.name}
                           </div>
-                          <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: '#fef9c3', color: '#854d0e' }}>
+                          <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-yellow-100 dark:bg-yellow-900/40 text-amber-800 dark:text-amber-300">
                             Nuevo
                           </span>
                           {contact.segment && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium capitalize">
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 font-medium capitalize">
                               {contact.segment}
                             </span>
                           )}
                         </div>
-                        <p className="text-gray-500 text-sm">{contact.company}{contact.address ? ` · ${contact.address}` : ''}</p>
-                        <p className="text-gray-700 text-sm font-medium mt-1">{contact.phone}</p>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">{contact.company}{contact.address ? ` · ${contact.address}` : ''}</p>
+                        <p className="text-gray-700 dark:text-gray-300 text-sm font-medium mt-1">{contact.phone}</p>
                       </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                         <a
                           href={whatsappUrl(contact.phone || '')}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-white transition"
-                          style={{ backgroundColor: '#16a34a' }}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition"
                         >
                           <MessageCircle size={15} /> WhatsApp
                         </a>
                         <a
                           href={`tel:${contact.phone}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-white transition"
-                          style={{ backgroundColor: '#2563eb' }}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition"
                         >
                           <Phone size={15} /> Llamar
                         </a>
@@ -313,34 +315,34 @@ export default function Seguimiento() {
             // ── TAB ACCIONES PENDIENTES ──
             actions.length === 0 ? (
               <Card className="p-12 text-center">
-                <CheckCircle size={48} className="text-green-300 mx-auto mb-3" />
-                <p className="text-gray-400 text-lg">No hay acciones pendientes</p>
-                <p className="text-gray-400 text-sm mt-1">Crea un nuevo plan de seguimiento para comenzar</p>
+                <CheckCircle size={48} className="text-green-300 dark:text-green-700 mx-auto mb-3" />
+                <p className="text-gray-400 dark:text-gray-500 text-lg">No hay acciones pendientes</p>
+                <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Crea un nuevo plan de seguimiento para comenzar</p>
               </Card>
             ) : (
               <div className="space-y-3">
                 {actions.map(action => (
-                  <Card key={action.id} variant="elevated" className="p-5 hover:shadow-lg transition duration-200">
-                    <div className="flex justify-between items-start gap-4">
+                  <Card key={action.id} variant="elevated" className="p-4 sm:p-5 hover:shadow-lg transition duration-200">
+                    <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-3 sm:gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <div className="flex items-center gap-1.5 font-bold text-gray-900">
+                          <div className="flex items-center gap-1.5 font-bold text-gray-900 dark:text-white">
                             <User size={16} className="text-gray-400" />
                             {action.contacts?.name}
                           </div>
                           <Badge variant={TONE_BADGE[action.follow_up_stages?.tone] || 'default'}>
                             {action.follow_up_stages?.stage_name}
                           </Badge>
-                          <div className="flex items-center gap-1 text-sm text-gray-500">
+                          <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
                             {CHANNEL_ICONS[action.follow_up_stages?.channel] || <Zap size={16} />}
                             <span className="capitalize">{action.follow_up_stages?.channel}</span>
                           </div>
                         </div>
-                        <p className="text-gray-500 text-sm">{action.contacts?.company} · {action.contacts?.phone}</p>
-                        <p className="text-gray-700 text-sm mt-2">
+                        <p className="text-gray-500 dark:text-gray-400 text-sm">{action.contacts?.company} · {action.contacts?.phone}</p>
+                        <p className="text-gray-700 dark:text-gray-300 text-sm mt-2">
                           <span className="font-semibold">Objetivo:</span> {action.follow_up_stages?.objective}
                         </p>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                           {formatDistanceToNow(new Date(action.scheduled_date), { locale: es, addSuffix: true })}
                           {' · '}{format(new Date(action.scheduled_date), "d 'de' MMM", { locale: es })}
                         </p>
@@ -357,9 +359,9 @@ export default function Seguimiento() {
             // ── TAB TODOS LOS PLANES ──
             allPlans.length === 0 ? (
               <Card className="p-12 text-center">
-                <Zap size={48} className="text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-400 text-lg">No hay planes creados</p>
-                <p className="text-gray-400 text-sm mt-1">Crea un nuevo plan para asignar una secuencia a un contacto</p>
+                <Zap size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400 dark:text-gray-500 text-lg">No hay planes creados</p>
+                <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Crea un nuevo plan para asignar una secuencia a un contacto</p>
               </Card>
             ) : (
               <div className="space-y-3">
@@ -374,57 +376,56 @@ export default function Seguimiento() {
                     <Card key={plan.key} variant="elevated" className="overflow-hidden">
                       {/* Header */}
                       <div
-                        className="w-full p-5 flex items-center gap-4 hover:bg-gray-50 transition text-left cursor-pointer"
+                        className="w-full p-4 sm:p-5 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition text-left cursor-pointer dark-mode-transition"
                         onClick={() => togglePlan(plan.key)}
                       >
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <User size={16} className="text-gray-400" />
-                            <span className="font-bold text-gray-900">{plan.contact?.name}</span>
-                            <span className="text-gray-400 text-sm">·</span>
-                            <span className="text-gray-500 text-sm">{plan.contact?.company}</span>
-                            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <User size={16} className="text-gray-400 flex-shrink-0" />
+                            <span className="font-bold text-gray-900 dark:text-white">{plan.contact?.name}</span>
+                            <span className="text-gray-400 text-sm hidden sm:inline">·</span>
+                            <span className="text-gray-500 dark:text-gray-400 text-sm hidden sm:inline">{plan.contact?.company}</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
                               {plan.sequenceName}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3">
-                            {/* Progress bar */}
-                            <div className="flex-1 max-w-xs h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                            <div className="flex-1 min-w-[80px] max-w-xs h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                               <div
                                 className="h-full rounded-full transition-all"
                                 style={{ width: `${pct}%`, backgroundColor: pct === 100 ? '#10b981' : '#0369a1' }}
                               />
                             </div>
-                            <span className="text-xs text-gray-500 font-medium">{completed}/{total} completados</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{completed}/{total}</span>
                             {nextPending && (
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline">
                                 Próximo: {format(new Date(nextPending.scheduled_date), "d MMM", { locale: es })}
                               </span>
                             )}
                             {pct === 100 && (
-                              <span className="text-xs font-semibold" style={{ color: '#10b981' }}>✓ Completado</span>
+                              <span className="text-xs font-semibold text-green-600 dark:text-green-400">✓ Completado</span>
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
                           <a
                             href={whatsappUrl(plan.contact?.phone || '')}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={e => e.stopPropagation()}
                             title="Abrir WhatsApp"
-                            className="p-1.5 rounded-lg hover:bg-green-50 transition"
+                            className="p-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/30 transition"
                           >
-                            <MessageCircle size={18} className="text-green-600" />
+                            <MessageCircle size={18} className="text-green-600 dark:text-green-400" />
                           </a>
                           <button
                             onClick={e => handleDeletePlan(plan.contact?.id, plan.stages[0]?.sequence_id, e)}
                             title="Eliminar plan"
-                            className="p-1.5 rounded-lg hover:bg-red-50 transition"
+                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition"
                           >
-                            <Trash2 size={18} className="text-red-400 hover:text-red-600" />
+                            <Trash2 size={18} className="text-red-400 hover:text-red-600 dark:text-red-500 dark:hover:text-red-400" />
                           </button>
-                          <div className="text-gray-400">
+                          <div className="text-gray-400 dark:text-gray-500">
                             {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                           </div>
                         </div>
@@ -432,27 +433,27 @@ export default function Seguimiento() {
 
                       {/* Stages detail */}
                       {isExpanded && (
-                        <div className="border-t border-gray-100 divide-y divide-gray-50">
+                        <div className="border-t border-gray-100 dark:border-gray-700 divide-y divide-gray-50 dark:divide-gray-700/50">
                           {plan.stages.map((stage: any, idx: number) => {
                             const isPending = stage.status === 'pending'
                             const isOverdue = isPending && new Date(stage.scheduled_date) <= new Date()
                             return (
-                              <div key={stage.id} className="px-5 py-3 flex items-start gap-4" style={{ opacity: stage.status === 'completed' ? 0.6 : 1 }}>
+                              <div key={stage.id} className={`px-4 sm:px-5 py-3 flex items-start gap-3 sm:gap-4 ${stage.status === 'completed' ? 'opacity-60' : ''}`}>
                                 {/* Step number */}
-                                <div
-                                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
-                                  style={{
-                                    backgroundColor: stage.status === 'completed' ? '#dcfce7' : isOverdue ? '#fee2e2' : '#f1f5f9',
-                                    color: stage.status === 'completed' ? '#15803d' : isOverdue ? '#dc2626' : '#64748b',
-                                  }}
-                                >
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${
+                                  stage.status === 'completed'
+                                    ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400'
+                                    : isOverdue
+                                    ? 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'
+                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                                }`}>
                                   {stage.status === 'completed' ? '✓' : idx + 1}
                                 </div>
 
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-sm font-semibold text-gray-800">{stage.follow_up_stages?.stage_name}</span>
-                                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                                    <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{stage.follow_up_stages?.stage_name}</span>
+                                    <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                                       {CHANNEL_ICONS[stage.follow_up_stages?.channel] || <Zap size={14} />}
                                       <span className="capitalize">{stage.follow_up_stages?.channel}</span>
                                     </div>
@@ -466,22 +467,22 @@ export default function Seguimiento() {
                                       {stage.follow_up_stages?.tone}
                                     </span>
                                   </div>
-                                  <p className="text-xs text-gray-500 mt-0.5">{stage.follow_up_stages?.objective}</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{stage.follow_up_stages?.objective}</p>
                                   {stage.notes && (
-                                    <p className="text-xs text-gray-600 mt-1 italic">"{stage.notes}"</p>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 italic">"{stage.notes}"</p>
                                   )}
                                 </div>
 
                                 <div className="text-right flex-shrink-0">
-                                  <p className="text-xs text-gray-400">{format(new Date(stage.scheduled_date), "d MMM", { locale: es })}</p>
+                                  <p className="text-xs text-gray-400 dark:text-gray-500">{format(new Date(stage.scheduled_date), "d MMM", { locale: es })}</p>
                                   {isOverdue && (
-                                    <span className="text-xs font-semibold" style={{ color: '#dc2626' }}>Vencido</span>
+                                    <span className="text-xs font-semibold text-red-600 dark:text-red-400">Vencido</span>
                                   )}
                                   {stage.status === 'pending' && !isOverdue && (
-                                    <span className="text-xs text-gray-400">Programado</span>
+                                    <span className="text-xs text-gray-400 dark:text-gray-500">Programado</span>
                                   )}
                                   {stage.status === 'completed' && stage.response_status && (
-                                    <span className="text-xs" style={{ color: '#15803d' }}>{stage.response_status}</span>
+                                    <span className="text-xs text-green-600 dark:text-green-400">{stage.response_status}</span>
                                   )}
                                 </div>
 
@@ -510,26 +511,26 @@ export default function Seguimiento() {
 
       {/* Modal ejecutar acción */}
       {modal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">Ejecutar Seguimiento</h2>
-              <p className="text-gray-500 text-sm mt-1">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto dark-mode-transition">
+            <div className="p-5 sm:p-6 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Ejecutar Seguimiento</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
                 {modal.contacts?.name} · {modal.follow_up_stages?.stage_name}
               </p>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-5 sm:p-6 space-y-4">
               <FollowUpTemplateSelector
                 stage={modal.follow_up_stages?.tone || ''}
                 channel={modal.follow_up_stages?.channel || ''}
                 contact={modal.contacts}
               />
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Respuesta del contacto</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Respuesta del contacto</label>
                 <select
                   value={responseStatus}
                   onChange={e => setResponseStatus(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark-mode-transition"
                 >
                   <option value="interested">Muy interesado</option>
                   <option value="maybe">Posiblemente interesado</option>
@@ -538,24 +539,23 @@ export default function Seguimiento() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Notas internas</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Notas internas</label>
                 <textarea
                   value={responseNote}
                   onChange={e => setResponseNote(e.target.value)}
                   placeholder="Ej: Preguntó por descuento en cantidad, llamar el viernes..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 h-24 resize-none"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 h-24 resize-none dark-mode-transition"
                 />
               </div>
             </div>
-            <div className="p-6 border-t border-gray-100 flex gap-3 justify-between items-center">
+            <div className="p-5 sm:p-6 border-t border-gray-100 dark:border-gray-700 flex gap-3 justify-between items-center flex-wrap">
               <div>
                 {modal.follow_up_stages?.channel === 'whatsapp' && modal.contacts?.phone && (
                   <a
                     href={whatsappUrl(modal.contacts.phone)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition"
-                    style={{ backgroundColor: '#16a34a' }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-green-600 hover:bg-green-700 transition"
                   >
                     <MessageCircle size={16} /> Abrir WhatsApp
                   </a>
@@ -563,8 +563,7 @@ export default function Seguimiento() {
                 {modal.follow_up_stages?.channel === 'call' && modal.contacts?.phone && (
                   <a
                     href={`tel:${modal.contacts.phone}`}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition"
-                    style={{ backgroundColor: '#2563eb' }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition"
                   >
                     <Phone size={16} /> Llamar
                   </a>
@@ -583,16 +582,16 @@ export default function Seguimiento() {
 
       {/* Modal primer contacto */}
       {firstContactModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">Documentar Primer Contacto</h2>
-              <p className="text-gray-500 text-sm mt-1">{firstContactModal.name} · {firstContactModal.phone}</p>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto dark-mode-transition">
+            <div className="p-5 sm:p-6 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Documentar Primer Contacto</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{firstContactModal.name} · {firstContactModal.phone}</p>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-5 sm:p-6 space-y-4">
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Canal utilizado</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Canal utilizado</label>
                 <div className="flex gap-2">
                   {[
                     { value: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle size={15} />, color: '#16a34a' },
@@ -605,7 +604,7 @@ export default function Seguimiento() {
                       className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold border-2 transition"
                       style={{
                         borderColor: fcChannel === ch.value ? ch.color : '#e5e7eb',
-                        backgroundColor: fcChannel === ch.value ? ch.color + '15' : '#fff',
+                        backgroundColor: fcChannel === ch.value ? ch.color + '15' : 'transparent',
                         color: fcChannel === ch.value ? ch.color : '#6b7280',
                       }}
                     >
@@ -616,41 +615,40 @@ export default function Seguimiento() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Respuesta del prospecto</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Respuesta del prospecto</label>
                 <div className="space-y-2">
                   {[
-                    { value: 'interested', label: 'Muy interesado', sub: 'Se creará plan de seguimiento automáticamente', color: '#15803d', bg: '#f0fdf4' },
-                    { value: 'maybe', label: 'Posiblemente interesado', sub: 'Se creará plan de seguimiento automáticamente', color: '#b45309', bg: '#fffbeb' },
-                    { value: 'no_response', label: 'Sin respuesta', sub: 'Se marca como contactado, sin plan aún', color: '#6b7280', bg: '#f9fafb' },
-                    { value: 'cold', label: 'No le interesa / Rechazó', sub: 'Se descarta el prospecto', color: '#dc2626', bg: '#fef2f2' },
+                    { value: 'interested', label: 'Muy interesado', sub: 'Se creará plan de seguimiento automáticamente', colorClass: 'text-green-700 dark:text-green-400', activeBorder: '#15803d', activeBg: '#f0fdf4' },
+                    { value: 'maybe', label: 'Posiblemente interesado', sub: 'Se creará plan de seguimiento automáticamente', colorClass: 'text-amber-700 dark:text-amber-400', activeBorder: '#b45309', activeBg: '#fffbeb' },
+                    { value: 'no_response', label: 'Sin respuesta', sub: 'Se marca como contactado, sin plan aún', colorClass: 'text-gray-600 dark:text-gray-400', activeBorder: '#6b7280', activeBg: '#f9fafb' },
+                    { value: 'cold', label: 'No le interesa / Rechazó', sub: 'Se descarta el prospecto', colorClass: 'text-red-600 dark:text-red-400', activeBorder: '#dc2626', activeBg: '#fef2f2' },
                   ].map(opt => (
                     <button
                       key={opt.value}
                       onClick={() => setFcResponse(opt.value)}
-                      className="w-full text-left px-4 py-3 rounded-xl border-2 transition"
-                      style={{
-                        borderColor: fcResponse === opt.value ? opt.color : '#e5e7eb',
-                        backgroundColor: fcResponse === opt.value ? opt.bg : '#fff',
-                      }}
+                      className={`w-full text-left px-4 py-3 rounded-xl border-2 transition dark:border-gray-600 ${
+                        fcResponse === opt.value ? 'border-current' : 'hover:border-gray-300 dark:hover:border-gray-500'
+                      }`}
+                      style={fcResponse === opt.value ? { borderColor: opt.activeBorder, backgroundColor: opt.activeBg } : {}}
                     >
-                      <p className="text-sm font-semibold" style={{ color: opt.color }}>{opt.label}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{opt.sub}</p>
+                      <p className={`text-sm font-semibold ${opt.colorClass}`}>{opt.label}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{opt.sub}</p>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Notas de la conversación</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Notas de la conversación</label>
                 <textarea
                   value={fcNote}
                   onChange={e => setFcNote(e.target.value)}
                   placeholder="Ej: Preguntó por precios al mayoreo, llamar la próxima semana..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 h-20 resize-none text-sm"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 h-20 resize-none text-sm dark-mode-transition"
                 />
               </div>
             </div>
-            <div className="p-6 border-t border-gray-100 flex gap-3 justify-end">
+            <div className="p-5 sm:p-6 border-t border-gray-100 dark:border-gray-700 flex gap-3 justify-end">
               <Button variant="secondary" onClick={() => setFirstContactModal(null)}>Cancelar</Button>
               <Button variant="primary" loading={saving} onClick={handleFirstContact}>
                 <CheckCircle size={16} /> Registrar Contacto
@@ -662,19 +660,19 @@ export default function Seguimiento() {
 
       {/* Modal nuevo plan */}
       {newPlanModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">Nuevo Plan de Seguimiento</h2>
-              <p className="text-gray-500 text-sm mt-1">Asigna una secuencia automática a un contacto</p>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md dark-mode-transition">
+            <div className="p-5 sm:p-6 border-b border-gray-100 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Nuevo Plan de Seguimiento</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Asigna una secuencia automática a un contacto</p>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-5 sm:p-6 space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Contacto</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Contacto</label>
                 <select
                   value={planForm.contact_id}
                   onChange={e => setPlanForm({ ...planForm, contact_id: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark-mode-transition"
                 >
                   <option value="">Seleccionar contacto...</option>
                   {contacts.map(c => (
@@ -683,7 +681,7 @@ export default function Seguimiento() {
                 </select>
               </div>
             </div>
-            <div className="p-6 border-t border-gray-100 flex gap-3 justify-end">
+            <div className="p-5 sm:p-6 border-t border-gray-100 dark:border-gray-700 flex gap-3 justify-end">
               <Button variant="secondary" onClick={() => setNewPlanModal(false)}>Cancelar</Button>
               <Button variant="primary" loading={saving} onClick={handleNewPlan}>
                 <Plus size={16} /> Crear Plan

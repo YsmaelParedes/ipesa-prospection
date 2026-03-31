@@ -91,11 +91,11 @@ export default function Campanas() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 mb-1">Enviar Campañas</h1>
-            <p className="text-gray-500">Envía mensajes masivos segmentados a tus prospectos</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 sm:py-8 dark-mode-transition">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4">
+          <div className="mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-1">Enviar Campañas</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">Envía mensajes masivos segmentados a tus prospectos</p>
           </div>
 
           {loading ? (
@@ -104,8 +104,8 @@ export default function Campanas() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card variant="elevated" className="p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
+              <Card variant="elevated" className="p-5 sm:p-6">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
                   <Send size={20} className="text-primary-600" /> Configuración
                 </h2>
                 <div className="space-y-4">
@@ -124,30 +124,28 @@ export default function Campanas() {
                     onChange={e => setSelectedSegment(e.target.value)}
                     options={SEGMENT_OPTIONS}
                   />
-                  <Card className="p-4 bg-primary-50 border border-primary-100">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-semibold text-gray-700">Contactos a enviar</span>
-                      <Badge variant="info" className="text-base px-4 py-1">{recipients.length}</Badge>
-                    </div>
-                  </Card>
+                  <div className="flex justify-between items-center p-4 rounded-xl bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800">
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Contactos a enviar</span>
+                    <Badge variant="info" className="text-base px-4 py-1">{recipients.length}</Badge>
+                  </div>
                   <Button variant="success" className="w-full" size="lg" loading={sending} onClick={handleSend}>
                     <Send size={18} /> Enviar Campaña
                   </Button>
                 </div>
               </Card>
 
-              <Card variant="elevated" className="p-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
+              <Card variant="elevated" className="p-5 sm:p-6">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-2">
                   <Eye size={20} className="text-primary-600" /> Vista Previa
                 </h2>
                 {preview ? (
-                  <div className="bg-success-50 border border-success-200 rounded-xl p-4">
-                    <p className="text-gray-800 leading-relaxed">{preview}</p>
+                  <div className="bg-success-50 dark:bg-success-900/20 border border-success-200 dark:border-success-800 rounded-xl p-4">
+                    <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-line">{preview}</p>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-600">
                     <Eye size={40} className="mb-3 opacity-30" />
-                    <p>Selecciona una plantilla para previsualizar</p>
+                    <p className="text-sm text-center">Selecciona una plantilla para previsualizar</p>
                   </div>
                 )}
               </Card>
