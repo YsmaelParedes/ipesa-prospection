@@ -98,7 +98,7 @@ export default function Contactos() {
   const tabContacts = useMemo(() => {
     let list = contacts
     if (activeTab === '__sin_segmento__') list = contacts.filter(c => !c.segment)
-    else if (activeTab !== '__todos__') list = contacts.filter(c => c.segment === activeTab)
+    else if (activeTab !== '__todos__') list = contacts.filter(c => c.segment?.toLowerCase() === activeTab)
 
     return list.filter(c => {
       if (search) {
@@ -293,15 +293,15 @@ export default function Contactos() {
             </div>
           </div>
 
-          {/* Segment tabs — scrollable */}
-          <div className="flex items-end gap-0 mb-0 overflow-x-auto pb-0 border-b-2 border-gray-200 dark:border-gray-700">
+          {/* Segment tabs — wrapping */}
+          <div className="flex flex-wrap items-end gap-0 mb-0 border-b-2 border-gray-200 dark:border-gray-700">
             {tabs.map(tab => {
               const isActive = activeTab === tab.key
               return (
                 <button
                   key={tab.key}
                   onClick={() => { setActiveTab(tab.key); setSelected(new Set()); setSearch('') }}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-all border-b-2 -mb-0.5 whitespace-nowrap flex-shrink-0"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-all border-b-2 -mb-0.5"
                   style={{
                     borderBottomColor: isActive ? (tab.color || '#0369a1') : 'transparent',
                     color: isActive ? (tab.color || '#0369a1') : (isDark ? '#9ca3af' : '#6b7280'),
@@ -563,7 +563,7 @@ export default function Contactos() {
                               ? <CheckSquare size={16} className="text-blue-600" /> : <Square size={16} />}
                           </button>
                         </th>
-                        {['Nombre', 'Teléfono', 'Empresa', 'Canal de adquisición', ...(activeTab === '__todos__' ? ['Segmento'] : []), 'Descripción', 'Estado', 'Acciones'].map(h => (
+                        {['Nombre', 'Teléfono', 'Empresa', 'Canal de adquisición', 'Segmento', 'Descripción', 'Estado', 'Acciones'].map(h => (
                           <th key={h} className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">{h}</th>
                         ))}
                       </tr>
@@ -588,16 +588,14 @@ export default function Contactos() {
                               ? <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">{c.acquisition_channel}</span>
                               : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
                           </td>
-                          {activeTab === '__todos__' && (
-                            <td className="px-4 py-3">
-                              {c.segment ? (
-                                <span className="text-xs px-2 py-0.5 rounded-full font-semibold capitalize"
-                                  style={{ backgroundColor: (segments.find((s:any) => s.name.toLowerCase() === c.segment?.toLowerCase())?.color || '#6b7280') + '30', color: segments.find((s:any) => s.name.toLowerCase() === c.segment?.toLowerCase())?.color || '#6b7280' }}>
-                                  {c.segment}
-                                </span>
-                              ) : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
-                            </td>
-                          )}
+                          <td className="px-4 py-3">
+                            {c.segment ? (
+                              <span className="text-xs px-2 py-0.5 rounded-full font-semibold capitalize"
+                                style={{ backgroundColor: (segments.find((s:any) => s.name.toLowerCase() === c.segment?.toLowerCase())?.color || '#6b7280') + '30', color: segments.find((s:any) => s.name.toLowerCase() === c.segment?.toLowerCase())?.color || '#6b7280' }}>
+                                {c.segment}
+                              </span>
+                            ) : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
+                          </td>
                           <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-sm max-w-xs truncate">
                             {(() => {
                               const seg = segments.find((s:any) => s.name.toLowerCase() === c.segment?.toLowerCase())

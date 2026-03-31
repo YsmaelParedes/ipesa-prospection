@@ -13,7 +13,7 @@ import Badge from '@/components/ui/Badge'
 import FollowUpTemplateSelector from '@/components/FollowUpTemplateSelector'
 import toast from 'react-hot-toast'
 import React from 'react'
-import { Phone, MessageCircle, Mail, CheckCircle, Clock, TrendingUp, Zap, Plus, User, ChevronDown, ChevronRight, Trash2 } from 'lucide-react'
+import { Phone, MessageCircle, Mail, CheckCircle, Clock, TrendingUp, Zap, Plus, User, ChevronDown, ChevronRight, Trash2, Search, X } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -77,6 +77,7 @@ export default function Seguimiento() {
   const [fcChannel, setFcChannel] = useState('whatsapp')
   const [fcResponse, setFcResponse] = useState('interested')
   const [fcNote, setFcNote] = useState('')
+  const [primerContactoSearch, setPrimerContactoSearch] = useState('')
 
   useEffect(() => { fetchAll() }, [])
 
@@ -259,10 +260,34 @@ export default function Seguimiento() {
               </Card>
             ) : (
               <div className="space-y-3">
+                {/* Search bar */}
+                <div className="relative mb-1">
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar nombre, empresa, teléfono..."
+                    value={primerContactoSearch}
+                    onChange={e => setPrimerContactoSearch(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2 border border-gray-200 dark:border-gray-700 rounded-xl text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark-mode-transition"
+                  />
+                  {primerContactoSearch && (
+                    <button onClick={() => setPrimerContactoSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                  {primerContacto.length} prospecto{primerContacto.length !== 1 ? 's' : ''} sin contactar — inicia la conversación y documenta la respuesta para activar el seguimiento automático.
+                  {primerContacto.filter(c => {
+                    if (!primerContactoSearch) return true
+                    const q = primerContactoSearch.toLowerCase()
+                    return c.name?.toLowerCase().includes(q) || c.company?.toLowerCase().includes(q) || c.phone?.includes(q)
+                  }).length} de {primerContacto.length} prospecto{primerContacto.length !== 1 ? 's' : ''} sin contactar
                 </p>
-                {primerContacto.map(contact => (
+                {primerContacto.filter(contact => {
+                  if (!primerContactoSearch) return true
+                  const q = primerContactoSearch.toLowerCase()
+                  return contact.name?.toLowerCase().includes(q) || contact.company?.toLowerCase().includes(q) || contact.phone?.includes(q)
+                }).map(contact => (
                   <Card key={contact.id} variant="elevated" className="p-4 sm:p-5 hover:shadow-lg transition duration-200">
                     <div className="flex flex-wrap sm:flex-nowrap justify-between items-start gap-3 sm:gap-4">
                       <div className="flex-1 min-w-0">

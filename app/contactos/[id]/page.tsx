@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { getContactById, updateContact, getContactFollowUps, getContactNotes, addContactNote } from '@/lib/supabase'
+import { getContactById, updateContact, getContactFollowUps, getContactNotes, addContactNote, getSegments } from '@/lib/supabase'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -30,6 +30,7 @@ export default function EditContacto() {
 
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ name: '', phone: '', email: '', company: '', address: '', segment: '', prospect_status: '', acquisition_channel: '' })
+  const [segments, setSegments] = useState<any[]>([])
   const [followUps, setFollowUps] = useState<any[]>([])
   const [notes, setNotes] = useState<any[]>([])
   const [newNote, setNewNote] = useState('')
@@ -39,14 +40,16 @@ export default function EditContacto() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [contact, fus, nts] = await Promise.all([
+        const [contact, fus, nts, segs] = await Promise.all([
           getContactById(id),
           getContactFollowUps(id),
           getContactNotes(id),
+          getSegments(),
         ])
         setForm(contact)
         setFollowUps(fus)
         setNotes(nts)
+        setSegments(segs)
       } catch {
         toast.error('Contacto no encontrado')
         router.push('/contactos')
@@ -120,11 +123,7 @@ export default function EditContacto() {
                   <Input label="Canal de adquisición" value={form.acquisition_channel} onChange={e => setForm({ ...form, acquisition_channel: e.target.value })} />
                   <Select label="Segmento" value={form.segment} onChange={e => setForm({ ...form, segment: e.target.value })} options={[
                     { value: '', label: 'Sin segmento' },
-                    { value: 'retail', label: 'Retail' },
-                    { value: 'industrial', label: 'Industrial' },
-                    { value: 'construccion', label: 'Construcción' },
-                    { value: 'residencial', label: 'Residencial' },
-                    { value: 'automotriz', label: 'Automotriz' },
+                    ...segments.map(s => ({ value: s.name, label: s.name })),
                   ]} />
                   <Select label="Estado" value={form.prospect_status} onChange={e => setForm({ ...form, prospect_status: e.target.value })} options={[
                     { value: 'nuevo', label: 'Nuevo' },
