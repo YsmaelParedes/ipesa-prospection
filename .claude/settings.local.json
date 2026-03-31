@@ -1,7 +1,21 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx:*)"
+      "Bash(npx:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(curl -s -X POST http://localhost:3000/api/scraper -H \"Content-Type: application/json\" -d '{\"\"\"\"query\"\"\"\":\"\"\"\"ferreterias\"\"\"\",\"\"\"\"location\"\"\"\":\"\"\"\"Monterrey\"\"\"\",\"\"\"\"source\"\"\"\":\"\"\"\"google_maps\"\"\"\"}')",
+      "Bash(curl -s \"https://www.inegi.org.mx/app/api/denue/v1/consulta/Buscar/ferreteria/25.6866,-100.3161/5000/ef04abdc-82f9-4714-810d-15c6c1719d63\")",
+      "Bash(python3 -c \":*)",
+      "Bash(curl -s -X POST http://localhost:3000/api/scraper -H \"Content-Type: application/json\" -d '{\"\"\"\"query\"\"\"\":\"\"\"\"ferreteria\"\"\"\",\"\"\"\"location\"\"\"\":\"\"\"\"Monterrey\"\"\"\",\"\"\"\"source\"\"\"\":\"\"\"\"inegi\"\"\"\"}')",
+      "WebFetch(domain:tlpyuuyqbatrgfrycsjs.supabase.co)",
+      "Bash(curl:*)",
+      "Bash(ANON=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRscHl1dXlxYmF0cmdmcnljc2pzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODI1NjYsImV4cCI6MjA5MDQ1ODU2Nn0.rkrS4Hod29q1yxBhtnyCMrR6PWDn9HPhRaH7K3fXMsM\")",
+      "Bash(python3:*)",
+      "Bash(pip install:*)",
+      "Bash(node -e \"require\\(''xlsx''\\); console.log\\(''xlsx ok''\\)\")",
+      "Bash(find /c/Users/iysma/Documents/apps_Claude/ipesa_ap/.next -name *.css)",
+      "Bash(find /c/Users/iysma/Documents/apps_Claude/ipesa_ap -name *.png -o -name *.jpg -o -name *.jpeg -o -name *.webp)"
     ]
   }
 }
