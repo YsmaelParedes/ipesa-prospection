@@ -54,6 +54,7 @@
   /* Animations */
   --animate-fade-in: fadeIn 0.3s ease-in-out;
   --animate-slide-in: slideIn 0.3s ease-in-out;
+  --animate-progress-bar: progressBar 1.8s ease-in-out infinite;
 
   @keyframes fadeIn {
     0% { opacity: 0; }
@@ -63,6 +64,12 @@
   @keyframes slideIn {
     0% { transform: translateY(10px); opacity: 0; }
     100% { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes progressBar {
+    0%   { width: 0%; margin-left: 0%; }
+    50%  { width: 60%; margin-left: 20%; }
+    100% { width: 0%; margin-left: 100%; }
   }
 }
 

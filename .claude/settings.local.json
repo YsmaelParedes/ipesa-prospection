@@ -15,7 +15,19 @@
       "Bash(pip install:*)",
       "Bash(node -e \"require\\(''xlsx''\\); console.log\\(''xlsx ok''\\)\")",
       "Bash(find /c/Users/iysma/Documents/apps_Claude/ipesa_ap/.next -name *.css)",
-      "Bash(find /c/Users/iysma/Documents/apps_Claude/ipesa_ap -name *.png -o -name *.jpg -o -name *.jpeg -o -name *.webp)"
+      "Bash(find /c/Users/iysma/Documents/apps_Claude/ipesa_ap -name *.png -o -name *.jpg -o -name *.jpeg -o -name *.webp)",
+      "Bash(\"C:\\\\Users\\\\iysma\\\\Documents\\\\apps_Claude\\\\ipesa-prospection\\\\.env.local\":*)",
+      "Bash(find /c/Users/iysma/Documents/apps_Claude/ipesa-prospection -type f -name tailwind.config.* -o -name globals.css -o -name global.css)",
+      "Bash(find /c/Users/iysma/Documents/apps_Claude/ipesa-prospection/components -type f -name *.tsx -o -name *.ts -o -name *.jsx -o -name *.js)",
+      "Bash(find /c/Users/iysma/Documents/apps_Claude/ipesa-prospection/app -type f \\\\\\(-name *.tsx -o -name *.ts \\\\\\))",
+      "Bash(grep -r style= /c/Users/iysma/Documents/apps_Claude/ipesa-prospection/components /c/Users/iysma/Documents/apps_Claude/ipesa-prospection/app --include=*.tsx --include=*.ts)",
+      "Bash(grep -r \"color:\\\\|background:\" /c/Users/iysma/Documents/apps_Claude/ipesa-prospection/components /c/Users/iysma/Documents/apps_Claude/ipesa-prospection/app --include=*.tsx --include=*.ts)",
+      "Bash(find /c/Users/iysma/Documents/apps_Claude/ipesa-prospection -name *.sql -o -name schema* -o -name *migration*)",
+      "Bash(grep -r \"follow_up_sequences\\\\|follow_up_stages\\\\|contact_follow_ups\" /c/Users/iysma/Documents/apps_Claude/ipesa-prospection/lib /c/Users/iysma/Documents/apps_Claude/ipesa-prospection/app --include=*.ts --include=*.tsx)",
+      "Bash(grep -n \"prospect_status\\\\|segment\\\\|SEGMENT\\\\|STATUS\" /c/Users/iysma/Documents/apps_Claude/ipesa-prospection/app/campanas/page.tsx /c/Users/iysma/Documents/apps_Claude/ipesa-prospection/app/contactos/[id]/page.tsx)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
