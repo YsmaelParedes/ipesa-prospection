@@ -94,19 +94,20 @@ export default function Scraper() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 dark-mode-transition">
 
-        {/* Loading bar */}
-        {loading && (
-          <div className="fixed top-0 left-0 right-0 z-50">
-            <div className="h-1 bg-blue-200 dark:bg-blue-900">
-              <div className="h-full bg-blue-600 animate-progress-bar" />
-            </div>
-            <div className="bg-blue-600 text-white text-xs text-center py-1.5 font-medium tracking-wide">
-              {loadingMsg}
-            </div>
+      {/* Loading bar — debajo del navbar, en el flujo normal */}
+      {loading && (
+        <div className="w-full">
+          <div className="h-1 bg-blue-100 dark:bg-blue-900/40">
+            <div className="h-full bg-blue-600 animate-progress-bar" />
           </div>
-        )}
+          <div className="bg-blue-600 text-white text-xs text-center py-1.5 font-medium tracking-wide">
+            {loadingMsg}
+          </div>
+        </div>
+      )}
+
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 dark-mode-transition">
 
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="mb-6">

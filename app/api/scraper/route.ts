@@ -180,11 +180,16 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'INEGI API key no configurada' }, { status: 500 })
       }
 
-      const radius = 10000 // 10 km — radio ampliado para mayor cobertura
+      const radius = 5000 // 5 km — radio óptimo (10km aborta el stream de INEGI)
       const terms = expandQueryTerms(query)
 
-      // Buscar en paralelo con todos los términos expandidos
-      const searches = await Promise.all(terms.map(t => searchINEGI(t, coords.lat, coords.lng, radius)))
+      // Buscar secuencialmente para no saturar la API de INEGI
+      const searches: any[][] = []
+      for (const t of terms) {
+        const batch = await searchINEGI(t, coords.lat, coords.lng, radius)
+        searches.push(batch)
+        if (searches.flat().length >= 500) break // suficientes resultados
+      }
 
       // Aplanar y deduplicar por ID INEGI o (nombre + CP)
       const seen = new Set<string>()
