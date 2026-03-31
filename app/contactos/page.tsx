@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { getContacts, addContact, deleteContact, deleteContacts, importContacts, updateContact, getSegments } from '@/lib/supabase'
+import { useTheme } from '@/components/ThemeProvider'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -12,7 +13,7 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
-import { Plus, Upload, Trash2, Edit, Search, FileSpreadsheet, X, CheckSquare, Square, Filter, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Upload, Trash2, Edit, Search, FileSpreadsheet, X, CheckSquare, Square, Filter, ChevronDown, ChevronUp, Download } from 'lucide-react'
 
 const STATUSES = [
   { value: 'nuevo', label: 'Nuevo' },
@@ -235,41 +236,65 @@ export default function Contactos() {
     })
   }
 
+  const handleBackup = () => {
+    const date = new Date().toISOString().split('T')[0]
+    const data = {
+      exported_at: new Date().toISOString(),
+      total_contacts: contacts.length,
+      total_segments: segments.length,
+      segments,
+      contacts,
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `backup-contactos-${date}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success(`Backup descargado · ${contacts.length} contactos · ${segments.length} segmentos`)
+  }
+
   const activeFilters = [filterStatus, filterChannel].filter(Boolean).length
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
 
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gray-50 py-8">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 dark-mode-transition">
         <div className="max-w-7xl mx-auto px-4">
 
           {/* Header */}
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-1">Gestión de Contactos</h1>
-              <p className="text-gray-500">{contacts.length.toLocaleString()} contactos · {tabs.length - 1} segmentos</p>
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-1">Gestión de Contactos</h1>
+              <p className="text-gray-500 dark:text-gray-400">{contacts.length.toLocaleString()} contactos · {tabs.length - 1} segmentos</p>
             </div>
             <div className="flex gap-2">
               <Button variant="primary" onClick={() => setShowForm(!showForm)}>
                 <Plus size={18} /> Nuevo
               </Button>
               <label>
-                <div className="bg-gray-200 text-gray-700 hover:bg-gray-300 font-semibold rounded-lg px-3 py-2 inline-flex items-center gap-1.5 cursor-pointer transition text-sm">
+                <div className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 font-semibold rounded-lg px-3 py-2 inline-flex items-center gap-1.5 cursor-pointer transition text-sm">
                   <Upload size={15} /> CSV
                 </div>
                 <input type="file" accept=".csv" onChange={handleCSV} className="hidden" />
               </label>
               <label>
-                <div className="font-semibold rounded-lg px-3 py-2 inline-flex items-center gap-1.5 cursor-pointer transition text-sm text-white" style={{ backgroundColor: '#16a34a' }}>
+                <div className="bg-green-600 hover:bg-green-700 font-semibold rounded-lg px-3 py-2 inline-flex items-center gap-1.5 cursor-pointer transition text-sm text-white">
                   <FileSpreadsheet size={15} /> Excel
                 </div>
                 <input type="file" accept=".xlsx,.xls" onChange={handleXLSX} className="hidden" />
               </label>
+              <Button variant="secondary" onClick={handleBackup} title="Descargar backup completo">
+                <Download size={15} /> Backup
+              </Button>
             </div>
           </div>
 
           {/* Segment tabs — scrollable */}
-          <div className="flex items-end gap-0 mb-0 overflow-x-auto pb-0" style={{ borderBottom: '2px solid #e5e7eb' }}>
+          <div className="flex items-end gap-0 mb-0 overflow-x-auto pb-0 border-b-2 border-gray-200 dark:border-gray-700">
             {tabs.map(tab => {
               const isActive = activeTab === tab.key
               return (
@@ -279,8 +304,8 @@ export default function Contactos() {
                   className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-all border-b-2 -mb-0.5 whitespace-nowrap flex-shrink-0"
                   style={{
                     borderBottomColor: isActive ? (tab.color || '#0369a1') : 'transparent',
-                    color: isActive ? (tab.color || '#0369a1') : '#6b7280',
-                    backgroundColor: isActive ? (tab.color || '#0369a1') + '12' : 'transparent',
+                    color: isActive ? (tab.color || '#0369a1') : (isDark ? '#9ca3af' : '#6b7280'),
+                    backgroundColor: isActive ? (tab.color || '#0369a1') + '20' : 'transparent',
                   }}
                 >
                   {tab.key !== '__todos__' && tab.key !== '__sin_segmento__' && (
@@ -290,8 +315,8 @@ export default function Contactos() {
                   <span
                     className="text-xs font-bold px-1.5 py-0.5 rounded-full"
                     style={{
-                      backgroundColor: isActive ? (tab.color || '#0369a1') : '#e5e7eb',
-                      color: isActive ? '#fff' : '#6b7280',
+                      backgroundColor: isActive ? (tab.color || '#0369a1') : (isDark ? '#374151' : '#e5e7eb'),
+                      color: isActive ? '#fff' : (isDark ? '#9ca3af' : '#6b7280'),
                     }}
                   >
                     {tab.count.toLocaleString()}
@@ -304,7 +329,7 @@ export default function Contactos() {
           {/* New contact form */}
           {showForm && (
             <Card variant="elevated" className="p-6 mt-4 mb-4">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Nuevo Contacto</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Nuevo Contacto</h2>
               <form onSubmit={handleAdd}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <Input label="Nombre *" placeholder="Juan Pérez" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
@@ -314,13 +339,13 @@ export default function Contactos() {
                   <Input label="Dirección" placeholder="Calle 123, Puebla" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
                   <Input label="Canal de adquisición" placeholder="B2B, Referido..." value={form.acquisition_channel} onChange={e => setForm({ ...form, acquisition_channel: e.target.value })} />
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Segmento</label>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Segmento</label>
                     <input
                       list="segment-list"
                       value={form.segment}
                       onChange={e => setForm({ ...form, segment: e.target.value })}
                       placeholder="Seleccionar o escribir..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white dark-mode-transition"
                     />
                     <datalist id="segment-list">
                       {allSegments.map(s => <option key={s} value={s} />)}
@@ -350,9 +375,9 @@ export default function Contactos() {
               onClick={() => setShowFilters(!showFilters)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-semibold transition"
               style={{
-                borderColor: activeFilters > 0 ? '#0369a1' : '#e5e7eb',
-                backgroundColor: activeFilters > 0 ? '#eff6ff' : '#fff',
-                color: activeFilters > 0 ? '#0369a1' : '#6b7280',
+                borderColor: activeFilters > 0 ? '#0369a1' : (isDark ? '#374151' : '#e5e7eb'),
+                backgroundColor: activeFilters > 0 ? (isDark ? '#1e3a5f' : '#eff6ff') : (isDark ? '#1f2937' : '#fff'),
+                color: activeFilters > 0 ? (isDark ? '#60a5fa' : '#0369a1') : (isDark ? '#9ca3af' : '#6b7280'),
               }}
             >
               <Filter size={15} />
@@ -368,17 +393,17 @@ export default function Contactos() {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-2 gap-3 mb-3 p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div className="grid grid-cols-2 gap-3 mb-3 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm dark-mode-transition">
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Estado</label>
-                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Estado</label>
+                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                   <option value="">Todos los estados</option>
                   {STATUSES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Canal de adquisición</label>
-                <select value={filterChannel} onChange={e => setFilterChannel(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Canal de adquisición</label>
+                <select value={filterChannel} onChange={e => setFilterChannel(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                   {channelOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
@@ -387,43 +412,43 @@ export default function Contactos() {
 
           {/* Bulk action bar */}
           {selected.size > 0 && (
-            <div className="mb-3 rounded-xl border-2 border-blue-200 bg-blue-50 divide-y divide-blue-100">
+            <div className="mb-3 rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 divide-y divide-blue-100 dark:divide-blue-900">
               {/* Row 1: counts + delete + close */}
               <div className="flex items-center gap-3 px-4 py-2.5">
-                <span className="text-sm font-semibold text-blue-800">
+                <span className="text-sm font-semibold text-blue-800 dark:text-blue-300">
                   {selected.size} seleccionado{selected.size !== 1 ? 's' : ''}
                 </span>
                 <div className="flex-1" />
                 <Button variant="danger" size="sm" loading={bulkSaving} onClick={handleBulkDelete}>
                   <Trash2 size={14} /> Eliminar seleccionados
                 </Button>
-                <button onClick={() => { setSelected(new Set()); setBulkSegment(''); setBulkChannel('') }} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => { setSelected(new Set()); setBulkSegment(''); setBulkChannel('') }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                   <X size={17} />
                 </button>
               </div>
               {/* Row 2: segment + channel bulk */}
               <div className="flex items-center gap-4 px-4 py-2.5 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Segmento:</span>
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Segmento:</span>
                   <select
                     value={bulkSegment}
                     onChange={e => setBulkSegment(e.target.value)}
-                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white"
+                    className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
                     <option value="">Seleccionar...</option>
                     {allSegments.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                   <Button variant="primary" size="sm" loading={bulkSaving} onClick={handleBulkSegment}>Aplicar</Button>
                 </div>
-                <div className="w-px h-5 bg-blue-200" />
+                <div className="w-px h-5 bg-blue-200 dark:bg-blue-800" />
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Canal de adquisición:</span>
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Canal de adquisición:</span>
                   <input
                     list="bulk-channel-list"
                     value={bulkChannel}
                     onChange={e => setBulkChannel(e.target.value)}
                     placeholder="B2B, INEGI, Google Maps..."
-                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white w-44"
+                    className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white w-44"
                   />
                   <datalist id="bulk-channel-list">
                     {channelOptions.filter(o => o.value).map(o => <option key={o.value} value={o.value} />)}
@@ -434,97 +459,178 @@ export default function Contactos() {
             </div>
           )}
 
-          {/* Table */}
+          {/* Table / Cards */}
           {loading ? (
             <div className="flex justify-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600" />
             </div>
+          ) : tabContacts.length === 0 ? (
+            <Card variant="elevated" className="px-6 py-16 text-center">
+              <p className="text-gray-400 text-base">No hay contactos en este segmento</p>
+              <p className="text-gray-300 text-sm mt-1">Importa contactos o muévelos aquí desde otro segmento</p>
+            </Card>
           ) : (
-            <Card variant="elevated" className="overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr style={{ backgroundColor: '#f0f9ff', borderBottom: '2px solid #bae6fd' }}>
-                      <th className="px-4 py-3 w-10">
-                        <button onClick={toggleSelectAll} className="text-gray-400 hover:text-blue-600 transition">
-                          {selected.size === tabContacts.length && tabContacts.length > 0
-                            ? <CheckSquare size={16} className="text-blue-600" /> : <Square size={16} />}
-                        </button>
-                      </th>
-                      {['Nombre', 'Teléfono', 'Empresa', 'Canal de adquisición', ...(activeTab === '__todos__' ? ['Segmento'] : []), 'Descripción', 'Estado', 'Acciones'].map(h => (
-                        <th key={h} className="px-4 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {tabContacts.length === 0 ? (
-                      <tr>
-                        <td colSpan={activeTab === '__todos__' ? 9 : 8} className="px-6 py-16 text-center">
-                          <p className="text-gray-400 text-base">No hay contactos en este segmento</p>
-                          <p className="text-gray-300 text-sm mt-1">Importa contactos o muévelos aquí desde otro segmento</p>
-                        </td>
-                      </tr>
-                    ) : tabContacts.map(c => (
-                      <tr key={c.id} className="hover:bg-blue-50/20 transition"
-                        style={{ backgroundColor: selected.has(c.id) ? '#eff6ff' : undefined }}>
-                        <td className="px-4 py-3">
-                          <button onClick={() => toggleSelect(c.id)} className="text-gray-300 hover:text-blue-600 transition">
-                            {selected.has(c.id) ? <CheckSquare size={16} className="text-blue-600" /> : <Square size={16} />}
-                          </button>
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="font-semibold text-gray-900 text-sm">{c.name}</p>
-                          {c.email && <p className="text-xs text-gray-400">{c.email}</p>}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 font-mono text-sm">{c.phone}</td>
-                        <td className="px-4 py-3 text-gray-600 text-sm">{c.company || '—'}</td>
-                        <td className="px-4 py-3">
-                          {c.acquisition_channel
-                            ? <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: '#f0f9ff', color: '#0369a1' }}>{c.acquisition_channel}</span>
-                            : <span className="text-gray-300 text-xs">—</span>}
-                        </td>
-                        {activeTab === '__todos__' && (
-                          <td className="px-4 py-3">
-                            {c.segment ? (
-                              <span className="text-xs px-2 py-0.5 rounded-full font-semibold capitalize"
-                                style={{ backgroundColor: (segments.find((s:any) => s.name.toLowerCase() === c.segment?.toLowerCase())?.color || '#6b7280') + '20', color: segments.find((s:any) => s.name.toLowerCase() === c.segment?.toLowerCase())?.color || '#6b7280' }}>
-                                {c.segment}
-                              </span>
-                            ) : <span className="text-gray-300 text-xs">—</span>}
-                          </td>
-                        )}
-                        <td className="px-4 py-3 text-gray-500 text-sm max-w-xs truncate">
-                          {(() => {
-                            const seg = segments.find((s:any) => s.name.toLowerCase() === c.segment?.toLowerCase())
-                            return seg?.description || <span className="text-gray-300 text-xs">—</span>
-                          })()}
-                        </td>
-                        <td className="px-4 py-3">
+            <>
+              {/* Mobile: card list */}
+              <div className="md:hidden space-y-2">
+                <div className="flex items-center gap-2 px-1 pb-1">
+                  <button onClick={toggleSelectAll} className="text-gray-400 hover:text-blue-600 transition flex items-center gap-1.5 text-xs font-semibold">
+                    {selected.size === tabContacts.length && tabContacts.length > 0
+                      ? <CheckSquare size={15} className="text-blue-600" /> : <Square size={15} />}
+                    Seleccionar todos
+                  </button>
+                </div>
+                {tabContacts.map(c => {
+                  const seg = segments.find((s: any) => s.name.toLowerCase() === c.segment?.toLowerCase())
+                  const isSelected = selected.has(c.id)
+                  return (
+                    <div
+                      key={c.id}
+                      className="rounded-xl border-2 transition p-4 flex gap-3 dark-mode-transition"
+                      style={{
+                        borderColor: isSelected ? '#93c5fd' : (isDark ? '#374151' : '#f3f4f6'),
+                        backgroundColor: isSelected ? (isDark ? '#1e3a5f' : '#eff6ff') : (isDark ? '#1f2937' : '#fff'),
+                      }}
+                    >
+                      {/* Checkbox */}
+                      <button onClick={() => toggleSelect(c.id)} className="mt-0.5 flex-shrink-0 text-gray-300 hover:text-blue-600 transition">
+                        {isSelected ? <CheckSquare size={17} className="text-blue-600" /> : <Square size={17} />}
+                      </button>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        {/* Row 1: name + status */}
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <p className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">{c.name}</p>
                           <Badge variant={statusBadge[c.prospect_status]}>{statusLabel[c.prospect_status] || c.prospect_status}</Badge>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-1.5">
-                            <Link href={`/contactos/${c.id}`}>
-                              <Button variant="secondary" size="sm"><Edit size={14} /></Button>
-                            </Link>
-                            <Button variant="danger" size="sm" onClick={() => handleDelete(c.id)}>
-                              <Trash2 size={14} />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-sm text-gray-500">
-                <span>
+                        </div>
+
+                        {/* Row 2: phone */}
+                        <p className="font-mono text-sm text-gray-600 dark:text-gray-300 mb-1">{c.phone}</p>
+
+                        {/* Row 3: email */}
+                        {c.email && <p className="text-xs text-gray-400 dark:text-gray-500 truncate mb-1">{c.email}</p>}
+
+                        {/* Row 4: company + channel */}
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {c.company && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium">{c.company}</span>
+                          )}
+                          {c.acquisition_channel && (
+                            <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">{c.acquisition_channel}</span>
+                          )}
+                          {activeTab === '__todos__' && c.segment && (
+                            <span className="text-xs px-2 py-0.5 rounded-full font-semibold capitalize"
+                              style={{ backgroundColor: (seg?.color || '#6b7280') + '20', color: seg?.color || '#6b7280' }}>
+                              {c.segment}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Row 5: segment description */}
+                        {seg?.description && (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5 line-clamp-1">{seg.description}</p>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex gap-2 mt-3">
+                          <Link href={`/contactos/${c.id}`} className="flex-1">
+                            <Button variant="secondary" size="sm" className="w-full justify-center"><Edit size={13} /> Editar</Button>
+                          </Link>
+                          <Button variant="danger" size="sm" onClick={() => handleDelete(c.id)}>
+                            <Trash2 size={13} />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+                <div className="px-1 py-2 text-sm text-gray-500 dark:text-gray-400">
                   <strong>{tabContacts.length.toLocaleString()}</strong> contactos
                   {(search || activeFilters > 0) && ` (filtrado de ${activeTab === '__todos__' ? contacts.length : tabs.find(t => t.key === activeTab)?.count ?? 0})`}
-                </span>
-                {selected.size > 0 && <span className="text-blue-600 font-semibold">{selected.size} seleccionados</span>}
+                </div>
               </div>
-            </Card>
+
+              {/* Desktop: table */}
+              <Card variant="elevated" className="overflow-hidden hidden md:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr style={{ backgroundColor: isDark ? '#1e3a5f' : '#f0f9ff', borderBottom: isDark ? '2px solid #1d4ed8' : '2px solid #bae6fd' }}>
+                        <th className="px-4 py-3 w-10">
+                          <button onClick={toggleSelectAll} className="text-gray-400 hover:text-blue-600 transition">
+                            {selected.size === tabContacts.length && tabContacts.length > 0
+                              ? <CheckSquare size={16} className="text-blue-600" /> : <Square size={16} />}
+                          </button>
+                        </th>
+                        {['Nombre', 'Teléfono', 'Empresa', 'Canal de adquisición', ...(activeTab === '__todos__' ? ['Segmento'] : []), 'Descripción', 'Estado', 'Acciones'].map(h => (
+                          <th key={h} className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
+                      {tabContacts.map(c => (
+                        <tr key={c.id} className="hover:bg-blue-50/20 dark:hover:bg-blue-900/10 transition"
+                          style={{ backgroundColor: selected.has(c.id) ? (isDark ? '#1e3a5f' : '#eff6ff') : undefined }}>
+                          <td className="px-4 py-3">
+                            <button onClick={() => toggleSelect(c.id)} className="text-gray-300 hover:text-blue-600 transition">
+                              {selected.has(c.id) ? <CheckSquare size={16} className="text-blue-600" /> : <Square size={16} />}
+                            </button>
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="font-semibold text-gray-900 dark:text-white text-sm">{c.name}</p>
+                            {c.email && <p className="text-xs text-gray-400 dark:text-gray-500">{c.email}</p>}
+                          </td>
+                          <td className="px-4 py-3 text-gray-600 dark:text-gray-300 font-mono text-sm">{c.phone}</td>
+                          <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-sm">{c.company || '—'}</td>
+                          <td className="px-4 py-3">
+                            {c.acquisition_channel
+                              ? <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">{c.acquisition_channel}</span>
+                              : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
+                          </td>
+                          {activeTab === '__todos__' && (
+                            <td className="px-4 py-3">
+                              {c.segment ? (
+                                <span className="text-xs px-2 py-0.5 rounded-full font-semibold capitalize"
+                                  style={{ backgroundColor: (segments.find((s:any) => s.name.toLowerCase() === c.segment?.toLowerCase())?.color || '#6b7280') + '30', color: segments.find((s:any) => s.name.toLowerCase() === c.segment?.toLowerCase())?.color || '#6b7280' }}>
+                                  {c.segment}
+                                </span>
+                              ) : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
+                            </td>
+                          )}
+                          <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-sm max-w-xs truncate">
+                            {(() => {
+                              const seg = segments.find((s:any) => s.name.toLowerCase() === c.segment?.toLowerCase())
+                              return seg?.description || <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                            })()}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant={statusBadge[c.prospect_status]}>{statusLabel[c.prospect_status] || c.prospect_status}</Badge>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex gap-1.5">
+                              <Link href={`/contactos/${c.id}`}>
+                                <Button variant="secondary" size="sm"><Edit size={14} /></Button>
+                              </Link>
+                              <Button variant="danger" size="sm" onClick={() => handleDelete(c.id)}>
+                                <Trash2 size={14} />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="px-5 py-3 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
+                  <span>
+                    <strong>{tabContacts.length.toLocaleString()}</strong> contactos
+                    {(search || activeFilters > 0) && ` (filtrado de ${activeTab === '__todos__' ? contacts.length : tabs.find(t => t.key === activeTab)?.count ?? 0})`}
+                  </span>
+                  {selected.size > 0 && <span className="text-blue-600 font-semibold">{selected.size} seleccionados</span>}
+                </div>
+              </Card>
+            </>
           )}
         </div>
       </div>
@@ -532,17 +638,17 @@ export default function Contactos() {
       {/* Modal importar Excel */}
       {xlsxModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-start">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col dark-mode-transition">
+            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-start">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Importar desde Excel</h2>
-                <p className="text-gray-500 text-sm mt-1">Selecciona las hojas que deseas importar</p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Importar desde Excel</h2>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Selecciona las hojas que deseas importar</p>
               </div>
-              <button onClick={() => setXlsxModal(false)} className="text-gray-400 hover:text-gray-600"><X size={22} /></button>
+              <button onClick={() => setXlsxModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={22} /></button>
             </div>
             <div className="overflow-y-auto flex-1 p-6 space-y-3">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-gray-500 font-medium">
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                   Total: <strong>{xlsxSheets.filter(s => s.selected).flatMap(s => s.rows).length.toLocaleString()}</strong> contactos
                 </span>
                 <div className="flex gap-3">
@@ -553,23 +659,30 @@ export default function Contactos() {
               {xlsxSheets.map((sheet, i) => (
                 <button key={sheet.name} onClick={() => setXlsxSheets(s => s.map((sh, j) => j === i ? { ...sh, selected: !sh.selected } : sh))}
                   className="w-full flex items-center gap-3 p-4 rounded-xl border-2 transition text-left"
-                  style={{ borderColor: sheet.selected ? '#16a34a' : '#e5e7eb', backgroundColor: sheet.selected ? '#f0fdf4' : '#fff' }}>
-                  <div style={{ color: sheet.selected ? '#16a34a' : '#d1d5db' }}>
+                  style={{
+                    borderColor: sheet.selected ? '#16a34a' : (isDark ? '#374151' : '#e5e7eb'),
+                    backgroundColor: sheet.selected ? (isDark ? '#14532d' : '#f0fdf4') : (isDark ? '#1f2937' : '#fff'),
+                  }}>
+                  <div style={{ color: sheet.selected ? '#16a34a' : (isDark ? '#6b7280' : '#d1d5db') }}>
                     {sheet.selected ? <CheckSquare size={20} /> : <Square size={20} />}
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-800">{sheet.name}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{sheet.rows.length.toLocaleString()} contactos</p>
+                    <p className="font-semibold text-gray-800 dark:text-gray-100">{sheet.name}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{sheet.rows.length.toLocaleString()} contactos</p>
                   </div>
-                  <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ backgroundColor: sheet.selected ? '#dcfce7' : '#f3f4f6', color: sheet.selected ? '#15803d' : '#9ca3af' }}>
+                  <span className="text-xs font-bold px-2 py-1 rounded-full"
+                    style={{
+                      backgroundColor: sheet.selected ? (isDark ? '#166534' : '#dcfce7') : (isDark ? '#374151' : '#f3f4f6'),
+                      color: sheet.selected ? (isDark ? '#86efac' : '#15803d') : (isDark ? '#9ca3af' : '#9ca3af'),
+                    }}>
                     {sheet.rows.length.toLocaleString()}
                   </span>
                 </button>
               ))}
             </div>
-            <div className="p-6 border-t border-gray-100 flex gap-3 justify-end">
+            <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex gap-3 justify-end">
               <Button variant="secondary" onClick={() => setXlsxModal(false)}>Cancelar</Button>
-              <Button variant="primary" loading={xlsxImporting} onClick={handleXLSXImport} style={{ backgroundColor: '#16a34a' }}>
+              <Button variant="primary" loading={xlsxImporting} onClick={handleXLSXImport} className="bg-green-600 hover:bg-green-700">
                 <FileSpreadsheet size={16} />
                 Importar {xlsxSheets.filter(s => s.selected).flatMap(s => s.rows).length.toLocaleString()} contactos
               </Button>

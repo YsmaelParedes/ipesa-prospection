@@ -85,41 +85,42 @@ export default function Scraper() {
   return (
     <>
       <Navbar />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 dark-mode-transition">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Scraper de Prospectos</h1>
+        <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Scraper de Prospectos</h1>
 
         {/* Formulario */}
-        <form onSubmit={handleSearch} className="bg-white p-6 rounded-lg shadow mb-6">
+        <form onSubmit={handleSearch} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow mb-6 dark-mode-transition">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
             <div>
-              <label className="block text-sm font-semibold mb-2">Giro / Actividad</label>
+              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Giro / Actividad</label>
               <input
                 type="text"
                 placeholder="ej: ferreteria, pintura, taller"
                 value={form.query}
                 onChange={e => setForm({ ...form, query: e.target.value })}
-                className="w-full border rounded px-3 py-2"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white dark-mode-transition"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-2">Código Postal</label>
+              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Código Postal</label>
               <input
                 type="text"
                 placeholder="ej: 64000"
                 value={form.cp}
                 onChange={e => setForm({ ...form, cp: e.target.value })}
-                className="w-full border rounded px-3 py-2"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white dark-mode-transition"
                 maxLength={5}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-2">Fuente</label>
+              <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Fuente</label>
               <select
                 value={form.source}
                 onChange={e => setForm({ ...form, source: e.target.value })}
-                className="w-full border rounded px-3 py-2"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white dark-mode-transition"
               >
                 <option value="inegi">INEGI DENUE</option>
                 <option value="google_maps">Google Maps</option>
@@ -134,7 +135,7 @@ export default function Scraper() {
             </button>
           </div>
           {ciudad && (
-            <p className="text-sm text-gray-500 mt-3">Zona: <strong>{ciudad}</strong></p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-3">Zona: <strong>{ciudad}</strong></p>
           )}
         </form>
 
@@ -143,17 +144,17 @@ export default function Scraper() {
           <>
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4 mb-4">
-              <div className="bg-white rounded-lg shadow p-4 text-center border-l-4 border-blue-500">
-                <p className="text-2xl font-bold">{results.length}</p>
-                <p className="text-sm text-gray-600">Negocios encontrados</p>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center border-l-4 border-blue-500 dark-mode-transition">
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{results.length}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Negocios encontrados</p>
               </div>
-              <div className="bg-white rounded-lg shadow p-4 text-center border-l-4 border-green-500">
-                <p className="text-2xl font-bold">{withPhone}</p>
-                <p className="text-sm text-gray-600">Con teléfono</p>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center border-l-4 border-green-500 dark-mode-transition">
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{withPhone}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Con teléfono</p>
               </div>
-              <div className="bg-white rounded-lg shadow p-4 text-center border-l-4 border-emerald-500">
-                <p className="text-2xl font-bold">{withWA}</p>
-                <p className="text-sm text-gray-600">Posible WhatsApp</p>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center border-l-4 border-emerald-500 dark-mode-transition">
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{withWA}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Posible WhatsApp</p>
               </div>
             </div>
 
@@ -166,7 +167,7 @@ export default function Scraper() {
                   onChange={toggleAll}
                   className="w-4 h-4"
                 />
-                <span className="text-sm text-gray-600">{selected.size} seleccionados</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{selected.size} seleccionados</span>
               </div>
               {selected.size > 0 && (
                 <button
@@ -179,23 +180,23 @@ export default function Scraper() {
             </div>
 
             {/* Tabla */}
-            <div className="bg-white rounded-lg shadow overflow-x-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto dark-mode-transition">
               <table className="w-full text-sm">
-                <thead className="bg-gray-100 border-b">
+                <thead className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                   <tr>
                     <th className="px-3 py-3 w-8"></th>
-                    <th className="px-3 py-3 text-left">Nombre</th>
-                    <th className="px-3 py-3 text-left">Teléfono</th>
-                    <th className="px-3 py-3 text-center">WhatsApp</th>
-                    <th className="px-3 py-3 text-left">Dirección</th>
-                    <th className="px-3 py-3 text-left">Segmento</th>
+                    <th className="px-3 py-3 text-left text-gray-700 dark:text-gray-300">Nombre</th>
+                    <th className="px-3 py-3 text-left text-gray-700 dark:text-gray-300">Teléfono</th>
+                    <th className="px-3 py-3 text-center text-gray-700 dark:text-gray-300">WhatsApp</th>
+                    <th className="px-3 py-3 text-left text-gray-700 dark:text-gray-300">Dirección</th>
+                    <th className="px-3 py-3 text-left text-gray-700 dark:text-gray-300">Segmento</th>
                   </tr>
                 </thead>
                 <tbody>
                   {results.map((r, idx) => (
                     <tr
                       key={idx}
-                      className={`border-b hover:bg-gray-50 cursor-pointer ${selected.has(idx) ? 'bg-blue-50' : ''}`}
+                      className={`border-b border-gray-100 dark:border-gray-700 cursor-pointer transition ${selected.has(idx) ? 'bg-blue-50 dark:bg-blue-950/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}`}
                       onClick={() => toggleSelect(idx)}
                     >
                       <td className="px-3 py-3">
@@ -207,12 +208,12 @@ export default function Scraper() {
                           className="w-4 h-4"
                         />
                       </td>
-                      <td className="px-3 py-3 font-medium">{r.name}</td>
+                      <td className="px-3 py-3 font-medium text-gray-900 dark:text-white">{r.name}</td>
                       <td className="px-3 py-3">
                         {r.phone ? (
-                          <span className="font-mono">{r.phone}</span>
+                          <span className="font-mono text-gray-700 dark:text-gray-300">{r.phone}</span>
                         ) : (
-                          <span className="text-gray-400 text-xs">Sin teléfono</span>
+                          <span className="text-gray-400 dark:text-gray-500 text-xs">Sin teléfono</span>
                         )}
                       </td>
                       <td className="px-3 py-3 text-center">
@@ -227,10 +228,10 @@ export default function Scraper() {
                             WA
                           </a>
                         ) : (
-                          <span className="text-gray-300 text-xs">—</span>
+                          <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
                         )}
                       </td>
-                      <td className="px-3 py-3 text-gray-600 text-xs">{r.address}</td>
+                      <td className="px-3 py-3 text-gray-600 dark:text-gray-400 text-xs">{r.address}</td>
                       <td className="px-3 py-3">
                         <span className={`text-xs px-2 py-1 rounded font-semibold ${segmentColor(r.segment)}`}>
                           {r.segment}
@@ -244,17 +245,18 @@ export default function Scraper() {
           </>
         )}
       </div>
+      </div>
     </>
   )
 }
 
 function segmentColor(segment: string): string {
   const map: Record<string, string> = {
-    construccion: 'bg-yellow-100 text-yellow-800',
-    retail: 'bg-blue-100 text-blue-800',
-    industrial: 'bg-red-100 text-red-800',
-    automotriz: 'bg-purple-100 text-purple-800',
-    residencial: 'bg-green-100 text-green-800',
+    construccion: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300',
+    retail: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300',
+    industrial: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
+    automotriz: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300',
+    residencial: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
   }
-  return map[segment] || 'bg-gray-100 text-gray-800'
+  return map[segment] || 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
 }

@@ -92,7 +92,7 @@ export default function EditContacto() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen py-8" style={{ backgroundColor: '#f8fafc' }}>
+      <div className="min-h-screen py-8 bg-gray-50 dark:bg-gray-900 dark-mode-transition">
         <div className="max-w-5xl mx-auto px-4">
 
           <div className="flex items-center gap-3 mb-8">
@@ -100,8 +100,8 @@ export default function EditContacto() {
               <ArrowLeft size={16} /> Volver
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{form.name}</h1>
-              <p className="text-gray-500 text-sm">{form.company} · {form.phone}</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{form.name}</h1>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">{form.company} · {form.phone}</p>
             </div>
           </div>
 
@@ -110,7 +110,7 @@ export default function EditContacto() {
             {/* Columna izquierda: Formulario */}
             <div className="lg:col-span-1 space-y-6">
               <Card variant="elevated" className="p-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-4">Datos del Contacto</h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Datos del Contacto</h2>
                 <form onSubmit={handleSave} className="space-y-3">
                   <Input label="Nombre" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
                   <Input label="Teléfono" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required />
@@ -145,26 +145,26 @@ export default function EditContacto() {
 
               {/* Historial de seguimiento */}
               <Card variant="elevated" className="overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                  <h2 className="font-bold text-gray-900">Historial de Seguimiento</h2>
+                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                  <h2 className="font-bold text-gray-900 dark:text-white">Historial de Seguimiento</h2>
                   <div className="flex gap-2">
                     <Badge variant="warning">{pending.length} pendientes</Badge>
                     <Badge variant="success">{completed.length} completados</Badge>
                   </div>
                 </div>
                 {followUps.length === 0 ? (
-                  <div className="p-8 text-center text-gray-400">
+                  <div className="p-8 text-center text-gray-400 dark:text-gray-500">
                     <p>Sin seguimientos asignados.</p>
                     <p className="text-sm mt-1">Ve a <strong>Seguimiento → Nuevo Plan</strong> para asignar una secuencia.</p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-gray-50">
+                  <div className="divide-y divide-gray-50 dark:divide-gray-700/50">
                     {followUps.map(fu => (
                       <div key={fu.id} className={`px-6 py-4 ${fu.status === 'completed' ? 'opacity-60' : ''}`}>
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold text-gray-900 text-sm">{fu.follow_up_stages?.stage_name}</span>
+                              <span className="font-semibold text-gray-900 dark:text-white text-sm">{fu.follow_up_stages?.stage_name}</span>
                               <Badge variant={TONE_BADGE[fu.follow_up_stages?.tone] || 'default'} className="text-xs">
                                 {fu.follow_up_stages?.tone}
                               </Badge>
@@ -172,12 +172,12 @@ export default function EditContacto() {
                                 {fu.status === 'completed' ? '✓ Completo' : '⏳ Pendiente'}
                               </Badge>
                             </div>
-                            <p className="text-gray-500 text-xs">{fu.follow_up_stages?.objective}</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-xs">{fu.follow_up_stages?.objective}</p>
                             {fu.notes && (
-                              <p className="text-gray-600 text-xs mt-1 italic">"{fu.notes}"</p>
+                              <p className="text-gray-600 dark:text-gray-400 text-xs mt-1 italic">"{fu.notes}"</p>
                             )}
                           </div>
-                          <span className="text-xs text-gray-400 whitespace-nowrap ml-4">
+                          <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap ml-4">
                             Día {fu.follow_up_stages?.day} · {format(new Date(fu.scheduled_date), "d MMM", { locale: es })}
                           </span>
                         </div>
@@ -189,21 +189,21 @@ export default function EditContacto() {
 
               {/* Notas internas */}
               <Card variant="elevated" className="overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                  <h2 className="font-bold text-gray-900">Notas Internas</h2>
+                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                  <h2 className="font-bold text-gray-900 dark:text-white">Notas Internas</h2>
                   <Button variant="outline" size="sm" onClick={() => setShowNoteForm(!showNoteForm)}>
                     <Plus size={15} /> Agregar
                   </Button>
                 </div>
 
                 {showNoteForm && (
-                  <div className="px-6 py-4 bg-gray-50 border-b border-gray-100">
+                  <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700">
                     <div className="flex gap-2 mb-2">
                       {['info', 'interes', 'objecion', 'accion'].map(t => (
                         <button
                           key={t}
                           onClick={() => setNoteType(t)}
-                          className={`text-xs px-3 py-1 rounded-full font-semibold border transition ${noteType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'}`}
+                          className={`text-xs px-3 py-1 rounded-full font-semibold border transition ${noteType === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-blue-400'}`}
                         >
                           {t}
                         </button>
@@ -213,7 +213,7 @@ export default function EditContacto() {
                       value={newNote}
                       onChange={e => setNewNote(e.target.value)}
                       placeholder="Escribe la nota aquí..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 h-20 resize-none"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 h-20 resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white dark-mode-transition"
                     />
                     <div className="flex gap-2 mt-2">
                       <Button variant="primary" size="sm" onClick={handleAddNote}>Guardar</Button>
@@ -225,15 +225,15 @@ export default function EditContacto() {
                 {notes.length === 0 ? (
                   <p className="p-6 text-center text-gray-400 text-sm">Sin notas todavía</p>
                 ) : (
-                  <div className="divide-y divide-gray-50">
+                  <div className="divide-y divide-gray-50 dark:divide-gray-700/50">
                     {notes.map(note => (
                       <div key={note.id} className="px-6 py-3">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <Badge variant={NOTE_BADGE[note.note_type] || 'default'} className="text-xs mb-1">{note.note_type}</Badge>
-                            <p className="text-gray-800 text-sm">{note.content}</p>
+                            <p className="text-gray-800 dark:text-gray-200 text-sm">{note.content}</p>
                           </div>
-                          <span className="text-xs text-gray-400 ml-4 whitespace-nowrap">
+                          <span className="text-xs text-gray-400 dark:text-gray-500 ml-4 whitespace-nowrap">
                             {format(new Date(note.created_at), "d MMM", { locale: es })}
                           </span>
                         </div>

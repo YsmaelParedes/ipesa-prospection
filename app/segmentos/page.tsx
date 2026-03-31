@@ -110,7 +110,7 @@ export default function Segmentos() {
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Clasificados</p>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm p-3 sm:p-4 text-center dark-mode-transition">
-              <p className="text-xl sm:text-2xl font-bold" style={{ color: withoutSegment > 0 ? '#d97706' : '#15803d' }}>{withoutSegment.toLocaleString()}</p>
+              <p className={`text-xl sm:text-2xl font-bold ${withoutSegment > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-green-700 dark:text-green-400'}`}>{withoutSegment.toLocaleString()}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Sin segmento</p>
             </div>
           </div>
