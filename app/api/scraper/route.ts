@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import axios from 'axios'
 
-export const maxDuration = 60
+export const maxDuration = 50
+
+// Límite de búsquedas concurrentes: si ya hay N en proceso, rechazar con 429
+// Funciona en un proceso Node.js único (Railway, VPS). En serverless es no-op.
+let activeScrapes = 0
+const MAX_CONCURRENT = 2
 
 const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY
 const INEGI_API_KEY = process.env.INEGI_API_KEY
@@ -99,7 +104,7 @@ async function searchINEGI(term: string, lat: number, lng: number, radius: numbe
   try {
     const { data } = await axios.get(url, {
       headers: { Accept: 'application/json' },
-      timeout: 25000,
+      timeout: 15000,
       validateStatus: () => true,
     })
     if (typeof data === 'string' || !Array.isArray(data)) return []
@@ -110,6 +115,14 @@ async function searchINEGI(term: string, lat: number, lng: number, radius: numbe
 }
 
 export async function POST(req: NextRequest) {
+  if (activeScrapes >= MAX_CONCURRENT) {
+    return NextResponse.json(
+      { error: 'El servidor está procesando otra búsqueda. Intenta en unos segundos.' },
+      { status: 429 }
+    )
+  }
+
+  activeScrapes++
   try {
     const { query, location, locationType, source } = await req.json()
 
@@ -192,7 +205,7 @@ export async function POST(req: NextRequest) {
       for (const t of terms) {
         const batch = await searchINEGI(t, coords.lat, coords.lng, radius)
         searches.push(batch)
-        if (searches.flat().length >= 500) break // suficientes resultados
+        if (searches.flat().length >= 200) break // suficientes resultados, mantener búsqueda rápida
       }
 
       // Aplanar y deduplicar por ID INEGI o (nombre + CP)
@@ -245,5 +258,7 @@ export async function POST(req: NextRequest) {
     const msg = error?.response?.data?.error_message || error.message
     console.error('Scraper error:', msg)
     return NextResponse.json({ error: msg }, { status: 500 })
+  } finally {
+    activeScrapes--
   }
 }

@@ -128,6 +128,7 @@ export default function Scraper() {
 
       setLoadingMsg('Buscando negocios en el área...')
       const data = await res.json()
+      if (res.status === 429) throw new Error(data.error)
       if (!res.ok) throw new Error(data.error)
 
       const newResults = data.data || []

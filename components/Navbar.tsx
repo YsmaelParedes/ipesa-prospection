@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useTheme } from '@/components/ThemeProvider'
-import { Menu, X, BarChart3, Users, MessageSquare, Clock, Search, Settings, Tag, ChevronDown, RefreshCw, Moon, Sun } from 'lucide-react'
+import { Menu, X, BarChart3, Users, MessageSquare, Clock, Search, Settings, Tag, ChevronDown, RefreshCw, Moon, Sun, LogOut } from 'lucide-react'
 
 const mainMenu = [
   { href: '/', label: 'Dashboard', icon: BarChart3 },
@@ -23,6 +24,13 @@ export default function Navbar() {
   const [configOpen, setConfigOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { theme, toggleTheme } = useTheme()
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push('/login')
+    router.refresh()
+  }
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -101,6 +109,16 @@ export default function Navbar() {
               aria-label="Cambiar tema"
             >
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+            </button>
+
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/15 transition duration-200"
+              aria-label="Cerrar sesión"
+              title="Cerrar sesión"
+            >
+              <LogOut size={20} />
             </button>
 
             {/* Mobile toggle */}

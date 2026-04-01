@@ -22,6 +22,20 @@ const STATUSES = [
   { value: 'cliente', label: 'Cliente' },
   { value: 'rechazado', label: 'Rechazado' },
 ]
+
+const ACQUISITION_CHANNELS = [
+  { value: '', label: 'Seleccionar canal...' },
+  { value: 'Scraper INEGI', label: 'Scraper INEGI' },
+  { value: 'Google Maps', label: 'Google Maps' },
+  { value: 'Referido', label: 'Referido' },
+  { value: 'Visita directa', label: 'Visita directa' },
+  { value: 'Llamada en frío', label: 'Llamada en frío' },
+  { value: 'Redes sociales', label: 'Redes sociales' },
+  { value: 'WhatsApp', label: 'WhatsApp' },
+  { value: 'Email', label: 'Email' },
+  { value: 'Feria / Evento', label: 'Feria / Evento' },
+  { value: 'Otro', label: 'Otro' },
+]
 const statusBadge: Record<string, any> = {
   nuevo: 'info', contactado: 'warning', interesado: 'success', cliente: 'success', rechazado: 'danger',
 }
@@ -153,12 +167,12 @@ export default function Contactos() {
   }
 
   const handleBulkChannel = async () => {
-    if (!bulkChannel.trim()) { toast.error('Escribe un canal de adquisición'); return }
+    if (!bulkChannel) { toast.error('Selecciona un canal de adquisición'); return }
     if (selected.size === 0) return
     try {
       setBulkSaving(true)
-      await Promise.all([...selected].map(id => updateContact(id, { acquisition_channel: bulkChannel.trim() })))
-      toast.success(`${selected.size} contactos → canal "${bulkChannel.trim()}"`)
+      await Promise.all([...selected].map(id => updateContact(id, { acquisition_channel: bulkChannel })))
+      toast.success(`${selected.size} contactos → canal "${bulkChannel}"`)
       setSelected(new Set()); setBulkChannel(''); fetchAll()
     } catch (error: any) { toast.error(error.message) }
     finally { setBulkSaving(false) }
@@ -337,7 +351,7 @@ export default function Contactos() {
                   <Input label="Email" placeholder="juan@empresa.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
                   <Input label="Empresa" placeholder="Acme Corp" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} />
                   <Input label="Dirección" placeholder="Calle 123, Puebla" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
-                  <Input label="Canal de adquisición" placeholder="B2B, Referido..." value={form.acquisition_channel} onChange={e => setForm({ ...form, acquisition_channel: e.target.value })} />
+                  <Select label="Canal de adquisición" value={form.acquisition_channel} onChange={e => setForm({ ...form, acquisition_channel: e.target.value })} options={ACQUISITION_CHANNELS} />
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Segmento</label>
                     <input
@@ -443,16 +457,13 @@ export default function Contactos() {
                 <div className="w-px h-5 bg-blue-200 dark:bg-blue-800" />
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Canal de adquisición:</span>
-                  <input
-                    list="bulk-channel-list"
+                  <select
                     value={bulkChannel}
                     onChange={e => setBulkChannel(e.target.value)}
-                    placeholder="B2B, INEGI, Google Maps..."
-                    className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white w-44"
-                  />
-                  <datalist id="bulk-channel-list">
-                    {channelOptions.filter(o => o.value).map(o => <option key={o.value} value={o.value} />)}
-                  </datalist>
+                    className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    {ACQUISITION_CHANNELS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
                   <Button variant="primary" size="sm" loading={bulkSaving} onClick={handleBulkChannel}>Aplicar</Button>
                 </div>
               </div>
