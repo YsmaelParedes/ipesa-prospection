@@ -276,39 +276,53 @@ export default function Contactos() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 dark-mode-transition">
-        <div className="max-w-7xl mx-auto px-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 sm:py-8 dark-mode-transition">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4">
 
           {/* Header */}
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-1">Gestión de Contactos</h1>
-              <p className="text-gray-500 dark:text-gray-400">{contacts.length.toLocaleString()} contactos · {tabs.length - 1} segmentos</p>
+          <div className="flex justify-between items-center mb-5 gap-3">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-0.5 truncate">Contactos</h1>
+              <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">{contacts.length.toLocaleString()} contactos · {tabs.length - 1} segmentos</p>
             </div>
-            <div className="flex gap-2">
-              <Button variant="primary" onClick={() => setShowForm(!showForm)}>
-                <Plus size={18} /> Nuevo
+            <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
+              <Button variant="primary" size="sm" onClick={() => setShowForm(!showForm)}>
+                <Plus size={16} /> <span className="hidden xs:inline sm:inline">Nuevo</span>
               </Button>
-              <label>
-                <div className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 font-semibold rounded-lg px-3 py-2 inline-flex items-center gap-1.5 cursor-pointer transition text-sm">
-                  <Upload size={15} /> CSV
+              <label className="cursor-pointer">
+                <div className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 font-semibold rounded-lg px-2.5 py-1.5 inline-flex items-center gap-1 transition text-sm">
+                  <Upload size={14} /> <span className="hidden sm:inline">CSV</span>
                 </div>
                 <input type="file" accept=".csv" onChange={handleCSV} className="hidden" />
               </label>
-              <label>
-                <div className="bg-green-600 hover:bg-green-700 font-semibold rounded-lg px-3 py-2 inline-flex items-center gap-1.5 cursor-pointer transition text-sm text-white">
-                  <FileSpreadsheet size={15} /> Excel
+              <label className="cursor-pointer">
+                <div className="bg-green-600 hover:bg-green-700 font-semibold rounded-lg px-2.5 py-1.5 inline-flex items-center gap-1 transition text-sm text-white">
+                  <FileSpreadsheet size={14} /> <span className="hidden sm:inline">Excel</span>
                 </div>
                 <input type="file" accept=".xlsx,.xls" onChange={handleXLSX} className="hidden" />
               </label>
-              <Button variant="secondary" onClick={handleBackup} title="Descargar backup completo">
-                <Download size={15} /> Backup
+              <Button variant="secondary" size="sm" onClick={handleBackup} title="Descargar backup completo">
+                <Download size={14} /> <span className="hidden sm:inline">Backup</span>
               </Button>
             </div>
           </div>
 
-          {/* Segment tabs — wrapping */}
-          <div className="flex flex-wrap items-end gap-0 mb-0 border-b-2 border-gray-200 dark:border-gray-700">
+          {/* Segment tabs — mobile: select, desktop: tab bar */}
+          <div className="md:hidden mb-3">
+            <select
+              value={activeTab}
+              onChange={e => { setActiveTab(e.target.value); setSelected(new Set()); setSearch('') }}
+              className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark-mode-transition"
+            >
+              {tabs.map(tab => (
+                <option key={tab.key} value={tab.key}>
+                  {tab.label} ({tab.count})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="hidden md:flex flex-wrap items-end gap-0 mb-0 border-b-2 border-gray-200 dark:border-gray-700">
             {tabs.map(tab => {
               const isActive = activeTab === tab.key
               return (
@@ -352,19 +366,15 @@ export default function Contactos() {
                   <Input label="Empresa" placeholder="Acme Corp" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} />
                   <Input label="Dirección" placeholder="Calle 123, Puebla" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
                   <Select label="Canal de adquisición" value={form.acquisition_channel} onChange={e => setForm({ ...form, acquisition_channel: e.target.value })} options={ACQUISITION_CHANNELS} />
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Segmento</label>
-                    <input
-                      list="segment-list"
-                      value={form.segment}
-                      onChange={e => setForm({ ...form, segment: e.target.value })}
-                      placeholder="Seleccionar o escribir..."
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white dark-mode-transition"
-                    />
-                    <datalist id="segment-list">
-                      {allSegments.map(s => <option key={s} value={s} />)}
-                    </datalist>
-                  </div>
+                  <Select
+                    label="Segmento"
+                    value={form.segment}
+                    onChange={e => setForm({ ...form, segment: e.target.value })}
+                    options={[
+                      { value: '', label: 'Sin segmento' },
+                      ...allSegments.map(s => ({ value: s, label: s })),
+                    ]}
+                  />
                   <Select label="Estado" value={form.prospect_status} onChange={e => setForm({ ...form, prospect_status: e.target.value })} options={STATUSES} />
                 </div>
                 <div className="flex gap-2">

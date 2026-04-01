@@ -95,16 +95,16 @@ export default function EditContacto() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen py-8 bg-gray-50 dark:bg-gray-900 dark-mode-transition">
-        <div className="max-w-5xl mx-auto px-4">
+      <div className="min-h-screen py-4 sm:py-8 bg-gray-50 dark:bg-gray-900 dark-mode-transition">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4">
 
-          <div className="flex items-center gap-3 mb-8">
+          <div className="flex items-center gap-3 mb-5 sm:mb-8">
             <Button variant="secondary" size="sm" onClick={() => router.push('/contactos')}>
               <ArrowLeft size={16} /> Volver
             </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{form.name}</h1>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">{form.company} · {form.phone}</p>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white truncate">{form.name}</h1>
+              <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm truncate">{form.company} · {form.phone}</p>
             </div>
           </div>
 
