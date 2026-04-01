@@ -232,6 +232,7 @@ export async function POST(req: NextRequest) {
           activity: actividad,
           email: item.Correo_e || '',
           website: item.Sitio_internet || '',
+          inegi_id: item.Id ? String(item.Id) : null,
         }
       })
 

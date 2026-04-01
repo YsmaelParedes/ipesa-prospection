@@ -4,9 +4,18 @@ import { useState, useMemo } from 'react'
 import Navbar from '@/components/Navbar'
 import { importContacts } from '@/lib/supabase'
 import toast from 'react-hot-toast'
-import { Search, Download, MapPin, Phone, Wifi, Filter, X, SlidersHorizontal } from 'lucide-react'
+import { Search, Download, MapPin, Phone, Wifi, Filter, X, SlidersHorizontal, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 type LocationType = 'cp' | 'ciudad'
+
+function normalizePhone(phone: string): string {
+  if (!phone) return ''
+  const d = phone.replace(/\D/g, '')
+  if (d.startsWith('52') && d.length === 12) return d.slice(2)
+  if (d.length === 10) return d
+  if (d.length > 10) return d.slice(-10)
+  return d
+}
 
 export default function Scraper() {
   // ── Formulario ──────────────────────────────────────────────────────────────
@@ -18,7 +27,13 @@ export default function Scraper() {
   const [loadingMsg, setLoadingMsg] = useState('')
 
   // ── Selección ───────────────────────────────────────────────────────────────
-  const [selected, setSelected] = useState<Set<number>>(new Set()) // índices en results[]
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+
+  // ── Duplicados ──────────────────────────────────────────────────────────────
+  const [duplicatePhones, setDuplicatePhones] = useState<Set<string>>(new Set())
+  const [duplicateNames, setDuplicateNames] = useState<Set<string>>(new Set())
+  const [duplicateInegiIds, setDuplicateInegiIds] = useState<Set<string>>(new Set())
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false)
 
   // ── Filtros post-búsqueda ───────────────────────────────────────────────────
   const [showFilters, setShowFilters] = useState(false)
@@ -26,12 +41,22 @@ export default function Scraper() {
   const [filterWA, setFilterWA] = useState(false)
   const [filterSegment, setFilterSegment] = useState('')
   const [filterSearch, setFilterSearch] = useState('')
+  const [filterHideDuplicates, setFilterHideDuplicates] = useState(false)
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+  const isDuplicate = (r: any): boolean => {
+    if (r.inegi_id && duplicateInegiIds.has(r.inegi_id)) return true
+    if (r.phone && duplicatePhones.has(normalizePhone(r.phone))) return true
+    if (!r.phone && r.name && duplicateNames.has(r.name.toLowerCase().trim())) return true
+    return false
+  }
 
   // resultados con índice original preservado
   const filteredResults = useMemo(() => {
     return results
       .map((r, i) => ({ ...r, _idx: i }))
       .filter(r => {
+        if (filterHideDuplicates && isDuplicate(r)) return false
         if (filterPhone && !r.phone) return false
         if (filterWA && !r.whatsapp) return false
         if (filterSegment && r.segment !== filterSegment) return false
@@ -41,11 +66,41 @@ export default function Scraper() {
         }
         return true
       })
-  }, [results, filterPhone, filterWA, filterSegment, filterSearch])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [results, filterPhone, filterWA, filterSegment, filterSearch, filterHideDuplicates, duplicatePhones, duplicateNames, duplicateInegiIds])
 
-  const activeFilterCount = [filterPhone, filterWA, !!filterSegment, !!filterSearch].filter(Boolean).length
+  const duplicateCount = useMemo(() =>
+    results.filter(r => isDuplicate(r)).length
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  , [results, duplicatePhones, duplicateNames, duplicateInegiIds])
 
+  const activeFilterCount = [filterPhone, filterWA, !!filterSegment, !!filterSearch, filterHideDuplicates].filter(Boolean).length
   const uniqueSegments = useMemo(() => [...new Set(results.map(r => r.segment).filter(Boolean))].sort(), [results])
+
+  // ── Check duplicados (async, no bloquea UI) ─────────────────────────────────
+  const checkDuplicates = async (data: any[]) => {
+    if (!data.length) return
+    setCheckingDuplicates(true)
+    try {
+      const phones = data.map(r => r.phone).filter(Boolean)
+      const names = data.filter(r => !r.phone).map(r => r.name).filter(Boolean)
+      const inegi_ids = data.map(r => r.inegi_id).filter(Boolean)
+
+      const res = await fetch('/api/contacts/check-duplicates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phones, names, inegi_ids }),
+      })
+      const json = await res.json()
+      setDuplicatePhones(new Set(json.existingPhones || []))
+      setDuplicateNames(new Set(json.existingNames || []))
+      setDuplicateInegiIds(new Set(json.existingInegiIds || []))
+    } catch {
+      // Falla silenciosamente
+    } finally {
+      setCheckingDuplicates(false)
+    }
+  }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   const handleSearch = async (e: React.FormEvent) => {
@@ -59,7 +114,10 @@ export default function Scraper() {
       setHint('')
       setResults([])
       setSelected(new Set())
-      setFilterPhone(false); setFilterWA(false); setFilterSegment(''); setFilterSearch('')
+      setDuplicatePhones(new Set())
+      setDuplicateNames(new Set())
+      setDuplicateInegiIds(new Set())
+      setFilterPhone(false); setFilterWA(false); setFilterSegment(''); setFilterSearch(''); setFilterHideDuplicates(false)
       setLoadingMsg(form.locationType === 'cp' ? 'Geolocalizar código postal...' : 'Geolocalizar municipio...')
 
       const res = await fetch('/api/scraper', {
@@ -72,12 +130,14 @@ export default function Scraper() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
 
-      setResults(data.data || [])
+      const newResults = data.data || []
+      setResults(newResults)
       setCiudad(data.ciudad || '')
       setHint(data.hint || '')
 
-      if (data.data?.length > 0) {
-        toast.success(`${data.data.length} resultados encontrados`)
+      if (newResults.length > 0) {
+        toast.success(`${newResults.length} resultados encontrados`)
+        checkDuplicates(newResults) // async — no bloquea
       } else {
         toast.error('Sin resultados — prueba con otro término o zona')
       }
@@ -94,11 +154,18 @@ export default function Scraper() {
   }
 
   const toggleAll = () => {
+    // Al seleccionar todo, excluye duplicados por defecto
     const allVisible = filteredResults.map(r => r._idx)
-    const allSelected = allVisible.every(i => selected.has(i))
+    const nonDuplicates = allVisible.filter(i => !isDuplicate(results[i]))
+    const allNonDupSelected = nonDuplicates.length > 0 && nonDuplicates.every(i => selected.has(i))
+
     setSelected(prev => {
       const n = new Set(prev)
-      allSelected ? allVisible.forEach(i => n.delete(i)) : allVisible.forEach(i => n.add(i))
+      if (allNonDupSelected) {
+        allVisible.forEach(i => n.delete(i))
+      } else {
+        nonDuplicates.forEach(i => n.add(i))
+      }
       return n
     })
   }
@@ -118,9 +185,18 @@ export default function Scraper() {
         acquisition_channel: channelLabel,
       })).filter(r => r.name)
 
-      await importContacts(toImport)
-      toast.success(`${toImport.length} contactos importados`)
+      const result = await importContacts(toImport)
+      const actual = result?.length ?? toImport.length
+      const skipped = toImport.length - actual
+
+      if (skipped > 0) {
+        toast.success(`${actual} importados · ${skipped} omitidos (ya existían)`)
+      } else {
+        toast.success(`${actual} contactos importados`)
+      }
       setSelected(new Set())
+      // Refrescar duplicados tras import
+      checkDuplicates(results)
     } catch (error: any) {
       toast.error(error.message)
     }
@@ -128,8 +204,12 @@ export default function Scraper() {
 
   const withPhone = results.filter(r => r.phone).length
   const withWA = results.filter(r => r.whatsapp).length
-  const allVisibleSelected = filteredResults.length > 0 && filteredResults.every(r => selected.has(r._idx))
+  const allVisibleNonDupSelected = (() => {
+    const nonDups = filteredResults.filter(r => !isDuplicate(r))
+    return nonDups.length > 0 && nonDups.every(r => selected.has(r._idx))
+  })()
   const selectedInView = filteredResults.filter(r => selected.has(r._idx)).length
+  const selectedDuplicates = [...selected].filter(i => isDuplicate(results[i])).length
 
   return (
     <>
@@ -268,7 +348,7 @@ export default function Scraper() {
           {!loading && results.length > 0 && (
             <>
               {/* Stats */}
-              <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 text-center border-l-4 border-blue-500 dark-mode-transition">
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">{results.length}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Negocios</p>
@@ -286,6 +366,22 @@ export default function Scraper() {
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">{withWA}</p>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Posible WhatsApp</p>
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 text-center border-l-4 border-orange-400 dark-mode-transition">
+                  {checkingDuplicates ? (
+                    <div className="flex flex-col items-center justify-center h-full gap-1">
+                      <div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-xs text-gray-400 dark:text-gray-500">Verificando...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-center gap-1 mb-0.5">
+                        <AlertCircle size={14} className="text-orange-500" />
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white">{duplicateCount}</p>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Ya guardados</p>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -336,6 +432,21 @@ export default function Scraper() {
                         <Wifi size={12} /> Solo con WhatsApp
                       </button>
 
+                      {/* Toggle: Ocultar ya guardados */}
+                      {duplicateCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setFilterHideDuplicates(!filterHideDuplicates)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                            filterHideDuplicates
+                              ? 'bg-orange-500 border-orange-500 text-white'
+                              : 'bg-white dark:bg-gray-700 border-orange-300 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:border-orange-500'
+                          }`}
+                        >
+                          <AlertCircle size={12} /> Ocultar ya guardados ({duplicateCount})
+                        </button>
+                      )}
+
                       {/* Segmento */}
                       {uniqueSegments.length > 1 && (
                         <select
@@ -369,7 +480,7 @@ export default function Scraper() {
                       {activeFilterCount > 0 && (
                         <button
                           type="button"
-                          onClick={() => { setFilterPhone(false); setFilterWA(false); setFilterSegment(''); setFilterSearch('') }}
+                          onClick={() => { setFilterPhone(false); setFilterWA(false); setFilterSegment(''); setFilterSearch(''); setFilterHideDuplicates(false) }}
                           className="text-xs text-gray-400 hover:text-red-500 transition underline"
                         >
                           Limpiar
@@ -377,7 +488,7 @@ export default function Scraper() {
                       )}
                     </div>
 
-                    {/* Resumen de filtros activos */}
+                    {/* Resumen */}
                     {activeFilterCount > 0 && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                         Mostrando <strong>{filteredResults.length}</strong> de {results.length} negocios
@@ -388,18 +499,24 @@ export default function Scraper() {
               </div>
 
               {/* ── Barra de acciones ────────────────────────────────────────── */}
-              <div className="flex justify-between items-center mb-3">
+              <div className="flex justify-between items-center mb-3 gap-3">
                 <div className="flex gap-2 items-center">
                   <input
                     type="checkbox"
-                    checked={allVisibleSelected}
+                    checked={allVisibleNonDupSelected}
                     onChange={toggleAll}
                     className="w-4 h-4 accent-blue-600"
+                    title="Seleccionar todo (excluye ya guardados)"
                   />
                   <span className="text-sm text-gray-600 dark:text-gray-400">
                     {selected.size > 0 ? `${selected.size} seleccionados` : `${filteredResults.length} resultados`}
                     {activeFilterCount > 0 && selected.size === 0 && ` (filtrado de ${results.length})`}
                   </span>
+                  {selected.size > 0 && selectedDuplicates > 0 && (
+                    <span className="text-xs text-orange-500 dark:text-orange-400 font-medium">
+                      · {selectedDuplicates} ya guardado{selectedDuplicates !== 1 ? 's' : ''}
+                    </span>
+                  )}
                 </div>
                 {selected.size > 0 && (
                   <button
@@ -426,30 +543,48 @@ export default function Scraper() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredResults.map(r => (
-                      <tr
-                        key={r._idx}
-                        className={`border-b border-gray-100 dark:border-gray-700 cursor-pointer transition ${selected.has(r._idx) ? 'bg-blue-50 dark:bg-blue-950/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}`}
-                        onClick={() => toggleSelect(r._idx)}
-                      >
-                        <td className="px-3 py-3">
-                          <input type="checkbox" checked={selected.has(r._idx)} onChange={() => toggleSelect(r._idx)} onClick={e => e.stopPropagation()} className="w-4 h-4 accent-blue-600" />
-                        </td>
-                        <td className="px-3 py-3 font-medium text-gray-900 dark:text-white max-w-[200px] truncate">{r.name}</td>
-                        <td className="px-3 py-3">
-                          {r.phone
-                            ? <span className="font-mono text-gray-700 dark:text-gray-300">{r.phone}</span>
-                            : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
-                        </td>
-                        <td className="px-3 py-3 text-center">
-                          {r.whatsapp_link
-                            ? <a href={r.whatsapp_link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1 bg-green-500 text-white text-xs px-2 py-1 rounded hover:bg-green-600">WA</a>
-                            : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
-                        </td>
-                        <td className="px-3 py-3 text-gray-500 dark:text-gray-400 text-xs max-w-[220px] truncate">{r.address}</td>
-                        <td className="px-3 py-3 text-xs text-gray-500 dark:text-gray-400 max-w-[160px] truncate">{r.activity || r.segment}</td>
-                      </tr>
-                    ))}
+                    {filteredResults.map(r => {
+                      const dup = isDuplicate(r)
+                      return (
+                        <tr
+                          key={r._idx}
+                          className={`border-b border-gray-100 dark:border-gray-700 cursor-pointer transition ${
+                            selected.has(r._idx)
+                              ? 'bg-blue-50 dark:bg-blue-950/30'
+                              : dup
+                              ? 'bg-orange-50/60 dark:bg-orange-950/10 hover:bg-orange-50 dark:hover:bg-orange-950/20'
+                              : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
+                          }`}
+                          onClick={() => toggleSelect(r._idx)}
+                        >
+                          <td className="px-3 py-3">
+                            <input type="checkbox" checked={selected.has(r._idx)} onChange={() => toggleSelect(r._idx)} onClick={e => e.stopPropagation()} className="w-4 h-4 accent-blue-600" />
+                          </td>
+                          <td className="px-3 py-3 font-medium text-gray-900 dark:text-white max-w-[220px]">
+                            <div className="flex items-center gap-2 truncate">
+                              <span className="truncate">{r.name}</span>
+                              {dup && (
+                                <span className="flex-shrink-0 inline-flex items-center gap-0.5 text-xs bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 px-1.5 py-0.5 rounded font-semibold">
+                                  <CheckCircle2 size={10} /> Guardado
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3">
+                            {r.phone
+                              ? <span className="font-mono text-gray-700 dark:text-gray-300">{r.phone}</span>
+                              : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            {r.whatsapp_link
+                              ? <a href={r.whatsapp_link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1 bg-green-500 text-white text-xs px-2 py-1 rounded hover:bg-green-600">WA</a>
+                              : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
+                          </td>
+                          <td className="px-3 py-3 text-gray-500 dark:text-gray-400 text-xs max-w-[220px] truncate">{r.address}</td>
+                          <td className="px-3 py-3 text-xs text-gray-500 dark:text-gray-400 max-w-[160px] truncate">{r.activity || r.segment}</td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
                 {filteredResults.length === 0 && (
@@ -461,32 +596,44 @@ export default function Scraper() {
 
               {/* Cards mobile */}
               <div className="md:hidden space-y-2">
-                {filteredResults.map(r => (
-                  <div
-                    key={r._idx}
-                    onClick={() => toggleSelect(r._idx)}
-                    className={`rounded-xl border-2 p-3 cursor-pointer transition dark-mode-transition ${
-                      selected.has(r._idx)
-                        ? 'border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-950/30'
-                        : 'border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800'
-                    }`}
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <input type="checkbox" checked={selected.has(r._idx)} onChange={() => toggleSelect(r._idx)} onClick={e => e.stopPropagation()} className="mt-1 w-4 h-4 accent-blue-600 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{r.name}</p>
-                        {r.phone && <p className="font-mono text-sm text-gray-600 dark:text-gray-300 mt-0.5">{r.phone}</p>}
-                        {r.address && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 line-clamp-1">{r.address}</p>}
-                        <div className="flex items-center gap-2 mt-1.5">
-                          {r.whatsapp_link && (
-                            <a href={r.whatsapp_link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-xs bg-green-500 text-white px-2 py-0.5 rounded font-semibold">WA</a>
-                          )}
-                          <span className={`text-xs px-2 py-0.5 rounded font-semibold ${segmentColor(r.segment)}`}>{r.activity || r.segment}</span>
+                {filteredResults.map(r => {
+                  const dup = isDuplicate(r)
+                  return (
+                    <div
+                      key={r._idx}
+                      onClick={() => toggleSelect(r._idx)}
+                      className={`rounded-xl border-2 p-3 cursor-pointer transition dark-mode-transition ${
+                        selected.has(r._idx)
+                          ? 'border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-950/30'
+                          : dup
+                          ? 'border-orange-200 dark:border-orange-800/50 bg-orange-50/60 dark:bg-orange-950/10'
+                          : 'border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <input type="checkbox" checked={selected.has(r._idx)} onChange={() => toggleSelect(r._idx)} onClick={e => e.stopPropagation()} className="mt-1 w-4 h-4 accent-blue-600 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{r.name}</p>
+                            {dup && (
+                              <span className="inline-flex items-center gap-0.5 text-xs bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400 px-1.5 py-0.5 rounded font-semibold flex-shrink-0">
+                                <CheckCircle2 size={10} /> Guardado
+                              </span>
+                            )}
+                          </div>
+                          {r.phone && <p className="font-mono text-sm text-gray-600 dark:text-gray-300 mt-0.5">{r.phone}</p>}
+                          {r.address && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 line-clamp-1">{r.address}</p>}
+                          <div className="flex items-center gap-2 mt-1.5">
+                            {r.whatsapp_link && (
+                              <a href={r.whatsapp_link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-xs bg-green-500 text-white px-2 py-0.5 rounded font-semibold">WA</a>
+                            )}
+                            <span className={`text-xs px-2 py-0.5 rounded font-semibold ${segmentColor(r.segment)}`}>{r.activity || r.segment}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
                 {filteredResults.length === 0 && (
                   <div className="py-10 text-center text-gray-400 dark:text-gray-500 text-sm">
                     Ningún resultado coincide con los filtros activos
