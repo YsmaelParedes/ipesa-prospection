@@ -3,19 +3,18 @@
 import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import { useTheme } from '@/components/ThemeProvider'
-import { Menu, X, BarChart3, Users, Send, Clock, Search, Settings, FileText, Tag, ChevronDown, RefreshCw, Moon, Sun } from 'lucide-react'
+import { Menu, X, BarChart3, Users, MessageSquare, Clock, Search, Settings, Tag, ChevronDown, RefreshCw, Moon, Sun } from 'lucide-react'
 
 const mainMenu = [
   { href: '/', label: 'Dashboard', icon: BarChart3 },
   { href: '/contactos', label: 'Contactos', icon: Users },
-  { href: '/campanas', label: 'Campañas', icon: Send },
+  { href: '/mensajeria', label: 'Mensajería', icon: MessageSquare },
   { href: '/seguimiento', label: 'Seguimiento', icon: RefreshCw },
   { href: '/recordatorios', label: 'Recordatorios', icon: Clock },
   { href: '/scraper', label: 'Scraper', icon: Search },
 ]
 
 const configMenu = [
-  { href: '/plantillas', label: 'Plantillas', icon: FileText },
   { href: '/segmentos', label: 'Segmentos', icon: Tag },
 ]
 
