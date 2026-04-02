@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    return NextResponse.json({ success: true, messageId: data.id ?? data.message })
+    return NextResponse.json({ success: true, messageId: data.references?.[0]?.reference ?? data.message, credit: data.credit ?? null })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

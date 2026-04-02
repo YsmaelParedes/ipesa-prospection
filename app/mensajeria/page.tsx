@@ -152,14 +152,16 @@ export default function Mensajeria() {
   const [selectedTemplate, setSelectedTemplate] = useState<YCloudTemplate | null>(null)
 
   // ── SMS state ───────────────────────────────────────────────────────────
-  const [smsMessage, setSmsMessage]                 = useState('')
-  const [smsTemplates, setSmsTemplates]             = useState<SmsTemplate[]>([])
+  const [smsMessage, setSmsMessage]                   = useState('')
+  const [smsTemplates, setSmsTemplates]               = useState<SmsTemplate[]>([])
   const [smsTemplatesLoading, setSmsTemplatesLoading] = useState(false)
-  const [newTplName, setNewTplName]                 = useState('')
-  const [showSaveTpl, setShowSaveTpl]               = useState(false)
-  const [savingTpl, setSavingTpl]                   = useState(false)
-  const [dailyLimit, setDailyLimit]                 = useState(200)
-  const [smsDailySent, setSmsDailySent]             = useState(0)
+  const [newTplName, setNewTplName]                   = useState('')
+  const [showSaveTpl, setShowSaveTpl]                 = useState(false)
+  const [savingTpl, setSavingTpl]                     = useState(false)
+  const [dailyLimit, setDailyLimit]                   = useState(200)
+  const [smsDailySent, setSmsDailySent]               = useState(0)
+  const [smsCredits, setSmsCredits]                   = useState<number | null>(null)
+  const [creditsLoading, setCreditsLoading]           = useState(false)
 
   // Anti-spam (compartido)
   const [delayPreset, setDelayPreset]   = useState<DelayPreset>('normal')
@@ -208,6 +210,20 @@ export default function Mensajeria() {
     setCountdown(null)
     isPaused.current    = false
     isCancelled.current = false
+    if (ch === 'sms') fetchSmsCredits()
+  }
+
+  const fetchSmsCredits = async () => {
+    setCreditsLoading(true)
+    try {
+      const res  = await fetch('/api/sms-masivos/credits')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      // El campo puede venir como credit, credits, o dentro del mensaje
+      const val = data.credit ?? data.credits ?? data.sms_credits ?? null
+      setSmsCredits(val)
+    } catch { /* silencioso — no crítico */ }
+    finally { setCreditsLoading(false) }
   }
 
   // ── WhatsApp templates ────────────────────────────────────────────────
@@ -255,11 +271,12 @@ export default function Mensajeria() {
 
   const deleteSmsTemplate = async (id: string) => {
     try {
-      const res = await fetch(`/api/twilio/templates/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Error al eliminar')
+      const res  = await fetch(`/api/twilio/templates/${id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || `Error ${res.status}`)
       setSmsTemplates(prev => prev.filter(t => t.id !== id))
       toast.success('Plantilla eliminada')
-    } catch (err: any) { toast.error(err.message) }
+    } catch (err: any) { toast.error('No se pudo eliminar: ' + err.message) }
   }
 
   // ── Filtered contacts ────────────────────────────────────────────────
@@ -411,7 +428,11 @@ export default function Mensajeria() {
         if (!res.ok) throw new Error(data.error || 'Error al enviar')
 
         sent++
-        if (channel === 'sms') addSmsDailySent(1)
+        if (channel === 'sms') {
+          addSmsDailySent(1)
+          // Actualiza créditos restantes si la respuesta los incluye
+          if (data.credit !== undefined && data.credit !== null) setSmsCredits(data.credit)
+        }
         updateEntry(contact.id, { status: 'sent', sentAt: new Date() })
         setProgress(p => ({ ...p, current: i + 1, sent }))
       } catch (err: any) {
@@ -514,6 +535,14 @@ export default function Mensajeria() {
                   ? 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
               }`}>SMS Masivos</span>
+              {channel === 'sms' && smsCredits !== null && (
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">
+                  {smsCredits.toLocaleString()} SMS
+                </span>
+              )}
+              {channel === 'sms' && creditsLoading && (
+                <div className="w-3 h-3 rounded-full border-2 border-red-300 border-t-red-600 animate-spin" />
+              )}
             </button>
           </div>
 
@@ -815,9 +844,10 @@ export default function Mensajeria() {
 
                 <textarea
                   value={smsMessage}
-                  onChange={e => setSmsMessage(e.target.value)}
-                  placeholder="Hola {{nombre}}, te escribimos desde IPESA. ¿Tienes un momento para hablar?"
+                  onChange={e => setSmsMessage(e.target.value.slice(0, 160))}
+                  placeholder="Hola {{nombre}}, te escribimos desde IPESA. Tienes un momento para hablar?"
                   rows={5}
+                  maxLength={160}
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-red-400 resize-none dark-mode-transition"
                 />
 
@@ -905,8 +935,8 @@ export default function Mensajeria() {
                           <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">{t.content}</p>
                         </div>
                         <button onClick={e => { e.stopPropagation(); deleteSmsTemplate(t.id) }}
-                          className="flex-shrink-0 p-1 rounded text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition">
-                          <Trash2 size={13} />
+                          className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     ))}
@@ -914,11 +944,25 @@ export default function Mensajeria() {
                 )}
               </Card>
 
-              {/* Reglas activas SMS Masivos */}
-              <div className="flex flex-wrap gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
-                <span className="flex items-center gap-1"><Clock size={11} className="text-green-500" /> Horario: 8am – 8pm</span>
-                <span className="flex items-center gap-1"><Zap size={11} className="text-blue-500" /> Delay: 3 seg entre mensajes</span>
-                <span className="flex items-center gap-1"><CheckCircle size={11} className="text-purple-500" /> Carrier: Telcel, Movistar, AT&T</span>
+              {/* Reglas activas + créditos */}
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+                <div className="flex flex-wrap gap-3">
+                  <span className="flex items-center gap-1"><Clock size={11} className="text-green-500" /> Horario: 8am – 8pm</span>
+                  <span className="flex items-center gap-1"><Zap size={11} className="text-blue-500" /> Delay: 3 seg entre mensajes</span>
+                  <span className="flex items-center gap-1"><CheckCircle size={11} className="text-purple-500" /> Telcel · Movistar · AT&T</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {smsCredits !== null && (
+                    <span className="font-semibold text-green-600 dark:text-green-400">
+                      {smsCredits.toLocaleString()} SMS disponibles
+                    </span>
+                  )}
+                  <button onClick={fetchSmsCredits} disabled={creditsLoading}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-red-300 text-gray-500 dark:text-gray-400 transition disabled:opacity-50">
+                    <RefreshCw size={11} className={creditsLoading ? 'animate-spin' : ''} />
+                    Créditos
+                  </button>
+                </div>
               </div>
 
               {/* Preview SMS */}

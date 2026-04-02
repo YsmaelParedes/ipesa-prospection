@@ -25,8 +25,9 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const { name, content } = await req.json()
-    if (!name?.trim())    return NextResponse.json({ error: 'Nombre requerido' }, { status: 400 })
-    if (!content?.trim()) return NextResponse.json({ error: 'Contenido requerido' }, { status: 400 })
+    if (!name?.trim())        return NextResponse.json({ error: 'Nombre requerido' }, { status: 400 })
+    if (!content?.trim())     return NextResponse.json({ error: 'Contenido requerido' }, { status: 400 })
+    if (content.length > 160) return NextResponse.json({ error: 'Máximo 160 caracteres por plantilla' }, { status: 400 })
 
     const { data, error } = await getClient()
       .from('sms_templates')
