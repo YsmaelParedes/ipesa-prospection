@@ -8,13 +8,14 @@ function getClient() {
   )
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const { name, content } = await req.json()
     const { data, error } = await getClient()
       .from('sms_templates')
       .update({ name: name?.trim(), content: content?.trim(), updated_at: new Date().toISOString() })
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
 
@@ -25,12 +26,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params
     const { error } = await getClient()
       .from('sms_templates')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (error) throw error
     return NextResponse.json({ success: true })
