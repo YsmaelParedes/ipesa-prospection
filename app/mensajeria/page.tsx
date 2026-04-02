@@ -326,7 +326,12 @@ export default function Mensajeria() {
 
   const goToConfig = () => {
     if (channel === 'whatsapp' && !selectedTemplate) { toast.error('Selecciona una plantilla'); return }
-    if (channel === 'sms' && !smsMessage.trim()) { toast.error('Escribe el mensaje SMS'); return }
+    if (channel === 'sms') {
+      if (!smsMessage.trim()) { toast.error('Escribe el mensaje SMS'); return }
+      // SMS Masivos: sin configuración manual, las reglas se aplican por defecto
+      startSend()
+      return
+    }
     setStep('config')
   }
 
@@ -366,9 +371,13 @@ export default function Mensajeria() {
         continue
       }
 
-      if (businessHours && !isInBusinessHours(bhStart, bhEnd)) {
+      // SMS Masivos: horario forzado 8am-8pm. WhatsApp: según configuración del usuario
+      const outOfHours = channel === 'sms'
+        ? !isInBusinessHours('08:00', '20:00')
+        : businessHours && !isInBusinessHours(bhStart, bhEnd)
+      if (outOfHours) {
         skipped++
-        updateEntry(contact.id, { status: 'skipped', error: 'Fuera de horario laboral' })
+        updateEntry(contact.id, { status: 'skipped', error: 'Fuera de horario (8am–8pm)' })
         setProgress(p => ({ ...p, current: i + 1, skipped }))
         continue
       }
@@ -412,8 +421,8 @@ export default function Mensajeria() {
       }
 
       if (i < queue.length - 1 && !isCancelled.current) {
-        const { min, max } = DELAY_PRESETS[delayPreset]
-        const delayMs  = gaussianDelay(min, max)
+        // SMS Masivos: 3 segundos fijos. WhatsApp: delay gaussiano según preset
+        const delayMs = channel === 'sms' ? 3000 : gaussianDelay(DELAY_PRESETS[delayPreset].min, DELAY_PRESETS[delayPreset].max)
         const endTime  = Date.now() + delayMs
         while (Date.now() < endTime && !isCancelled.current) {
           setCountdown(Math.ceil((endTime - Date.now()) / 1000))
@@ -454,7 +463,6 @@ export default function Mensajeria() {
   const STEPS_SMS = [
     { key: 'select',  label: 'Contactos' },
     { key: 'preview', label: 'Mensaje' },
-    { key: 'config',  label: 'Anti-spam' },
     { key: 'sending', label: 'Envío' },
   ]
   const STEPS   = channel === 'whatsapp' ? STEPS_WA : STEPS_SMS
@@ -505,7 +513,7 @@ export default function Mensajeria() {
                 channel === 'sms'
                   ? 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-              }`}>Twilio</span>
+              }`}>SMS Masivos</span>
             </button>
           </div>
 
@@ -828,7 +836,12 @@ export default function Mensajeria() {
                   ))}
                 </div>
 
-                {smsMessage.length > 160 && (
+                {/[áéíóúüñÁÉÍÓÚÜÑ]/.test(smsMessage) && (
+                  <p className="mt-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+                    <AlertTriangle size={12} /> Contiene acentos o ñ — el límite baja a <strong>70 caracteres</strong> por SMS (regla SMS Masivos). Elimínalos para 160 caracteres.
+                  </p>
+                )}
+                {!(/[áéíóúüñÁÉÍÓÚÜÑ]/.test(smsMessage)) && smsMessage.length > 160 && (
                   <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                     <AlertTriangle size={12} /> Mensaje largo: se enviará en {smsSegments(smsMessage)} partes concatenadas (costo x{smsSegments(smsMessage)})
                   </p>
@@ -901,6 +914,13 @@ export default function Mensajeria() {
                 )}
               </Card>
 
+              {/* Reglas activas SMS Masivos */}
+              <div className="flex flex-wrap gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+                <span className="flex items-center gap-1"><Clock size={11} className="text-green-500" /> Horario: 8am – 8pm</span>
+                <span className="flex items-center gap-1"><Zap size={11} className="text-blue-500" /> Delay: 3 seg entre mensajes</span>
+                <span className="flex items-center gap-1"><CheckCircle size={11} className="text-purple-500" /> Carrier: Telcel, Movistar, AT&T</span>
+              </div>
+
               {/* Preview SMS */}
               {smsMessage.trim() && (
                 <Card variant="elevated" className="p-5">
@@ -930,7 +950,7 @@ export default function Mensajeria() {
                 <Button variant="secondary" onClick={() => setStep('select')}><ChevronLeft size={16} /> Atrás</Button>
                 <Button variant="primary" onClick={goToConfig} disabled={!smsMessage.trim()}
                   className="!bg-red-600 hover:!bg-red-700">
-                  Siguiente — Anti-spam <ChevronRight size={16} />
+                  <Send size={16} /> Iniciar envío
                 </Button>
               </div>
             </div>
@@ -1104,7 +1124,7 @@ export default function Mensajeria() {
               <Card variant="elevated" className="p-5">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="font-bold text-gray-900 dark:text-white">
-                    {isDone ? 'Envío completado' : isSending ? `Enviando ${channel === 'sms' ? 'SMS' : 'WhatsApp'}...` : 'Pausado'}
+                    {isDone ? 'Envío completado' : isSending ? `Enviando ${channel === 'sms' ? 'SMS vía SMS Masivos' : 'WhatsApp'}...` : 'Pausado'}
                   </h2>
                   <span className="text-sm font-bold text-gray-500 dark:text-gray-400">
                     {progress.current} / {progress.total}
