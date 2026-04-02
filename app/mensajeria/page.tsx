@@ -162,6 +162,7 @@ export default function Mensajeria() {
   const [smsDailySent, setSmsDailySent]               = useState(0)
   const [smsCredits, setSmsCredits]                   = useState<number | null>(null)
   const [creditsLoading, setCreditsLoading]           = useState(false)
+  const [showConfirm, setShowConfirm]                 = useState(false)
 
   // Anti-spam (compartido)
   const [delayPreset, setDelayPreset]   = useState<DelayPreset>('normal')
@@ -345,12 +346,13 @@ export default function Mensajeria() {
     if (channel === 'whatsapp' && !selectedTemplate) { toast.error('Selecciona una plantilla'); return }
     if (channel === 'sms') {
       if (!smsMessage.trim()) { toast.error('Escribe el mensaje SMS'); return }
-      // SMS Masivos: sin configuración manual, las reglas se aplican por defecto
-      startSend()
+      setShowConfirm(true)
       return
     }
     setStep('config')
   }
+
+  const requestSend = () => setShowConfirm(true)
 
   // ── Send loop ────────────────────────────────────────────────────────
   const startSend = async () => {
@@ -1152,7 +1154,7 @@ export default function Mensajeria() {
 
               <div className="flex justify-between">
                 <Button variant="secondary" onClick={() => setStep('preview')}><ChevronLeft size={16} /> Atrás</Button>
-                <Button variant="primary" onClick={startSend}
+                <Button variant="primary" onClick={requestSend}
                   className={channel === 'sms' ? '!bg-red-600 hover:!bg-red-700' : ''}>
                   <Send size={16} /> Iniciar envío
                 </Button>
@@ -1284,6 +1286,98 @@ export default function Mensajeria() {
 
         </div>
       </div>
+
+      {/* ── Modal de confirmación ──────────────────────────────────────────── */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowConfirm(false)} />
+
+          {/* Panel */}
+          <div className="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+
+            {/* Header */}
+            <div className={`px-6 py-4 flex items-center gap-3 ${
+              channel === 'sms'
+                ? 'bg-red-600'
+                : 'bg-green-600'
+            }`}>
+              {channel === 'sms'
+                ? <MessageSquare size={22} className="text-white flex-shrink-0" />
+                : <MessageCircle size={22} className="text-white flex-shrink-0" />
+              }
+              <div>
+                <h3 className="font-bold text-white text-lg leading-tight">¿Confirmar envío?</h3>
+                <p className="text-white/80 text-xs">
+                  {channel === 'sms' ? 'SMS vía SMS Masivos' : 'WhatsApp vía YCloud'}
+                </p>
+              </div>
+            </div>
+
+            {/* Resumen */}
+            <div className="px-6 py-5 space-y-3">
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{selectedContacts.length}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Destinatarios</p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl text-center">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {selectedContacts.filter(c => c.phone).length}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Con teléfono</p>
+                </div>
+              </div>
+
+              {channel === 'whatsapp' && selectedTemplate && (
+                <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-xl border border-green-100 dark:border-green-800">
+                  <p className="text-xs font-bold text-green-700 dark:text-green-400 mb-1">Plantilla WhatsApp</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedTemplate.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
+                    {selectedTemplate.components.find((c: any) => c.type === 'BODY')?.text?.replace(/\n/g, ' ')}
+                  </p>
+                </div>
+              )}
+
+              {channel === 'sms' && (
+                <div className="p-3 bg-red-50 dark:bg-red-950/30 rounded-xl border border-red-100 dark:border-red-800">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs font-bold text-red-700 dark:text-red-400">Mensaje SMS</p>
+                    <span className="text-xs text-gray-400">{smsMessage.length}/160</span>
+                  </div>
+                  <p className="text-sm text-gray-900 dark:text-white line-clamp-3 whitespace-pre-line">{smsMessage}</p>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-100 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300">
+                <AlertTriangle size={14} className="flex-shrink-0" />
+                Esta acción enviará mensajes reales. Asegúrate de que la lista de contactos sea correcta.
+              </div>
+            </div>
+
+            {/* Acciones */}
+            <div className="px-6 pb-5 flex gap-3">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => { setShowConfirm(false); startSend() }}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition ${
+                  channel === 'sms'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                <Send size={15} /> Confirmar envío
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
