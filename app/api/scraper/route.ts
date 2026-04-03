@@ -3,32 +3,96 @@ import axios from 'axios'
 
 export const maxDuration = 50
 
-// Límite de búsquedas concurrentes: si ya hay N en proceso, rechazar con 429
-// Funciona en un proceso Node.js único (Railway, VPS). En serverless es no-op.
 let activeScrapes = 0
 const MAX_CONCURRENT = 2
 
 const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY
 const INEGI_API_KEY = process.env.INEGI_API_KEY
 
-// Términos de barrido amplio para maximizar cobertura por área.
-// El DENUE devuelve TODOS los negocios que coincidan (sin límite de 50).
-// Diferentes términos en el mismo centro NO activan el throttle de INEGI.
-// Datos reales (3km, CDMX): taller=906, tienda=4027, servicio=8833
-const AREA_SWEEP_TERMS = ['taller', 'tienda', 'construccion', 'ferreteria', 'servicio', 'distribuidor']
+// ── Estado INEGI codes ────────────────────────────────────────────────────────
+// Mapeo del nombre de estado (Google geocoding) → clave INEGI de 2 dígitos
+const STATE_CODES: Record<string, string> = {
+  aguascalientes:        '01',
+  'baja california':     '02',
+  'baja california sur': '03',
+  campeche:              '04',
+  coahuila:              '05',
+  colima:                '06',
+  chiapas:               '07',
+  chihuahua:             '08',
+  'ciudad de mexico':    '09',
+  'ciudad de méxico':    '09',
+  'mexico city':         '09',
+  'cdmx':                '09',
+  durango:               '10',
+  guanajuato:            '11',
+  guerrero:              '12',
+  hidalgo:               '13',
+  jalisco:               '14',
+  mexico:                '15',  // Estado de México (no país)
+  'estado de mexico':    '15',
+  'estado de méxico':    '15',
+  michoacan:             '16',
+  michoacán:             '16',
+  morelos:               '17',
+  nayarit:               '18',
+  'nuevo leon':          '19',
+  'nuevo león':          '19',
+  oaxaca:                '20',
+  puebla:                '21',
+  queretaro:             '22',
+  querétaro:             '22',
+  'quintana roo':        '23',
+  'san luis potosi':     '24',
+  'san luis potosí':     '24',
+  sinaloa:               '25',
+  sonora:                '26',
+  tabasco:               '27',
+  tamaulipas:            '28',
+  tlaxcala:              '29',
+  veracruz:              '30',
+  yucatan:               '31',
+  yucatán:               '31',
+  zacatecas:             '32',
+}
 
-// Mapeo de actividad INEGI -> segmento IPESA
+function getStateCode(addressComponents: any[]): string | null {
+  const state = addressComponents?.find(c => c.types.includes('administrative_area_level_1'))
+  if (!state) return null
+  const name = state.long_name.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // quitar acentos
+    .replace(/\s+de\s+(zaragoza|ocampo|ignacio de la llave)/g, '')  // "Coahuila de Zaragoza" → "Coahuila"
+    .trim()
+
+  // Búsqueda exacta primero
+  if (STATE_CODES[name]) return STATE_CODES[name]
+  // Luego parcial
+  for (const [key, code] of Object.entries(STATE_CODES)) {
+    if (name.includes(key) || key.includes(name)) return code
+  }
+  return null
+}
+
+// ── Haversine distance (metros) ──────────────────────────────────────────────
+function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000, p = Math.PI / 180
+  const a = Math.sin((lat2 - lat1) * p / 2) ** 2
+    + Math.cos(lat1 * p) * Math.cos(lat2 * p) * Math.sin((lng2 - lng1) * p / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(a))
+}
+
+// ── Segmento IPESA ────────────────────────────────────────────────────────────
 function mapSegmento(actividad: string): string {
   const a = actividad.toLowerCase()
   if (a.includes('ferret') || a.includes('materi') || a.includes('construc') || a.includes('plomer') || a.includes('electric') || a.includes('pintur')) return 'construccion'
   if (a.includes('tienda') || a.includes('minori') || a.includes('super') || a.includes('abarrot') || a.includes('comercio al por menor')) return 'retail'
   if (a.includes('industri') || a.includes('fabric') || a.includes('manufactur') || a.includes('mayoreo') || a.includes('al por mayor')) return 'industrial'
   if (a.includes('auto') || a.includes('taller') || a.includes('vehic') || a.includes('refacci')) return 'automotriz'
-  if (a.includes('casa') || a.includes('hogar') || a.includes('residen') || a.includes('inmobil')) return 'residencial'
+  if (a.includes('casa') || a.includes('hogar') || a.includes('residen') || a.includes('inmobil') || a.includes('bienes ra')) return 'residencial'
   return 'retail'
 }
 
-// Formatea número para WhatsApp (México +52)
+// ── Formato WhatsApp ──────────────────────────────────────────────────────────
 function formatWhatsApp(phone: string): string | null {
   if (!phone) return null
   const digits = phone.replace(/\D/g, '')
@@ -38,7 +102,10 @@ function formatWhatsApp(phone: string): string | null {
   return null
 }
 
-async function geocodeLocation(location: string): Promise<{ lat: number; lng: number; ciudad: string } | null> {
+// ── Geocoding ─────────────────────────────────────────────────────────────────
+async function geocodeLocation(location: string): Promise<{
+  lat: number; lng: number; ciudad: string; stateCode: string | null
+} | null> {
   if (!GOOGLE_API_KEY) return null
   try {
     const { data } = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
@@ -46,66 +113,98 @@ async function geocodeLocation(location: string): Promise<{ lat: number; lng: nu
       timeout: 10000,
     })
     if (data.status === 'OK' && data.results.length > 0) {
-      const loc = data.results[0].geometry.location
-      const ciudad = data.results[0].formatted_address
-      return { lat: loc.lat, lng: loc.lng, ciudad }
+      const r = data.results[0]
+      const loc = r.geometry.location
+      const stateCode = getStateCode(r.address_components)
+      return { lat: loc.lat, lng: loc.lng, ciudad: r.formatted_address, stateCode }
     }
   } catch {}
   return null
 }
 
-/**
- * Genera variantes del query para mejorar cobertura en DENUE.
- * El DENUE indexa actividades con terminología SCIAN (ej: "pintura", no "pintores").
- */
+// ── Expansión de términos SCIAN ───────────────────────────────────────────────
 function expandQueryTerms(query: string): string[] {
   const q = query.toLowerCase().trim()
   const terms = new Set<string>([q])
 
-  // Mapa de sinónimos y formas SCIAN
   const synonyms: Record<string, string[]> = {
-    pintores:    ['pintura', 'pintor'],
-    plomeros:    ['plomeria', 'plomería', 'plomer'],
-    electricistas: ['electricidad', 'instalaciones electricas', 'electrica'],
-    herreros:    ['herrería', 'herreria', 'herrero'],
-    carpinteros: ['carpintería', 'carpinteria'],
-    albaniles:   ['construccion', 'albañil'],
-    mecanicos:   ['taller mecanico', 'mecanica'],
-    soldadores:  ['soldadura'],
-    torneros:    ['torno', 'torneria'],
-    vidrieros:   ['vidrieria', 'vidrio'],
-    tapiceros:   ['tapiceria'],
-    fontaneros:  ['plomeria'],
-    contadores:  ['contabilidad', 'contador'],
-    abogados:    ['juridico', 'notaria'],
-    medicos:     ['medico', 'consultorio', 'clinica'],
+    pintores:      ['pintura', 'pintor'],
+    plomeros:      ['plomeria', 'plomería'],
+    electricistas: ['electricidad', 'instalaciones electricas'],
+    herreros:      ['herrería', 'herreria'],
+    carpinteros:   ['carpintería', 'carpinteria'],
+    albaniles:     ['construccion'],
+    mecanicos:     ['taller mecanico', 'mecanica'],
+    soldadores:    ['soldadura'],
+    torneros:      ['torneria'],
+    vidrieros:     ['vidrieria'],
+    tapiceros:     ['tapiceria'],
+    fontaneros:    ['plomeria'],
+    contadores:    ['contabilidad'],
+    abogados:      ['juridico', 'notaria'],
+    medicos:       ['consultorio', 'clinica'],
   }
 
   if (synonyms[q]) synonyms[q].forEach(t => terms.add(t))
 
-  // Normalización de plurales españoles
-  if (q.endsWith('ores')) {
-    terms.add(q.slice(0, -4) + 'ura')  // pintores → pintura
-    terms.add(q.slice(0, -2))           // pintores → pintor
-  }
-  if (q.endsWith('eros')) {
-    terms.add(q.slice(0, -4) + 'eria') // plomeros → plomeria
-    terms.add(q.slice(0, -2))           // plomeros → plomer
-  }
-  if (q.endsWith('istas')) {
-    terms.add(q.slice(0, -5))           // electricistas → electric
-  }
-  if (q.endsWith('es') && q.length > 4) {
-    terms.add(q.slice(0, -2))           // talleres → taller
-  }
+  if (q.endsWith('ores')) { terms.add(q.slice(0, -4) + 'ura'); terms.add(q.slice(0, -2)) }
+  if (q.endsWith('eros')) { terms.add(q.slice(0, -4) + 'eria'); terms.add(q.slice(0, -2)) }
+  if (q.endsWith('istas')) { terms.add(q.slice(0, -5)) }
+  if (q.endsWith('es') && q.length > 4) { terms.add(q.slice(0, -2)) }
   if (q.endsWith('s') && q.length > 3 && !q.endsWith('es') && !q.endsWith('as')) {
-    terms.add(q.slice(0, -1))           // ferretería's → ferretería
+    terms.add(q.slice(0, -1))
   }
 
   return Array.from(terms)
 }
 
-async function searchINEGI(term: string, lat: number, lng: number, radius: number): Promise<any[]> {
+// ── INEGI BuscarEntidad con paginación ────────────────────────────────────────
+// Supera el límite duro de 50 del endpoint "Buscar" (coordenadas).
+// Devuelve TODOS los negocios del estado que coincidan, incluye lat/lng.
+// Se filtran por distancia haversine en código.
+async function searchINEGIByState(
+  term: string,
+  stateCode: string,
+  lat: number,
+  lng: number,
+  radiusM: number,
+  maxPages = 4
+): Promise<any[]> {
+  const PAGE_SIZE = 1000
+  const results: any[] = []
+
+  for (let page = 0; page < maxPages; page++) {
+    const start = page * PAGE_SIZE + 1
+    const end = (page + 1) * PAGE_SIZE
+    const url = `https://www.inegi.org.mx/app/api/denue/v1/consulta/BuscarEntidad/${encodeURIComponent(term)}/${stateCode}/${start}/${end}/${INEGI_API_KEY}`
+
+    try {
+      const { data } = await axios.get(url, {
+        headers: { Accept: 'application/json' },
+        timeout: 12000,
+        validateStatus: () => true,
+      })
+      if (!Array.isArray(data) || data.length === 0) break
+
+      // Filtrar por distancia inmediatamente para no acumular datos irrelevantes
+      for (const item of data) {
+        if (item.Latitud && item.Longitud) {
+          const d = haversine(lat, lng, parseFloat(item.Latitud), parseFloat(item.Longitud))
+          if (d <= radiusM) results.push(item)
+        }
+      }
+
+      if (data.length < PAGE_SIZE) break  // última página
+    } catch {
+      break
+    }
+  }
+
+  return results
+}
+
+// Fallback: endpoint original Buscar (coordenadas) si no tenemos código de estado
+async function searchINEGIByCoords(term: string, lat: number, lng: number, radius: number): Promise<any[]> {
   const url = `https://www.inegi.org.mx/app/api/denue/v1/consulta/Buscar/${encodeURIComponent(term)}/${lat},${lng}/${radius}/${INEGI_API_KEY}`
   try {
     const { data } = await axios.get(url, {
@@ -113,7 +212,7 @@ async function searchINEGI(term: string, lat: number, lng: number, radius: numbe
       timeout: 15000,
       validateStatus: () => true,
     })
-    if (typeof data === 'string' || !Array.isArray(data)) return []
+    if (!Array.isArray(data)) return []
     return data
   } catch {
     return []
@@ -142,7 +241,7 @@ export async function POST(req: NextRequest) {
     }
 
     const isCiudad = locationType === 'ciudad'
-    const RADIUS = isCiudad ? 5000 : 3000
+    const RADIUS = isCiudad ? 8000 : 5000
 
     // ── GOOGLE MAPS ──────────────────────────────────────────────────────────
     if (source === 'google_maps') {
@@ -152,8 +251,6 @@ export async function POST(req: NextRequest) {
 
       const locationLabel = isCiudad ? location : `código postal ${location}`
       const inputCp = /^\d{5}$/.test(location.trim()) ? location.trim() : ''
-
-      // Paginación: hasta 3 páginas × 20 resultados = máximo 60 por búsqueda
       const allPlaces: any[] = []
       let pageToken: string | undefined
 
@@ -191,11 +288,9 @@ export async function POST(req: NextRequest) {
         allPlaces.push(...(data.places || []))
         pageToken = data.nextPageToken
         if (!pageToken) break
-        // Google requiere 2s entre páginas para que el token sea válido
         await new Promise(r => setTimeout(r, 2000))
       }
 
-      // Deduplicar por teléfono + nombre (Places no tiene ID único en esta versión)
       const seenG = new Set<string>()
       const results = allPlaces
         .filter(place => {
@@ -213,11 +308,9 @@ export async function POST(req: NextRequest) {
           const postal_code = cpMatch ? cpMatch[1] : inputCp
           return {
             name: place.displayName?.text || '',
-            phone,
-            whatsapp: wa,
+            phone, whatsapp: wa,
             whatsapp_link: wa ? `https://wa.me/${wa}` : null,
-            address,
-            postal_code,
+            address, postal_code,
             segment: mapSegmento(actividad),
             activity: actividad,
             rating: place.rating || null,
@@ -233,24 +326,27 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'INEGI API key no configurada' }, { status: 500 })
       }
 
-      // Estrategia de máximo alcance:
-      // 1. Términos específicos del usuario (query + sinónimos)
-      // 2. Términos de barrido amplio del área (diferentes términos, mismo centro)
-      //
-      // Clave: el DENUE NO limita resultados a 50 — devuelve TODOS los que coincidan.
-      // Diferentes términos en el mismo punto NO activan el throttle de IP.
-      // Resultado: potencialmente miles de negocios únicos por búsqueda.
-      const userTerms = expandQueryTerms(query).slice(0, 2) // query + 1 sinónimo
-      const sweepTerms = AREA_SWEEP_TERMS.filter(t => !userTerms.includes(t))
-      const allTerms = [...userTerms, ...sweepTerms]
-      // Total: ~8 términos × avg 500 resultados = ~4,000 negocios únicos
+      const terms = expandQueryTerms(query).slice(0, 3)
+      const { stateCode } = coords
 
       const allBatches: any[][] = []
-      for (let i = 0; i < allTerms.length; i++) {
-        const batch = await searchINEGI(allTerms[i], coords.lat, coords.lng, RADIUS)
-        allBatches.push(batch)
-        if (i < allTerms.length - 1) {
-          await new Promise(r => setTimeout(r, 200)) // 200ms entre términos distintos (seguro)
+
+      if (stateCode) {
+        // Modo óptimo: BuscarEntidad por estado + filtro haversine
+        // Supera el límite duro de 50 del endpoint Buscar.
+        // Puebla "bienes raices": 685 en estado → 50 en 5km (real count)
+        // CDMX "bienes raices": >1000 en estado → 273 en 5km (vs 50 del modo antiguo)
+        for (const term of terms) {
+          const batch = await searchINEGIByState(term, stateCode, coords.lat, coords.lng, RADIUS)
+          allBatches.push(batch)
+          // Sin pausa entre términos: son peticiones diferentes a INEGI, no hay throttle
+        }
+      } else {
+        // Fallback si no se pudo resolver el estado (raro)
+        for (let i = 0; i < terms.length; i++) {
+          const batch = await searchINEGIByCoords(terms[i], coords.lat, coords.lng, RADIUS)
+          allBatches.push(batch)
+          if (i < terms.length - 1) await new Promise(r => setTimeout(r, 300))
         }
       }
 
@@ -268,7 +364,6 @@ export async function POST(req: NextRequest) {
       }
 
       if (allItems.length === 0) {
-        const terms = expandQueryTerms(query)
         return NextResponse.json({
           source: 'inegi',
           ciudad: coords.ciudad,
@@ -283,8 +378,7 @@ export async function POST(req: NextRequest) {
         const actividad = item.Clase_actividad || ''
         return {
           name: item.Nombre || '',
-          phone,
-          whatsapp: wa,
+          phone, whatsapp: wa,
           whatsapp_link: wa ? `https://wa.me/${wa}` : null,
           address: [item.Calle, item.Num_Exterior, item.Colonia, `CP ${item.CP}`]
             .filter(Boolean).join(', '),
