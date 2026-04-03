@@ -322,7 +322,9 @@ export async function POST(req: NextRequest) {
           return true
         })
         .map((place: any) => {
-          const phone = place.nationalPhoneNumber || ''
+          const rawPhone = place.nationalPhoneNumber || ''
+          // Google devuelve "222 123 4567" — quedarnos solo con los 10 dígitos locales
+          const phone = rawPhone.replace(/\D/g, '').slice(-10)
           const wa = formatWhatsApp(phone)
           const actividad = place.primaryTypeDisplayName?.text || ''
           const address = place.formattedAddress || ''

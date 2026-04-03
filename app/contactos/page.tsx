@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { getContacts, addContact, deleteContact, deleteContacts, importContacts, updateContact, getSegments } from '@/lib/supabase'
 import { useTheme } from '@/components/ThemeProvider'
 import Navbar from '@/components/Navbar'
@@ -147,12 +147,34 @@ export default function Contactos() {
     } catch { toast.error('Error al eliminar') }
   }
 
-  const toggleSelect = (id: string) => setSelected(prev => {
-    const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next
-  })
-  const toggleSelectAll = () =>
+  const lastSelectedIdx = useRef<number>(-1)
+
+  const toggleSelect = (id: string, index: number, e: React.MouseEvent) => {
+    if (e.shiftKey && lastSelectedIdx.current !== -1) {
+      // Shift+click: seleccionar rango entre último y actual
+      const start = Math.min(lastSelectedIdx.current, index)
+      const end = Math.max(lastSelectedIdx.current, index)
+      setSelected(prev => {
+        const next = new Set(prev)
+        for (let i = start; i <= end; i++) next.add(tabContacts[i].id)
+        return next
+      })
+    } else {
+      // Click normal o Ctrl: toggle individual
+      setSelected(prev => {
+        const next = new Set(prev)
+        next.has(id) ? next.delete(id) : next.add(id)
+        return next
+      })
+    }
+    lastSelectedIdx.current = index
+  }
+
+  const toggleSelectAll = () => {
+    lastSelectedIdx.current = -1
     setSelected(selected.size === tabContacts.length && tabContacts.length > 0
       ? new Set() : new Set(tabContacts.map(c => c.id)))
+  }
 
   const handleBulkSegment = async () => {
     if (!bulkSegment) { toast.error('Selecciona un segmento'); return }
@@ -656,7 +678,7 @@ export default function Contactos() {
                     Seleccionar todos
                   </button>
                 </div>
-                {tabContacts.map(c => {
+                {tabContacts.map((c, idx) => {
                   const seg = segments.find((s: any) => s.name.toLowerCase() === c.segment?.toLowerCase())
                   const isSelected = selected.has(c.id)
                   return (
@@ -669,7 +691,7 @@ export default function Contactos() {
                       }}
                     >
                       {/* Checkbox */}
-                      <button onClick={() => toggleSelect(c.id)} className="mt-0.5 flex-shrink-0 text-gray-300 hover:text-blue-600 transition">
+                      <button onClick={e => toggleSelect(c.id, idx, e)} className="mt-0.5 flex-shrink-0 text-gray-300 hover:text-blue-600 transition">
                         {isSelected ? <CheckSquare size={17} className="text-blue-600" /> : <Square size={17} />}
                       </button>
 
@@ -745,11 +767,11 @@ export default function Contactos() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
-                      {tabContacts.map(c => (
+                      {tabContacts.map((c, idx) => (
                         <tr key={c.id} className="hover:bg-blue-50/20 dark:hover:bg-blue-900/10 transition"
                           style={{ backgroundColor: selected.has(c.id) ? (isDark ? '#1e3a5f' : '#eff6ff') : undefined }}>
                           <td className="px-4 py-3">
-                            <button onClick={() => toggleSelect(c.id)} className="text-gray-300 hover:text-blue-600 transition">
+                            <button onClick={e => toggleSelect(c.id, idx, e)} className="text-gray-300 hover:text-blue-600 transition">
                               {selected.has(c.id) ? <CheckSquare size={16} className="text-blue-600" /> : <Square size={16} />}
                             </button>
                           </td>
