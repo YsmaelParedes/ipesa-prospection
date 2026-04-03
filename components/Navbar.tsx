@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTheme } from '@/components/ThemeProvider'
+import { getAlertCount } from '@/lib/supabase'
 import { Menu, X, BarChart3, Users, MessageSquare, Clock, Search, Settings, Tag, ChevronDown, RefreshCw, Moon, Sun, LogOut, FileText } from 'lucide-react'
 
 const mainMenu = [
@@ -23,9 +24,19 @@ const configMenu = [
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
+  const [alertCount, setAlertCount] = useState(0)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { theme, toggleTheme } = useTheme()
   const router = useRouter()
+
+  useEffect(() => {
+    getAlertCount().then(setAlertCount).catch(() => {})
+    // Refresca cada 5 minutos
+    const interval = setInterval(() => {
+      getAlertCount().then(setAlertCount).catch(() => {})
+    }, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [])
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -62,10 +73,15 @@ export default function Navbar() {
               <Link
                 key={href}
                 href={href}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-white/90 hover:text-white hover:bg-white/15 text-sm font-medium transition duration-200"
+                className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg text-white/90 hover:text-white hover:bg-white/15 text-sm font-medium transition duration-200"
               >
                 <Icon size={16} />
                 {label}
+                {href === '/recordatorios' && alertCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow">
+                    {alertCount > 99 ? '99+' : alertCount}
+                  </span>
+                )}
               </Link>
             ))}
 
@@ -139,11 +155,16 @@ export default function Navbar() {
               <Link
                 key={href}
                 href={href}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-white/90 hover:text-white hover:bg-white/15 transition duration-200 text-sm"
+                className="relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-white/90 hover:text-white hover:bg-white/15 transition duration-200 text-sm"
                 onClick={() => setIsOpen(false)}
               >
                 <Icon size={18} />
                 {label}
+                {href === '/recordatorios' && alertCount > 0 && (
+                  <span className="ml-auto min-w-[20px] h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1.5">
+                    {alertCount > 99 ? '99+' : alertCount}
+                  </span>
+                )}
               </Link>
             ))}
             <div className="border-t border-white/20 mt-2 pt-2">

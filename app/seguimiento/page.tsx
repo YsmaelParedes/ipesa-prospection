@@ -5,6 +5,7 @@ import {
   getFollowUpPendingActions, getDashboardFollowUpStats,
   completeFollowUp, addContactNote, getFollowUpSequences, createFollowUpPlan, getContacts,
   getAllFollowUpPlans, deleteFollowUpPlan, getPrimerContactoPendientes, markFirstContact,
+  createReminder,
 } from '@/lib/supabase'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
@@ -13,7 +14,7 @@ import Badge from '@/components/ui/Badge'
 import FollowUpTemplateSelector from '@/components/FollowUpTemplateSelector'
 import toast from 'react-hot-toast'
 import React from 'react'
-import { Phone, MessageCircle, Mail, CheckCircle, Clock, TrendingUp, Zap, Plus, User, ChevronDown, ChevronRight, Trash2, Search, X } from 'lucide-react'
+import { Phone, MessageCircle, Mail, CheckCircle, Clock, TrendingUp, Zap, Plus, User, ChevronDown, ChevronRight, Trash2, Search, X, Bell } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -78,6 +79,10 @@ export default function Seguimiento() {
   const [fcResponse, setFcResponse] = useState('interested')
   const [fcNote, setFcNote] = useState('')
   const [primerContactoSearch, setPrimerContactoSearch] = useState('')
+  const [reminderModal, setReminderModal] = useState<{ contact_id: string; contact_name: string; follow_up_id: string; suggested_date: string } | null>(null)
+  const [reminderDate, setReminderDate] = useState('')
+  const [reminderNote, setReminderNote] = useState('')
+  const [reminderSaving, setReminderSaving] = useState(false)
 
   useEffect(() => { fetchAll() }, [])
 
@@ -129,6 +134,37 @@ export default function Seguimiento() {
       fetchAll()
     } catch (error: any) { toast.error(error.message) }
     finally { setSaving(false) }
+  }
+
+  const openReminderModal = (action: any) => {
+    // Sugerir fecha/hora actual + 1 hora como default
+    const d = new Date()
+    d.setHours(d.getHours() + 1, 0, 0, 0)
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+    setReminderDate(local)
+    setReminderNote('')
+    setReminderModal({
+      contact_id: action.contact_id,
+      contact_name: action.contacts?.name || '',
+      follow_up_id: action.id,
+      suggested_date: local,
+    })
+  }
+
+  const handleCreateReminder = async () => {
+    if (!reminderModal || !reminderDate) return
+    try {
+      setReminderSaving(true)
+      await createReminder({
+        contact_id: reminderModal.contact_id,
+        reminder_date: new Date(reminderDate).toISOString(),
+        reminder_type: 'follow_up',
+        notes: reminderNote || `Seguimiento — ${reminderModal.contact_name}`,
+      })
+      toast.success(`Recordatorio creado para ${reminderModal.contact_name}`)
+      setReminderModal(null)
+    } catch (error: any) { toast.error(error.message) }
+    finally { setReminderSaving(false) }
   }
 
   const togglePlan = (key: string) => {
@@ -372,9 +408,14 @@ export default function Seguimiento() {
                           {' · '}{format(new Date(action.scheduled_date), "d 'de' MMM", { locale: es })}
                         </p>
                       </div>
-                      <Button variant="primary" size="sm" onClick={() => { setModal(action); setResponseStatus('interested'); setResponseNote('') }}>
-                        Ejecutar
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="secondary" size="sm" onClick={() => openReminderModal(action)} title="Crear recordatorio para esta etapa">
+                          <Bell size={14} /> Recordar
+                        </Button>
+                        <Button variant="primary" size="sm" onClick={() => { setModal(action); setResponseStatus('interested'); setResponseNote('') }}>
+                          Ejecutar
+                        </Button>
+                      </div>
                     </div>
                   </Card>
                 ))}
@@ -512,6 +553,7 @@ export default function Seguimiento() {
                                 </div>
 
                                 {isOverdue && (
+                                  <div className="flex gap-2">
                                   <Button
                                     variant="primary"
                                     size="sm"
@@ -519,6 +561,15 @@ export default function Seguimiento() {
                                   >
                                     Ejecutar
                                   </Button>
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => openReminderModal(stage)}
+                                    title="Crear recordatorio"
+                                  >
+                                    <Bell size={14} />
+                                  </Button>
+                                  </div>
                                 )}
                               </div>
                             )
@@ -711,6 +762,63 @@ export default function Seguimiento() {
               <Button variant="primary" loading={saving} onClick={handleNewPlan}>
                 <Plus size={16} /> Crear Plan
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal: Crear recordatorio rápido */}
+      {reminderModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setReminderModal(null)} />
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
+                <Bell size={20} className="text-orange-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white">Crear recordatorio</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{reminderModal.contact_name}</p>
+              </div>
+              <button onClick={() => setReminderModal(null)} className="ml-auto text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Fecha y hora</label>
+                <input
+                  type="datetime-local"
+                  value={reminderDate}
+                  onChange={e => setReminderDate(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Nota (opcional)</label>
+                <input
+                  placeholder={`Seguimiento — ${reminderModal.contact_name}`}
+                  value={reminderNote}
+                  onChange={e => setReminderNote(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent placeholder-gray-400"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={handleCreateReminder}
+                disabled={reminderSaving || !reminderDate}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold rounded-xl py-2.5 text-sm transition flex items-center justify-center gap-2"
+              >
+                <Bell size={15} /> {reminderSaving ? 'Guardando...' : 'Crear recordatorio'}
+              </button>
+              <button
+                onClick={() => setReminderModal(null)}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-semibold transition"
+              >
+                Cancelar
+              </button>
             </div>
           </div>
         </div>

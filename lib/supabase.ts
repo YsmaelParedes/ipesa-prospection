@@ -156,6 +156,35 @@ export async function getAllReminders() {
   return data
 }
 
+// Cuenta ítems urgentes: recordatorios + etapas de seguimiento vencidos hoy
+export async function getAlertCount(): Promise<number> {
+  const endOfToday = new Date()
+  endOfToday.setHours(23, 59, 59, 999)
+  const cut = endOfToday.toISOString()
+  const [r1, r2] = await Promise.all([
+    getSupabase().from('reminders').select('id', { count: 'exact', head: true })
+      .eq('is_completed', false).lte('reminder_date', cut),
+    getSupabase().from('contact_follow_ups').select('id', { count: 'exact', head: true })
+      .eq('status', 'pending').lte('scheduled_date', cut),
+  ])
+  return (r1.count ?? 0) + (r2.count ?? 0)
+}
+
+// Etapas de seguimiento pendientes hasta N días adelante (para feed unificado)
+export async function getFollowUpsDue(daysAhead = 1): Promise<any[]> {
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() + daysAhead)
+  cutoff.setHours(23, 59, 59, 999)
+  const { data, error } = await getSupabase()
+    .from('contact_follow_ups')
+    .select(`*, contacts(name, phone, company), follow_up_stages(stage_name, objective, channel, tone, day)`)
+    .eq('status', 'pending')
+    .lte('scheduled_date', cutoff.toISOString())
+    .order('scheduled_date', { ascending: true })
+  if (error) throw error
+  return data ?? []
+}
+
 // ===== FOLLOW-UP SYSTEM =====
 
 export async function getFollowUpSequences() {
