@@ -172,16 +172,24 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: data.error.message }, { status: 400 })
       }
 
+      // Si el input fue un CP de 5 dígitos, usarlo como fallback
+      const inputCp = /^\d{5}$/.test(location.trim()) ? location.trim() : ''
+
       const results = (data.places || []).map((place: any) => {
         const phone = place.nationalPhoneNumber || ''
         const wa = formatWhatsApp(phone)
         const actividad = place.primaryTypeDisplayName?.text || ''
+        const address = place.formattedAddress || ''
+        // Extraer CP de 5 dígitos de la dirección formateada
+        const cpMatch = address.match(/\b(\d{5})\b/)
+        const postal_code = cpMatch ? cpMatch[1] : inputCp
         return {
           name: place.displayName?.text || '',
           phone,
           whatsapp: wa,
           whatsapp_link: wa ? `https://wa.me/${wa}` : null,
-          address: place.formattedAddress || '',
+          address,
+          postal_code,
           segment: mapSegmento(actividad),
           activity: actividad,
           rating: place.rating || null,
@@ -197,23 +205,42 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'INEGI API key no configurada' }, { status: 500 })
       }
 
-      const radius = isCiudad ? 5000 : 5000 // 5 km siempre — 10km aborta el stream de INEGI
       const terms = expandQueryTerms(query)
+      const primaryTerm = terms[0]
 
-      // Buscar secuencialmente para no saturar la API de INEGI
-      const searches: any[][] = []
-      for (const t of terms) {
-        const batch = await searchINEGI(t, coords.lat, coords.lng, radius)
-        searches.push(batch)
-        if (searches.flat().length >= 200) break // suficientes resultados, mantener búsqueda rápida
-      }
+      // Grid 3×3 centrado en las coordenadas (~1 km entre puntos, radio 1.5 km por celda).
+      // Cada celda devuelve hasta 50 resultados → hasta ~400 únicos tras deduplicar.
+      const STEP   = 0.009  // ≈ 1 km en lat/lng
+      const RADIUS = 1500   // metros por celda (overlapping para no dejar huecos)
+      const gridOffsets: [number, number][] = [
+        [-STEP, -STEP], [-STEP, 0], [-STEP, STEP],
+        [0,     -STEP], [0,     0], [0,     STEP],
+        [STEP,  -STEP], [STEP,  0], [STEP,  STEP],
+      ]
 
-      // Aplanar y deduplicar por ID INEGI o (nombre + CP)
+      // Búsquedas del grid con el término principal, en paralelo
+      const gridResults = await Promise.allSettled(
+        gridOffsets.map(([dlat, dlng]) =>
+          searchINEGI(primaryTerm, coords.lat + dlat, coords.lng + dlng, RADIUS)
+        )
+      )
+
+      // Términos alternativos solo en el centro (sin multiplicar el grid)
+      const extraResults = await Promise.allSettled(
+        terms.slice(1, 3).map(t => searchINEGI(t, coords.lat, coords.lng, RADIUS))
+      )
+
+      const allBatches: any[][] = [
+        ...gridResults.map(r => r.status === 'fulfilled' ? r.value : []),
+        ...extraResults.map(r => r.status === 'fulfilled' ? r.value : []),
+      ]
+
+      // Deduplicar por ID INEGI o (nombre + CP)
       const seen = new Set<string>()
       const allItems: any[] = []
-      for (const batch of searches) {
+      for (const batch of allBatches) {
         for (const item of batch) {
-          const key = item.Id || `${item.Nombre}|${item.CP}`
+          const key = item.Id ? String(item.Id) : `${item.Nombre}|${item.CP}`
           if (!seen.has(key)) {
             seen.add(key)
             allItems.push(item)
@@ -226,7 +253,7 @@ export async function POST(req: NextRequest) {
           source: 'inegi',
           ciudad: coords.ciudad,
           data: [],
-          hint: `Sin resultados en 10 km para "${query}". Intenta con términos como: ${terms.slice(1).join(', ') || 'ninguna variante encontrada'}`,
+          hint: `Sin resultados para "${query}". Intenta con: ${terms.slice(1).join(', ') || 'ninguna variante encontrada'}`,
         })
       }
 
@@ -241,6 +268,7 @@ export async function POST(req: NextRequest) {
           whatsapp_link: wa ? `https://wa.me/${wa}` : null,
           address: [item.Calle, item.Num_Exterior, item.Colonia, `CP ${item.CP}`]
             .filter(Boolean).join(', '),
+          postal_code: item.CP ? String(item.CP) : '',
           segment: mapSegmento(actividad),
           activity: actividad,
           email: item.Correo_e || '',

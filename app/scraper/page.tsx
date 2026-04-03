@@ -181,6 +181,7 @@ export default function Scraper() {
         email: results[i].email || '',
         company: results[i].name,
         address: results[i].address || '',
+        postal_code: results[i].postal_code || '',
         segment: results[i].segment || '',
         prospect_status: 'nuevo',
         acquisition_channel: channelLabel,
