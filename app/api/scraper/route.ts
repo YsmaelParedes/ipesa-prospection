@@ -208,32 +208,32 @@ export async function POST(req: NextRequest) {
       const terms = expandQueryTerms(query)
       const primaryTerm = terms[0]
 
-      // Grid 3×3 centrado en las coordenadas (~1 km entre puntos, radio 1.5 km por celda).
-      // Cada celda devuelve hasta 50 resultados → hasta ~400 únicos tras deduplicar.
-      const STEP   = 0.009  // ≈ 1 km en lat/lng
-      const RADIUS = 1500   // metros por celda (overlapping para no dejar huecos)
-      const gridOffsets: [number, number][] = [
-        [-STEP, -STEP], [-STEP, 0], [-STEP, STEP],
-        [0,     -STEP], [0,     0], [0,     STEP],
-        [STEP,  -STEP], [STEP,  0], [STEP,  STEP],
+      // INEGI bloquea peticiones paralelas del mismo IP.
+      // Estrategia: 5 puntos en cruz (centro + N/S/E/O) secuenciales con 400ms de pausa.
+      // ~2km entre puntos, radio 3km por punto → cubre área de ~7km × 7km.
+      // Tiempo estimado: 5 × 3s + 4 × 0.4s ≈ 17s. Hasta ~200 únicos.
+      const OFFSET = 0.018  // ≈ 2 km
+      const RADIUS = 3000
+      const points: [number, number][] = [
+        [coords.lat,          coords.lng         ],  // centro
+        [coords.lat + OFFSET, coords.lng         ],  // norte
+        [coords.lat - OFFSET, coords.lng         ],  // sur
+        [coords.lat,          coords.lng + OFFSET],  // este
+        [coords.lat,          coords.lng - OFFSET],  // oeste
       ]
 
-      // Búsquedas del grid con el término principal, en paralelo
-      const gridResults = await Promise.allSettled(
-        gridOffsets.map(([dlat, dlng]) =>
-          searchINEGI(primaryTerm, coords.lat + dlat, coords.lng + dlng, RADIUS)
-        )
-      )
-
-      // Términos alternativos solo en el centro (sin multiplicar el grid)
-      const extraResults = await Promise.allSettled(
-        terms.slice(1, 3).map(t => searchINEGI(t, coords.lat, coords.lng, RADIUS))
-      )
-
-      const allBatches: any[][] = [
-        ...gridResults.map(r => r.status === 'fulfilled' ? r.value : []),
-        ...extraResults.map(r => r.status === 'fulfilled' ? r.value : []),
-      ]
+      const allBatches: any[][] = []
+      for (const [lat, lng] of points) {
+        const batch = await searchINEGI(primaryTerm, lat, lng, RADIUS)
+        allBatches.push(batch)
+        await new Promise(r => setTimeout(r, 400)) // pausa para no saturar INEGI
+      }
+      // Términos alternativos solo en el centro
+      for (const t of terms.slice(1, 3)) {
+        const batch = await searchINEGI(t, coords.lat, coords.lng, RADIUS)
+        allBatches.push(batch)
+        await new Promise(r => setTimeout(r, 400))
+      }
 
       // Deduplicar por ID INEGI o (nombre + CP)
       const seen = new Set<string>()
