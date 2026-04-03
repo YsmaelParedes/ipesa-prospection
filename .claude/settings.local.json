@@ -27,7 +27,23 @@
       "Bash(grep -n \"prospect_status\\\\|segment\\\\|SEGMENT\\\\|STATUS\" /c/Users/iysma/Documents/apps_Claude/ipesa-prospection/app/campanas/page.tsx /c/Users/iysma/Documents/apps_Claude/ipesa-prospection/app/contactos/[id]/page.tsx)",
       "Bash(git checkout:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git stash:*)",
+      "Bash(git reset:*)",
+      "Bash(node -e \"const d=require\\(''''fs''''\\).readFileSync\\(''''/dev/stdin'''',''''utf8''''\\); console.log\\(JSON.stringify\\(JSON.parse\\(d\\),null,2\\)\\)\")",
+      "Bash(node -e \":*)",
+      "Bash(cd:*)",
+      "Bash(git rm:*)",
+      "Bash(git merge:*)",
+      "Bash(xargs grep:*)",
+      "WebSearch",
+      "WebFetch(domain:help.smsmasivos.com.mx)",
+      "WebFetch(domain:www.smsmasivos.com.mx)",
+      "WebFetch(domain:app.smsmasivos.com.mx)",
+      "Bash(node -e ':*)",
+      "WebFetch(domain:www.seccionamarilla.com.mx)",
+      "Bash(rm:*)"
     ]
   }
 }
