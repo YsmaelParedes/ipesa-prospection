@@ -13,7 +13,7 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
-import { Plus, Upload, Trash2, Edit, Search, FileSpreadsheet, X, CheckSquare, Square, Filter, ChevronDown, ChevronUp, Download } from 'lucide-react'
+import { Plus, Upload, Trash2, Edit, Search, FileSpreadsheet, X, CheckSquare, Square, Filter, ChevronDown, ChevronUp, Download, TableProperties } from 'lucide-react'
 
 const STATUSES = [
   { value: 'nuevo', label: 'Nuevo' },
@@ -63,12 +63,24 @@ export default function Contactos() {
   const [bulkChannel, setBulkChannel] = useState('')
   const [bulkSaving, setBulkSaving] = useState(false)
 
-  // Excel
+  // Exportar Excel
+  const [exportOpen, setExportOpen] = useState(false)
+  const exportRef = useRef<HTMLDivElement>(null)
+
+  // Excel import
   const [xlsxModal, setXlsxModal] = useState(false)
   const [xlsxSheets, setXlsxSheets] = useState<{ name: string; rows: any[]; selected: boolean }[]>([])
   const [xlsxImporting, setXlsxImporting] = useState(false)
 
   useEffect(() => { fetchAll() }, [])
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   const fetchAll = async () => {
     try {
@@ -273,6 +285,43 @@ export default function Contactos() {
     })
   }
 
+  const exportToExcel = (segmentFilter: string | null) => {
+    setExportOpen(false)
+    const rows = segmentFilter === null
+      ? contacts
+      : segmentFilter === '__sin__'
+        ? contacts.filter(c => !c.segment)
+        : contacts.filter(c => c.segment?.toLowerCase() === segmentFilter.toLowerCase())
+
+    if (!rows.length) { toast('Sin contactos en esa categoría', { icon: '📭' }); return }
+
+    const data = rows.map(c => ({
+      'Nombre':             c.name || '',
+      'Teléfono':           c.phone || '',
+      'Email':              c.email || '',
+      'Empresa':            c.company || '',
+      'Dirección':          c.address || '',
+      'CP':                 c.postal_code || '',
+      'Segmento':           c.segment || '',
+      'Estado prospecto':   c.prospect_status || '',
+      'Canal adquisición':  c.acquisition_channel || '',
+      'Fecha creación':     c.created_at ? new Date(c.created_at).toLocaleDateString('es-MX') : '',
+    }))
+
+    const ws = XLSX.utils.json_to_sheet(data)
+    // Anchos de columna
+    ws['!cols'] = [20, 14, 28, 22, 32, 8, 16, 18, 20, 14].map(w => ({ wch: w }))
+
+    const wb = XLSX.utils.book_new()
+    const sheetName = segmentFilter === null ? 'Todos' : segmentFilter === '__sin__' ? 'Sin segmento' : segmentFilter.charAt(0).toUpperCase() + segmentFilter.slice(1)
+    XLSX.utils.book_append_sheet(wb, ws, sheetName)
+
+    const date = new Date().toISOString().split('T')[0]
+    const filename = segmentFilter === null ? `contactos_todos_${date}.xlsx` : `contactos_${sheetName.toLowerCase()}_${date}.xlsx`
+    XLSX.writeFile(wb, filename)
+    toast.success(`${rows.length} contactos exportados`)
+  }
+
   const handleBackup = () => {
     const date = new Date().toISOString().split('T')[0]
     const data = {
@@ -327,6 +376,53 @@ export default function Contactos() {
               <Button variant="secondary" size="sm" onClick={handleBackup} title="Descargar backup completo">
                 <Download size={14} /> <span className="hidden sm:inline">Backup</span>
               </Button>
+
+              {/* Exportar Excel con dropdown por segmento */}
+              <div className="relative" ref={exportRef}>
+                <button
+                  onClick={() => setExportOpen(v => !v)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg px-2.5 py-1.5 inline-flex items-center gap-1 transition text-sm"
+                  title="Exportar a Excel"
+                >
+                  <TableProperties size={14} />
+                  <span className="hidden sm:inline">Exportar</span>
+                  <ChevronDown size={12} className={`transition-transform ${exportOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {exportOpen && (
+                  <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden z-30">
+                    <div className="px-3 py-2 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
+                      Exportar como .xlsx
+                    </div>
+                    <button onClick={() => exportToExcel(null)}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-700 hover:text-emerald-700 dark:hover:text-white transition flex items-center justify-between">
+                      Todos los contactos
+                      <span className="text-xs text-gray-400">{contacts.length}</span>
+                    </button>
+                    <div className="border-t border-gray-100 dark:border-gray-700" />
+                    {segments.map(s => {
+                      const count = contacts.filter(c => c.segment?.toLowerCase() === s.name.toLowerCase()).length
+                      return (
+                        <button key={s.id} onClick={() => exportToExcel(s.name)}
+                          className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-700 hover:text-emerald-700 dark:hover:text-white transition flex items-center justify-between">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.color || '#6b7280' }} />
+                            {s.name}
+                          </span>
+                          <span className="text-xs text-gray-400">{count}</span>
+                        </button>
+                      )
+                    })}
+                    {contacts.some(c => !c.segment) && (
+                      <button onClick={() => exportToExcel('__sin__')}
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-gray-700 hover:text-emerald-700 dark:hover:text-white transition flex items-center justify-between">
+                        Sin segmento
+                        <span className="text-xs text-gray-400">{contacts.filter(c => !c.segment).length}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
