@@ -10,28 +10,44 @@ import {
   ChevronDown, X,
 } from 'lucide-react'
 
+interface ContactInfo {
+  name: string
+  company: string
+  segment: string
+  prospect_status: string
+}
+
 interface SmsReport {
   reference: string
   number: string
+  name: string        // nombre de campaña/lista en SMS Masivos
   message: string
   status: number
   sent_date: string
+  created_date: string
+  operator: string
+  contact: ContactInfo | null  // enriquecido desde Supabase
 }
 
+// Status codes reales API SMS Masivos v2
 const STATUS_MAP: Record<number, { label: string; bg: string; text: string; icon: React.ReactNode }> = {
-  1: { label: 'Entregado',  bg: 'bg-green-100 dark:bg-green-900/30',  text: 'text-green-700 dark:text-green-300',  icon: <CheckCircle size={12} /> },
-  2: { label: 'Fallido',    bg: 'bg-red-100 dark:bg-red-900/30',      text: 'text-red-700 dark:text-red-300',      icon: <XCircle size={12} /> },
-  3: { label: 'Pendiente',  bg: 'bg-yellow-100 dark:bg-yellow-900/30',text: 'text-yellow-700 dark:text-yellow-300',icon: <Clock size={12} /> },
-  4: { label: 'Expirado',   bg: 'bg-gray-100 dark:bg-gray-700',       text: 'text-gray-600 dark:text-gray-400',    icon: <AlertTriangle size={12} /> },
-  5: { label: 'Rechazado',  bg: 'bg-red-100 dark:bg-red-900/30',      text: 'text-red-700 dark:text-red-300',      icon: <XCircle size={12} /> },
+  0: { label: 'Entregado',        bg: 'bg-green-100 dark:bg-green-900/30',  text: 'text-green-700 dark:text-green-300',  icon: <CheckCircle size={12} /> },
+  1: { label: 'No entregado',     bg: 'bg-red-100 dark:bg-red-900/30',      text: 'text-red-700 dark:text-red-300',      icon: <XCircle size={12} /> },
+  2: { label: 'Error',            bg: 'bg-red-100 dark:bg-red-900/30',      text: 'text-red-700 dark:text-red-300',      icon: <XCircle size={12} /> },
+  3: { label: 'Expirado',         bg: 'bg-gray-100 dark:bg-gray-700',       text: 'text-gray-600 dark:text-gray-400',    icon: <AlertTriangle size={12} /> },
+  4: { label: 'Rechazado',        bg: 'bg-red-100 dark:bg-red-900/30',      text: 'text-red-700 dark:text-red-300',      icon: <XCircle size={12} /> },
+  5: { label: 'Desconocido',      bg: 'bg-gray-100 dark:bg-gray-700',       text: 'text-gray-500 dark:text-gray-400',    icon: <AlertTriangle size={12} /> },
+  6: { label: 'No encontrado',    bg: 'bg-gray-100 dark:bg-gray-700',       text: 'text-gray-500 dark:text-gray-400',    icon: <AlertTriangle size={12} /> },
+  7: { label: 'Formato inválido', bg: 'bg-red-100 dark:bg-red-900/30',      text: 'text-red-700 dark:text-red-300',      icon: <XCircle size={12} /> },
+  8: { label: 'Pendiente',        bg: 'bg-yellow-100 dark:bg-yellow-900/30',text: 'text-yellow-700 dark:text-yellow-300',icon: <Clock size={12} /> },
 }
 
 type TabId = 'all' | 'delivered' | 'failed' | 'pending'
 const TABS: { id: TabId; label: string; statuses: number[] }[] = [
   { id: 'all',       label: 'Todos',      statuses: [] },
-  { id: 'delivered', label: 'Entregados', statuses: [1] },
-  { id: 'failed',    label: 'Fallidos',   statuses: [2, 4, 5] },
-  { id: 'pending',   label: 'Pendientes', statuses: [3] },
+  { id: 'delivered', label: 'Entregados', statuses: [0] },
+  { id: 'failed',    label: 'Fallidos',   statuses: [1, 2, 4, 5, 6, 7] },
+  { id: 'pending',   label: 'Pendientes', statuses: [3, 8] },
 ]
 
 function formatDate(iso: string) {
@@ -53,12 +69,16 @@ function daysAgoStr(n: number) {
 
 // ── CSV export ──────────────────────────────────────────────────────────────
 function downloadCSV(rows: SmsReport[], filename: string) {
-  const header = ['Número', 'Mensaje', 'Estado', 'Fecha envío', 'Referencia']
+  const header = ['Contacto', 'Empresa', 'Segmento', 'Número', 'Mensaje', 'Estado', 'Operador', 'Fecha envío', 'Referencia']
   const lines = rows.map(r => [
+    r.contact?.name   || '',
+    r.contact?.company || '',
+    r.contact?.segment || '',
     `+52${r.number}`,
     `"${(r.message || '').replace(/"/g, '""')}"`,
     STATUS_MAP[r.status]?.label ?? `Estado ${r.status}`,
-    r.sent_date ? formatDate(r.sent_date) : '',
+    r.operator || '',
+    (r.sent_date || r.created_date) ? formatDate(r.sent_date || r.created_date) : '',
     r.reference,
   ].join(','))
   const csv = [header.join(','), ...lines].join('\n')
@@ -113,9 +133,9 @@ export default function SmsReportes() {
 
   // ── Stats ───────────────────────────────────────────────────────────────
   const total      = report.length
-  const entregados = report.filter(r => r.status === 1).length
-  const fallidos   = report.filter(r => [2, 4, 5].includes(r.status)).length
-  const pendientes = report.filter(r => r.status === 3).length
+  const entregados = report.filter(r => r.status === 0).length
+  const fallidos   = report.filter(r => [1, 2, 4, 5, 6, 7].includes(r.status)).length
+  const pendientes = report.filter(r => [3, 8].includes(r.status)).length
   const tasa       = total > 0 ? Math.round((entregados / total) * 100) : 0
 
   // ── Filtrado ────────────────────────────────────────────────────────────
@@ -124,10 +144,11 @@ export default function SmsReportes() {
     return report
       .map((r, i) => ({ ...r, _idx: String(i) }))
       .filter(r => {
-        if (tabStatuses.length && !tabStatuses.includes(r.status)) return false
+        if (tabStatuses.length > 0 && !tabStatuses.includes(r.status)) return false
         if (search) {
           const q = search.toLowerCase()
-          if (!r.number.includes(q) && !r.message.toLowerCase().includes(q) && !r.reference.toLowerCase().includes(q)) return false
+          const inContact = r.contact && (r.contact.name?.toLowerCase().includes(q) || r.contact.company?.toLowerCase().includes(q))
+          if (!r.number.includes(q) && !r.message.toLowerCase().includes(q) && !r.reference.toLowerCase().includes(q) && !inContact) return false
         }
         return true
       })
@@ -385,19 +406,20 @@ export default function SmsReportes() {
                               className="rounded border-gray-300 text-red-600" />
                           </th>
                         )}
+                        <th className="px-4 py-3 text-left">Contacto</th>
                         <th className="px-4 py-3 text-left">Número</th>
                         <th className="px-4 py-3 text-left">Mensaje</th>
                         <th className="px-4 py-3 text-left">Estado</th>
+                        <th className="px-4 py-3 text-left">Operador</th>
                         <th className="px-4 py-3 text-left">Fecha envío</th>
-                        <th className="px-4 py-3 text-left">Referencia</th>
                         <th className="px-4 py-3 text-left">Acción</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
                       {filtered.map((row) => {
                         const st = STATUS_MAP[row.status] ?? { label: `Estado ${row.status}`, bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-600 dark:text-gray-400', icon: null }
-                        const isFailed = [2, 4, 5].includes(row.status)
-                        const isDelivered = row.status === 1
+                        const isFailed    = [1, 2, 4, 5, 6, 7].includes(row.status)
+                        const isDelivered = row.status === 0
                         return (
                           <tr key={row._idx} className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 transition ${selected.has(row._idx) ? 'bg-red-50/50 dark:bg-red-900/10' : ''}`}>
                             {isFailedTab && (
@@ -406,17 +428,33 @@ export default function SmsReportes() {
                                   className="rounded border-gray-300 text-red-600" />
                               </td>
                             )}
+                            {/* Columna contacto */}
+                            <td className="px-4 py-3">
+                              {row.contact ? (
+                                <div>
+                                  <p className="text-xs font-semibold text-gray-900 dark:text-white">{row.contact.name}</p>
+                                  {row.contact.company && <p className="text-xs text-gray-400 dark:text-gray-500">{row.contact.company}</p>}
+                                  {row.contact.segment && (
+                                    <span className="inline-block text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 mt-0.5">
+                                      {row.contact.segment}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-gray-400 dark:text-gray-500 italic">Sin contacto</span>
+                              )}
+                            </td>
                             <td className="px-4 py-3 font-mono text-gray-900 dark:text-white text-xs whitespace-nowrap">+52 {row.number}</td>
                             <td className="px-4 py-3 text-gray-600 dark:text-gray-300 max-w-xs">
-                              <p className="truncate">{row.message}</p>
+                              <p className="truncate text-xs">{row.message}</p>
                             </td>
                             <td className="px-4 py-3">
                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${st.bg} ${st.text}`}>
                                 {st.icon} {st.label}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">{formatDate(row.sent_date)}</td>
-                            <td className="px-4 py-3 font-mono text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">{row.reference || '—'}</td>
+                            <td className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">{row.operator || '—'}</td>
+                            <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">{formatDate(row.sent_date || row.created_date)}</td>
                             <td className="px-4 py-3">
                               {isFailed && !isFailedTab && (
                                 <button onClick={() => resendSingle(row)}
