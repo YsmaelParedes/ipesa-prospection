@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTheme } from '@/components/ThemeProvider'
-import { Menu, X, BarChart3, Users, MessageSquare, Clock, Search, Settings, Tag, ChevronDown, RefreshCw, Moon, Sun, LogOut } from 'lucide-react'
+import { Menu, X, BarChart3, Users, MessageSquare, Clock, Search, Settings, Tag, ChevronDown, RefreshCw, Moon, Sun, LogOut, FileText } from 'lucide-react'
 
 const mainMenu = [
   { href: '/', label: 'Dashboard', icon: BarChart3 },
@@ -16,7 +16,8 @@ const mainMenu = [
 ]
 
 const configMenu = [
-  { href: '/segmentos', label: 'Segmentos', icon: Tag },
+  { href: '/segmentos',     label: 'Segmentos',         icon: Tag },
+  { href: '/sms-reportes',  label: 'Reportes SMS Masivos', icon: FileText },
 ]
 
 export default function Navbar() {
