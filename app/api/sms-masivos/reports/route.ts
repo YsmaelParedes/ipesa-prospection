@@ -34,9 +34,14 @@ export async function POST(req: NextRequest) {
     })
 
     const data = await res.json()
-    if (!res.ok) return NextResponse.json({ error: data.message || 'Error al generar reporte' }, { status: res.status })
 
-    const report: any[] = Array.isArray(data) ? data : (data.report ?? data.data ?? [])
+    if (!res.ok || data.success === false) {
+      return NextResponse.json({ error: data.message || 'Error al generar reporte' }, { status: 429 })
+    }
+
+    const report: any[] = Array.isArray(data) ? data : (data.report ?? data.data ?? data.messages ?? [])
+
+    if (!report.length) return NextResponse.json({ report: [] })
 
     if (!report.length) return NextResponse.json({ report: [] })
 

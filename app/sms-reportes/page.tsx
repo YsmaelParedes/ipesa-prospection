@@ -112,22 +112,40 @@ export default function SmsReportes() {
   const [dlOpen, setDlOpen] = useState(false)
   const dlRef = useRef<HTMLDivElement>(null)
 
+  const CACHE_KEY = `sms_report_${startDate}_${endDate}`
+
   const fetchReport = async () => {
+    // Revisar caché de sesión primero (evita gastar llamadas del límite diario)
+    const cached = sessionStorage.getItem(CACHE_KEY)
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached)
+        setReport(parsed)
+        setFetched(true)
+        setTab('all')
+        toast('Datos desde caché de sesión', { icon: '💾' })
+        return
+      } catch {}
+    }
+
     setLoading(true); setSelected(new Set())
     try {
-      const res  = await fetch('/api/sms-masivos/reports', {
+      const res = await fetch('/api/sms-masivos/reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ start_date: toApiDate(startDate), end_date: toApiDate(endDate, true) }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      setReport(data.report || [])
+      const rows = data.report || []
+      setReport(rows)
       setFetched(true)
       setTab('all')
-      if (!(data.report || []).length) toast('Sin registros en ese período', { icon: '📭' })
+      // Guardar en caché solo si hay datos
+      if (rows.length) sessionStorage.setItem(CACHE_KEY, JSON.stringify(rows))
+      if (!rows.length) toast('Sin registros en ese período', { icon: '📭' })
     } catch (err: any) {
-      toast.error('Error al obtener reporte: ' + err.message)
+      toast.error(err.message)
     } finally { setLoading(false) }
   }
 
