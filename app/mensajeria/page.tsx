@@ -934,7 +934,6 @@ export default function Mensajeria() {
               <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
                 <div className="flex flex-wrap gap-3">
                   <span className="flex items-center gap-1"><Clock size={11} className="text-green-500" /> Horario: 8am – 8pm</span>
-                  <span className="flex items-center gap-1"><Zap size={11} className="text-blue-500" /> Delay: 3 seg entre mensajes</span>
                   <span className="flex items-center gap-1"><CheckCircle size={11} className="text-purple-500" /> Telcel · Movistar · AT&T</span>
                 </div>
                 <div className="flex items-center gap-2">
