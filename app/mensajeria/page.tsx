@@ -443,9 +443,8 @@ export default function Mensajeria() {
         setProgress(p => ({ ...p, current: i + 1, failed }))
       }
 
-      if (i < queue.length - 1 && !isCancelled.current) {
-        // SMS Masivos: 3 segundos fijos. WhatsApp: delay gaussiano según preset
-        const delayMs = channel === 'sms' ? 3000 : gaussianDelay(DELAY_PRESETS[delayPreset].min, DELAY_PRESETS[delayPreset].max)
+      if (channel === 'whatsapp' && i < queue.length - 1 && !isCancelled.current) {
+        const delayMs = gaussianDelay(DELAY_PRESETS[delayPreset].min, DELAY_PRESETS[delayPreset].max)
         const endTime  = Date.now() + delayMs
         while (Date.now() < endTime && !isCancelled.current) {
           setCountdown(Math.ceil((endTime - Date.now()) / 1000))
@@ -847,26 +846,11 @@ export default function Mensajeria() {
                 <textarea
                   value={smsMessage}
                   onChange={e => setSmsMessage(e.target.value.slice(0, 160))}
-                  placeholder="Hola {{nombre}}, te escribimos desde IPESA. Tienes un momento para hablar?"
+                  placeholder="Hola, te escribimos desde IPESA. Tienes un momento para hablar?"
                   rows={5}
                   maxLength={160}
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-xl text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-red-400 resize-none dark-mode-transition"
                 />
-
-                {/* Variables helper */}
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-gray-400 dark:text-gray-500 font-semibold">Insertar:</span>
-                  {[
-                    { label: '{{nombre}}',   value: '{{nombre}}' },
-                    { label: '{{empresa}}',  value: '{{empresa}}' },
-                    { label: '{{telefono}}', value: '{{telefono}}' },
-                  ].map(v => (
-                    <button key={v.value} onClick={() => setSmsMessage(prev => prev + v.value)}
-                      className="text-xs px-2 py-1 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-900/40 font-mono transition">
-                      {v.label}
-                    </button>
-                  ))}
-                </div>
 
                 {/[áéíóúüñÁÉÍÓÚÜÑ]/.test(smsMessage) && (
                   <p className="mt-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
@@ -986,9 +970,6 @@ export default function Mensajeria() {
                       <p className="text-xs text-gray-500 mt-1 ml-1">+1 (877) 780-4236</p>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
-                    ✦ Las variables <code>{'{{nombre}}'}</code>, <code>{'{{empresa}}'}</code> se reemplazan por cada contacto
-                  </p>
                 </Card>
               )}
 
