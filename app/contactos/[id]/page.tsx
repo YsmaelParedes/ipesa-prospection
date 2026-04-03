@@ -29,7 +29,7 @@ export default function EditContacto() {
   const id = params.id as string
 
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ name: '', phone: '', email: '', company: '', address: '', segment: '', prospect_status: '', acquisition_channel: '' })
+  const [form, setForm] = useState({ name: '', phone: '', email: '', company: '', address: '', postal_code: '', segment: '', prospect_status: '', acquisition_channel: '' })
   const [segments, setSegments] = useState<any[]>([])
   const [followUps, setFollowUps] = useState<any[]>([])
   const [notes, setNotes] = useState<any[]>([])
@@ -120,6 +120,7 @@ export default function EditContacto() {
                   <Input label="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
                   <Input label="Empresa" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} />
                   <Input label="Dirección" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+                  <Input label="Código Postal" value={form.postal_code} onChange={e => setForm({ ...form, postal_code: e.target.value })} />
                   <Input label="Canal de adquisición" value={form.acquisition_channel} onChange={e => setForm({ ...form, acquisition_channel: e.target.value })} />
                   <Select label="Segmento" value={form.segment} onChange={e => setForm({ ...form, segment: e.target.value })} options={[
                     { value: '', label: 'Sin segmento' },

@@ -49,7 +49,7 @@ export default function Contactos() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('__todos__')
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: '', phone: '', email: '', company: '', address: '', segment: '', prospect_status: 'nuevo', acquisition_channel: '' })
+  const [form, setForm] = useState({ name: '', phone: '', email: '', company: '', address: '', postal_code: '', segment: '', prospect_status: 'nuevo', acquisition_channel: '' })
 
   // Search & filters within tab
   const [search, setSearch] = useState('')
@@ -132,7 +132,7 @@ export default function Contactos() {
     try {
       await addContact({ ...form, segment: form.segment || (activeTab !== '__todos__' && activeTab !== '__sin_segmento__' ? activeTab : '') })
       toast.success('Contacto agregado')
-      setForm({ name: '', phone: '', email: '', company: '', address: '', segment: '', prospect_status: 'nuevo', acquisition_channel: '' })
+      setForm({ name: '', phone: '', email: '', company: '', address: '', postal_code: '', segment: '', prospect_status: 'nuevo', acquisition_channel: '' })
       setShowForm(false)
       fetchContacts()
     } catch (error: any) { toast.error(error.message || 'Error al agregar') }
@@ -204,6 +204,7 @@ export default function Contactos() {
           email: (r['Emails'] || r['Email'] || '').toString().trim(),
           company: (r['Empresa'] || '').toString().trim(),
           address: (r['Dirección'] || r['Direccion'] || '').toString().trim(),
+          postal_code: (r['Código Postal'] || r['Codigo Postal'] || r['CP'] || r['postal_code'] || '').toString().trim(),
           segment: (r['Etiquetas'] || r['Etiqueta '] || r['Etiqueta'] || name).toString().trim().toLowerCase(),
           acquisition_channel: (r['Canal de adquisición'] || r['Canal de adquisicion'] || r['Canal'] || '').toString().trim(),
           prospect_status: 'nuevo',
@@ -239,7 +240,7 @@ export default function Contactos() {
         try {
           const data = results.data.filter((r: any) => r.name && r.phone).map((r: any) => ({
             name: r.name, phone: r.phone, email: r.email || '', company: r.company || '',
-            address: r.address || '', segment: r.segment || '',
+            address: r.address || '', postal_code: r.postal_code || '', segment: r.segment || '',
             prospect_status: r.prospect_status || 'nuevo', acquisition_channel: r.acquisition_channel || '',
           }))
           await importContacts(data)
@@ -365,6 +366,7 @@ export default function Contactos() {
                   <Input label="Email" placeholder="juan@empresa.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
                   <Input label="Empresa" placeholder="Acme Corp" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} />
                   <Input label="Dirección" placeholder="Calle 123, Puebla" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+                  <Input label="Código Postal" placeholder="72000" value={form.postal_code} onChange={e => setForm({ ...form, postal_code: e.target.value })} />
                   <Select label="Canal de adquisición" value={form.acquisition_channel} onChange={e => setForm({ ...form, acquisition_channel: e.target.value })} options={ACQUISITION_CHANNELS} />
                   <Select
                     label="Segmento"
