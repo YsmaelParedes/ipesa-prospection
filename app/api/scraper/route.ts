@@ -258,45 +258,64 @@ async function searchSeccionAmarilla(query: string, location: string, maxPages =
     'Referer': 'https://www.seccionamarilla.com.mx/',
   }
 
-  // Slug: minúsculas, acentos removidos, espacios → guiones
+  // Slug: minúsculas, sin acentos, sin CP numérico inicial, espacios → guiones
   const slug = (s: string) =>
     s.trim().toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/^\d+\s*/, '')           // quitar CP o número al inicio ("72850 Puebla" → "Puebla")
       .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
 
   const qSlug = slug(query)
-  const lSlug = slug(location)
 
-  // Probar URL base para diagnóstico
-  const testUrl = `https://www.seccionamarilla.com.mx/resultados/1/${qSlug}/${lSlug}/`
-  try {
-    const resp = await axios.get(testUrl, { headers, timeout: 14000, validateStatus: () => true })
-    const html = typeof resp.data === 'string' ? resp.data : ''
-    debugLines.push(`status=${resp.status} len=${html.length}`)
+  // Generar variantes de location: ciudad completa y solo primera palabra
+  const locClean = location.replace(/^\d+\s*/, '').trim()  // quitar CP si lo hay
+  const locParts = locClean.split(',').map(p => p.trim()).filter(Boolean)
+  const locVariants = [
+    slug(locParts[0] || locClean),                          // "san-andres-cholula"
+    locParts[1] ? slug(locParts[1]) : null,                 // "puebla" (estado)
+    slug(locClean),                                         // todo junto
+  ].filter((v): v is string => !!v && v.length > 1)
+  // Eliminar duplicados manteniendo orden
+  const seen2 = new Set<string>()
+  const uniqueLocs = locVariants.filter(v => { if (seen2.has(v)) return false; seen2.add(v); return true })
 
-    if (resp.status !== 200 || html.length < 1000) {
-      debugLines.push('respuesta vacía o error HTTP')
-      return { results: [], debug: debugLines.join(' | ') }
+  // Probar variantes de URL hasta encontrar una que devuelva 200
+  let workingLSlug = uniqueLocs[0]
+  let probeHtml = ''
+  for (const lSlug of uniqueLocs) {
+    const testUrl = `https://www.seccionamarilla.com.mx/resultados/1/${qSlug}/${lSlug}/`
+    debugLines.push(`probe: ${testUrl}`)
+    try {
+      const resp = await axios.get(testUrl, { headers, timeout: 12000, validateStatus: () => true })
+      const html = typeof resp.data === 'string' ? resp.data : ''
+      debugLines.push(`→ status=${resp.status} len=${html.length}`)
+      if (resp.status === 200 && html.length > 2000) {
+        workingLSlug = lSlug
+        probeHtml = html
+        break
+      }
+    } catch (e: any) {
+      debugLines.push(`→ error: ${e.message}`)
     }
+  }
 
-    const isSPA = !html.includes('itemtype') && !html.includes('sa-name') && html.includes('<app-root')
-    debugLines.push(`isSPA=${isSPA}`)
-
-    const $p = cheerio.load(html)
-    const sampleCounts = ['[itemtype*="LocalBusiness"]', '.sa-name', 'h2.listing-name', '.listing', '.resultado', 'article']
-      .map(s => `${s}:${$p(s).length}`).join(' ')
-    debugLines.push(`selectors: ${sampleCounts}`)
-    const snippet = $p('body').html()?.slice(0, 600).replace(/\s+/g, ' ') || ''
-    debugLines.push(`snippet: ${snippet}`)
-  } catch (e: any) {
-    debugLines.push(`probe error: ${e.message}`)
+  if (!probeHtml) {
     return { results: [], debug: debugLines.join(' | ') }
   }
 
+  // Diagnóstico de selectores en la página real
+  const $p = cheerio.load(probeHtml)
+  const sampleCounts = ['[itemtype*="LocalBusiness"]', '.sa-name', 'h2.listing-name', '.listing', '.resultado', 'article', 'li.item']
+    .map(s => `${s}:${$p(s).length}`).join(' ')
+  debugLines.push(`selectors: ${sampleCounts}`)
+  debugLines.push(`snippet: ${$p('body').html()?.slice(0, 500).replace(/\s+/g, ' ') || ''}`)
+
   // ── Parsear páginas ───────────────────────────────────────────────────────
   for (let page = 1; page <= maxPages; page++) {
-    const url = `https://www.seccionamarilla.com.mx/resultados/1/${qSlug}/${lSlug}/?pagina=${page}`
+    const url = `https://www.seccionamarilla.com.mx/resultados/1/${qSlug}/${workingLSlug}/?pagina=${page}`
     try {
       const { data: html } = await axios.get(url, { headers, timeout: 15000 })
       if (typeof html !== 'string' || html.length < 500) break
@@ -547,10 +566,9 @@ export async function POST(req: NextRequest) {
 
     // ── SECCIÓN AMARILLA ─────────────────────────────────────────────────────
     if (source === 'paginas_amarillas') {
-      // Usar ciudad del geocoding si dieron CP numérico
-      const searchLoc = /^\d{5}$/.test(location.trim())
-        ? coords.ciudad.split(',')[0].trim()
-        : location.trim()
+      // Siempre usar ciudad geocodificada — más limpia que lo que escribe el usuario
+      // coords.ciudad ej: "San Andrés Cholula, Puebla, México"
+      const searchLoc = coords.ciudad
 
       const { results: items, debug } = await searchSeccionAmarilla(query, searchLoc)
       console.log('[SA debug]', debug)
