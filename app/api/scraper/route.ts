@@ -241,110 +241,124 @@ async function searchByState(
   return results
 }
 
-// ── Páginas Amarillas MX ──────────────────────────────────────────────────────
-// Scraping HTML de paginasamarillas.com.mx con cheerio.
-// URL: /search/{query}/{location}/?pagina={n}
-async function searchPaginasAmarillas(query: string, location: string, maxPages = 3): Promise<any[]> {
+// ── Sección Amarilla MX (seccionamarilla.com.mx) ──────────────────────────────
+// Directorio de negocios Telmex — SSR, selectores Schema.org
+// URL: /resultados/1/{query}/{state-city}/?pagina={n}
+interface SAResult { results: any[]; debug: string }
+
+async function searchSeccionAmarilla(query: string, location: string, maxPages = 3): Promise<SAResult> {
   const results: any[] = []
   const seen = new Set<string>()
+  const debugLines: string[] = []
 
   const headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    'Accept-Language': 'es-MX,es;q=0.9,en;q=0.8',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Connection': 'keep-alive',
-    'Cache-Control': 'no-cache',
+    'Accept-Language': 'es-MX,es;q=0.9',
+    'Referer': 'https://www.seccionamarilla.com.mx/',
   }
 
-  // Normalizar location: quitar CP si es numérico, usar solo texto
-  const locSlug = encodeURIComponent(location.trim())
-  const querySlug = encodeURIComponent(query.trim())
+  // Slug: minúsculas, acentos removidos, espacios → guiones
+  const slug = (s: string) =>
+    s.trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
 
+  const qSlug = slug(query)
+  const lSlug = slug(location)
+
+  // Probar URL base para diagnóstico
+  const testUrl = `https://www.seccionamarilla.com.mx/resultados/1/${qSlug}/${lSlug}/`
+  try {
+    const resp = await axios.get(testUrl, { headers, timeout: 14000, validateStatus: () => true })
+    const html = typeof resp.data === 'string' ? resp.data : ''
+    debugLines.push(`status=${resp.status} len=${html.length}`)
+
+    if (resp.status !== 200 || html.length < 1000) {
+      debugLines.push('respuesta vacía o error HTTP')
+      return { results: [], debug: debugLines.join(' | ') }
+    }
+
+    const isSPA = !html.includes('itemtype') && !html.includes('sa-name') && html.includes('<app-root')
+    debugLines.push(`isSPA=${isSPA}`)
+
+    const $p = cheerio.load(html)
+    const sampleCounts = ['[itemtype*="LocalBusiness"]', '.sa-name', 'h2.listing-name', '.listing', '.resultado', 'article']
+      .map(s => `${s}:${$p(s).length}`).join(' ')
+    debugLines.push(`selectors: ${sampleCounts}`)
+    const snippet = $p('body').html()?.slice(0, 600).replace(/\s+/g, ' ') || ''
+    debugLines.push(`snippet: ${snippet}`)
+  } catch (e: any) {
+    debugLines.push(`probe error: ${e.message}`)
+    return { results: [], debug: debugLines.join(' | ') }
+  }
+
+  // ── Parsear páginas ───────────────────────────────────────────────────────
   for (let page = 1; page <= maxPages; page++) {
-    const url = `https://www.paginasamarillas.com.mx/search/${querySlug}/${locSlug}/?pagina=${page}`
+    const url = `https://www.seccionamarilla.com.mx/resultados/1/${qSlug}/${lSlug}/?pagina=${page}`
     try {
-      const { data: html } = await axios.get(url, {
-        headers,
-        timeout: 15000,
-        validateStatus: s => s < 500,
-      })
-
+      const { data: html } = await axios.get(url, { headers, timeout: 15000 })
       if (typeof html !== 'string' || html.length < 500) break
 
       const $ = cheerio.load(html)
 
-      // Selector principal de items
-      const items = $('article.result, .result-item, li.listado-item, div.business-listing, article.listing')
-      if (items.length === 0) break
+      // Sección Amarilla usa Schema.org LocalBusiness en sus listings
+      const containers = $('[itemtype*="LocalBusiness"], .listing-item, .sa-card, .resultado-item, article.result')
+      debugLines.push(`page=${page} found=${containers.length}`)
+      if (containers.length === 0) break
 
-      items.each((_i, el) => {
+      containers.each((_i, el) => {
         const $el = $(el)
 
-        // Nombre — varios patrones posibles
         const name = (
-          $el.find('h2.name, h2.business-name, .name a, .business-name, h3.name, a.name').first().text() ||
-          $el.find('h2').first().text() ||
-          $el.find('a[itemprop="name"], span[itemprop="name"]').first().text()
-        ).trim()
-
-        if (!name) return
-
-        // Teléfono
-        const phoneRaw = (
-          $el.find('.phone, .telefono, .tel, [itemprop="telephone"], span.phone').first().text() ||
-          $el.find('a[href^="tel:"]').first().attr('href')?.replace('tel:', '') ||
-          ''
-        ).trim()
-        const phone = phoneRaw.replace(/\D/g, '').slice(-10)
-
-        // Dirección
-        const address = (
-          $el.find('.address, .direccion, [itemprop="streetAddress"], .street-address, .location').first().text() ||
-          $el.find('[itemprop="address"]').first().text()
+          $el.find('[itemprop="name"]').first().text() ||
+          $el.find('.sa-name, .listing-name, h2, h3').first().text()
         ).trim().replace(/\s+/g, ' ')
 
-        // Categoría / actividad
+        if (!name || name.length < 2) return
+
+        const phoneRaw = (
+          $el.find('[itemprop="telephone"]').first().text() ||
+          $el.find('a[href^="tel:"]').first().attr('href')?.replace('tel:', '') ||
+          $el.find('.sa-phone, .phone, .telefono').first().text()
+        )?.trim() || ''
+        const phone = phoneRaw.replace(/\D/g, '').slice(-10)
+
+        const address = (
+          $el.find('[itemprop="streetAddress"]').first().text() ||
+          $el.find('[itemprop="address"]').first().text() ||
+          $el.find('.sa-address, .address, .direccion').first().text()
+        ).trim().replace(/\s+/g, ' ')
+
         const activity = (
-          $el.find('.category, .categoria, .business-category, .clasificacion').first().text() ||
-          $el.find('[itemprop="description"]').first().text()
+          $el.find('[itemprop="description"], .sa-category, .category').first().text()
         ).trim()
 
-        // CP desde dirección
         const cpMatch = address.match(/\b(\d{5})\b/)
-
-        const key = phone ? phone : name.toLowerCase()
+        const key = phone || name.toLowerCase()
         if (seen.has(key)) return
         seen.add(key)
 
         const wa = formatWhatsApp(phone)
         results.push({
-          name,
-          phone,
-          whatsapp: wa,
+          name, phone, whatsapp: wa,
           whatsapp_link: wa ? `https://wa.me/${wa}` : null,
-          address,
-          postal_code: cpMatch ? cpMatch[1] : '',
-          activity: activity || query,
-          segment: mapSegmento(activity || query),
+          address, postal_code: cpMatch ? cpMatch[1] : '',
+          activity: activity || query, segment: mapSegmento(activity || query),
           email: '',
-          source_url: url,
         })
       })
 
-      // Si el botón de siguiente página no existe, parar
-      const hasNext = $('a.next-page, a[rel="next"], .pagination .next, li.next a').length > 0
+      const hasNext = $('a[rel="next"], .pagination .next, a.siguiente, .paginacion .siguiente').length > 0
       if (!hasNext) break
-
-      // Pausa entre páginas
-      if (page < maxPages) await new Promise(r => setTimeout(r, 1500))
-
+      if (page < maxPages) await new Promise(r => setTimeout(r, 1200))
     } catch {
       break
     }
   }
 
-  return results
+  return { results, debug: debugLines.join(' | ') }
 }
 
 // ── Deduplicar por ID INEGI ───────────────────────────────────────────────────
@@ -531,21 +545,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ source: 'inegi', ciudad: coords.ciudad, data: results })
     }
 
-    // ── PÁGINAS AMARILLAS ────────────────────────────────────────────────────
+    // ── SECCIÓN AMARILLA ─────────────────────────────────────────────────────
     if (source === 'paginas_amarillas') {
-      // Para PA usamos el location tal cual (ciudad/municipio es más efectivo)
+      // Usar ciudad del geocoding si dieron CP numérico
       const searchLoc = /^\d{5}$/.test(location.trim())
-        ? coords.ciudad.split(',')[0].trim()  // del geocoding sacamos ciudad
+        ? coords.ciudad.split(',')[0].trim()
         : location.trim()
 
-      const items = await searchPaginasAmarillas(query, searchLoc)
+      const { results: items, debug } = await searchSeccionAmarilla(query, searchLoc)
+      console.log('[SA debug]', debug)
 
       if (items.length === 0) {
         return NextResponse.json({
           source: 'paginas_amarillas',
           ciudad: coords.ciudad,
           data: [],
-          hint: `Sin resultados en Páginas Amarillas para "${query}" en "${searchLoc}". Prueba con el nombre de la ciudad en lugar de CP.`,
+          hint: `Sin resultados en Sección Amarilla para "${query}" en "${searchLoc}". Debug: ${debug}`,
         })
       }
 

@@ -174,7 +174,7 @@ export default function Scraper() {
   const handleImport = async () => {
     if (selected.size === 0) { toast.error('Selecciona al menos uno'); return }
     try {
-      const channelLabel = form.source === 'inegi' ? 'INEGI DENUE' : form.source === 'google_maps' ? 'Google Maps' : 'Páginas Amarillas'
+      const channelLabel = form.source === 'inegi' ? 'INEGI DENUE' : form.source === 'google_maps' ? 'Google Maps' : 'Sección Amarilla'
       const toImport = [...selected].map(i => ({
         name: results[i].name,
         phone: results[i].phone || '',
@@ -233,7 +233,7 @@ export default function Scraper() {
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
           <div className="mb-4 sm:mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Scraper de Prospectos</h1>
-            <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm mt-1">Busca negocios por código postal o municipio en INEGI DENUE / Google Maps / Páginas Amarillas</p>
+            <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm mt-1">Busca negocios por código postal o municipio en INEGI DENUE / Google Maps / Sección Amarilla</p>
           </div>
 
           {/* ── Formulario ───────────────────────────────────────────────────── */}
@@ -309,7 +309,7 @@ export default function Scraper() {
                 >
                   <option value="inegi">INEGI DENUE</option>
                   <option value="google_maps">Google Maps</option>
-                  <option value="paginas_amarillas">Páginas Amarillas</option>
+                  <option value="paginas_amarillas">Sección Amarilla</option>
                 </select>
               </div>
 
