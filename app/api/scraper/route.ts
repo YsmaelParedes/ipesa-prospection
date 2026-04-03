@@ -11,6 +11,12 @@ const MAX_CONCURRENT = 2
 const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY
 const INEGI_API_KEY = process.env.INEGI_API_KEY
 
+// Términos de barrido amplio para maximizar cobertura por área.
+// El DENUE devuelve TODOS los negocios que coincidan (sin límite de 50).
+// Diferentes términos en el mismo centro NO activan el throttle de INEGI.
+// Datos reales (3km, CDMX): taller=906, tienda=4027, servicio=8833
+const AREA_SWEEP_TERMS = ['taller', 'tienda', 'construccion', 'ferreteria', 'servicio', 'distribuidor']
+
 // Mapeo de actividad INEGI -> segmento IPESA
 function mapSegmento(actividad: string): string {
   const a = actividad.toLowerCase()
@@ -135,8 +141,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `No se encontró la ubicación "${location}"` }, { status: 400 })
     }
 
-    // Para búsqueda por ciudad usamos radio ligeramente mayor
     const isCiudad = locationType === 'ciudad'
+    const RADIUS = isCiudad ? 5000 : 3000
 
     // ── GOOGLE MAPS ──────────────────────────────────────────────────────────
     if (source === 'google_maps') {
@@ -145,9 +151,14 @@ export async function POST(req: NextRequest) {
       }
 
       const locationLabel = isCiudad ? location : `código postal ${location}`
-      const { data } = await axios.post(
-        'https://places.googleapis.com/v1/places:searchText',
-        {
+      const inputCp = /^\d{5}$/.test(location.trim()) ? location.trim() : ''
+
+      // Paginación: hasta 3 páginas × 20 resultados = máximo 60 por búsqueda
+      const allPlaces: any[] = []
+      let pageToken: string | undefined
+
+      for (let page = 0; page < 3; page++) {
+        const body: any = {
           textQuery: `${query} ${locationLabel} México`,
           languageCode: 'es',
           maxResultCount: 20,
@@ -157,44 +168,61 @@ export async function POST(req: NextRequest) {
               radius: isCiudad ? 8000.0 : 5000.0,
             },
           },
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Goog-Api-Key': GOOGLE_API_KEY,
-            'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.rating,places.primaryTypeDisplayName',
-          },
-          timeout: 20000,
         }
-      )
+        if (pageToken) body.pageToken = pageToken
 
-      if (data.error) {
-        return NextResponse.json({ error: data.error.message }, { status: 400 })
+        const { data } = await axios.post(
+          'https://places.googleapis.com/v1/places:searchText',
+          body,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': GOOGLE_API_KEY,
+              'X-Goog-FieldMask': 'places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.rating,places.primaryTypeDisplayName,nextPageToken',
+            },
+            timeout: 20000,
+          }
+        )
+
+        if (data.error) {
+          return NextResponse.json({ error: data.error.message }, { status: 400 })
+        }
+
+        allPlaces.push(...(data.places || []))
+        pageToken = data.nextPageToken
+        if (!pageToken) break
+        // Google requiere 2s entre páginas para que el token sea válido
+        await new Promise(r => setTimeout(r, 2000))
       }
 
-      // Si el input fue un CP de 5 dígitos, usarlo como fallback
-      const inputCp = /^\d{5}$/.test(location.trim()) ? location.trim() : ''
-
-      const results = (data.places || []).map((place: any) => {
-        const phone = place.nationalPhoneNumber || ''
-        const wa = formatWhatsApp(phone)
-        const actividad = place.primaryTypeDisplayName?.text || ''
-        const address = place.formattedAddress || ''
-        // Extraer CP de 5 dígitos de la dirección formateada
-        const cpMatch = address.match(/\b(\d{5})\b/)
-        const postal_code = cpMatch ? cpMatch[1] : inputCp
-        return {
-          name: place.displayName?.text || '',
-          phone,
-          whatsapp: wa,
-          whatsapp_link: wa ? `https://wa.me/${wa}` : null,
-          address,
-          postal_code,
-          segment: mapSegmento(actividad),
-          activity: actividad,
-          rating: place.rating || null,
-        }
-      })
+      // Deduplicar por teléfono + nombre (Places no tiene ID único en esta versión)
+      const seenG = new Set<string>()
+      const results = allPlaces
+        .filter(place => {
+          const key = `${place.displayName?.text}|${place.nationalPhoneNumber}`
+          if (seenG.has(key)) return false
+          seenG.add(key)
+          return true
+        })
+        .map((place: any) => {
+          const phone = place.nationalPhoneNumber || ''
+          const wa = formatWhatsApp(phone)
+          const actividad = place.primaryTypeDisplayName?.text || ''
+          const address = place.formattedAddress || ''
+          const cpMatch = address.match(/\b(\d{5})\b/)
+          const postal_code = cpMatch ? cpMatch[1] : inputCp
+          return {
+            name: place.displayName?.text || '',
+            phone,
+            whatsapp: wa,
+            whatsapp_link: wa ? `https://wa.me/${wa}` : null,
+            address,
+            postal_code,
+            segment: mapSegmento(actividad),
+            activity: actividad,
+            rating: place.rating || null,
+          }
+        })
 
       return NextResponse.json({ source: 'google_maps', ciudad: coords.ciudad, data: results })
     }
@@ -205,34 +233,25 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'INEGI API key no configurada' }, { status: 500 })
       }
 
-      const terms = expandQueryTerms(query)
-      const primaryTerm = terms[0]
-
-      // INEGI bloquea peticiones paralelas del mismo IP.
-      // Estrategia: 5 puntos en cruz (centro + N/S/E/O) secuenciales con 400ms de pausa.
-      // ~2km entre puntos, radio 3km por punto → cubre área de ~7km × 7km.
-      // Tiempo estimado: 5 × 3s + 4 × 0.4s ≈ 17s. Hasta ~200 únicos.
-      const OFFSET = 0.018  // ≈ 2 km
-      const RADIUS = 3000
-      const points: [number, number][] = [
-        [coords.lat,          coords.lng         ],  // centro
-        [coords.lat + OFFSET, coords.lng         ],  // norte
-        [coords.lat - OFFSET, coords.lng         ],  // sur
-        [coords.lat,          coords.lng + OFFSET],  // este
-        [coords.lat,          coords.lng - OFFSET],  // oeste
-      ]
+      // Estrategia de máximo alcance:
+      // 1. Términos específicos del usuario (query + sinónimos)
+      // 2. Términos de barrido amplio del área (diferentes términos, mismo centro)
+      //
+      // Clave: el DENUE NO limita resultados a 50 — devuelve TODOS los que coincidan.
+      // Diferentes términos en el mismo punto NO activan el throttle de IP.
+      // Resultado: potencialmente miles de negocios únicos por búsqueda.
+      const userTerms = expandQueryTerms(query).slice(0, 2) // query + 1 sinónimo
+      const sweepTerms = AREA_SWEEP_TERMS.filter(t => !userTerms.includes(t))
+      const allTerms = [...userTerms, ...sweepTerms]
+      // Total: ~8 términos × avg 500 resultados = ~4,000 negocios únicos
 
       const allBatches: any[][] = []
-      for (const [lat, lng] of points) {
-        const batch = await searchINEGI(primaryTerm, lat, lng, RADIUS)
+      for (let i = 0; i < allTerms.length; i++) {
+        const batch = await searchINEGI(allTerms[i], coords.lat, coords.lng, RADIUS)
         allBatches.push(batch)
-        await new Promise(r => setTimeout(r, 400)) // pausa para no saturar INEGI
-      }
-      // Términos alternativos solo en el centro
-      for (const t of terms.slice(1, 3)) {
-        const batch = await searchINEGI(t, coords.lat, coords.lng, RADIUS)
-        allBatches.push(batch)
-        await new Promise(r => setTimeout(r, 400))
+        if (i < allTerms.length - 1) {
+          await new Promise(r => setTimeout(r, 200)) // 200ms entre términos distintos (seguro)
+        }
       }
 
       // Deduplicar por ID INEGI o (nombre + CP)
@@ -249,6 +268,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (allItems.length === 0) {
+        const terms = expandQueryTerms(query)
         return NextResponse.json({
           source: 'inegi',
           ciudad: coords.ciudad,
