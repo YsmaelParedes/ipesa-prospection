@@ -355,36 +355,189 @@ export default function Contactos() {
             })}
           </div>
 
-          {/* New contact form */}
+          {/* Slide-over drawer: Nuevo Contacto */}
           {showForm && (
-            <Card variant="elevated" className="p-6 mt-4 mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Nuevo Contacto</h2>
-              <form onSubmit={handleAdd}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <Input label="Nombre *" placeholder="Juan Pérez" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
-                  <Input label="Teléfono *" placeholder="222 123 4567" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required />
-                  <Input label="Email" placeholder="juan@empresa.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-                  <Input label="Empresa" placeholder="Acme Corp" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} />
-                  <Input label="Dirección" placeholder="Calle 123, Puebla" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
-                  <Input label="Código Postal" placeholder="72000" value={form.postal_code} onChange={e => setForm({ ...form, postal_code: e.target.value })} />
-                  <Select label="Canal de adquisición" value={form.acquisition_channel} onChange={e => setForm({ ...form, acquisition_channel: e.target.value })} options={ACQUISITION_CHANNELS} />
-                  <Select
-                    label="Segmento"
-                    value={form.segment}
-                    onChange={e => setForm({ ...form, segment: e.target.value })}
-                    options={[
-                      { value: '', label: 'Sin segmento' },
-                      ...allSegments.map(s => ({ value: s, label: s })),
-                    ]}
-                  />
-                  <Select label="Estado" value={form.prospect_status} onChange={e => setForm({ ...form, prospect_status: e.target.value })} options={STATUSES} />
+            <div className="fixed inset-0 z-50 flex">
+              {/* Backdrop */}
+              <div
+                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                onClick={() => setShowForm(false)}
+              />
+              {/* Panel */}
+              <div className="relative ml-auto w-full max-w-md h-full bg-white dark:bg-gray-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+
+                {/* Header */}
+                <div className="bg-gradient-to-br from-blue-600 to-blue-700 px-6 py-5 flex-shrink-0">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                        <Plus size={20} className="text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-white font-bold text-lg leading-tight">Nuevo Contacto</h2>
+                        <p className="text-blue-200 text-xs">Completa la información del prospecto</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowForm(false)}
+                      className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition text-white"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  {/* Avatar preview */}
+                  <div className="flex items-center gap-3 bg-white/10 rounded-xl px-4 py-3">
+                    <div className="w-10 h-10 rounded-full bg-white/30 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                      {form.name ? form.name.charAt(0).toUpperCase() : '?'}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-white font-semibold text-sm truncate">{form.name || 'Nombre del contacto'}</p>
+                      <p className="text-blue-200 text-xs truncate">{form.company || form.phone || 'Empresa o teléfono'}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button type="submit" variant="primary">Guardar</Button>
-                  <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>Cancelar</Button>
-                </div>
-              </form>
-            </Card>
+
+                {/* Form body */}
+                <form onSubmit={handleAdd} className="flex-1 overflow-y-auto">
+                  <div className="px-6 py-5 space-y-5">
+
+                    {/* Datos principales */}
+                    <div>
+                      <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Datos principales</p>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                            Nombre <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            required
+                            placeholder="Juan Pérez"
+                            value={form.name}
+                            onChange={e => setForm({ ...form, name: e.target.value })}
+                            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-400 dark:placeholder-gray-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                            Teléfono <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            required
+                            placeholder="222 123 4567"
+                            value={form.phone}
+                            onChange={e => setForm({ ...form, phone: e.target.value })}
+                            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-400 dark:placeholder-gray-500"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Email</label>
+                            <input
+                              type="email"
+                              placeholder="juan@empresa.com"
+                              value={form.email}
+                              onChange={e => setForm({ ...form, email: e.target.value })}
+                              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-400 dark:placeholder-gray-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Empresa</label>
+                            <input
+                              placeholder="Acme Corp"
+                              value={form.company}
+                              onChange={e => setForm({ ...form, company: e.target.value })}
+                              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-400 dark:placeholder-gray-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Ubicación */}
+                    <div>
+                      <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Ubicación</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="col-span-2">
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Dirección</label>
+                          <input
+                            placeholder="Calle 123, Colonia"
+                            value={form.address}
+                            onChange={e => setForm({ ...form, address: e.target.value })}
+                            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-400 dark:placeholder-gray-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">C.P.</label>
+                          <input
+                            placeholder="72000"
+                            value={form.postal_code}
+                            onChange={e => setForm({ ...form, postal_code: e.target.value })}
+                            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-400 dark:placeholder-gray-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Clasificación */}
+                    <div>
+                      <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Clasificación</p>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Canal de adquisición</label>
+                          <select
+                            value={form.acquisition_channel}
+                            onChange={e => setForm({ ...form, acquisition_channel: e.target.value })}
+                            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                          >
+                            {ACQUISITION_CHANNELS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Segmento</label>
+                            <select
+                              value={form.segment}
+                              onChange={e => setForm({ ...form, segment: e.target.value })}
+                              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                            >
+                              <option value="">Sin segmento</option>
+                              {allSegments.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Estado</label>
+                            <select
+                              value={form.prospect_status}
+                              onChange={e => setForm({ ...form, prospect_status: e.target.value })}
+                              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                            >
+                              {STATUSES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer actions */}
+                  <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex gap-3 flex-shrink-0">
+                    <button
+                      type="submit"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl py-2.5 text-sm transition flex items-center justify-center gap-2"
+                    >
+                      <Plus size={16} /> Guardar contacto
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowForm(false)}
+                      className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm font-semibold transition"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           )}
 
           {/* Search + filters bar */}
