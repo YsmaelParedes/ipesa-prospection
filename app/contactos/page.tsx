@@ -13,7 +13,16 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
-import { Plus, Upload, Trash2, Edit, Search, FileSpreadsheet, X, CheckSquare, Square, Filter, ChevronDown, ChevronUp, Download, TableProperties } from 'lucide-react'
+import { Plus, Upload, Trash2, Edit, Search, FileSpreadsheet, X, CheckSquare, Square, Filter, ChevronDown, ChevronUp, Download, TableProperties, AlertTriangle, RefreshCw } from 'lucide-react'
+
+// Normaliza teléfono: solo dígitos, últimos 10
+function cleanPhone(raw: string): string {
+  return raw.replace(/\D/g, '').slice(-10)
+}
+
+function isValidPhone(phone: string): boolean {
+  return /^\d{10}$/.test(phone)
+}
 
 const STATUSES = [
   { value: 'nuevo', label: 'Nuevo' },
@@ -140,9 +149,12 @@ export default function Contactos() {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!form.name || !form.phone) { toast.error('Nombre y teléfono son requeridos'); return }
+    const phone = cleanPhone(form.phone)
+    if (!form.name) { toast.error('El nombre es requerido'); return }
+    if (!phone) { toast.error('El teléfono es requerido'); return }
+    if (!isValidPhone(phone)) { toast.error('El teléfono debe tener exactamente 10 dígitos'); return }
     try {
-      await addContact({ ...form, segment: form.segment || (activeTab !== '__todos__' && activeTab !== '__sin_segmento__' ? activeTab : '') })
+      await addContact({ ...form, phone, segment: form.segment || (activeTab !== '__todos__' && activeTab !== '__sin_segmento__' ? activeTab : '') })
       toast.success('Contacto agregado')
       setForm({ name: '', phone: '', email: '', company: '', address: '', postal_code: '', segment: '', prospect_status: 'nuevo', acquisition_channel: '' })
       setShowForm(false)
@@ -342,6 +354,27 @@ export default function Contactos() {
   }
 
   const activeFilters = [filterStatus, filterChannel].filter(Boolean).length
+
+  // Contactos del tab activo con teléfono inválido (con espacios / != 10 dígitos)
+  const dirtyPhones = useMemo(() =>
+    tabContacts.filter(c => c.phone && !isValidPhone(c.phone))
+  , [tabContacts])
+
+  const [cleaningPhones, setCleaningPhones] = useState(false)
+  const handleCleanPhones = async () => {
+    if (!dirtyPhones.length) return
+    setCleaningPhones(true)
+    let fixed = 0
+    for (const c of dirtyPhones) {
+      const cleaned = cleanPhone(c.phone)
+      if (cleaned && isValidPhone(cleaned)) {
+        try { await updateContact(c.id, { phone: cleaned }); fixed++ } catch {}
+      }
+    }
+    await fetchContacts()
+    setCleaningPhones(false)
+    toast.success(`${fixed} teléfonos corregidos`)
+  }
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
@@ -543,9 +576,14 @@ export default function Contactos() {
                             required
                             placeholder="222 123 4567"
                             value={form.phone}
-                            onChange={e => setForm({ ...form, phone: e.target.value })}
-                            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-400 dark:placeholder-gray-500"
+                            onChange={e => setForm({ ...form, phone: cleanPhone(e.target.value) })}
+                            maxLength={10}
+                            inputMode="numeric"
+                            className={`w-full px-3 py-2.5 rounded-lg border bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-400 dark:placeholder-gray-500 ${form.phone && !isValidPhone(form.phone) ? 'border-red-400 dark:border-red-500' : 'border-gray-200 dark:border-gray-700'}`}
                           />
+                          {form.phone && !isValidPhone(form.phone) && (
+                            <p className="text-xs text-red-500 mt-1">{form.phone.length}/10 dígitos</p>
+                          )}
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
@@ -655,6 +693,20 @@ export default function Contactos() {
                   </div>
                 </form>
               </div>
+            </div>
+          )}
+
+          {/* Alerta teléfonos sucios */}
+          {dirtyPhones.length > 0 && (
+            <div className="flex items-center gap-3 mb-3 px-4 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+              <AlertTriangle size={15} className="text-amber-600 dark:text-amber-400 flex-shrink-0" />
+              <p className="text-xs text-amber-700 dark:text-amber-300 flex-1">
+                <strong>{dirtyPhones.length}</strong> contacto{dirtyPhones.length > 1 ? 's' : ''} con teléfono inválido (espacios o distinto de 10 dígitos)
+              </p>
+              <button onClick={handleCleanPhones} disabled={cleaningPhones}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition disabled:opacity-60">
+                {cleaningPhones ? <><RefreshCw size={11} className="animate-spin" /> Limpiando...</> : 'Limpiar ahora'}
+              </button>
             </div>
           )}
 
