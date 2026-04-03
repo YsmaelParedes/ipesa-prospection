@@ -204,7 +204,7 @@ export default function SmsReportes() {
         if (res.ok) ok++
       } catch {}
       setResendProgress(Math.round(((i + 1) / toSend.length) * 100))
-      if (i < toSend.length - 1) await new Promise(r => setTimeout(r, 300))
+      if (i < toSend.length - 1) await new Promise(r => setTimeout(r, 3000))
     }
     toast.success(`${ok} de ${toSend.length} reenviados`)
     setResending(false); setSelected(new Set())
