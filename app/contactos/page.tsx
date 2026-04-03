@@ -586,7 +586,7 @@ export default function Contactos() {
                               ? <CheckSquare size={16} className="text-blue-600" /> : <Square size={16} />}
                           </button>
                         </th>
-                        {['Nombre', 'Teléfono', 'Empresa', 'Canal de adquisición', 'Segmento', 'Descripción', 'Estado', 'Acciones'].map(h => (
+                        {['Nombre', 'Teléfono', 'Empresa', 'C.P.', 'Canal de adquisición', 'Segmento', 'Descripción', 'Estado', 'Acciones'].map(h => (
                           <th key={h} className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">{h}</th>
                         ))}
                       </tr>
@@ -606,6 +606,7 @@ export default function Contactos() {
                           </td>
                           <td className="px-4 py-3 text-gray-600 dark:text-gray-300 font-mono text-sm">{c.phone}</td>
                           <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-sm">{c.company || '—'}</td>
+                          <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-sm font-mono">{c.postal_code || '—'}</td>
                           <td className="px-4 py-3">
                             {c.acquisition_channel
                               ? <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">{c.acquisition_channel}</span>
