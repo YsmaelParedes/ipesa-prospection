@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import axios from 'axios'
+import * as cheerio from 'cheerio'
 
 export const maxDuration = 50
 
@@ -129,6 +130,15 @@ function expandQueryTerms(query: string): string[] {
 
   const synonyms: Record<string, string[]> = {
     // Trabajadores → nombre de negocio (para BuscarEntidad) + SCIAN (para Buscar)
+    // Pinturas / recubrimientos (giro principal IPESA)
+    pintura:       ['pinturas', 'recubrimiento', 'recubrimientos', 'impermeabilizante'],
+    pinturas:      ['recubrimiento', 'recubrimientos', 'impermeabilizante'],
+    recubrimiento: ['pinturas', 'recubrimientos', 'impermeabilizante', 'pintura'],
+    recubrimientos:['pinturas', 'recubrimiento', 'impermeabilizante'],
+    impermeabilizante: ['impermeabilizantes', 'recubrimiento', 'pinturas'],
+    ferreteria:    ['ferretería', 'materiales', 'construrama', 'pintureria'],
+    ferretería:    ['ferreteria', 'materiales', 'construrama'],
+    // Otros oficios
     plomero:       ['plomeria', 'plomería', 'hidraulica'],
     plomeros:      ['plomeria', 'plomería'],
     electricista:  ['electrica', 'electricidad'],
@@ -137,8 +147,8 @@ function expandQueryTerms(query: string): string[] {
     carpinteros:   ['carpinteria', 'carpintería'],
     albanil:       ['construccion', 'albanileria'],
     albaniles:     ['construccion'],
-    pintor:        ['pintura'],
-    pintores:      ['pintura'],
+    pintor:        ['pintura', 'pinturas', 'recubrimientos'],
+    pintores:      ['pintura', 'pinturas'],
     herrero:       ['herreria', 'herrería'],
     herreros:      ['herreria', 'herrería'],
     soldador:      ['soldadura'],
@@ -223,6 +233,112 @@ async function searchByState(
       }
 
       if (data.length < PAGE_SIZE) break
+    } catch {
+      break
+    }
+  }
+
+  return results
+}
+
+// ── Páginas Amarillas MX ──────────────────────────────────────────────────────
+// Scraping HTML de paginasamarillas.com.mx con cheerio.
+// URL: /search/{query}/{location}/?pagina={n}
+async function searchPaginasAmarillas(query: string, location: string, maxPages = 3): Promise<any[]> {
+  const results: any[] = []
+  const seen = new Set<string>()
+
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'es-MX,es;q=0.9,en;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Cache-Control': 'no-cache',
+  }
+
+  // Normalizar location: quitar CP si es numérico, usar solo texto
+  const locSlug = encodeURIComponent(location.trim())
+  const querySlug = encodeURIComponent(query.trim())
+
+  for (let page = 1; page <= maxPages; page++) {
+    const url = `https://www.paginasamarillas.com.mx/search/${querySlug}/${locSlug}/?pagina=${page}`
+    try {
+      const { data: html } = await axios.get(url, {
+        headers,
+        timeout: 15000,
+        validateStatus: s => s < 500,
+      })
+
+      if (typeof html !== 'string' || html.length < 500) break
+
+      const $ = cheerio.load(html)
+
+      // Selector principal de items
+      const items = $('article.result, .result-item, li.listado-item, div.business-listing, article.listing')
+      if (items.length === 0) break
+
+      items.each((_i, el) => {
+        const $el = $(el)
+
+        // Nombre — varios patrones posibles
+        const name = (
+          $el.find('h2.name, h2.business-name, .name a, .business-name, h3.name, a.name').first().text() ||
+          $el.find('h2').first().text() ||
+          $el.find('a[itemprop="name"], span[itemprop="name"]').first().text()
+        ).trim()
+
+        if (!name) return
+
+        // Teléfono
+        const phoneRaw = (
+          $el.find('.phone, .telefono, .tel, [itemprop="telephone"], span.phone').first().text() ||
+          $el.find('a[href^="tel:"]').first().attr('href')?.replace('tel:', '') ||
+          ''
+        ).trim()
+        const phone = phoneRaw.replace(/\D/g, '').slice(-10)
+
+        // Dirección
+        const address = (
+          $el.find('.address, .direccion, [itemprop="streetAddress"], .street-address, .location').first().text() ||
+          $el.find('[itemprop="address"]').first().text()
+        ).trim().replace(/\s+/g, ' ')
+
+        // Categoría / actividad
+        const activity = (
+          $el.find('.category, .categoria, .business-category, .clasificacion').first().text() ||
+          $el.find('[itemprop="description"]').first().text()
+        ).trim()
+
+        // CP desde dirección
+        const cpMatch = address.match(/\b(\d{5})\b/)
+
+        const key = phone ? phone : name.toLowerCase()
+        if (seen.has(key)) return
+        seen.add(key)
+
+        const wa = formatWhatsApp(phone)
+        results.push({
+          name,
+          phone,
+          whatsapp: wa,
+          whatsapp_link: wa ? `https://wa.me/${wa}` : null,
+          address,
+          postal_code: cpMatch ? cpMatch[1] : '',
+          activity: activity || query,
+          segment: mapSegmento(activity || query),
+          email: '',
+          source_url: url,
+        })
+      })
+
+      // Si el botón de siguiente página no existe, parar
+      const hasNext = $('a.next-page, a[rel="next"], .pagination .next, li.next a').length > 0
+      if (!hasNext) break
+
+      // Pausa entre páginas
+      if (page < maxPages) await new Promise(r => setTimeout(r, 1500))
+
     } catch {
       break
     }
@@ -413,6 +529,27 @@ export async function POST(req: NextRequest) {
       })
 
       return NextResponse.json({ source: 'inegi', ciudad: coords.ciudad, data: results })
+    }
+
+    // ── PÁGINAS AMARILLAS ────────────────────────────────────────────────────
+    if (source === 'paginas_amarillas') {
+      // Para PA usamos el location tal cual (ciudad/municipio es más efectivo)
+      const searchLoc = /^\d{5}$/.test(location.trim())
+        ? coords.ciudad.split(',')[0].trim()  // del geocoding sacamos ciudad
+        : location.trim()
+
+      const items = await searchPaginasAmarillas(query, searchLoc)
+
+      if (items.length === 0) {
+        return NextResponse.json({
+          source: 'paginas_amarillas',
+          ciudad: coords.ciudad,
+          data: [],
+          hint: `Sin resultados en Páginas Amarillas para "${query}" en "${searchLoc}". Prueba con el nombre de la ciudad en lugar de CP.`,
+        })
+      }
+
+      return NextResponse.json({ source: 'paginas_amarillas', ciudad: coords.ciudad, data: items })
     }
 
     return NextResponse.json({ error: 'Fuente no válida' }, { status: 400 })
