@@ -242,11 +242,57 @@ async function searchByState(
 }
 
 // ── Sección Amarilla MX (seccionamarilla.com.mx) ──────────────────────────────
-// Directorio de negocios Telmex — SSR, selectores Schema.org
-// URL: /resultados/1/{query}/{state-city}/?pagina={n}
+// URL confirmada: /resultados/{query}/{page}?estado={state}
+// Nombres: a[title^="Más información de"]  Teléfonos: a[href^="tel:"]
 interface SAResult { results: any[]; debug: string }
 
-async function searchSeccionAmarilla(query: string, location: string, maxPages = 3): Promise<SAResult> {
+// Abreviaturas de estado para filtrar resultados por ubicación
+const STATE_ABBR: Record<string, string[]> = {
+  'aguascalientes':   ['AGS','AGS.'],
+  'baja california':  ['BC'],
+  'baja california sur': ['BCS'],
+  'campeche':         ['CAMP'],
+  'chiapas':          ['CHIS'],
+  'chihuahua':        ['CHIH'],
+  'coahuila':         ['COAH'],
+  'colima':           ['COL'],
+  'ciudad de mexico': ['DF','CDMX'],
+  'durango':          ['DGO'],
+  'guanajuato':       ['GTO'],
+  'guerrero':         ['GRO'],
+  'hidalgo':          ['HGO'],
+  'jalisco':          ['JAL'],
+  'estado de mexico': ['MEX','EDO.MEX','EDOMEX'],
+  'michoacan':        ['MICH'],
+  'morelos':          ['MOR'],
+  'nayarit':          ['NAY'],
+  'nuevo leon':       ['NL','N.L.'],
+  'oaxaca':           ['OAX'],
+  'puebla':           ['PUE'],
+  'queretaro':        ['QRO'],
+  'quintana roo':     ['QROO','Q.ROO'],
+  'san luis potosi':  ['SLP'],
+  'sinaloa':          ['SIN'],
+  'sonora':           ['SON'],
+  'tabasco':          ['TAB'],
+  'tamaulipas':       ['TAMPS'],
+  'tlaxcala':         ['TLAX'],
+  'veracruz':         ['VER'],
+  'yucatan':          ['YUC'],
+  'zacatecas':        ['ZAC'],
+}
+
+function normalizeState(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+de\s+(zaragoza|ocampo|ignacio de la llave)/g, '').trim()
+}
+
+function getStateAbbrs(stateName: string): string[] {
+  const norm = normalizeState(stateName)
+  return STATE_ABBR[norm] ?? []
+}
+
+async function searchSeccionAmarilla(query: string, geocodedCity: string, maxPages = 3): Promise<SAResult> {
   const results: any[] = []
   const seen = new Set<string>()
   const debugLines: string[] = []
@@ -258,103 +304,82 @@ async function searchSeccionAmarilla(query: string, location: string, maxPages =
     'Referer': 'https://www.seccionamarilla.com.mx/',
   }
 
-  // Slug: minúsculas, sin acentos, sin CP numérico inicial, espacios → guiones
-  const slug = (s: string) =>
+  const toSlug = (s: string) =>
     s.trim().toLowerCase()
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/^\d+\s*/, '')           // quitar CP o número al inicio ("72850 Puebla" → "Puebla")
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
+      .replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '%20')
 
-  const qSlug = slug(query)
+  // Extraer estado del geocoding: "San Andrés Cholula, Puebla, México" → "Puebla"
+  const parts = geocodedCity.split(',').map(p => p.trim())
+  const stateRaw = parts.length >= 3 ? parts[parts.length - 2]   // penúltimo = estado
+                 : parts.length === 2 ? parts[0] : parts[0]
+  const stateSlug = toSlug(stateRaw).replace(/%20/g, '-')
+  const stateAbbrs = getStateAbbrs(stateRaw)
+  const cityName = parts[0] || stateRaw
 
-  // Generar variantes de location: ciudad completa y solo primera palabra
-  const locClean = location.replace(/^\d+\s*/, '').trim()  // quitar CP si lo hay
-  const locParts = locClean.split(',').map(p => p.trim()).filter(Boolean)
-  const locVariants = [
-    slug(locParts[0] || locClean),                          // "san-andres-cholula"
-    locParts[1] ? slug(locParts[1]) : null,                 // "puebla" (estado)
-    slug(locClean),                                         // todo junto
-  ].filter((v): v is string => !!v && v.length > 1)
-  // Eliminar duplicados manteniendo orden
-  const seen2 = new Set<string>()
-  const uniqueLocs = locVariants.filter(v => { if (seen2.has(v)) return false; seen2.add(v); return true })
-
-  // Probar variantes de URL hasta encontrar una que devuelva 200
-  let workingLSlug = uniqueLocs[0]
-  let probeHtml = ''
-  for (const lSlug of uniqueLocs) {
-    const testUrl = `https://www.seccionamarilla.com.mx/resultados/1/${qSlug}/${lSlug}/`
-    debugLines.push(`probe: ${testUrl}`)
-    try {
-      const resp = await axios.get(testUrl, { headers, timeout: 12000, validateStatus: () => true })
-      const html = typeof resp.data === 'string' ? resp.data : ''
-      debugLines.push(`→ status=${resp.status} len=${html.length}`)
-      if (resp.status === 200 && html.length > 2000) {
-        workingLSlug = lSlug
-        probeHtml = html
-        break
-      }
-    } catch (e: any) {
-      debugLines.push(`→ error: ${e.message}`)
-    }
-  }
-
-  if (!probeHtml) {
-    return { results: [], debug: debugLines.join(' | ') }
-  }
-
-  // Diagnóstico de selectores en la página real
-  const $p = cheerio.load(probeHtml)
-  const sampleCounts = ['[itemtype*="LocalBusiness"]', '.sa-name', 'h2.listing-name', '.listing', '.resultado', 'article', 'li.item']
-    .map(s => `${s}:${$p(s).length}`).join(' ')
-  debugLines.push(`selectors: ${sampleCounts}`)
-  debugLines.push(`snippet: ${$p('body').html()?.slice(0, 500).replace(/\s+/g, ' ') || ''}`)
+  const qSlug = toSlug(query)
+  debugLines.push(`query="${qSlug}" estado="${stateSlug}" abbrs=${stateAbbrs.join(',')} city="${cityName}"`)
 
   // ── Parsear páginas ───────────────────────────────────────────────────────
   for (let page = 1; page <= maxPages; page++) {
-    const url = `https://www.seccionamarilla.com.mx/resultados/1/${qSlug}/${workingLSlug}/?pagina=${page}`
+    const url = `https://www.seccionamarilla.com.mx/resultados/${qSlug}/${page}?estado=${stateSlug}`
+    debugLines.push(`fetch p${page}: ${url}`)
     try {
-      const { data: html } = await axios.get(url, { headers, timeout: 15000 })
-      if (typeof html !== 'string' || html.length < 500) break
+      const resp = await axios.get(url, { headers, timeout: 15000, validateStatus: () => true })
+      const html = typeof resp.data === 'string' ? resp.data : ''
+      debugLines.push(`→ status=${resp.status} len=${html.length}`)
+
+      if (resp.status !== 200 || html.length < 1000) break
 
       const $ = cheerio.load(html)
 
-      // Sección Amarilla usa Schema.org LocalBusiness en sus listings
-      const containers = $('[itemtype*="LocalBusiness"], .listing-item, .sa-card, .resultado-item, article.result')
-      debugLines.push(`page=${page} found=${containers.length}`)
-      if (containers.length === 0) break
+      // Ancla principal: todos los links de nombre (confirmados por WebFetch)
+      const nameLinks = $('a[title^="Más información de"]')
+      debugLines.push(`→ nameLinks=${nameLinks.length}`)
+      if (nameLinks.length === 0) {
+        // Diagnóstico si no encontramos nada
+        const classes = $('[class]').map((_,el) => $(el).attr('class')).get()
+          .join(' ').match(/\b\w{4,}\b/g)?.slice(0,30).join(' ') || ''
+        debugLines.push(`→ classes_sample: ${classes}`)
+        break
+      }
 
-      containers.each((_i, el) => {
-        const $el = $(el)
+      nameLinks.each((_i, el) => {
+        const $a = $(el)
+        const name = ($a.attr('title') || '').replace(/^Más información de\s*/i, '').trim()
+        if (!name) return
 
-        const name = (
-          $el.find('[itemprop="name"]').first().text() ||
-          $el.find('.sa-name, .listing-name, h2, h3').first().text()
-        ).trim().replace(/\s+/g, ' ')
+        // Subir al contenedor del listing (máx 6 niveles)
+        let $container = $a.parent()
+        for (let lvl = 0; lvl < 6; lvl++) {
+          if ($container.find('a[href^="tel:"]').length > 0) break
+          const $up = $container.parent()
+          if (!$up.length || $up.is('body')) break
+          $container = $up
+        }
 
-        if (!name || name.length < 2) return
+        const phoneHref = $container.find('a[href^="tel:"]').first().attr('href') || ''
+        const phone = phoneHref.replace('tel:', '').replace(/\D/g, '').slice(-10)
 
-        const phoneRaw = (
-          $el.find('[itemprop="telephone"]').first().text() ||
-          $el.find('a[href^="tel:"]').first().attr('href')?.replace('tel:', '') ||
-          $el.find('.sa-phone, .phone, .telefono').first().text()
-        )?.trim() || ''
-        const phone = phoneRaw.replace(/\D/g, '').slice(-10)
+        // Dirección: texto que contiene C.P. o calle (buscar nodo de texto relevante)
+        let address = ''
+        $container.find('*').each((_j, node) => {
+          const text = $(node).clone().children().remove().end().text().trim()
+          if ((text.includes('C.P.') || text.includes('Calle') || text.match(/,\s*[A-Z]{2,4}\s*,/)) && text.length > 10) {
+            address = text.replace(/\s+/g, ' ').trim()
+            return false // break
+          }
+        })
 
-        const address = (
-          $el.find('[itemprop="streetAddress"]').first().text() ||
-          $el.find('[itemprop="address"]').first().text() ||
-          $el.find('.sa-address, .address, .direccion').first().text()
-        ).trim().replace(/\s+/g, ' ')
+        // Filtrar por estado si tenemos abreviatura (ej: ", PUE ,")
+        if (stateAbbrs.length > 0) {
+          const addrUpper = address.toUpperCase()
+          const inState = stateAbbrs.some(abbr => addrUpper.includes(` ${abbr} `) || addrUpper.includes(`, ${abbr},`) || addrUpper.includes(`, ${abbr} `))
+          const inCity = addrUpper.includes(cityName.toUpperCase())
+          if (!inState && !inCity) return  // descartar si no es del estado
+        }
 
-        const activity = (
-          $el.find('[itemprop="description"], .sa-category, .category').first().text()
-        ).trim()
-
-        const cpMatch = address.match(/\b(\d{5})\b/)
+        const cpMatch = address.match(/C\.P\.?\s*(\d{5})/)
         const key = phone || name.toLowerCase()
         if (seen.has(key)) return
         seen.add(key)
@@ -364,15 +389,17 @@ async function searchSeccionAmarilla(query: string, location: string, maxPages =
           name, phone, whatsapp: wa,
           whatsapp_link: wa ? `https://wa.me/${wa}` : null,
           address, postal_code: cpMatch ? cpMatch[1] : '',
-          activity: activity || query, segment: mapSegmento(activity || query),
+          activity: query, segment: mapSegmento(query),
           email: '',
         })
       })
 
-      const hasNext = $('a[rel="next"], .pagination .next, a.siguiente, .paginacion .siguiente').length > 0
+      // Verificar si hay página siguiente
+      const hasNext = $('a[rel="next"], .paginador a.siguiente, li.siguiente a, a:contains("Siguiente")').length > 0
       if (!hasNext) break
       if (page < maxPages) await new Promise(r => setTimeout(r, 1200))
-    } catch {
+    } catch (e: any) {
+      debugLines.push(`→ error: ${e.message}`)
       break
     }
   }
