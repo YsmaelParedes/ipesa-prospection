@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import axios from 'axios'
-import * as cheerio from 'cheerio'
+
 
 export const maxDuration = 50
 
@@ -241,172 +241,6 @@ async function searchByState(
   return results
 }
 
-// ── Sección Amarilla MX (seccionamarilla.com.mx) ──────────────────────────────
-// URL confirmada: /resultados/{query}/{page}?estado={state}
-// Nombres: a[title^="Más información de"]  Teléfonos: a[href^="tel:"]
-interface SAResult { results: any[]; debug: string }
-
-// Abreviaturas de estado para filtrar resultados por ubicación
-const STATE_ABBR: Record<string, string[]> = {
-  'aguascalientes':   ['AGS','AGS.'],
-  'baja california':  ['BC'],
-  'baja california sur': ['BCS'],
-  'campeche':         ['CAMP'],
-  'chiapas':          ['CHIS'],
-  'chihuahua':        ['CHIH'],
-  'coahuila':         ['COAH'],
-  'colima':           ['COL'],
-  'ciudad de mexico': ['DF','CDMX'],
-  'durango':          ['DGO'],
-  'guanajuato':       ['GTO'],
-  'guerrero':         ['GRO'],
-  'hidalgo':          ['HGO'],
-  'jalisco':          ['JAL'],
-  'estado de mexico': ['MEX','EDO.MEX','EDOMEX'],
-  'michoacan':        ['MICH'],
-  'morelos':          ['MOR'],
-  'nayarit':          ['NAY'],
-  'nuevo leon':       ['NL','N.L.'],
-  'oaxaca':           ['OAX'],
-  'puebla':           ['PUE'],
-  'queretaro':        ['QRO'],
-  'quintana roo':     ['QROO','Q.ROO'],
-  'san luis potosi':  ['SLP'],
-  'sinaloa':          ['SIN'],
-  'sonora':           ['SON'],
-  'tabasco':          ['TAB'],
-  'tamaulipas':       ['TAMPS'],
-  'tlaxcala':         ['TLAX'],
-  'veracruz':         ['VER'],
-  'yucatan':          ['YUC'],
-  'zacatecas':        ['ZAC'],
-}
-
-function normalizeState(s: string): string {
-  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+de\s+(zaragoza|ocampo|ignacio de la llave)/g, '').trim()
-}
-
-function getStateAbbrs(stateName: string): string[] {
-  const norm = normalizeState(stateName)
-  return STATE_ABBR[norm] ?? []
-}
-
-async function searchSeccionAmarilla(query: string, geocodedCity: string, maxPages = 3): Promise<SAResult> {
-  const results: any[] = []
-  const seen = new Set<string>()
-  const debugLines: string[] = []
-
-  const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    'Accept-Language': 'es-MX,es;q=0.9',
-    'Referer': 'https://www.seccionamarilla.com.mx/',
-  }
-
-  const toSlug = (s: string) =>
-    s.trim().toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '%20')
-
-  // Extraer estado del geocoding: "San Andrés Cholula, Puebla, México" → "Puebla"
-  const parts = geocodedCity.split(',').map(p => p.trim())
-  const stateRaw = parts.length >= 3 ? parts[parts.length - 2]   // penúltimo = estado
-                 : parts.length === 2 ? parts[0] : parts[0]
-  const stateSlug = toSlug(stateRaw).replace(/%20/g, '-')
-  const stateAbbrs = getStateAbbrs(stateRaw)
-  const cityName = parts[0] || stateRaw
-
-  const qSlug = toSlug(query)
-  debugLines.push(`query="${qSlug}" estado="${stateSlug}" abbrs=${stateAbbrs.join(',')} city="${cityName}"`)
-
-  // ── Parsear páginas ───────────────────────────────────────────────────────
-  for (let page = 1; page <= maxPages; page++) {
-    const url = `https://www.seccionamarilla.com.mx/resultados/${qSlug}/${page}?estado=${stateSlug}`
-    debugLines.push(`fetch p${page}: ${url}`)
-    try {
-      const resp = await axios.get(url, { headers, timeout: 15000, validateStatus: () => true })
-      const html = typeof resp.data === 'string' ? resp.data : ''
-      debugLines.push(`→ status=${resp.status} len=${html.length}`)
-
-      if (resp.status !== 200 || html.length < 1000) break
-
-      const $ = cheerio.load(html)
-
-      // Ancla principal: todos los links de nombre (confirmados por WebFetch)
-      const nameLinks = $('a[title^="Más información de"]')
-      debugLines.push(`→ nameLinks=${nameLinks.length}`)
-      if (nameLinks.length === 0) {
-        // Diagnóstico si no encontramos nada
-        const classes = $('[class]').map((_,el) => $(el).attr('class')).get()
-          .join(' ').match(/\b\w{4,}\b/g)?.slice(0,30).join(' ') || ''
-        debugLines.push(`→ classes_sample: ${classes}`)
-        break
-      }
-
-      nameLinks.each((_i, el) => {
-        const $a = $(el)
-        const name = ($a.attr('title') || '').replace(/^Más información de\s*/i, '').trim()
-        if (!name) return
-
-        // Subir al contenedor del listing (máx 6 niveles)
-        let $container = $a.parent()
-        for (let lvl = 0; lvl < 6; lvl++) {
-          if ($container.find('a[href^="tel:"]').length > 0) break
-          const $up = $container.parent()
-          if (!$up.length || $up.is('body')) break
-          $container = $up
-        }
-
-        const phoneHref = $container.find('a[href^="tel:"]').first().attr('href') || ''
-        const phone = phoneHref.replace('tel:', '').replace(/\D/g, '').slice(-10)
-
-        // Dirección: texto que contiene C.P. o calle (buscar nodo de texto relevante)
-        let address = ''
-        $container.find('*').each((_j, node) => {
-          const text = $(node).clone().children().remove().end().text().trim()
-          if ((text.includes('C.P.') || text.includes('Calle') || text.match(/,\s*[A-Z]{2,4}\s*,/)) && text.length > 10) {
-            address = text.replace(/\s+/g, ' ').trim()
-            return false // break
-          }
-        })
-
-        // Filtrar por estado si tenemos abreviatura (ej: ", PUE ,")
-        if (stateAbbrs.length > 0) {
-          const addrUpper = address.toUpperCase()
-          const inState = stateAbbrs.some(abbr => addrUpper.includes(` ${abbr} `) || addrUpper.includes(`, ${abbr},`) || addrUpper.includes(`, ${abbr} `))
-          const inCity = addrUpper.includes(cityName.toUpperCase())
-          if (!inState && !inCity) return  // descartar si no es del estado
-        }
-
-        const cpMatch = address.match(/C\.P\.?\s*(\d{5})/)
-        const key = phone || name.toLowerCase()
-        if (seen.has(key)) return
-        seen.add(key)
-
-        const wa = formatWhatsApp(phone)
-        results.push({
-          name, phone, whatsapp: wa,
-          whatsapp_link: wa ? `https://wa.me/${wa}` : null,
-          address, postal_code: cpMatch ? cpMatch[1] : '',
-          activity: query, segment: mapSegmento(query),
-          email: '',
-        })
-      })
-
-      // Verificar si hay página siguiente
-      const hasNext = $('a[rel="next"], .paginador a.siguiente, li.siguiente a, a:contains("Siguiente")').length > 0
-      if (!hasNext) break
-      if (page < maxPages) await new Promise(r => setTimeout(r, 1200))
-    } catch (e: any) {
-      debugLines.push(`→ error: ${e.message}`)
-      break
-    }
-  }
-
-  return { results, debug: debugLines.join(' | ') }
-}
-
 // ── Deduplicar por ID INEGI ───────────────────────────────────────────────────
 function dedupe(batches: any[][]): any[] {
   const seen = new Set<string>()
@@ -589,27 +423,6 @@ export async function POST(req: NextRequest) {
       })
 
       return NextResponse.json({ source: 'inegi', ciudad: coords.ciudad, data: results })
-    }
-
-    // ── SECCIÓN AMARILLA ─────────────────────────────────────────────────────
-    if (source === 'paginas_amarillas') {
-      // Siempre usar ciudad geocodificada — más limpia que lo que escribe el usuario
-      // coords.ciudad ej: "San Andrés Cholula, Puebla, México"
-      const searchLoc = coords.ciudad
-
-      const { results: items, debug } = await searchSeccionAmarilla(query, searchLoc)
-      console.log('[SA debug]', debug)
-
-      if (items.length === 0) {
-        return NextResponse.json({
-          source: 'paginas_amarillas',
-          ciudad: coords.ciudad,
-          data: [],
-          hint: `Sin resultados en Sección Amarilla para "${query}" en "${searchLoc}". Debug: ${debug}`,
-        })
-      }
-
-      return NextResponse.json({ source: 'paginas_amarillas', ciudad: coords.ciudad, data: items })
     }
 
     return NextResponse.json({ error: 'Fuente no válida' }, { status: 400 })
