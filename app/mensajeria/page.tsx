@@ -905,9 +905,9 @@ export default function Mensajeria() {
               {selectedTemplate && (
                 <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-xl border border-green-100 dark:border-green-800">
                   <p className="text-xs font-bold text-green-700 dark:text-green-400 mb-1">Plantilla WhatsApp</p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedTemplate.name}</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedTemplate.friendly_name}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
-                    {selectedTemplate.components.find((c: any) => c.type === 'BODY')?.text?.replace(/\n/g, ' ')}
+                    {selectedTemplate.body.replace(/\n/g, ' ')}
                   </p>
                 </div>
               )}

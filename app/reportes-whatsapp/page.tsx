@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, type ReactElement } from 'react'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -41,7 +41,7 @@ const STATUS_LABELS: Record<string, string> = {
   undelivered: 'No entregado',
 }
 
-const STATUS_ICONS: Record<string, JSX.Element> = {
+const STATUS_ICONS: Record<string, ReactElement> = {
   queued:      <Clock size={12} />,
   scheduled:   <Clock size={12} />,
   sent:        <CheckCircle size={12} />,
