@@ -331,7 +331,7 @@ export default function Mensajeria() {
         <div className="max-w-5xl mx-auto px-3 sm:px-4">
 
           {/* Header */}
-          <div className="mb-5">
+          <div className="mb-5 animate-page-in">
             <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-1">Centro de Mensajería</h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm">Envíos masivos WhatsApp con sistema anti-spam inteligente</p>
           </div>
@@ -451,7 +451,7 @@ export default function Mensajeria() {
                     <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-200 border-t-blue-600" />
                   </div>
                 ) : (
-                  <div className="border border-gray-100 dark:border-gray-700 rounded-xl overflow-hidden max-h-[420px] overflow-y-auto">
+                  <div className="border border-gray-100 dark:border-gray-700 rounded-xl overflow-hidden max-h-[50vh] sm:max-h-[420px] overflow-y-auto">
                     {filteredContacts.length === 0 ? (
                       <div className="py-12 text-center text-gray-400 dark:text-gray-500">
                         <Users size={32} className="mx-auto mb-2 opacity-30" />
@@ -613,7 +613,7 @@ export default function Mensajeria() {
               {/* Resumen */}
               <Card variant="elevated" className="p-5">
                 <h2 className="font-bold text-gray-900 dark:text-white mb-4">Resumen del envío</h2>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/30 rounded-xl">
                     <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{selected.size}</p>
                     <p className="text-xs text-blue-600 dark:text-blue-400">Contactos</p>
@@ -635,7 +635,7 @@ export default function Mensajeria() {
               <Card variant="elevated" className="p-5">
                 <h2 className="font-bold text-gray-900 dark:text-white mb-1">Velocidad de envío</h2>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Distribución gaussiana — delays naturales como comportamiento humano</p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {(Object.entries(DELAY_PRESETS) as [DelayPreset, any][]).map(([key, val]) => (
                     <button key={key} onClick={() => setDelayPreset(key)}
                       className={`p-4 rounded-xl border-2 text-left transition ${
@@ -672,17 +672,17 @@ export default function Mensajeria() {
                   </button>
                 </div>
                 {businessHours && (
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <div>
                       <label className="text-xs text-gray-500 dark:text-gray-400 font-semibold">Inicio</label>
                       <input type="time" value={bhStart} onChange={e => setBhStart(e.target.value)}
-                        className="block mt-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none" />
+                        className="block mt-1 w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none" />
                     </div>
                     <span className="text-gray-400 mt-4">—</span>
                     <div>
                       <label className="text-xs text-gray-500 dark:text-gray-400 font-semibold">Fin</label>
                       <input type="time" value={bhEnd} onChange={e => setBhEnd(e.target.value)}
-                        className="block mt-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none" />
+                        className="block mt-1 w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none" />
                     </div>
                     <div className={`mt-4 px-3 py-1.5 rounded-lg text-xs font-semibold ${
                       isInBusinessHours(bhStart, bhEnd)
@@ -873,10 +873,10 @@ export default function Mensajeria() {
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowConfirm(false)} />
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm backdrop-animate" onClick={() => setShowConfirm(false)} />
 
           {/* Panel */}
-          <div className="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <div className="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-scale-in">
 
             {/* Header */}
             <div className="px-6 py-4 flex items-center gap-3 bg-green-600">
