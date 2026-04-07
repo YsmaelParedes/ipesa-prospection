@@ -385,7 +385,7 @@ export default function Contactos() {
         <div className="max-w-7xl mx-auto px-3 sm:px-4">
 
           {/* Header */}
-          <div className="flex justify-between items-center mb-5 gap-3">
+          <div className="flex justify-between items-center mb-5 gap-3 animate-page-in">
             <div className="min-w-0">
               <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-0.5 truncate">Contactos</h1>
               <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">{contacts.length.toLocaleString()} contactos · {tabs.length - 1} segmentos</p>
@@ -722,12 +722,11 @@ export default function Contactos() {
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-semibold transition"
-              style={{
-                borderColor: activeFilters > 0 ? '#0369a1' : (isDark ? '#374151' : '#e5e7eb'),
-                backgroundColor: activeFilters > 0 ? (isDark ? '#1e3a5f' : '#eff6ff') : (isDark ? '#1f2937' : '#fff'),
-                color: activeFilters > 0 ? (isDark ? '#60a5fa' : '#0369a1') : (isDark ? '#9ca3af' : '#6b7280'),
-              }}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-semibold transition ${
+                activeFilters > 0
+                  ? 'border-primary-700 dark:border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
+                  : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+              }`}
             >
               <Filter size={15} />
               Filtros
@@ -832,11 +831,11 @@ export default function Contactos() {
                   return (
                     <div
                       key={c.id}
-                      className="rounded-xl border-2 transition p-4 flex gap-3 dark-mode-transition"
-                      style={{
-                        borderColor: isSelected ? '#93c5fd' : (isDark ? '#374151' : '#f3f4f6'),
-                        backgroundColor: isSelected ? (isDark ? '#1e3a5f' : '#eff6ff') : (isDark ? '#1f2937' : '#fff'),
-                      }}
+                      className={`rounded-xl border-2 transition p-4 flex gap-3 dark-mode-transition ${
+                        isSelected
+                          ? 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-primary-900/30'
+                          : 'border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800'
+                      }`}
                     >
                       {/* Checkbox */}
                       <button onClick={e => toggleSelect(c.id, idx, e)} className="mt-0.5 flex-shrink-0 text-gray-300 hover:text-blue-600 transition">
@@ -902,7 +901,7 @@ export default function Contactos() {
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr style={{ backgroundColor: isDark ? '#1e3a5f' : '#f0f9ff', borderBottom: isDark ? '2px solid #1d4ed8' : '2px solid #bae6fd' }}>
+                      <tr className="bg-primary-50 dark:bg-primary-900/40 border-b-2 border-primary-200 dark:border-primary-700">
                         <th className="px-4 py-3 w-10">
                           <button onClick={toggleSelectAll} className="text-gray-400 hover:text-blue-600 transition">
                             {selected.size === tabContacts.length && tabContacts.length > 0
@@ -916,8 +915,9 @@ export default function Contactos() {
                     </thead>
                     <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
                       {tabContacts.map((c, idx) => (
-                        <tr key={c.id} className="hover:bg-blue-50/20 dark:hover:bg-blue-900/10 transition"
-                          style={{ backgroundColor: selected.has(c.id) ? (isDark ? '#1e3a5f' : '#eff6ff') : undefined }}>
+                        <tr key={c.id} className={`hover:bg-blue-50/20 dark:hover:bg-blue-900/10 transition ${
+                          selected.has(c.id) ? 'bg-blue-50 dark:bg-primary-900/30' : ''
+                        }`}>
                           <td className="px-4 py-3">
                             <button onClick={e => toggleSelect(c.id, idx, e)} className="text-gray-300 hover:text-blue-600 transition">
                               {selected.has(c.id) ? <CheckSquare size={16} className="text-blue-600" /> : <Square size={16} />}
@@ -1003,23 +1003,23 @@ export default function Contactos() {
               </div>
               {xlsxSheets.map((sheet, i) => (
                 <button key={sheet.name} onClick={() => setXlsxSheets(s => s.map((sh, j) => j === i ? { ...sh, selected: !sh.selected } : sh))}
-                  className="w-full flex items-center gap-3 p-4 rounded-xl border-2 transition text-left"
-                  style={{
-                    borderColor: sheet.selected ? '#16a34a' : (isDark ? '#374151' : '#e5e7eb'),
-                    backgroundColor: sheet.selected ? (isDark ? '#14532d' : '#f0fdf4') : (isDark ? '#1f2937' : '#fff'),
-                  }}>
-                  <div style={{ color: sheet.selected ? '#16a34a' : (isDark ? '#6b7280' : '#d1d5db') }}>
+                  className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition text-left ${
+                    sheet.selected
+                      ? 'border-green-600 bg-green-50 dark:bg-green-950/30'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+                  }`}>
+                  <div className={sheet.selected ? 'text-green-600' : 'text-gray-300 dark:text-gray-600'}>
                     {sheet.selected ? <CheckSquare size={20} /> : <Square size={20} />}
                   </div>
                   <div className="flex-1">
                     <p className="font-semibold text-gray-800 dark:text-gray-100">{sheet.name}</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{sheet.rows.length.toLocaleString()} contactos</p>
                   </div>
-                  <span className="text-xs font-bold px-2 py-1 rounded-full"
-                    style={{
-                      backgroundColor: sheet.selected ? (isDark ? '#166534' : '#dcfce7') : (isDark ? '#374151' : '#f3f4f6'),
-                      color: sheet.selected ? (isDark ? '#86efac' : '#15803d') : (isDark ? '#9ca3af' : '#9ca3af'),
-                    }}>
+                  <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                    sheet.selected
+                      ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-400'
+                  }`}>
                     {sheet.rows.length.toLocaleString()}
                   </span>
                 </button>
