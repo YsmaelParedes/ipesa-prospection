@@ -89,7 +89,7 @@ export default function Segmentos() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 sm:py-8 dark-mode-transition">
         <div className="max-w-5xl mx-auto px-3 sm:px-4">
 
-          <div className="flex flex-wrap gap-3 justify-between items-start mb-6 sm:mb-8">
+          <div className="flex flex-wrap gap-3 justify-between items-start mb-6 sm:mb-8 animate-page-in">
             <div>
               <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-1">Segmentos</h1>
               <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">Clasifica tus contactos por categoría de negocio</p>

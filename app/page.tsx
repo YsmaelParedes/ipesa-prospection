@@ -39,7 +39,7 @@ export default function Dashboard() {
       <Navbar />
       <div className="min-h-screen py-6 sm:py-8 bg-gray-50 dark:bg-gray-900 dark-mode-transition">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
-          <div className="mb-8">
+          <div className="mb-8 animate-page-in">
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-1">Dashboard IPESA</h1>
             <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">Gestión inteligente de prospectos y campañas comerciales</p>
           </div>
@@ -51,11 +51,11 @@ export default function Dashboard() {
           ) : (
             <>
               {/* Métricas */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-8 animate-stagger">
                 {metricCards.map((m, i) => {
                   const Icon = m.icon
                   return (
-                    <div key={i} className={`rounded-xl shadow border p-4 sm:p-6 dark-mode-transition ${m.cardClass}`}>
+                    <div key={i} className={`rounded-xl shadow border p-4 sm:p-6 dark-mode-transition hover-lift ${m.cardClass}`}>
                       <div className="flex justify-between items-start mb-3 sm:mb-4">
                         <div className="p-2 sm:p-3 rounded-lg bg-white/60 dark:bg-white/10">
                           <Icon size={20} className={m.iconClass} />

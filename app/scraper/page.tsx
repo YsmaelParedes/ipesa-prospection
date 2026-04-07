@@ -231,7 +231,7 @@ export default function Scraper() {
 
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 dark-mode-transition">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
-          <div className="mb-4 sm:mb-6">
+          <div className="mb-4 sm:mb-6 animate-page-in">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Scraper de Prospectos</h1>
             <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm mt-1">Busca negocios por código postal o municipio en INEGI DENUE / Google Maps</p>
           </div>
