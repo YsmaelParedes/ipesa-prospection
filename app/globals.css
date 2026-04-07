@@ -52,8 +52,10 @@
   --radius-2xl: 2rem;
 
   /* Animations */
-  --animate-fade-in: fadeIn 0.3s ease-in-out;
-  --animate-slide-in: slideIn 0.3s ease-in-out;
+  --animate-fade-in: fadeIn 0.4s ease-out both;
+  --animate-slide-up: slideUp 0.4s ease-out both;
+  --animate-slide-down: slideDown 0.3s ease-out both;
+  --animate-scale-in: scaleIn 0.25s ease-out both;
   --animate-progress-bar: progressBar 1.8s ease-in-out infinite;
 
   @keyframes fadeIn {
@@ -61,15 +63,35 @@
     100% { opacity: 1; }
   }
 
-  @keyframes slideIn {
-    0% { transform: translateY(10px); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
+  @keyframes slideUp {
+    0% { opacity: 0; transform: translateY(16px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideDown {
+    0% { opacity: 0; transform: translateY(-8px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes scaleIn {
+    0% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
   }
 
   @keyframes progressBar {
     0%   { width: 0%; margin-left: 0%; }
     50%  { width: 60%; margin-left: 20%; }
     100% { width: 0%; margin-left: 100%; }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
   }
 }
 
@@ -94,6 +116,90 @@
 @layer utilities {
   .dark-mode-transition {
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  }
+
+  /* Page entrance animations */
+  .animate-page-in {
+    animation: slideUp 0.4s ease-out both;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out both;
+  }
+
+  .animate-slide-down {
+    animation: slideDown 0.3s ease-out both;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.25s ease-out both;
+  }
+
+  /* Staggered children animation */
+  .animate-stagger > * {
+    animation: slideUp 0.4s ease-out both;
+  }
+  .animate-stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .animate-stagger > *:nth-child(2) { animation-delay: 60ms; }
+  .animate-stagger > *:nth-child(3) { animation-delay: 120ms; }
+  .animate-stagger > *:nth-child(4) { animation-delay: 180ms; }
+  .animate-stagger > *:nth-child(5) { animation-delay: 240ms; }
+  .animate-stagger > *:nth-child(6) { animation-delay: 300ms; }
+
+  /* Skeleton loading shimmer */
+  .skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  .dark .skeleton {
+    background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
+    background-size: 200% 100%;
+  }
+
+  /* Interactive button/card hover */
+  .hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  .dark .hover-lift:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Press effect for buttons */
+  .press-effect:active {
+    transform: scale(0.97);
+  }
+
+  /* Focus ring */
+  .focus-ring {
+    transition: box-shadow 0.15s ease;
+  }
+  .focus-ring:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.3);
+  }
+
+  /* Smooth modal backdrop */
+  .backdrop-animate {
+    animation: fadeIn 0.2s ease-out both;
+  }
+
+  /* Pulse for notification badges */
+  .pulse-soft {
+    animation: pulse-soft 2s ease-in-out infinite;
+  }
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

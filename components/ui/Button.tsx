@@ -14,7 +14,7 @@ export default function Button({
   className = '',
   ...props
 }: ButtonProps) {
-  const base = 'font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer dark-mode-transition'
+  const base = 'font-semibold rounded-lg transition-all duration-200 inline-flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer dark-mode-transition press-effect focus-ring'
 
   const variants = {
     primary: 'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-500',

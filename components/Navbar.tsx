@@ -78,7 +78,7 @@ export default function Navbar() {
                 <Icon size={16} />
                 {label}
                 {href === '/recordatorios' && alertCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow">
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow pulse-soft">
                     {alertCount > 99 ? '99+' : alertCount}
                   </span>
                 )}
@@ -97,7 +97,7 @@ export default function Navbar() {
               </button>
 
               {configOpen && (
-                <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden z-50">
+                <div className="absolute right-0 top-full mt-2 w-52 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden z-50 animate-slide-down">
                   <div className="px-3 py-2 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
                     Gestión
                   </div>
@@ -142,6 +142,7 @@ export default function Navbar() {
             <button
               onClick={() => setIsOpen(!isOpen)}
               className="lg:hidden p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/15 transition"
+              aria-label="Abrir menú de navegación"
             >
               {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -150,7 +151,7 @@ export default function Navbar() {
 
         {/* Mobile menu */}
         {isOpen && (
-          <div className="lg:hidden pb-4 space-y-1 max-h-96 overflow-y-auto">
+          <div className="lg:hidden pb-4 space-y-1 max-h-96 overflow-y-auto animate-slide-down">
             {mainMenu.map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
