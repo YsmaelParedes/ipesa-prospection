@@ -77,10 +77,15 @@ export default function ReportesWhatsApp() {
 
   useEffect(() => { fetchMessages() }, [filterStatus])
 
-  // Auto-refresh cada 30s
+  // Auto-refresh cada 30s (pauses when tab is hidden)
   useEffect(() => {
-    const id = setInterval(() => fetchMessages(), 30_000)
-    return () => clearInterval(id)
+    let id: ReturnType<typeof setInterval>
+    const start = () => { id = setInterval(() => fetchMessages(), 30_000) }
+    const stop = () => clearInterval(id)
+    const onVisibility = () => document.hidden ? stop() : start()
+    start()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => { stop(); document.removeEventListener('visibilitychange', onVisibility) }
   }, [filterStatus])
 
   const filtered = useMemo(() => {
@@ -120,7 +125,7 @@ export default function ReportesWhatsApp() {
         <div className="max-w-6xl mx-auto px-3 sm:px-4">
 
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 animate-page-in">
             <div>
               <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-1">Reportes WhatsApp</h1>
               <p className="text-gray-500 dark:text-gray-400 text-sm">Historial y estado de mensajes enviados via Twilio</p>
@@ -131,14 +136,14 @@ export default function ReportesWhatsApp() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 animate-stagger">
             {[
               { label: 'Total enviados', value: stats.total,     color: 'text-gray-900 dark:text-white',               icon: <MessageSquare size={18} className="text-gray-400" /> },
               { label: 'Entregados',     value: stats.delivered, color: 'text-green-600 dark:text-green-400',           icon: <CheckCircle size={18} className="text-green-400" /> },
               { label: 'Leídos',         value: stats.read,      color: 'text-primary-600 dark:text-primary-400',       icon: <Eye size={18} className="text-primary-400" /> },
               { label: 'Fallidos',       value: stats.failed,    color: 'text-red-600 dark:text-red-400',               icon: <XCircle size={18} className="text-red-400" /> },
             ].map(s => (
-              <Card key={s.label} variant="elevated" className="p-4">
+              <Card key={s.label} variant="elevated" className="p-4 hover-lift">
                 <div className="flex items-center gap-2 mb-1">{s.icon}<span className="text-xs text-gray-500 dark:text-gray-400">{s.label}</span></div>
                 <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
                 {s.label !== 'Total enviados' && stats.total > 0 && (
@@ -171,7 +176,7 @@ export default function ReportesWhatsApp() {
                 placeholder="Buscar contacto..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="pl-8 pr-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 w-48"
+                className="pl-8 pr-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 w-full sm:w-48"
               />
             </div>
           </div>
