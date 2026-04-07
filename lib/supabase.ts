@@ -45,7 +45,7 @@ export async function addContact(contact: any) {
 export async function updateContact(id: string, updates: any) {
   const { data, error } = await getSupabase()
     .from('contacts')
-    .update({ ...updates, updated_at: new Date() })
+    .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
 
@@ -307,7 +307,7 @@ export async function markFirstContact(
   const newStatus = response === 'cold' ? 'rechazado' : 'contactado'
   const { error: updateError } = await getSupabase()
     .from('contacts')
-    .update({ prospect_status: newStatus, updated_at: new Date() })
+    .update({ prospect_status: newStatus, updated_at: new Date().toISOString() })
     .eq('id', contactId)
   if (updateError) throw updateError
 
