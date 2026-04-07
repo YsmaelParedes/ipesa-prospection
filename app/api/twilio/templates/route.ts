@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { verifySession } from '@/lib/auth'
 
 const ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID
 const AUTH_TOKEN  = process.env.TWILIO_AUTH_TOKEN
@@ -12,7 +13,12 @@ function extractBody(types: Record<string, any>): string {
   return ''
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Auth check
+  if (!verifySession(req)) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
   if (!ACCOUNT_SID || !AUTH_TOKEN) {
     return NextResponse.json(
       { error: 'TWILIO_ACCOUNT_SID o TWILIO_AUTH_TOKEN no configuradas' },

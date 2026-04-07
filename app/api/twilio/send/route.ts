@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServerSupabase } from '@/lib/supabase-server'
+import { verifySession } from '@/lib/auth'
 
 const ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID!
 const AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN!
 const FROM         = process.env.TWILIO_WHATSAPP_FROM!
 const MESSAGING_SID = process.env.TWILIO_MESSAGING_SERVICE_SID
 const APP_URL      = process.env.NEXT_PUBLIC_APP_URL || ''
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
 
 function formatPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '')
@@ -24,12 +18,24 @@ function formatPhone(phone: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    // Auth check
+    if (!verifySession(req)) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
     const { phone, contentSid, contentVariables, contactId, contactName, templateName, scheduledFor } = await req.json()
 
-    if (!phone)      return NextResponse.json({ error: 'Teléfono requerido' }, { status: 400 })
+    if (!phone)       return NextResponse.json({ error: 'Teléfono requerido' }, { status: 400 })
+    if (!contentSid)  return NextResponse.json({ error: 'ContentSid requerido' }, { status: 400 })
     if (!ACCOUNT_SID) return NextResponse.json({ error: 'TWILIO_ACCOUNT_SID no configurada' }, { status: 500 })
     if (!AUTH_TOKEN)  return NextResponse.json({ error: 'TWILIO_AUTH_TOKEN no configurada' }, { status: 500 })
     if (!FROM && !MESSAGING_SID) return NextResponse.json({ error: 'TWILIO_WHATSAPP_FROM no configurada' }, { status: 500 })
+
+    // Validate phone format
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length < 10) {
+      return NextResponse.json({ error: 'Teléfono inválido: debe tener al menos 10 dígitos' }, { status: 400 })
+    }
 
     const to = formatPhone(phone)
     const isScheduled = !!scheduledFor
@@ -79,8 +85,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Guardar log en Supabase
-    const supabase = getSupabase()
+    // Save log in Supabase with service role key
+    const supabase = getServerSupabase()
     await supabase.from('message_logs').insert({
       message_sid:   data.sid,
       contact_id:    contactId   || null,
@@ -94,6 +100,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, messageId: data.sid })
   } catch (error: any) {
+    console.error('Twilio send error:', error.message)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

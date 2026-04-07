@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServerSupabase } from '@/lib/supabase-server'
+import { verifySession } from '@/lib/auth'
 
 function normalizePhone(phone: string): string {
   if (!phone) return ''
@@ -12,18 +13,20 @@ function normalizePhone(phone: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    // Auth check
+    if (!verifySession(req)) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
+
     const { phones = [], names = [], inegi_ids = [] } = await req.json()
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    const supabase = getServerSupabase()
 
     const existingPhones: string[] = []
     const existingNames: string[] = []
     const existingInegiIds: string[] = []
 
-    // ── Capa 1: comparación por teléfono (normalizado) ───────────────────────
+    // Layer 1: phone comparison (normalized)
     if (phones.length > 0) {
       const { data } = await supabase
         .from('contacts')
@@ -42,7 +45,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Capa 4: comparación por nombre de negocio (sin teléfono) ────────────
+    // Layer 2: business name comparison
     if (names.length > 0) {
       const { data } = await supabase
         .from('contacts')
@@ -62,7 +65,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Capa 3: comparación por ID de INEGI (si la columna existe) ──────────
+    // Layer 3: INEGI ID comparison
     if (inegi_ids.length > 0) {
       try {
         const { data } = await supabase
@@ -77,12 +80,13 @@ export async function POST(req: NextRequest) {
           }
         }
       } catch {
-        // Columna inegi_id no existe aún — ignorar silenciosamente
+        // Column inegi_id may not exist yet
       }
     }
 
     return NextResponse.json({ existingPhones, existingNames, existingInegiIds })
   } catch (error: any) {
+    console.error('Check duplicates error:', error.message)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

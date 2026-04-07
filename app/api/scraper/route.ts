@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import axios from 'axios'
-
+import { verifySession } from '@/lib/auth'
 
 export const maxDuration = 50
 
@@ -255,6 +255,11 @@ function dedupe(batches: any[][]): any[] {
 }
 
 export async function POST(req: NextRequest) {
+  // Auth check
+  if (!verifySession(req)) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
   if (activeScrapes >= MAX_CONCURRENT) {
     return NextResponse.json(
       { error: 'El servidor está procesando otra búsqueda. Intenta en unos segundos.' },
