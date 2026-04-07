@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/api/auth/login']
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/twilio/webhook']
 
 // Web Crypto API — disponible en Edge Runtime (sin dependencias de Node.js)
 async function verifySession(cookie: string, secret: string): Promise<boolean> {

@@ -25,11 +25,13 @@ interface LogEntry {
   sentAt?: Date
 }
 
-interface YCloudTemplate {
-  name: string
+interface TwilioTemplate {
+  sid: string
+  friendly_name: string
   language: string
+  variables: Record<string, string>
+  body: string
   status: string
-  components: any[]
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -107,8 +109,8 @@ export default function Mensajeria() {
   const [onlyPhone, setOnlyPhone]         = useState(true)
 
   // WhatsApp state
-  const [templates, setTemplates]               = useState<YCloudTemplate[]>([])
-  const [selectedTemplate, setSelectedTemplate] = useState<YCloudTemplate | null>(null)
+  const [templates, setTemplates]               = useState<TwilioTemplate[]>([])
+  const [selectedTemplate, setSelectedTemplate] = useState<TwilioTemplate | null>(null)
   const [showConfirm, setShowConfirm]           = useState(false)
 
   // Anti-spam
@@ -116,6 +118,10 @@ export default function Mensajeria() {
   const [businessHours, setBusinessHours] = useState(true)
   const [bhStart, setBhStart]             = useState('09:00')
   const [bhEnd, setBhEnd]                 = useState('19:00')
+
+  // Programación
+  const [scheduleEnabled, setScheduleEnabled] = useState(false)
+  const [scheduledFor, setScheduledFor]       = useState('')
 
   // Estado de envío
   const [log, setLog]             = useState<LogEntry[]>([])
@@ -145,7 +151,7 @@ export default function Mensajeria() {
   // WhatsApp templates
   const fetchWaTemplates = async () => {
     try {
-      const res  = await fetch('/api/ycloud/templates')
+      const res  = await fetch('/api/twilio/templates')
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setTemplates(data.templates)
@@ -187,10 +193,9 @@ export default function Mensajeria() {
   )
 
   // WhatsApp preview
-  const bodyComponent = selectedTemplate?.components.find((c: any) => c.type === 'BODY')
-  const bodyText      = bodyComponent?.text || ''
-  const previewFirst  = selectedContacts[0] ? extractFirstName(selectedContacts[0].name) : 'Juan'
-  const previewText   = renderTemplate(bodyText, [previewFirst])
+  const bodyText     = selectedTemplate?.body || ''
+  const previewFirst = selectedContacts[0] ? extractFirstName(selectedContacts[0].name) : 'Juan'
+  const previewText  = renderTemplate(bodyText, [previewFirst])
 
   // Step navigation
   const STEPS = [
@@ -203,13 +208,14 @@ export default function Mensajeria() {
 
   const goToPreview = () => {
     if (selected.size === 0) { toast.error('Selecciona al menos un contacto'); return }
-    if (selected.size > MAX_WA) { toast.error(`Máximo ${MAX_WA} contactos por día (límite YCloud)`); return }
+    if (selected.size > MAX_WA) { toast.error(`Máximo ${MAX_WA} contactos por día`); return }
     fetchWaTemplates()
     setStep('preview')
   }
 
   const goToConfig = () => {
     if (!selectedTemplate) { toast.error('Selecciona una plantilla'); return }
+    if (selectedTemplate.status !== 'approved') { toast.error('Solo se pueden enviar plantillas aprobadas por Meta'); return }
     setStep('config')
   }
 
@@ -262,14 +268,17 @@ export default function Mensajeria() {
       updateEntry(contact.id, { status: 'sending' })
 
       try {
-        const res = await fetch('/api/ycloud/send', {
+        const res = await fetch('/api/twilio/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            phone:        contact.phone,
-            templateName: selectedTemplate!.name,
-            language:     selectedTemplate!.language,
-            variables:    [extractFirstName(contact.name)],
+            phone:            contact.phone,
+            contentSid:       selectedTemplate!.sid,
+            contentVariables: { '1': extractFirstName(contact.name) },
+            contactId:        contact.id,
+            contactName:      contact.name,
+            templateName:     selectedTemplate!.friendly_name,
+            scheduledFor:     scheduleEnabled && scheduledFor ? scheduledFor : undefined,
           }),
         })
 
@@ -489,7 +498,7 @@ export default function Mensajeria() {
               {selected.size > MAX_WA && (
                 <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-700 rounded-xl text-sm text-amber-800 dark:text-amber-300">
                   <AlertTriangle size={16} />
-                  Límite diario de YCloud: {MAX_WA} conversaciones. Tienes {selected.size} seleccionados.
+                  Límite diario: {MAX_WA} conversaciones. Tienes {selected.size} seleccionados.
                 </div>
               )}
 
@@ -519,26 +528,47 @@ export default function Mensajeria() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {templates.map(t => (
-                      <button key={t.name} onClick={() => setSelectedTemplate(t)}
-                        className={`w-full text-left p-4 rounded-xl border-2 transition ${
-                          selectedTemplate?.name === t.name
-                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/20'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-semibold text-sm text-gray-900 dark:text-white">{t.name}</span>
-                          <div className="flex gap-2">
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold">✓ Aprobada</span>
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{t.language}</span>
+                    {templates.map(t => {
+                      const isApproved = t.status === 'approved'
+                      const statusBadge: Record<string, string> = {
+                        approved: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+                        pending:  'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
+                        rejected: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400',
+                        paused:   'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400',
+                      }
+                      const statusLabel: Record<string, string> = {
+                        approved: '✓ Aprobada',
+                        pending:  '⏳ En revisión',
+                        rejected: '✗ Rechazada',
+                        paused:   '⏸ Pausada',
+                      }
+                      return (
+                        <button key={t.sid}
+                          onClick={() => isApproved ? setSelectedTemplate(t) : undefined}
+                          disabled={!isApproved}
+                          className={`w-full text-left p-4 rounded-xl border-2 transition ${
+                            !isApproved
+                              ? 'opacity-60 cursor-not-allowed border-gray-200 dark:border-gray-700'
+                              : selectedTemplate?.sid === t.sid
+                                ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/20'
+                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-semibold text-sm text-gray-900 dark:text-white">{t.friendly_name}</span>
+                            <div className="flex gap-2">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${statusBadge[t.status] || statusBadge.pending}`}>
+                                {statusLabel[t.status] || t.status}
+                              </span>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{t.language}</span>
+                            </div>
                           </div>
-                        </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
-                          {t.components.find((c: any) => c.type === 'BODY')?.text?.replace(/\n/g, ' ')}
-                        </p>
-                      </button>
-                    ))}
+                          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                            {t.body.replace(/\n/g, ' ')}
+                          </p>
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
               </Card>
@@ -558,11 +588,6 @@ export default function Mensajeria() {
                           {new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })} ✓✓
                         </p>
                       </div>
-                      {selectedTemplate.components.find((c: any) => c.type === 'BUTTONS')?.buttons?.map((btn: any, i: number) => (
-                        <div key={i} className="mt-1 bg-white dark:bg-[#202c33] rounded-lg px-3 py-2 text-center text-sm font-semibold text-[#00a9ff] shadow-sm">
-                          {btn.text}
-                        </div>
-                      ))}
                     </div>
                   </div>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">
@@ -670,6 +695,36 @@ export default function Mensajeria() {
                 )}
               </Card>
 
+              {/* Programar envío */}
+              <Card variant="elevated" className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-gray-400" />
+                    <h2 className="font-bold text-gray-900 dark:text-white">Programar envío</h2>
+                  </div>
+                  <button
+                    onClick={() => setScheduleEnabled(!scheduleEnabled)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${scheduleEnabled ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${scheduleEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+                {scheduleEnabled ? (
+                  <div className="space-y-2">
+                    <input
+                      type="datetime-local"
+                      value={scheduledFor}
+                      onChange={e => setScheduledFor(e.target.value)}
+                      min={new Date(Date.now() + 15 * 60 * 1000).toISOString().slice(0, 16)}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                    <p className="text-xs text-amber-600 dark:text-amber-400">Requiere <code>TWILIO_MESSAGING_SERVICE_SID</code> configurado en las variables de entorno.</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 dark:text-gray-500">El envío iniciará de inmediato al confirmar.</p>
+                )}
+              </Card>
+
               {/* Tiempo estimado */}
               <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center gap-3">
                 <Clock size={18} className="text-gray-400 flex-shrink-0" />
@@ -680,7 +735,7 @@ export default function Mensajeria() {
                     </span>
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500">
-                    {selectedContacts.filter(c => c.phone).length} mensajes via plantilla: {selectedTemplate?.name}
+                    {selectedContacts.filter(c => c.phone).length} mensajes via plantilla: {selectedTemplate?.friendly_name}
                   </p>
                 </div>
               </div>
@@ -828,7 +883,7 @@ export default function Mensajeria() {
               <MessageCircle size={22} className="text-white flex-shrink-0" />
               <div>
                 <h3 className="font-bold text-white text-lg leading-tight">¿Confirmar envío?</h3>
-                <p className="text-white/80 text-xs">WhatsApp vía YCloud</p>
+                <p className="text-white/80 text-xs">WhatsApp vía Twilio</p>
               </div>
             </div>
 
