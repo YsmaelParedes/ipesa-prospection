@@ -57,13 +57,18 @@ export async function GET() {
         t.whatsapp_approval_status ??
         null
 
+      const status = normalizeStatus(rawStatus)
+
+      // Log para diagnóstico — ver consola del servidor Next.js
+      console.log(`[templates] ${t.friendly_name} | raw="${rawStatus}" → normalized="${status}"`)
+
       return {
         sid:           t.sid,
         friendly_name: t.friendly_name,
         language:      t.language,
         variables:     t.variables || {},
         body:          extractBody(t.types || {}),
-        status:        normalizeStatus(rawStatus),
+        status,
       }
     })
 

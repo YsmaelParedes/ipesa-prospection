@@ -155,7 +155,8 @@ export default function Mensajeria() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setTemplates(data.templates)
-      if (data.templates.length === 1) setSelectedTemplate(data.templates[0])
+      const approved = data.templates.filter((t: TwilioTemplate) => t.status === 'approved')
+      if (approved.length === 1) setSelectedTemplate(approved[0])
     } catch (err: any) { toast.error('Error al cargar plantillas: ' + err.message) }
   }
 
@@ -598,7 +599,7 @@ export default function Mensajeria() {
 
               <div className="flex justify-between">
                 <Button variant="secondary" onClick={() => setStep('select')}><ChevronLeft size={16} /> Atrás</Button>
-                <Button variant="primary" onClick={goToConfig} disabled={!selectedTemplate}>
+                <Button variant="primary" onClick={goToConfig} disabled={!selectedTemplate || selectedTemplate.status !== 'approved'}>
                   Siguiente — Anti-spam <ChevronRight size={16} />
                 </Button>
               </div>
