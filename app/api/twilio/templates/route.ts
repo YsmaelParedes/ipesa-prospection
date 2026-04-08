@@ -15,12 +15,47 @@ function extractBody(types: Record<string, any>): string {
 function normalizeStatus(raw: string | undefined | null): string {
   if (!raw) return 'unknown'
   const s = raw.trim().toLowerCase()
-  // Twilio puede devolver: 'approved', 'APPROVED', 'Approved', 'pending', 'rejected', 'paused'
   if (s === 'approved')  return 'approved'
   if (s === 'pending')   return 'pending'
   if (s === 'rejected')  return 'rejected'
   if (s === 'paused')    return 'paused'
   return s
+}
+
+/**
+ * Extrae el status de aprobación de WhatsApp desde cualquier estructura
+ * que Twilio pueda devolver en su API ContentAndApprovals.
+ */
+function extractWhatsappStatus(t: any): string {
+  // Estructura más común: t.approvals.whatsapp.status
+  if (t.approvals?.whatsapp?.status)
+    return normalizeStatus(t.approvals.whatsapp.status)
+
+  // t.approvals.whatsapp es un string directo (no un objeto)
+  if (typeof t.approvals?.whatsapp === 'string')
+    return normalizeStatus(t.approvals.whatsapp)
+
+  // t.approvals es un array de objetos con campo 'channel'
+  if (Array.isArray(t.approvals)) {
+    const wa = t.approvals.find((a: any) =>
+      a.channel?.toLowerCase() === 'whatsapp' || a.name?.toLowerCase() === 'whatsapp'
+    )
+    if (wa?.status) return normalizeStatus(wa.status)
+  }
+
+  // t.approvals.status directo (sin sub-objeto por canal)
+  if (t.approvals?.status)
+    return normalizeStatus(t.approvals.status)
+
+  // Versión más nueva de la API: approval_requests en vez de approvals
+  if (t.approval_requests?.whatsapp?.status)
+    return normalizeStatus(t.approval_requests.whatsapp.status)
+
+  // Campo en la raíz del objeto template
+  if (t.whatsapp_approval_status)
+    return normalizeStatus(t.whatsapp_approval_status)
+
+  return 'unknown'
 }
 
 async function fetchPage(url: string, headers: Record<string, string>): Promise<any[]> {
@@ -43,24 +78,14 @@ export async function GET() {
       'Authorization': 'Basic ' + Buffer.from(`${ACCOUNT_SID}:${AUTH_TOKEN}`).toString('base64'),
     }
 
-    // Traer hasta 200 plantillas (Twilio máximo por página)
     const contents = await fetchPage(
       'https://content.twilio.com/v1/ContentAndApprovals?PageSize=200',
       headers,
     )
 
     const templates = contents.map((t: any) => {
-      // El estado puede estar en distintas rutas según versión de Twilio
-      const rawStatus =
-        t.approvals?.whatsapp?.status ??
-        t.approval_requests?.whatsapp?.status ??
-        t.whatsapp_approval_status ??
-        null
-
-      const status = normalizeStatus(rawStatus)
-
-      // Log para diagnóstico — ver consola del servidor Next.js
-      console.log(`[templates] ${t.friendly_name} | raw="${rawStatus}" → normalized="${status}"`)
+      const status = extractWhatsappStatus(t)
+      console.log(`[templates] "${t.friendly_name}" | approvals=${JSON.stringify(t.approvals)} → status="${status}"`)
 
       return {
         sid:           t.sid,
