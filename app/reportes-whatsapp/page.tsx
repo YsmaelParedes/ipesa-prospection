@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, type ReactElement } from 'react'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { MessageSquare, CheckCircle, Eye, XCircle, Clock, RefreshCw, Search, ChevronDown } from 'lucide-react'
+import { MessageSquare, CheckCircle, Eye, XCircle, Clock, RefreshCw, Search, ChevronDown, Zap } from 'lucide-react'
 
 interface MessageLog {
   id: string
@@ -62,6 +62,7 @@ export default function ReportesWhatsApp() {
   const [filterStatus, setFilter]   = useState('')
   const [search, setSearch]         = useState('')
   const [refreshing, setRefreshing] = useState(false)
+  const [syncing, setSyncing]       = useState(false)
 
   const fetchMessages = async (showSpinner = false) => {
     if (showSpinner) setRefreshing(true)
@@ -73,6 +74,16 @@ export default function ReportesWhatsApp() {
       setMessages(data.messages || [])
     } catch {}
     finally { setLoading(false); setRefreshing(false) }
+  }
+
+  const syncStatuses = async () => {
+    setSyncing(true)
+    try {
+      const res  = await fetch('/api/twilio/sync', { method: 'POST' })
+      const data = await res.json()
+      if (data.updated > 0) await fetchMessages()
+    } catch {}
+    finally { setSyncing(false) }
   }
 
   useEffect(() => { fetchMessages() }, [filterStatus])
@@ -125,9 +136,14 @@ export default function ReportesWhatsApp() {
               <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-1">Reportes WhatsApp</h1>
               <p className="text-gray-500 dark:text-gray-400 text-sm">Historial y estado de mensajes enviados via Twilio</p>
             </div>
-            <Button variant="secondary" onClick={() => fetchMessages(true)} disabled={refreshing}>
-              <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} /> Actualizar
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={syncStatuses} disabled={syncing}>
+                <Zap size={15} className={syncing ? 'animate-pulse' : ''} /> Sincronizar
+              </Button>
+              <Button variant="secondary" onClick={() => fetchMessages(true)} disabled={refreshing}>
+                <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} /> Actualizar
+              </Button>
+            </div>
           </div>
 
           {/* Stats */}
