@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useTheme } from '@/components/ThemeProvider'
-import { getAlertCount } from '@/lib/supabase'
 import { BarChart3, Users, MessageSquare, Clock, Search, Settings, Tag, ChevronDown, Moon, Sun, LogOut, FileText, RefreshCw, X, Grid3X3 } from 'lucide-react'
 
 const mainTabs = [
@@ -38,9 +37,9 @@ export default function Navbar() {
   const pathname = usePathname()
 
   useEffect(() => {
-    getAlertCount().then(setAlertCount).catch(() => {})
+    fetch('/api/data/alerts').then(r => r.json()).then(d => setAlertCount(d.count ?? 0)).catch(() => {})
     const interval = setInterval(() => {
-      getAlertCount().then(setAlertCount).catch(() => {})
+      fetch('/api/data/alerts').then(r => r.json()).then(d => setAlertCount(d.count ?? 0)).catch(() => {})
     }, 5 * 60 * 1000)
     return () => clearInterval(interval)
   }, [])
