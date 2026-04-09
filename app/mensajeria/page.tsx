@@ -332,7 +332,7 @@ export default function Mensajeria() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 sm:py-8 pb-24 lg:pb-8 dark-mode-transition">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pt-6 sm:pt-8 pb-28 lg:pb-10 dark-mode-transition">
         <div className="max-w-5xl mx-auto px-3 sm:px-4">
 
           {/* Header */}
