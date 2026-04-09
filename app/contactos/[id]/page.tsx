@@ -49,9 +49,9 @@ export default function EditContacto() {
         ])
         if (contact.error) throw new Error(contact.error)
         setForm(contact)
-        setFollowUps(fus)
-        setNotes(nts)
-        setSegments(segs)
+        setFollowUps(fus || [])
+        setNotes(nts || [])
+        setSegments(segs.segments || [])
       } catch {
         toast.error('Contacto no encontrado')
         router.push('/contactos')
@@ -90,7 +90,8 @@ export default function EditContacto() {
       setNewNote('')
       setShowNoteForm(false)
       const notesRes = await fetch(`/api/data/contacts/${id}/notes`)
-      setNotes(await notesRes.json())
+      const notesData = await notesRes.json()
+      setNotes(notesData || [])
     } catch (error: any) { toast.error(error.message) }
   }
 

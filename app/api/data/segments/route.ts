@@ -9,7 +9,7 @@ export async function GET() {
       .select('*')
       .order('name', { ascending: true })
     if (error) throw error
-    return NextResponse.json(data)
+    return NextResponse.json({ segments: data })
   } catch (error: any) {
     return NextResponse.json({ error: 'Error al obtener segmentos' }, { status: 500 })
   }

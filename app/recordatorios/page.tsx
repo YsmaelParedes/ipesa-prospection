@@ -53,9 +53,9 @@ export default function Recordatorios() {
         fetch('/api/data/contacts').then(r => r.json()),
         fetch('/api/data/follow-ups?type=due&days=1').then(r => r.json()),
       ])
-      setReminders(r)
-      setContacts(c)
-      setFollowUpsDue(fu)
+      setReminders(r.reminders || [])
+      setContacts(c.contacts || [])
+      setFollowUpsDue(fu.followUps || [])
     } catch { toast.error('Error al cargar datos') }
     finally { setLoading(false) }
   }

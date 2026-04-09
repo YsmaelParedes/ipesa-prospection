@@ -254,8 +254,8 @@ export default function Contactos() {
         fetch('/api/data/contacts').then(r => r.json()),
         fetch('/api/data/segments').then(r => r.json()),
       ])
-      setContacts(cts)
-      setSegments(segs)
+      setContacts(cts.contacts || [])
+      setSegments(segs.segments || [])
     } catch { toast.error('Error al cargar contactos') }
     finally { setLoading(false) }
   }

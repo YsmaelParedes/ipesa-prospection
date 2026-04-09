@@ -48,8 +48,8 @@ export default function Segmentos() {
         fetch('/api/data/segments').then(r => r.json()),
         fetch('/api/data/contacts').then(r => r.json()),
       ])
-      setSegments(segs)
-      setContacts(cts)
+      setSegments(segs.segments || [])
+      setContacts(cts.contacts || [])
     } catch { toast.error('Error al cargar datos') }
     finally { setLoading(false) }
   }

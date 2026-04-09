@@ -23,7 +23,7 @@ export default function Dashboard() {
     ])
       .then(([dashboard, contacts]) => {
         setMetrics(dashboard.metrics)
-        setRecentContacts((contacts || []).slice(0, 5))
+        setRecentContacts((contacts.contacts || []).slice(0, 5))
         setPendingReminders((dashboard.reminders || []).filter((r: any) => !r.is_completed).slice(0, 5))
       })
       .catch(console.error)

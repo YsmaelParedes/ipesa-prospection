@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
         .lte('scheduled_date', new Date().toISOString())
         .order('scheduled_date', { ascending: true })
       if (error) throw error
-      return NextResponse.json(data)
+      return NextResponse.json({ actions: data })
     }
 
     if (type === 'plans') {
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
         .select('*, contacts(id, name, phone, company), follow_up_stages(stage_name, objective, day, tone, channel)')
         .order('scheduled_date', { ascending: true })
       if (error) throw error
-      return NextResponse.json(data)
+      return NextResponse.json({ plans: data })
     }
 
     if (type === 'sequences') {
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
         .select('*')
         .eq('is_active', true)
       if (error) throw error
-      return NextResponse.json(data)
+      return NextResponse.json({ sequences: data })
     }
 
     if (type === 'primer-contacto') {
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
         .eq('prospect_status', 'nuevo')
         .order('created_at', { ascending: false })
       if (error) throw error
-      return NextResponse.json(data)
+      return NextResponse.json({ contacts: data })
     }
 
     if (type === 'due') {
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
         .lte('scheduled_date', cutoff.toISOString())
         .order('scheduled_date', { ascending: true })
       if (error) throw error
-      return NextResponse.json(data)
+      return NextResponse.json({ followUps: data })
     }
 
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })

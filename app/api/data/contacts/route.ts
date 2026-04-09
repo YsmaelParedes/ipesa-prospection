@@ -9,7 +9,7 @@ export async function GET() {
       .select('*')
       .order('created_at', { ascending: false })
     if (error) throw error
-    return NextResponse.json(data)
+    return NextResponse.json({ contacts: data })
   } catch (error: any) {
     return NextResponse.json({ error: 'Error al obtener contactos' }, { status: 500 })
   }
