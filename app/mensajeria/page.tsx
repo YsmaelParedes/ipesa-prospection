@@ -512,6 +512,7 @@ export default function Mensajeria() {
                   variant="primary"
                   onClick={goToPreview}
                   disabled={selected.size === 0 || selected.size > MAX_WA}
+                  className="w-full sm:w-auto"
                 >
                   Siguiente — Plantilla <ChevronRight size={16} />
                 </Button>
@@ -559,13 +560,13 @@ export default function Mensajeria() {
                                 : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                           }`}
                         >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-semibold text-sm text-gray-900 dark:text-white">{t.friendly_name}</span>
-                            <div className="flex gap-2">
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${statusBadge[t.status] || statusBadge.pending}`}>
+                          <div className="flex flex-wrap items-start justify-between gap-1 mb-1">
+                            <span className="font-semibold text-sm text-gray-900 dark:text-white break-all">{t.friendly_name}</span>
+                            <div className="flex gap-1.5 flex-shrink-0">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap ${statusBadge[t.status] || statusBadge.pending}`}>
                                 {statusLabel[t.status] || t.status}
                               </span>
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">{t.language}</span>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 whitespace-nowrap">{t.language}</span>
                             </div>
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
@@ -601,9 +602,9 @@ export default function Mensajeria() {
                 </Card>
               )}
 
-              <div className="flex justify-between">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2">
                 <Button variant="secondary" onClick={() => setStep('select')}><ChevronLeft size={16} /> Atrás</Button>
-                <Button variant="primary" onClick={goToConfig} disabled={!selectedTemplate}>
+                <Button variant="primary" onClick={goToConfig} disabled={!selectedTemplate} className="w-full sm:w-auto">
                   Siguiente — Anti-spam <ChevronRight size={16} />
                 </Button>
               </div>
@@ -640,10 +641,10 @@ export default function Mensajeria() {
               <Card variant="elevated" className="p-5">
                 <h2 className="font-bold text-gray-900 dark:text-white mb-1">Velocidad de envío</h2>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Distribución gaussiana — delays naturales como comportamiento humano</p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {(Object.entries(DELAY_PRESETS) as [DelayPreset, any][]).map(([key, val]) => (
                     <button key={key} onClick={() => setDelayPreset(key)}
-                      className={`p-4 rounded-xl border-2 text-left transition ${
+                      className={`p-3 sm:p-4 rounded-xl border-2 text-left transition flex sm:block items-center gap-3 ${
                         delayPreset === key
                           ? key === 'rapido' ? 'border-red-400 bg-red-50 dark:bg-red-950/20'
                           : key === 'lento'  ? 'border-green-400 bg-green-50 dark:bg-green-950/20'
@@ -651,7 +652,7 @@ export default function Mensajeria() {
                           : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                       }`}
                     >
-                      <p className={`font-bold text-sm mb-1 ${
+                      <p className={`font-bold text-sm mb-0 sm:mb-1 ${
                         delayPreset === key
                           ? key === 'rapido' ? 'text-red-700 dark:text-red-300'
                           : key === 'lento'  ? 'text-green-700 dark:text-green-300'
@@ -677,19 +678,19 @@ export default function Mensajeria() {
                   </button>
                 </div>
                 {businessHours && (
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-end gap-3">
                     <div>
                       <label className="text-xs text-gray-500 dark:text-gray-400 font-semibold">Inicio</label>
                       <input type="time" value={bhStart} onChange={e => setBhStart(e.target.value)}
                         className="block mt-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none" />
                     </div>
-                    <span className="text-gray-400 mt-4">—</span>
+                    <span className="text-gray-400 mb-2">—</span>
                     <div>
                       <label className="text-xs text-gray-500 dark:text-gray-400 font-semibold">Fin</label>
                       <input type="time" value={bhEnd} onChange={e => setBhEnd(e.target.value)}
                         className="block mt-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none" />
                     </div>
-                    <div className={`mt-4 px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                    <div className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${
                       isInBusinessHours(bhStart, bhEnd)
                         ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                         : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
@@ -745,9 +746,9 @@ export default function Mensajeria() {
                 </div>
               </div>
 
-              <div className="flex justify-between">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2">
                 <Button variant="secondary" onClick={() => setStep('preview')}><ChevronLeft size={16} /> Atrás</Button>
-                <Button variant="primary" onClick={requestSend}>
+                <Button variant="primary" onClick={requestSend} className="w-full sm:w-auto">
                   <Send size={16} /> Iniciar envío
                 </Button>
               </div>
@@ -858,8 +859,8 @@ export default function Mensajeria() {
                       </div>
                       <div className="text-right flex-shrink-0">
                         {entry.status === 'sent'    && <span className="text-xs text-green-600 dark:text-green-400">Enviado</span>}
-                        {entry.status === 'failed'  && <span className="text-xs text-red-600 dark:text-red-400 truncate max-w-[140px] block">{entry.error}</span>}
-                        {entry.status === 'skipped' && <span className="text-xs text-gray-400 truncate max-w-[140px] block">{entry.error}</span>}
+                        {entry.status === 'failed'  && <span className="text-xs text-red-600 dark:text-red-400 truncate max-w-[100px] sm:max-w-[180px] block">{entry.error}</span>}
+                        {entry.status === 'skipped' && <span className="text-xs text-gray-400 truncate max-w-[100px] sm:max-w-[180px] block">{entry.error}</span>}
                         {entry.status === 'sending' && <span className="text-xs text-blue-600 dark:text-blue-400">Enviando...</span>}
                         {entry.status === 'pending' && <span className="text-xs text-gray-300 dark:text-gray-600">En cola</span>}
                       </div>
