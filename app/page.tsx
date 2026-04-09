@@ -37,7 +37,7 @@ export default function Dashboard() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen py-6 sm:py-8 bg-gray-50 dark:bg-gray-900 dark-mode-transition">
+      <div className="min-h-screen py-6 sm:py-8 pb-24 lg:pb-8 bg-gray-50 dark:bg-gray-900 dark-mode-transition">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
           <div className="mb-8">
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-1">Dashboard IPESA</h1>

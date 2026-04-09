@@ -10,7 +10,8 @@ import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
 import Badge from '@/components/ui/Badge'
 import toast from 'react-hot-toast'
-import { Save, ArrowLeft, Plus } from 'lucide-react'
+import { Save, ArrowLeft, Plus, MessageCircle } from 'lucide-react'
+import Link from 'next/link'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -98,14 +99,18 @@ export default function EditContacto() {
       <div className="min-h-screen py-4 sm:py-8 bg-gray-50 dark:bg-gray-900 dark-mode-transition">
         <div className="max-w-5xl mx-auto px-3 sm:px-4">
 
-          <div className="flex items-center gap-3 mb-5 sm:mb-8">
+          <div className="flex items-center gap-3 mb-5 sm:mb-8 flex-wrap">
             <Button variant="secondary" size="sm" onClick={() => router.push('/contactos')}>
               <ArrowLeft size={16} /> Volver
             </Button>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white truncate">{form.name}</h1>
               <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm truncate">{form.company} · {form.phone}</p>
             </div>
+            <Link href={`/mensajeria?contacto=${form.phone}`}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold flex-shrink-0">
+              <MessageCircle size={15} /> Enviar mensaje
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -116,7 +121,17 @@ export default function EditContacto() {
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Datos del Contacto</h2>
                 <form onSubmit={handleSave} className="space-y-3">
                   <Input label="Nombre" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
-                  <Input label="Teléfono" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required />
+                  <Input
+                    label="Teléfono"
+                    value={form.phone}
+                    onChange={e => setForm({ ...form, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                    maxLength={10}
+                    inputMode="numeric"
+                    pattern="\d{10}"
+                    placeholder="2221234567"
+                    error={form.phone && form.phone.length < 10 ? `${form.phone.length}/10 dígitos` : undefined}
+                    required
+                  />
                   <Input label="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
                   <Input label="Empresa" value={form.company} onChange={e => setForm({ ...form, company: e.target.value })} />
                   <Input label="Dirección" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />

@@ -13,12 +13,7 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
-import { Plus, Upload, Trash2, Edit, Search, FileSpreadsheet, X, CheckSquare, Square, Filter, ChevronDown, ChevronUp, Download, TableProperties, AlertTriangle, RefreshCw } from 'lucide-react'
-
-// Normaliza teléfono: solo dígitos, últimos 10
-function cleanPhone(raw: string): string {
-  return raw.replace(/\D/g, '').slice(-10)
-}
+import { Plus, Upload, Trash2, Edit, Search, FileSpreadsheet, X, CheckSquare, Square, Filter, ChevronDown, ChevronUp, Download, TableProperties, MessageCircle } from 'lucide-react'
 
 function isValidPhone(phone: string): boolean {
   return /^\d{10}$/.test(phone)
@@ -52,19 +47,180 @@ const statusLabel: Record<string, string> = {
   nuevo: 'Nuevo', contactado: 'Contactado', interesado: 'Interesado', cliente: 'Cliente', rechazado: 'Rechazado',
 }
 
+const EMPTY_FORM = { name: '', phone: '', email: '', company: '', address: '', postal_code: '', segment: '', prospect_status: 'nuevo', acquisition_channel: '' }
+
+interface DrawerProps {
+  open: boolean
+  onClose: () => void
+  onSave: (data: typeof EMPTY_FORM) => void
+  segments: string[]
+  defaultSegment: string
+}
+
+function NuevoContactoDrawer({ open, onClose, onSave, segments, defaultSegment }: DrawerProps) {
+  const [form, setForm] = useState({ ...EMPTY_FORM, segment: defaultSegment })
+
+  useEffect(() => {
+    if (open) setForm({ ...EMPTY_FORM, segment: defaultSegment })
+  }, [open, defaultSegment])
+
+  const set = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }))
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!form.name) { toast.error('El nombre es requerido'); return }
+    if (!form.phone) { toast.error('El teléfono es requerido'); return }
+    if (!isValidPhone(form.phone)) { toast.error('El teléfono debe tener exactamente 10 dígitos'); return }
+    onSave(form)
+  }
+
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative ml-auto w-full max-w-md h-full bg-white dark:bg-gray-900 shadow-2xl flex flex-col">
+
+        {/* Header */}
+        <div className="bg-gradient-to-br from-blue-600 to-blue-700 px-6 py-5 flex-shrink-0">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                <Plus size={20} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-white font-bold text-lg leading-tight">Nuevo Contacto</h2>
+                <p className="text-blue-200 text-xs">Completa la información del prospecto</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="flex items-center gap-3 bg-white/10 rounded-xl px-4 py-3">
+            <div className="w-10 h-10 rounded-full bg-white/30 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+              {form.name ? form.name.charAt(0).toUpperCase() : '?'}
+            </div>
+            <div className="min-w-0">
+              <p className="text-white font-semibold text-sm truncate">{form.name || 'Nombre del contacto'}</p>
+              <p className="text-blue-200 text-xs truncate">{form.company || form.phone || 'Empresa o teléfono'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Form body */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col">
+          <div className="px-6 py-5 space-y-5 flex-1">
+
+            <div>
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Datos principales</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Nombre <span className="text-red-500">*</span></label>
+                  <input required placeholder="Juan Pérez" value={form.name} onChange={e => set('name', e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400 dark:placeholder-gray-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Teléfono <span className="text-red-500">*</span></label>
+                  <input required placeholder="2221234567" value={form.phone}
+                    onChange={e => set('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    maxLength={10} inputMode="numeric" pattern="\d{10}"
+                    className={`w-full px-3 py-2.5 rounded-lg border bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400 dark:placeholder-gray-500 ${form.phone && !isValidPhone(form.phone) ? 'border-red-400 dark:border-red-500' : 'border-gray-200 dark:border-gray-700'}`} />
+                  {form.phone && !isValidPhone(form.phone) && <p className="text-xs text-red-500 mt-1">{form.phone.length}/10 dígitos</p>}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Email</label>
+                    <input type="email" placeholder="juan@empresa.com" value={form.email} onChange={e => set('email', e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400 dark:placeholder-gray-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Empresa</label>
+                    <input placeholder="Acme Corp" value={form.company} onChange={e => set('company', e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400 dark:placeholder-gray-500" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Ubicación</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-3 sm:col-span-2">
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Dirección</label>
+                  <input placeholder="Calle 123, Colonia" value={form.address} onChange={e => set('address', e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400 dark:placeholder-gray-500" />
+                </div>
+                <div className="col-span-3 sm:col-span-1">
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">C.P.</label>
+                  <input placeholder="72000" value={form.postal_code} onChange={e => set('postal_code', e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400 dark:placeholder-gray-500" />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Clasificación</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Canal de adquisición</label>
+                  <select value={form.acquisition_channel} onChange={e => set('acquisition_channel', e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    {ACQUISITION_CHANNELS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Segmento</label>
+                    <select value={form.segment} onChange={e => set('segment', e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                      <option value="">Sin segmento</option>
+                      {segments.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Estado</label>
+                    <select value={form.prospect_status} onChange={e => set('prospect_status', e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                      {STATUSES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-4 sm:px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex gap-3 flex-shrink-0">
+            <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl py-3 text-sm flex items-center justify-center gap-2">
+              <Plus size={16} /> Guardar contacto
+            </button>
+            <button type="button" onClick={onClose} className="px-5 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm font-semibold">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function Contactos() {
   const [contacts, setContacts] = useState<any[]>([])
   const [segments, setSegments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('__todos__')
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: '', phone: '', email: '', company: '', address: '', postal_code: '', segment: '', prospect_status: 'nuevo', acquisition_channel: '' })
 
   // Search & filters within tab
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterChannel, setFilterChannel] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+
+  // Sorting
+  const [sortBy, setSortBy] = useState('created_at')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   // Bulk
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -129,7 +285,7 @@ export default function Contactos() {
     return [{ value: '', label: 'Todos los canales' }, ...vals.map(v => ({ value: v, label: v }))]
   }, [contacts])
 
-  // Contacts for active tab + search/filters
+  // Contacts for active tab + search/filters + sort
   const tabContacts = useMemo(() => {
     let list = contacts
     if (activeTab === '__sin_segmento__') list = contacts.filter(c => !c.segment)
@@ -144,31 +300,47 @@ export default function Contactos() {
       if (filterStatus && c.prospect_status !== filterStatus) return false
       if (filterChannel && c.acquisition_channel !== filterChannel) return false
       return true
+    }).sort((a, b) => {
+      const va = a[sortBy] ?? ''
+      const vb = b[sortBy] ?? ''
+      const cmp = String(va).localeCompare(String(vb), 'es', { numeric: true })
+      return sortDir === 'asc' ? cmp : -cmp
     })
-  }, [contacts, activeTab, search, filterStatus, filterChannel])
+  }, [contacts, activeTab, search, filterStatus, filterChannel, sortBy, sortDir])
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const phone = cleanPhone(form.phone)
-    if (!form.name) { toast.error('El nombre es requerido'); return }
-    if (!phone) { toast.error('El teléfono es requerido'); return }
-    if (!isValidPhone(phone)) { toast.error('El teléfono debe tener exactamente 10 dígitos'); return }
-    try {
-      await addContact({ ...form, phone, segment: form.segment || (activeTab !== '__todos__' && activeTab !== '__sin_segmento__' ? activeTab : '') })
-      toast.success('Contacto agregado')
-      setForm({ name: '', phone: '', email: '', company: '', address: '', postal_code: '', segment: '', prospect_status: 'nuevo', acquisition_channel: '' })
-      setShowForm(false)
-      fetchContacts()
-    } catch (error: any) { toast.error(error.message || 'Error al agregar') }
+  const handleAdd = (data: typeof EMPTY_FORM) => {
+    const segment = data.segment || (activeTab !== '__todos__' && activeTab !== '__sin_segmento__' ? activeTab : '')
+    const tempId = `temp_${Date.now()}`
+    const optimistic = { ...data, segment, id: tempId, created_at: new Date().toISOString() }
+    setContacts(prev => [optimistic, ...prev])
+    setShowForm(false)
+    toast.success('Contacto agregado')
+    addContact({ ...data, segment }).then(([real]) => {
+      setContacts(prev => prev.map(c => c.id === tempId ? real : c))
+    }).catch((err: any) => {
+      setContacts(prev => prev.filter(c => c.id !== tempId))
+      toast.error(err.message || 'Error al agregar')
+    })
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar contacto?')) return
     try {
       await deleteContact(id)
+      setContacts(prev => prev.filter(c => c.id !== id))
       toast.success('Eliminado')
-      fetchAll()
     } catch { toast.error('Error al eliminar') }
+  }
+
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    setContacts(prev => prev.map(c => c.id === id ? { ...c, prospect_status: newStatus } : c))
+    try {
+      await updateContact(id, { prospect_status: newStatus })
+    } catch {
+      const original = contacts.find(x => x.id === id)?.prospect_status
+      setContacts(prev => prev.map(c => c.id === id ? { ...c, prospect_status: original } : c))
+      toast.error('Error al cambiar estado')
+    }
   }
 
   const lastSelectedIdx = useRef<number>(-1)
@@ -206,8 +378,9 @@ export default function Contactos() {
     try {
       setBulkSaving(true)
       await Promise.all([...selected].map(id => updateContact(id, { segment: bulkSegment })))
+      setContacts(prev => prev.map(c => selected.has(c.id) ? { ...c, segment: bulkSegment } : c))
       toast.success(`${selected.size} contactos → "${bulkSegment}"`)
-      setSelected(new Set()); setBulkSegment(''); fetchAll()
+      setSelected(new Set()); setBulkSegment('')
     } catch (error: any) { toast.error(error.message) }
     finally { setBulkSaving(false) }
   }
@@ -218,8 +391,9 @@ export default function Contactos() {
     try {
       setBulkSaving(true)
       await Promise.all([...selected].map(id => updateContact(id, { acquisition_channel: bulkChannel })))
+      setContacts(prev => prev.map(c => selected.has(c.id) ? { ...c, acquisition_channel: bulkChannel } : c))
       toast.success(`${selected.size} contactos → canal "${bulkChannel}"`)
-      setSelected(new Set()); setBulkChannel(''); fetchAll()
+      setSelected(new Set()); setBulkChannel('')
     } catch (error: any) { toast.error(error.message) }
     finally { setBulkSaving(false) }
   }
@@ -355,33 +529,43 @@ export default function Contactos() {
 
   const activeFilters = [filterStatus, filterChannel].filter(Boolean).length
 
-  // Contactos del tab activo con teléfono inválido (con espacios / != 10 dígitos)
-  const dirtyPhones = useMemo(() =>
-    tabContacts.filter(c => c.phone && !isValidPhone(c.phone))
-  , [tabContacts])
-
-  const [cleaningPhones, setCleaningPhones] = useState(false)
-  const handleCleanPhones = async () => {
-    if (!dirtyPhones.length) return
-    setCleaningPhones(true)
-    let fixed = 0
-    for (const c of dirtyPhones) {
-      const cleaned = cleanPhone(c.phone)
-      if (cleaned && isValidPhone(cleaned)) {
-        try { await updateContact(c.id, { phone: cleaned }); fixed++ } catch {}
-      }
-    }
-    await fetchContacts()
-    setCleaningPhones(false)
-    toast.success(`${fixed} teléfonos corregidos`)
-  }
   const { theme } = useTheme()
   const isDark = theme === 'dark'
+
+  const statusSelectClass: Record<string, string> = {
+    nuevo:      'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/30 dark:text-blue-300',
+    contactado: 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-600 dark:bg-amber-900/30 dark:text-amber-300',
+    interesado: 'border-green-300 bg-green-50 text-green-700 dark:border-green-600 dark:bg-green-900/30 dark:text-green-300',
+    cliente:    'border-green-400 bg-green-100 text-green-800 dark:border-green-500 dark:bg-green-900/40 dark:text-green-200',
+    rechazado:  'border-red-300 bg-red-50 text-red-700 dark:border-red-600 dark:bg-red-900/30 dark:text-red-300',
+  }
+
+  const getStatusSelectClass = (status: string) =>
+    statusSelectClass[status] || 'border-gray-300 bg-gray-50 text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300'
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortBy(field); setSortDir('asc') }
+  }
+
+  const SortHeader = ({ field, label }: { field: string; label: string }) => (
+    <th
+      className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider cursor-pointer select-none hover:text-blue-600 dark:hover:text-blue-400 transition"
+      onClick={() => handleSort(field)}
+    >
+      <span className="flex items-center gap-1">
+        {label}
+        {sortBy === field
+          ? (sortDir === 'asc' ? <ChevronUp size={12} className="text-blue-600" /> : <ChevronDown size={12} className="text-blue-600" />)
+          : <ChevronDown size={12} className="opacity-30" />}
+      </span>
+    </th>
+  )
 
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 sm:py-8 dark-mode-transition">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 sm:py-8 pb-24 lg:pb-8 dark-mode-transition">
         <div className="max-w-7xl mx-auto px-3 sm:px-4">
 
           {/* Header */}
@@ -507,208 +691,13 @@ export default function Contactos() {
           </div>
 
           {/* Slide-over drawer: Nuevo Contacto */}
-          {showForm && (
-            <div className="fixed inset-0 z-50 flex">
-              {/* Backdrop */}
-              <div
-                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-                onClick={() => setShowForm(false)}
-              />
-              {/* Panel */}
-              <div className="relative ml-auto w-full max-w-md h-full bg-white dark:bg-gray-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-
-                {/* Header */}
-                <div className="bg-gradient-to-br from-blue-600 to-blue-700 px-6 py-5 flex-shrink-0">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                        <Plus size={20} className="text-white" />
-                      </div>
-                      <div>
-                        <h2 className="text-white font-bold text-lg leading-tight">Nuevo Contacto</h2>
-                        <p className="text-blue-200 text-xs">Completa la información del prospecto</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setShowForm(false)}
-                      className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition text-white"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                  {/* Avatar preview */}
-                  <div className="flex items-center gap-3 bg-white/10 rounded-xl px-4 py-3">
-                    <div className="w-10 h-10 rounded-full bg-white/30 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                      {form.name ? form.name.charAt(0).toUpperCase() : '?'}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-white font-semibold text-sm truncate">{form.name || 'Nombre del contacto'}</p>
-                      <p className="text-blue-200 text-xs truncate">{form.company || form.phone || 'Empresa o teléfono'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Form body */}
-                <form onSubmit={handleAdd} className="flex-1 overflow-y-auto">
-                  <div className="px-6 py-5 space-y-5">
-
-                    {/* Datos principales */}
-                    <div>
-                      <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Datos principales</p>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
-                            Nombre <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            required
-                            placeholder="Juan Pérez"
-                            value={form.name}
-                            onChange={e => setForm({ ...form, name: e.target.value })}
-                            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-400 dark:placeholder-gray-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
-                            Teléfono <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            required
-                            placeholder="222 123 4567"
-                            value={form.phone}
-                            onChange={e => setForm({ ...form, phone: cleanPhone(e.target.value) })}
-                            maxLength={10}
-                            inputMode="numeric"
-                            className={`w-full px-3 py-2.5 rounded-lg border bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-400 dark:placeholder-gray-500 ${form.phone && !isValidPhone(form.phone) ? 'border-red-400 dark:border-red-500' : 'border-gray-200 dark:border-gray-700'}`}
-                          />
-                          {form.phone && !isValidPhone(form.phone) && (
-                            <p className="text-xs text-red-500 mt-1">{form.phone.length}/10 dígitos</p>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Email</label>
-                            <input
-                              type="email"
-                              placeholder="juan@empresa.com"
-                              value={form.email}
-                              onChange={e => setForm({ ...form, email: e.target.value })}
-                              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-400 dark:placeholder-gray-500"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Empresa</label>
-                            <input
-                              placeholder="Acme Corp"
-                              value={form.company}
-                              onChange={e => setForm({ ...form, company: e.target.value })}
-                              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-400 dark:placeholder-gray-500"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Ubicación */}
-                    <div>
-                      <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Ubicación</p>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="col-span-2">
-                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Dirección</label>
-                          <input
-                            placeholder="Calle 123, Colonia"
-                            value={form.address}
-                            onChange={e => setForm({ ...form, address: e.target.value })}
-                            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-400 dark:placeholder-gray-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">C.P.</label>
-                          <input
-                            placeholder="72000"
-                            value={form.postal_code}
-                            onChange={e => setForm({ ...form, postal_code: e.target.value })}
-                            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition placeholder-gray-400 dark:placeholder-gray-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Clasificación */}
-                    <div>
-                      <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Clasificación</p>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Canal de adquisición</label>
-                          <select
-                            value={form.acquisition_channel}
-                            onChange={e => setForm({ ...form, acquisition_channel: e.target.value })}
-                            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                          >
-                            {ACQUISITION_CHANNELS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                          </select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Segmento</label>
-                            <select
-                              value={form.segment}
-                              onChange={e => setForm({ ...form, segment: e.target.value })}
-                              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                            >
-                              <option value="">Sin segmento</option>
-                              {allSegments.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Estado</label>
-                            <select
-                              value={form.prospect_status}
-                              onChange={e => setForm({ ...form, prospect_status: e.target.value })}
-                              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                            >
-                              {STATUSES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                            </select>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Footer actions */}
-                  <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex gap-3 flex-shrink-0">
-                    <button
-                      type="submit"
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl py-2.5 text-sm transition flex items-center justify-center gap-2"
-                    >
-                      <Plus size={16} /> Guardar contacto
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowForm(false)}
-                      className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm font-semibold transition"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* Alerta teléfonos sucios */}
-          {dirtyPhones.length > 0 && (
-            <div className="flex items-center gap-3 mb-3 px-4 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
-              <AlertTriangle size={15} className="text-amber-600 dark:text-amber-400 flex-shrink-0" />
-              <p className="text-xs text-amber-700 dark:text-amber-300 flex-1">
-                <strong>{dirtyPhones.length}</strong> contacto{dirtyPhones.length > 1 ? 's' : ''} con teléfono inválido (espacios o distinto de 10 dígitos)
-              </p>
-              <button onClick={handleCleanPhones} disabled={cleaningPhones}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition disabled:opacity-60">
-                {cleaningPhones ? <><RefreshCw size={11} className="animate-spin" /> Limpiando...</> : 'Limpiar ahora'}
-              </button>
-            </div>
-          )}
+          <NuevoContactoDrawer
+            open={showForm}
+            onClose={() => setShowForm(false)}
+            onSave={handleAdd}
+            segments={allSegments}
+            defaultSegment={activeTab !== '__todos__' && activeTab !== '__sin_segmento__' ? activeTab : ''}
+          />
 
           {/* Search + filters bar */}
           <div className="flex gap-2 mt-4 mb-3">
@@ -848,7 +837,14 @@ export default function Contactos() {
                         {/* Row 1: name + status */}
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <p className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">{c.name}</p>
-                          <Badge variant={statusBadge[c.prospect_status]}>{statusLabel[c.prospect_status] || c.prospect_status}</Badge>
+                          <select
+                            value={c.prospect_status || 'nuevo'}
+                            onChange={e => handleStatusChange(c.id, e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                            className={`text-xs font-semibold rounded-full border px-2 py-0.5 focus:outline-none cursor-pointer flex-shrink-0 ${getStatusSelectClass(c.prospect_status)}`}
+                          >
+                            {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                          </select>
                         </div>
 
                         {/* Row 2: phone */}
@@ -883,6 +879,12 @@ export default function Contactos() {
                           <Link href={`/contactos/${c.id}`} className="flex-1">
                             <Button variant="secondary" size="sm" className="w-full justify-center"><Edit size={13} /> Editar</Button>
                           </Link>
+                          {/^\d{10}$/.test(c.phone) && (
+                            <a href={`https://wa.me/52${c.phone}`} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center justify-center px-2.5 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50 transition">
+                              <MessageCircle size={15} />
+                            </a>
+                          )}
                           <Button variant="danger" size="sm" onClick={() => handleDelete(c.id)}>
                             <Trash2 size={13} />
                           </Button>
@@ -900,65 +902,80 @@ export default function Contactos() {
               {/* Desktop: table */}
               <Card variant="elevated" className="overflow-hidden hidden md:block">
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full min-w-[700px]">
                     <thead>
                       <tr style={{ backgroundColor: isDark ? '#1e3a5f' : '#f0f9ff', borderBottom: isDark ? '2px solid #1d4ed8' : '2px solid #bae6fd' }}>
-                        <th className="px-4 py-3 w-10">
+                        <th className="px-3 py-2.5 w-8">
                           <button onClick={toggleSelectAll} className="text-gray-400 hover:text-blue-600 transition">
                             {selected.size === tabContacts.length && tabContacts.length > 0
-                              ? <CheckSquare size={16} className="text-blue-600" /> : <Square size={16} />}
+                              ? <CheckSquare size={15} className="text-blue-600" /> : <Square size={15} />}
                           </button>
                         </th>
-                        {['Nombre', 'Teléfono', 'Empresa', 'C.P.', 'Canal de adquisición', 'Segmento', 'Descripción', 'Estado', 'Acciones'].map(h => (
-                          <th key={h} className="px-4 py-3 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">{h}</th>
-                        ))}
+                        <SortHeader field="name" label="Nombre" />
+                        <SortHeader field="phone" label="Teléfono" />
+                        <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">C.P.</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">Canal</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Segmento</th>
+                        <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Descripción</th>
+                        <SortHeader field="prospect_status" label="Estado" />
+                        <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50 dark:divide-gray-700/50">
                       {tabContacts.map((c, idx) => (
                         <tr key={c.id} className="hover:bg-blue-50/20 dark:hover:bg-blue-900/10 transition"
                           style={{ backgroundColor: selected.has(c.id) ? (isDark ? '#1e3a5f' : '#eff6ff') : undefined }}>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2.5">
                             <button onClick={e => toggleSelect(c.id, idx, e)} className="text-gray-300 hover:text-blue-600 transition">
-                              {selected.has(c.id) ? <CheckSquare size={16} className="text-blue-600" /> : <Square size={16} />}
+                              {selected.has(c.id) ? <CheckSquare size={15} className="text-blue-600" /> : <Square size={15} />}
                             </button>
                           </td>
-                          <td className="px-4 py-3">
-                            <p className="font-semibold text-gray-900 dark:text-white text-sm">{c.name}</p>
-                            {c.email && <p className="text-xs text-gray-400 dark:text-gray-500">{c.email}</p>}
+                          <td className="px-3 py-2.5 max-w-[180px]">
+                            <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{c.name}</p>
+                            {c.email && <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{c.email}</p>}
                           </td>
-                          <td className="px-4 py-3 text-gray-600 dark:text-gray-300 font-mono text-sm">{c.phone}</td>
-                          <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-sm">{c.company || '—'}</td>
-                          <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-sm font-mono">{c.postal_code || '—'}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2.5 text-gray-600 dark:text-gray-300 font-mono text-sm whitespace-nowrap">{c.phone}</td>
+                          <td className="px-3 py-2.5 text-gray-600 dark:text-gray-300 text-sm font-mono whitespace-nowrap">{c.postal_code || '—'}</td>
+                          <td className="px-3 py-2.5">
                             {c.acquisition_channel
-                              ? <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">{c.acquisition_channel}</span>
+                              ? <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 whitespace-nowrap">{c.acquisition_channel}</span>
                               : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2.5">
                             {c.segment ? (
-                              <span className="text-xs px-2 py-0.5 rounded-full font-semibold capitalize"
+                              <span className="text-xs px-2 py-0.5 rounded-full font-semibold capitalize whitespace-nowrap"
                                 style={{ backgroundColor: (segments.find((s:any) => s.name.toLowerCase() === c.segment?.toLowerCase())?.color || '#6b7280') + '30', color: segments.find((s:any) => s.name.toLowerCase() === c.segment?.toLowerCase())?.color || '#6b7280' }}>
                                 {c.segment}
                               </span>
                             ) : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
                           </td>
-                          <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-sm max-w-xs truncate">
-                            {(() => {
-                              const seg = segments.find((s:any) => s.name.toLowerCase() === c.segment?.toLowerCase())
-                              return seg?.description || <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
-                            })()}
+                          <td className="px-3 py-2.5 max-w-[160px]">
+                            {c.company
+                              ? <span className="text-sm text-gray-600 dark:text-gray-300 truncate block">{c.company}</span>
+                              : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
                           </td>
-                          <td className="px-4 py-3">
-                            <Badge variant={statusBadge[c.prospect_status]}>{statusLabel[c.prospect_status] || c.prospect_status}</Badge>
+                          <td className="px-3 py-2.5">
+                            <select
+                              value={c.prospect_status || 'nuevo'}
+                              onChange={e => handleStatusChange(c.id, e.target.value)}
+                              className={`text-xs font-semibold rounded-full border px-2 py-0.5 focus:outline-none cursor-pointer whitespace-nowrap ${getStatusSelectClass(c.prospect_status)}`}
+                            >
+                              {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                            </select>
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="flex gap-1.5">
+                          <td className="px-3 py-2.5">
+                            <div className="flex gap-1 items-center">
                               <Link href={`/contactos/${c.id}`}>
-                                <Button variant="secondary" size="sm"><Edit size={14} /></Button>
+                                <Button variant="secondary" size="sm"><Edit size={13} /></Button>
                               </Link>
+                              {/^\d{10}$/.test(c.phone) && (
+                                <a href={`https://wa.me/52${c.phone}`} target="_blank" rel="noopener noreferrer"
+                                  className="flex items-center justify-center w-7 h-7 rounded-lg bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50">
+                                  <MessageCircle size={13} />
+                                </a>
+                              )}
                               <Button variant="danger" size="sm" onClick={() => handleDelete(c.id)}>
-                                <Trash2 size={14} />
+                                <Trash2 size={13} />
                               </Button>
                             </div>
                           </td>
@@ -1035,6 +1052,16 @@ export default function Contactos() {
           </div>
         </div>
       )}
+
+      {/* FAB móvil: Nuevo Contacto */}
+      <button
+        onClick={() => setShowForm(true)}
+        className="lg:hidden fixed bottom-20 right-4 z-40 w-14 h-14 bg-primary-600 hover:bg-primary-700 text-white rounded-full shadow-lg flex items-center justify-center"
+        style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+        aria-label="Nuevo contacto"
+      >
+        <Plus size={26} />
+      </button>
     </>
   )
 }

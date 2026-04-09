@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       params.append('ContentVariables', JSON.stringify(contentVariables))
     }
 
-    if (APP_URL) {
+    if (APP_URL && !APP_URL.includes('localhost')) {
       params.append('StatusCallback', `${APP_URL}/api/twilio/webhook`)
     }
 

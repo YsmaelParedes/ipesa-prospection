@@ -12,6 +12,12 @@ function extractBody(types: Record<string, any>): string {
   return ''
 }
 
+function extractApprovalStatus(t: any): string {
+  // Twilio uses 'approval_requests' (flat object with .status)
+  const s = t.approval_requests?.status || t.approvals?.whatsapp?.status
+  return s ? s.toLowerCase() : 'unknown'
+}
+
 export async function GET() {
   if (!ACCOUNT_SID || !AUTH_TOKEN) {
     return NextResponse.json(
@@ -37,7 +43,7 @@ export async function GET() {
       language:      t.language,
       variables:     t.variables || {},
       body:          extractBody(t.types || {}),
-      status:        t.approvals?.whatsapp?.status || 'unknown',
+      status:        extractApprovalStatus(t),
     }))
 
     return NextResponse.json({ templates })
