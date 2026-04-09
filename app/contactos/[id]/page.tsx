@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { getContactById, updateContact, getContactFollowUps, getContactNotes, addContactNote, getSegments } from '@/lib/supabase'
+// Data fetched from API routes (server-side Supabase)
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -42,11 +42,12 @@ export default function EditContacto() {
     const load = async () => {
       try {
         const [contact, fus, nts, segs] = await Promise.all([
-          getContactById(id),
-          getContactFollowUps(id),
-          getContactNotes(id),
-          getSegments(),
+          fetch(`/api/data/contacts/${id}`).then(r => r.json()),
+          fetch(`/api/data/contacts/${id}/follow-ups`).then(r => r.json()),
+          fetch(`/api/data/contacts/${id}/notes`).then(r => r.json()),
+          fetch('/api/data/segments').then(r => r.json()),
         ])
+        if (contact.error) throw new Error(contact.error)
         setForm(contact)
         setFollowUps(fus)
         setNotes(nts)
@@ -64,7 +65,13 @@ export default function EditContacto() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await updateContact(id, form)
+      const res = await fetch(`/api/data/contacts/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al actualizar')
       toast.success('Contacto actualizado')
       router.push('/contactos')
     } catch (error: any) { toast.error(error.message) }
@@ -73,11 +80,17 @@ export default function EditContacto() {
   const handleAddNote = async () => {
     if (!newNote.trim()) return
     try {
-      await addContactNote(id, noteType, newNote)
+      const res = await fetch(`/api/data/contacts/${id}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ noteType, content: newNote }),
+      })
+      if (!res.ok) throw new Error('Error al agregar nota')
       toast.success('Nota agregada')
       setNewNote('')
       setShowNoteForm(false)
-      setNotes(await getContactNotes(id))
+      const notesRes = await fetch(`/api/data/contacts/${id}/notes`)
+      setNotes(await notesRes.json())
     } catch (error: any) { toast.error(error.message) }
   }
 

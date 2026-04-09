@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+import { getServerSupabase } from '@/lib/supabase-server'
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,7 +9,7 @@ export async function GET(req: NextRequest) {
     const from       = searchParams.get('from')
     const to         = searchParams.get('to')
 
-    const supabase = getSupabase()
+    const supabase = getServerSupabase()
     let query = supabase
       .from('message_logs')
       .select('*')

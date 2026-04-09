@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getSegments, createSegment, deleteSegment, getContacts } from '@/lib/supabase'
+// Data fetched from API routes (server-side Supabase)
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -44,7 +44,10 @@ export default function Segmentos() {
   const fetchAll = async () => {
     try {
       setLoading(true)
-      const [segs, cts] = await Promise.all([getSegments(), getContacts()])
+      const [segs, cts] = await Promise.all([
+        fetch('/api/data/segments').then(r => r.json()),
+        fetch('/api/data/contacts').then(r => r.json()),
+      ])
       setSegments(segs)
       setContacts(cts)
     } catch { toast.error('Error al cargar datos') }
@@ -58,7 +61,12 @@ export default function Segmentos() {
     e.preventDefault()
     if (!form.name.trim()) { toast.error('El nombre es requerido'); return }
     try {
-      await createSegment(form)
+      const res = await fetch('/api/data/segments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (!res.ok) throw new Error('Error al crear segmento')
       toast.success('Segmento creado')
       setForm({ name: '', description: '', color: '#0284c7' })
       setShowDrawer(false)
@@ -73,7 +81,12 @@ export default function Segmentos() {
       : `¿Eliminar el segmento "${seg.name}"?`
     if (!confirm(msg)) return
     try {
-      await deleteSegment(seg.id, seg.name)
+      const res = await fetch(`/api/data/segments/${seg.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: seg.name }),
+      })
+      if (!res.ok) throw new Error('Error al eliminar segmento')
       toast.success(`Segmento "${seg.name}" eliminado`)
       fetchAll()
     } catch (error: any) { toast.error(error.message) }
@@ -86,9 +99,12 @@ export default function Segmentos() {
 
   const handleEditSave = async (id: string) => {
     try {
-      const { supabase } = await import('@/lib/supabase')
-      const { error } = await (supabase as any).from('segments').update(editForm).eq('id', id)
-      if (error) throw error
+      const res = await fetch(`/api/data/segments/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      })
+      if (!res.ok) throw new Error('Error al actualizar segmento')
       toast.success('Segmento actualizado')
       setEditingId(null)
       fetchAll()

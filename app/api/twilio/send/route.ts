@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServerSupabase } from '@/lib/supabase-server'
 
 const ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID!
 const AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN!
 const FROM         = process.env.TWILIO_WHATSAPP_FROM!
 const MESSAGING_SID = process.env.TWILIO_MESSAGING_SERVICE_SID
 const APP_URL      = process.env.NEXT_PUBLIC_APP_URL || ''
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
 
 function formatPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '')
@@ -80,7 +73,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Guardar log en Supabase
-    const supabase = getSupabase()
+    const supabase = getServerSupabase()
     await supabase.from('message_logs').insert({
       message_sid:   data.sid,
       contact_id:    contactId   || null,

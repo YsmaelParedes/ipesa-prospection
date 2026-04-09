@@ -1,22 +1,15 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServerSupabase } from '@/lib/supabase-server'
 
 const ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID!
 const AUTH_TOKEN  = process.env.TWILIO_AUTH_TOKEN!
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
 
 // Estados que aún pueden cambiar (no finales)
 const PENDING_STATUSES = ['queued', 'accepted', 'sending', 'sent']
 
 export async function POST() {
   try {
-    const supabase = getSupabase()
+    const supabase = getServerSupabase()
 
     // Obtener mensajes con estado no final
     const { data: pending, error } = await supabase

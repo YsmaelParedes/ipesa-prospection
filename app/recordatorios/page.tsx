@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getAllReminders, completeReminder, getContacts, createReminder, getFollowUpsDue, completeFollowUp } from '@/lib/supabase'
+// Data fetched from API routes (server-side Supabase)
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -48,7 +48,11 @@ export default function Recordatorios() {
   const fetchData = async () => {
     try {
       setLoading(true)
-      const [r, c, fu] = await Promise.all([getAllReminders(), getContacts(), getFollowUpsDue(1)])
+      const [r, c, fu] = await Promise.all([
+        fetch('/api/data/reminders').then(r => r.json()),
+        fetch('/api/data/contacts').then(r => r.json()),
+        fetch('/api/data/follow-ups?type=due&days=1').then(r => r.json()),
+      ])
       setReminders(r)
       setContacts(c)
       setFollowUpsDue(fu)
@@ -58,7 +62,8 @@ export default function Recordatorios() {
 
   const handleCompleteReminder = async (id: string) => {
     try {
-      await completeReminder(id)
+      const res = await fetch(`/api/data/reminders/${id}`, { method: 'PUT' })
+      if (!res.ok) throw new Error('Error al completar')
       toast.success('Recordatorio completado')
       fetchData()
     } catch (error: any) { toast.error(error.message) }
@@ -66,7 +71,12 @@ export default function Recordatorios() {
 
   const handleCompleteFollowUp = async (id: string) => {
     try {
-      await completeFollowUp(id, 'interested', '')
+      const res = await fetch('/api/data/follow-ups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete', followUpId: id, responseStatus: 'interested', notes: '' }),
+      })
+      if (!res.ok) throw new Error('Error al completar')
       toast.success('Etapa de seguimiento completada')
       fetchData()
     } catch (error: any) { toast.error(error.message) }
@@ -76,7 +86,12 @@ export default function Recordatorios() {
     e.preventDefault()
     if (!form.contact_id || !form.reminder_date) { toast.error('Completa todos los campos'); return }
     try {
-      await createReminder({ ...form, reminder_date: new Date(form.reminder_date).toISOString() })
+      const res = await fetch('/api/data/reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, reminder_date: new Date(form.reminder_date).toISOString() }),
+      })
+      if (!res.ok) throw new Error('Error al crear recordatorio')
       toast.success('Recordatorio creado')
       setForm({ contact_id: '', reminder_date: '', reminder_type: 'follow_up', notes: '' })
       setShowForm(false)

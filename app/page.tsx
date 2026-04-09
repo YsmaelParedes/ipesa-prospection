@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getDashboardMetrics, getContacts, getAllReminders } from '@/lib/supabase'
+// Data fetched from API routes (server-side Supabase)
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
@@ -17,11 +17,14 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([getDashboardMetrics(), getContacts(), getAllReminders()])
-      .then(([m, contacts, reminders]) => {
-        setMetrics(m)
-        setRecentContacts(contacts.slice(0, 5))
-        setPendingReminders(reminders.filter((r: any) => !r.is_completed).slice(0, 5))
+    Promise.all([
+      fetch('/api/data/dashboard').then(r => r.json()),
+      fetch('/api/data/contacts').then(r => r.json()),
+    ])
+      .then(([dashboard, contacts]) => {
+        setMetrics(dashboard.metrics)
+        setRecentContacts((contacts || []).slice(0, 5))
+        setPendingReminders((dashboard.reminders || []).filter((r: any) => !r.is_completed).slice(0, 5))
       })
       .catch(console.error)
       .finally(() => setLoading(false))

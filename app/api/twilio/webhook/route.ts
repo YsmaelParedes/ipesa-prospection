@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
+import { getServerSupabase } from '@/lib/supabase-server'
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     if (!messageSid) return new NextResponse('OK', { status: 200 })
 
-    const supabase = getSupabase()
+    const supabase = getServerSupabase()
     const now = new Date().toISOString()
 
     const updates: Record<string, any> = {

@@ -43,7 +43,27 @@
       "WebFetch(domain:app.smsmasivos.com.mx)",
       "Bash(node -e ':*)",
       "WebFetch(domain:www.seccionamarilla.com.mx)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(supabase --version)",
+      "Skill(schedule)",
+      "Bash(git fetch:*)",
+      "Bash(git log:*)",
+      "Bash(sed:*)",
+      "Bash(grep -oE \"NEXT_PUBLIC_[A-Z_]+['\\\\\"]?\\\\s*:\\\\s*['\\\\\"][^'\\\\\"]{10,}['\\\\\"]\")",
+      "Bash(grep -oE \"\\(eyJ[A-Za-z0-9_-]{20,}\\\\.[A-Za-z0-9_-]{20,}\\\\.[A-Za-z0-9_-]{20,}|https://[a-z0-9]+\\\\.supabase\\\\.co|NEXT_PUBLIC_[A-Z_]+|supabaseUrl|supabaseKey|anon_key|service_role\\)\")",
+      "Bash(grep -oE \"\\(eyJ[A-Za-z0-9_-]{20,}\\\\.[A-Za-z0-9_-]{20,}\\\\.[A-Za-z0-9_-]{20,}|https://[a-z0-9]+\\\\.supabase\\\\.co|supabaseUrl|supabaseKey|anon_key|service_role|NEXT_PUBLIC\\)\")",
+      "Bash(xargs ls:*)",
+      "Bash(grep -oE \"\\(session|auth|cookie|HMAC|sign|verify|middleware|redirect\\)[^;]{0,100}\")",
+      "Bash(grep -oE \"\\(supabase|eyJ[A-Za-z0-9_-]{30,}|https://[a-z0-9]+\\\\.supabase\\)\")",
+      "Bash(grep -oE \"eyJ[A-Za-z0-9_-]{50,}\\\\.[A-Za-z0-9_-]{50,}\\\\.[A-Za-z0-9_-]{10,}\")",
+      "Bash(grep -oE '[0-9a-z]{8,}\\\\.\"[a-z0-9]+\"')",
+      "Bash(mkdir -p \"C:/Users/iysma/Documents/apps_Claude/ipesa-prospection/app/api/data/contacts/[id]/notes\")",
+      "Bash(mkdir -p \"C:/Users/iysma/Documents/apps_Claude/ipesa-prospection/app/api/data/contacts/[id]/follow-ups\")",
+      "Bash(mkdir -p \"C:/Users/iysma/Documents/apps_Claude/ipesa-prospection/app/api/data/segments/[id]\")",
+      "Bash(mkdir -p \"C:/Users/iysma/Documents/apps_Claude/ipesa-prospection/app/api/data/reminders/[id]\")",
+      "Bash(grep -l \"from '@/lib/supabase'\" \"C:\\\\Users\\\\iysma\\\\Documents\\\\apps_Claude\\\\ipesa-prospection\\\\app\"/**/*.tsx)"
     ]
   }
 }

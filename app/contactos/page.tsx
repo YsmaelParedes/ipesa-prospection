@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo, useRef } from 'react'
-import { getContacts, addContact, deleteContact, deleteContacts, importContacts, updateContact, getSegments } from '@/lib/supabase'
+// Data fetched from API routes (server-side Supabase)
 import { useTheme } from '@/components/ThemeProvider'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
@@ -250,7 +250,10 @@ export default function Contactos() {
   const fetchAll = async () => {
     try {
       setLoading(true)
-      const [cts, segs] = await Promise.all([getContacts(), getSegments()])
+      const [cts, segs] = await Promise.all([
+        fetch('/api/data/contacts').then(r => r.json()),
+        fetch('/api/data/segments').then(r => r.json()),
+      ])
       setContacts(cts)
       setSegments(segs)
     } catch { toast.error('Error al cargar contactos') }
@@ -315,8 +318,14 @@ export default function Contactos() {
     setContacts(prev => [optimistic, ...prev])
     setShowForm(false)
     toast.success('Contacto agregado')
-    addContact({ ...data, segment }).then(([real]) => {
-      setContacts(prev => prev.map(c => c.id === tempId ? real : c))
+    fetch('/api/data/contacts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...data, segment }),
+    }).then(r => r.json()).then((result) => {
+      if (Array.isArray(result) && result[0]) {
+        setContacts(prev => prev.map(c => c.id === tempId ? result[0] : c))
+      }
     }).catch((err: any) => {
       setContacts(prev => prev.filter(c => c.id !== tempId))
       toast.error(err.message || 'Error al agregar')
@@ -326,7 +335,8 @@ export default function Contactos() {
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar contacto?')) return
     try {
-      await deleteContact(id)
+      const res = await fetch(`/api/data/contacts/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Error al eliminar')
       setContacts(prev => prev.filter(c => c.id !== id))
       toast.success('Eliminado')
     } catch { toast.error('Error al eliminar') }
@@ -335,7 +345,12 @@ export default function Contactos() {
   const handleStatusChange = async (id: string, newStatus: string) => {
     setContacts(prev => prev.map(c => c.id === id ? { ...c, prospect_status: newStatus } : c))
     try {
-      await updateContact(id, { prospect_status: newStatus })
+      const res = await fetch(`/api/data/contacts/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prospect_status: newStatus }),
+      })
+      if (!res.ok) throw new Error()
     } catch {
       const original = contacts.find(x => x.id === id)?.prospect_status
       setContacts(prev => prev.map(c => c.id === id ? { ...c, prospect_status: original } : c))
@@ -377,7 +392,13 @@ export default function Contactos() {
     if (selected.size === 0) return
     try {
       setBulkSaving(true)
-      await Promise.all([...selected].map(id => updateContact(id, { segment: bulkSegment })))
+      await Promise.all([...selected].map(id =>
+        fetch(`/api/data/contacts/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ segment: bulkSegment }),
+        })
+      ))
       setContacts(prev => prev.map(c => selected.has(c.id) ? { ...c, segment: bulkSegment } : c))
       toast.success(`${selected.size} contactos → "${bulkSegment}"`)
       setSelected(new Set()); setBulkSegment('')
@@ -390,7 +411,13 @@ export default function Contactos() {
     if (selected.size === 0) return
     try {
       setBulkSaving(true)
-      await Promise.all([...selected].map(id => updateContact(id, { acquisition_channel: bulkChannel })))
+      await Promise.all([...selected].map(id =>
+        fetch(`/api/data/contacts/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ acquisition_channel: bulkChannel }),
+        })
+      ))
       setContacts(prev => prev.map(c => selected.has(c.id) ? { ...c, acquisition_channel: bulkChannel } : c))
       toast.success(`${selected.size} contactos → canal "${bulkChannel}"`)
       setSelected(new Set()); setBulkChannel('')
@@ -403,7 +430,12 @@ export default function Contactos() {
     if (!confirm(`¿Eliminar ${selected.size} contacto${selected.size !== 1 ? 's' : ''}? Esta acción no se puede deshacer.`)) return
     try {
       setBulkSaving(true)
-      await deleteContacts([...selected])
+      const res = await fetch('/api/data/contacts', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [...selected] }),
+      })
+      if (!res.ok) throw new Error('Error al eliminar')
       toast.success(`${selected.size} contactos eliminados`)
       setSelected(new Set()); fetchAll()
     } catch (error: any) { toast.error(error.message) }
@@ -444,7 +476,13 @@ export default function Contactos() {
       setXlsxImporting(true)
       let inserted = 0
       for (let i = 0; i < allRows.length; i += 500) {
-        const r = await importContacts(allRows.slice(i, i + 500)); inserted += r?.length ?? 0
+        const res = await fetch('/api/data/contacts/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contacts: allRows.slice(i, i + 500) }),
+        })
+        const r = await res.json()
+        inserted += Array.isArray(r) ? r.length : 0
       }
       toast.success(`${inserted} importados · ${allRows.length - inserted} duplicados omitidos`)
       setXlsxModal(false); setXlsxSheets([]); fetchContacts()
@@ -463,7 +501,12 @@ export default function Contactos() {
             address: r.address || '', postal_code: r.postal_code || '', segment: r.segment || '',
             prospect_status: r.prospect_status || 'nuevo', acquisition_channel: r.acquisition_channel || '',
           }))
-          await importContacts(data)
+          const res = await fetch('/api/data/contacts/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contacts: data }),
+          })
+          if (!res.ok) throw new Error('Error al importar')
           toast.success(`${data.length} contactos importados`)
           fetchContacts()
         } catch (error: any) { toast.error(error.message) }

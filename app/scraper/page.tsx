@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react'
 import Navbar from '@/components/Navbar'
-import { importContacts } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { Search, Download, MapPin, Phone, Wifi, Filter, X, SlidersHorizontal, AlertCircle, CheckCircle2 } from 'lucide-react'
 
@@ -187,7 +186,14 @@ export default function Scraper() {
         acquisition_channel: channelLabel,
       })).filter(r => r.name)
 
-      const result = await importContacts(toImport)
+      const importRes = await fetch('/api/data/contacts/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contacts: toImport }),
+      })
+      const importData = await importRes.json()
+      if (!importRes.ok) throw new Error(importData.error || 'Error al importar')
+      const result = importData.contacts
       const actual = result?.length ?? toImport.length
       const skipped = toImport.length - actual
 

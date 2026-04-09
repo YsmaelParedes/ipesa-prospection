@@ -1,12 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import {
-  getFollowUpPendingActions, getDashboardFollowUpStats,
-  completeFollowUp, addContactNote, getFollowUpSequences, createFollowUpPlan, getContacts,
-  getAllFollowUpPlans, deleteFollowUpPlan, getPrimerContactoPendientes, markFirstContact,
-  createReminder,
-} from '@/lib/supabase'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -89,20 +83,25 @@ export default function Seguimiento() {
   const fetchAll = async () => {
     try {
       setLoading(true)
-      const [a, s, seqs, c, allFu, pc] = await Promise.all([
-        getFollowUpPendingActions(),
-        getDashboardFollowUpStats(),
-        getFollowUpSequences(),
-        getContacts(),
-        getAllFollowUpPlans(),
-        getPrimerContactoPendientes(),
+      const [rPending, rStats, rSeqs, rContacts, rPlans, rPc] = await Promise.all([
+        fetch('/api/data/follow-ups?type=pending'),
+        fetch('/api/data/follow-ups?type=stats'),
+        fetch('/api/data/follow-ups?type=sequences'),
+        fetch('/api/data/contacts'),
+        fetch('/api/data/follow-ups?type=plans'),
+        fetch('/api/data/follow-ups?type=primer-contacto'),
       ])
-      setActions(a)
-      setStats(s)
+      const [dPending, dStats, dSeqs, dContacts, dPlans, dPc] = await Promise.all([
+        rPending.json(), rStats.json(), rSeqs.json(),
+        rContacts.json(), rPlans.json(), rPc.json(),
+      ])
+      const seqs = dSeqs.sequences || []
+      setActions(dPending.actions || [])
+      setStats(dStats.stats || null)
       setSequences(seqs)
-      setContacts(c)
-      setAllPlans(groupByPlan(allFu, seqs))
-      setPrimerContacto(pc)
+      setContacts(dContacts.contacts || [])
+      setAllPlans(groupByPlan(dPlans.plans || [], seqs))
+      setPrimerContacto(dPc.contacts || [])
     } catch { toast.error('Error al cargar datos') }
     finally { setLoading(false) }
   }
@@ -111,8 +110,16 @@ export default function Seguimiento() {
     if (!modal) return
     try {
       setSaving(true)
-      await completeFollowUp(modal.id, responseStatus, responseNote)
-      if (responseNote) await addContactNote(modal.contact_id, 'accion', responseNote)
+      await fetch('/api/data/follow-ups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete', followUpId: modal.id, responseStatus, notes: responseNote }),
+      })
+      if (responseNote) await fetch('/api/data/follow-ups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'note', contactId: modal.contact_id, noteType: 'accion', content: responseNote }),
+      })
       toast.success('Seguimiento completado')
       setModal(null)
       setResponseNote('')
@@ -127,7 +134,11 @@ export default function Seguimiento() {
     if (!defaultSeq) { toast.error('No hay secuencia configurada'); return }
     try {
       setSaving(true)
-      await createFollowUpPlan(planForm.contact_id, defaultSeq.id)
+      await fetch('/api/data/follow-ups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create-plan', contactId: planForm.contact_id, sequenceId: defaultSeq.id }),
+      })
       toast.success('Plan de seguimiento creado')
       setNewPlanModal(false)
       setPlanForm({ contact_id: '', sequence_id: '' })
@@ -155,11 +166,15 @@ export default function Seguimiento() {
     if (!reminderModal || !reminderDate) return
     try {
       setReminderSaving(true)
-      await createReminder({
-        contact_id: reminderModal.contact_id,
-        reminder_date: new Date(reminderDate).toISOString(),
-        reminder_type: 'follow_up',
-        notes: reminderNote || `Seguimiento — ${reminderModal.contact_name}`,
+      await fetch('/api/data/reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contact_id: reminderModal.contact_id,
+          reminder_date: new Date(reminderDate).toISOString(),
+          reminder_type: 'follow_up',
+          notes: reminderNote || `Seguimiento — ${reminderModal.contact_name}`,
+        }),
       })
       toast.success(`Recordatorio creado para ${reminderModal.contact_name}`)
       setReminderModal(null)
@@ -179,7 +194,11 @@ export default function Seguimiento() {
     e.stopPropagation()
     if (!confirm('¿Eliminar este plan de seguimiento? Se borrarán todas sus etapas.')) return
     try {
-      await deleteFollowUpPlan(contactId, sequenceId)
+      await fetch('/api/data/follow-ups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete-plan', contactId, sequenceId }),
+      })
       toast.success('Plan eliminado')
       fetchAll()
     } catch (error: any) { toast.error(error.message) }
@@ -197,7 +216,11 @@ export default function Seguimiento() {
     try {
       setSaving(true)
       const defaultSeq = sequences[0]
-      await markFirstContact(firstContactModal.id, fcChannel, fcResponse, fcNote, defaultSeq?.id)
+      await fetch('/api/data/follow-ups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'mark-first', contactId: firstContactModal.id, channel: fcChannel, response: fcResponse, notes: fcNote, sequenceId: defaultSeq?.id }),
+      })
       const autoCreated = fcResponse === 'interested' || fcResponse === 'maybe'
       toast.success(autoCreated ? 'Contacto registrado — plan de seguimiento creado automáticamente' : 'Contacto registrado')
       setFirstContactModal(null)

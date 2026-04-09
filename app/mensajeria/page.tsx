@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState, useMemo } from 'react'
-import { getContacts, getSegments } from '@/lib/supabase'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -141,7 +140,13 @@ export default function Mensajeria() {
 
   const fetchAll = async () => {
     try {
-      const [cts, segs] = await Promise.all([getContacts(), getSegments()])
+      const [ctsRes, segsRes] = await Promise.all([
+        fetch('/api/data/contacts'),
+        fetch('/api/data/segments'),
+      ])
+      const [ctsData, segsData] = await Promise.all([ctsRes.json(), segsRes.json()])
+      const cts  = ctsData.contacts  || []
+      const segs = segsData.segments || []
       setContacts(cts)
       setSegments(segs)
     } catch { toast.error('Error al cargar contactos') }
