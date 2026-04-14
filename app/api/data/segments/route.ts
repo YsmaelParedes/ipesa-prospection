@@ -11,7 +11,8 @@ export async function GET() {
     if (error) throw error
     return NextResponse.json({ segments: data })
   } catch (error: any) {
-    return NextResponse.json({ error: 'Error al obtener segmentos' }, { status: 500 })
+    console.error('[GET /api/data/segments]', error?.message ?? error)
+    return NextResponse.json({ error: error?.message ?? 'Error al obtener segmentos' }, { status: 500 })
   }
 }
 

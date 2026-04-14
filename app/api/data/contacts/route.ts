@@ -11,7 +11,8 @@ export async function GET() {
     if (error) throw error
     return NextResponse.json({ contacts: data })
   } catch (error: any) {
-    return NextResponse.json({ error: 'Error al obtener contactos' }, { status: 500 })
+    console.error('[GET /api/data/contacts]', error?.message ?? error)
+    return NextResponse.json({ error: error?.message ?? 'Error al obtener contactos' }, { status: 500 })
   }
 }
 

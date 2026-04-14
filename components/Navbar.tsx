@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useTheme } from '@/components/ThemeProvider'
-import { BarChart3, Users, MessageSquare, Clock, Search, Settings, Tag, ChevronDown, Moon, Sun, LogOut, FileText, RefreshCw, X, Grid3X3 } from 'lucide-react'
+import { BarChart3, Users, MessageSquare, Clock, Search, Tag, ChevronDown, Moon, Sun, LogOut, FileText, RefreshCw, X, Grid3X3, LayoutTemplate, MoreHorizontal } from 'lucide-react'
 
 const mainTabs = [
   { href: '/',            label: 'Dashboard',  icon: BarChart3 },
@@ -18,12 +18,14 @@ const moreItems = [
   { href: '/segmentos',         label: 'Segmentos',    icon: Tag },
   { href: '/recordatorios',     label: 'Recordatorios',icon: Clock },
   { href: '/reportes-whatsapp', label: 'Reportes WA',  icon: FileText },
+  { href: '/plantillas',        label: 'Plantillas',   icon: LayoutTemplate },
 ]
 
 const desktopConfig = [
   { href: '/segmentos',         label: 'Segmentos',    icon: Tag },
   { href: '/recordatorios',     label: 'Recordatorios',icon: Clock },
   { href: '/reportes-whatsapp', label: 'Reportes WA',  icon: FileText },
+  { href: '/plantillas',        label: 'Plantillas',   icon: LayoutTemplate },
 ]
 
 export default function Navbar() {
@@ -95,12 +97,12 @@ export default function Navbar() {
                 <Search size={16} /> Scraper
               </Link>
 
-              {/* Configuración dropdown */}
+              {/* Más dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <button onClick={() => setConfigOpen(!configOpen)}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition duration-200 ${configOpen ? 'bg-white/15 text-white' : 'text-white/90 hover:text-white hover:bg-white/15'}`}>
-                  <Settings size={16} />
-                  Configuración
+                  <MoreHorizontal size={16} />
+                  Más
                   <ChevronDown size={14} className={`transition-transform duration-200 ${configOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {configOpen && (
