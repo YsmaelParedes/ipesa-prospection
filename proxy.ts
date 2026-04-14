@@ -50,6 +50,9 @@ export async function proxy(req: NextRequest) {
   const valid = await verifySession(session, secret)
 
   if (!valid) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    }
     const url = req.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
