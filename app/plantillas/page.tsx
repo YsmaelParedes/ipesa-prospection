@@ -13,57 +13,51 @@ type Channel = 'wa' | 'sms'
 
 interface Template {
   id: string
+  channel: Channel
   name: string
   body: string
-  createdAt: string
+  created_at: string
 }
 
 // ── SMS helpers ───────────────────────────────────────────────────────────────
-// Characters outside GSM-7 basic + extended that break 160-char limit
 const ACCENT_REGEX = /[áéíóúüÁÉÍÓÚÜñÑàèìòùÀÈÌÒÙâêîôûÂÊÎÔÛãõÃÕäöÄÖ¿¡çÇ]/
 
-function hasAccents(text: string) {
-  return ACCENT_REGEX.test(text)
-}
+function hasAccents(text: string) { return ACCENT_REGEX.test(text) }
 
 function removeAccents(text: string) {
-  // Normalize to NFD (decomposed), strip combining diacritics, then remove ¿ ¡
-  return text
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[¿¡]/g, '')
-}
-
-// ── localStorage helpers ──────────────────────────────────────────────────────
-const KEY: Record<Channel, string> = { wa: 'plantillas_wa', sms: 'plantillas_sms' }
-
-function loadTemplates(ch: Channel): Template[] {
-  if (typeof window === 'undefined') return []
-  try { return JSON.parse(localStorage.getItem(KEY[ch]) || '[]') } catch { return [] }
-}
-
-function persistTemplates(ch: Channel, templates: Template[]) {
-  localStorage.setItem(KEY[ch], JSON.stringify(templates))
+  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[¿¡]/g, '')
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function Plantillas() {
   const [channel, setChannel] = useState<Channel>('wa')
   const [templates, setTemplates] = useState<Template[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [showDrawer, setShowDrawer] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
-  // Drawer form state
   const [formName, setFormName] = useState('')
   const [formBody, setFormBody] = useState('')
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Load templates when channel changes
-  useEffect(() => {
-    setTemplates(loadTemplates(channel))
-  }, [channel])
+  useEffect(() => { fetchTemplates() }, [channel])
+
+  async function fetchTemplates() {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/data/templates?channel=${channel}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setTemplates(data.templates ?? [])
+    } catch (err: any) {
+      toast.error(err.message ?? 'Error al cargar plantillas')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const SMS_LIMIT = 160
   const smsCount = formBody.length
@@ -71,48 +65,51 @@ export default function Plantillas() {
   const smsHasAccents = channel === 'sms' && hasAccents(formBody)
 
   // ── Actions ────────────────────────────────────────────────────────────────
-  function handleSave(e: React.FormEvent) {
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     if (!formName.trim()) { toast.error('El nombre es requerido'); return }
     if (!formBody.trim()) { toast.error('El contenido es requerido'); return }
-    if (channel === 'sms' && smsOverLimit) {
-      toast.error(`El mensaje supera los ${SMS_LIMIT} caracteres`)
-      return
-    }
-    if (channel === 'sms' && smsHasAccents) {
-      toast.error('Hay acentos en el mensaje. Retíralos antes de guardar.')
-      return
-    }
+    if (channel === 'sms' && smsOverLimit) { toast.error(`El mensaje supera los ${SMS_LIMIT} caracteres`); return }
+    if (channel === 'sms' && smsHasAccents) { toast.error('Hay acentos en el mensaje. Retíralos antes de guardar.'); return }
 
-    let updated: Template[]
-    if (editingId) {
-      updated = templates.map(t =>
-        t.id === editingId ? { ...t, name: formName.trim(), body: formBody.trim() } : t
-      )
-      toast.success('Plantilla actualizada')
-    } else {
-      const newTemplate: Template = {
-        id: Date.now().toString(),
-        name: formName.trim(),
-        body: formBody.trim(),
-        createdAt: new Date().toISOString(),
+    setSaving(true)
+    try {
+      if (editingId) {
+        const res = await fetch(`/api/data/templates/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: formName.trim(), body: formBody.trim() }),
+        })
+        if (!res.ok) throw new Error((await res.json()).error)
+        toast.success('Plantilla actualizada')
+      } else {
+        const res = await fetch('/api/data/templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channel, name: formName.trim(), body: formBody.trim() }),
+        })
+        if (!res.ok) throw new Error((await res.json()).error)
+        toast.success('Plantilla guardada')
       }
-      updated = [newTemplate, ...templates]
-      toast.success('Plantilla guardada')
+      closeDrawer()
+      fetchTemplates()
+    } catch (err: any) {
+      toast.error(err.message ?? 'Error al guardar')
+    } finally {
+      setSaving(false)
     }
-
-    setTemplates(updated)
-    persistTemplates(channel, updated)
-    closeDrawer()
   }
 
-  function handleDelete(id: string) {
-    const tpl = templates.find(t => t.id === id)
-    if (!confirm(`¿Eliminar la plantilla "${tpl?.name}"?`)) return
-    const updated = templates.filter(t => t.id !== id)
-    setTemplates(updated)
-    persistTemplates(channel, updated)
-    toast.success('Plantilla eliminada')
+  async function handleDelete(tpl: Template) {
+    if (!confirm(`¿Eliminar la plantilla "${tpl.name}"?`)) return
+    try {
+      const res = await fetch(`/api/data/templates/${tpl.id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error((await res.json()).error)
+      toast.success('Plantilla eliminada')
+      setTemplates(prev => prev.filter(t => t.id !== tpl.id))
+    } catch (err: any) {
+      toast.error(err.message ?? 'Error al eliminar')
+    }
   }
 
   async function handleCopy(tpl: Template) {
@@ -127,8 +124,7 @@ export default function Plantillas() {
   }
 
   function applyRemoveAccents() {
-    const cleaned = removeAccents(formBody)
-    setFormBody(cleaned)
+    setFormBody(removeAccents(formBody))
     toast.success('Acentos eliminados')
   }
 
@@ -153,11 +149,11 @@ export default function Plantillas() {
     setFormBody('')
   }
 
-  // ── Tab colors ─────────────────────────────────────────────────────────────
+  // ── Colors ─────────────────────────────────────────────────────────────────
   const isWA = channel === 'wa'
-  const accentColor = isWA
-    ? { bg: 'bg-green-600', hover: 'hover:bg-green-700', light: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-700 dark:text-green-400', border: 'border-green-200 dark:border-green-800', ring: 'focus:ring-green-500' }
-    : { bg: 'bg-blue-600',  hover: 'hover:bg-blue-700',  light: 'bg-blue-50 dark:bg-blue-900/20',   text: 'text-blue-700 dark:text-blue-400',   border: 'border-blue-200 dark:border-blue-800',   ring: 'focus:ring-blue-500' }
+  const ac = isWA
+    ? { bg: 'bg-green-600', hover: 'hover:bg-green-700', light: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-700 dark:text-green-400', border: 'border-green-200 dark:border-green-800' }
+    : { bg: 'bg-blue-600',  hover: 'hover:bg-blue-700',  light: 'bg-blue-50 dark:bg-blue-900/20',   text: 'text-blue-700 dark:text-blue-400',   border: 'border-blue-200 dark:border-blue-800' }
 
   return (
     <>
@@ -178,7 +174,7 @@ export default function Plantillas() {
             </div>
             <button
               onClick={openDrawer}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl ${accentColor.bg} ${accentColor.hover} text-white font-semibold text-sm transition shadow-sm`}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl ${ac.bg} ${ac.hover} text-white font-semibold text-sm transition shadow-sm`}
             >
               <Plus size={16} /> Nueva plantilla
             </button>
@@ -189,48 +185,46 @@ export default function Plantillas() {
             <button
               onClick={() => setChannel('wa')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                channel === 'wa'
-                  ? 'bg-green-600 text-white shadow'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                channel === 'wa' ? 'bg-green-600 text-white shadow' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
             >
-              <MessageSquare size={15} />
-              WhatsApp
+              <MessageSquare size={15} /> WhatsApp
             </button>
             <button
               onClick={() => setChannel('sms')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-                channel === 'sms'
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                channel === 'sms' ? 'bg-blue-600 text-white shadow' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
             >
-              <Phone size={15} />
-              SMS
+              <Phone size={15} /> SMS
             </button>
           </div>
 
-          {/* Channel info banner */}
-          <div className={`mb-5 rounded-xl border px-4 py-3 flex items-start gap-3 ${accentColor.light} ${accentColor.border}`}>
+          {/* Info banner */}
+          <div className={`mb-5 rounded-xl border px-4 py-3 flex items-start gap-3 ${ac.light} ${ac.border}`}>
             {isWA ? (
               <>
-                <Smile size={16} className={`${accentColor.text} mt-0.5 flex-shrink-0`} />
-                <p className={`text-xs ${accentColor.text}`}>
+                <Smile size={16} className={`${ac.text} mt-0.5 flex-shrink-0`} />
+                <p className={`text-xs ${ac.text}`}>
                   <span className="font-semibold">WhatsApp:</span> admite texto libre, emojis, formato (*negrita*, _cursiva_), saltos de línea y variables como <code className="bg-black/5 dark:bg-white/10 px-1 rounded">{'{{1}}'}</code>.
                 </p>
               </>
             ) : (
               <>
-                <AlertTriangle size={16} className={`${accentColor.text} mt-0.5 flex-shrink-0`} />
-                <p className={`text-xs ${accentColor.text}`}>
+                <AlertTriangle size={16} className={`${ac.text} mt-0.5 flex-shrink-0`} />
+                <p className={`text-xs ${ac.text}`}>
                   <span className="font-semibold">SMS:</span> máximo <span className="font-semibold">160 caracteres</span> por mensaje. <span className="font-semibold">No se permiten acentos</span> (á, é, ñ, ¡, ¿, etc.) ya que generan cobros extra o truncan el mensaje.
                 </p>
               </>
             )}
           </div>
 
-          {/* Template list */}
-          {templates.length === 0 ? (
+          {/* List */}
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600" />
+            </div>
+          ) : templates.length === 0 ? (
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-12 sm:p-16 text-center dark-mode-transition">
               <LayoutTemplate size={56} className="text-gray-200 dark:text-gray-700 mx-auto mb-4" />
               <p className="text-gray-500 dark:text-gray-400 font-semibold text-lg mb-1">
@@ -241,7 +235,7 @@ export default function Plantillas() {
               </p>
               <button
                 onClick={openDrawer}
-                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl ${accentColor.bg} ${accentColor.hover} text-white font-semibold text-sm transition`}
+                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl ${ac.bg} ${ac.hover} text-white font-semibold text-sm transition`}
               >
                 <Plus size={16} /> Crear primera plantilla
               </button>
@@ -249,34 +243,30 @@ export default function Plantillas() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {templates.map(tpl => (
-                <div
-                  key={tpl.id}
-                  className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden dark-mode-transition group"
-                >
+                <div key={tpl.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden dark-mode-transition">
+
                   {/* Card header */}
-                  <div className={`px-4 py-3 flex items-center justify-between border-b ${accentColor.border} ${accentColor.light}`}>
+                  <div className={`px-4 py-3 flex items-center justify-between border-b ${ac.border} ${ac.light}`}>
                     <div className="flex items-center gap-2 min-w-0">
                       {isWA
                         ? <MessageSquare size={14} className="text-green-600 dark:text-green-400 flex-shrink-0" />
                         : <Phone size={14} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
                       }
-                      <span className={`text-sm font-bold truncate ${accentColor.text}`}>{tpl.name}</span>
+                      <span className={`text-sm font-bold truncate ${ac.text}`}>{tpl.name}</span>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
-                      {/* Copy button */}
                       <button
                         onClick={() => handleCopy(tpl)}
                         title="Copiar mensaje"
                         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition ${
                           copiedId === tpl.id
                             ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
-                            : `${accentColor.bg} ${accentColor.hover} text-white`
+                            : `${ac.bg} ${ac.hover} text-white`
                         }`}
                       >
                         {copiedId === tpl.id ? <Check size={12} /> : <Copy size={12} />}
                         {copiedId === tpl.id ? 'Copiado' : 'Copiar'}
                       </button>
-                      {/* Edit button */}
                       <button
                         onClick={() => openEdit(tpl)}
                         title="Editar plantilla"
@@ -284,9 +274,8 @@ export default function Plantillas() {
                       >
                         <Edit2 size={13} />
                       </button>
-                      {/* Delete button */}
                       <button
-                        onClick={() => handleDelete(tpl.id)}
+                        onClick={() => handleDelete(tpl)}
                         title="Eliminar plantilla"
                         className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition"
                       >
@@ -302,7 +291,7 @@ export default function Plantillas() {
                     </p>
                   </div>
 
-                  {/* Card footer: meta */}
+                  {/* Card footer */}
                   <div className="px-4 pb-3 flex items-center justify-between">
                     {channel === 'sms' && (
                       <span className={`text-xs font-semibold ${tpl.body.length > SMS_LIMIT ? 'text-red-600' : 'text-gray-400 dark:text-gray-500'}`}>
@@ -310,7 +299,7 @@ export default function Plantillas() {
                       </span>
                     )}
                     <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">
-                      {new Date(tpl.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {new Date(tpl.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </span>
                   </div>
                 </div>
@@ -320,16 +309,13 @@ export default function Plantillas() {
         </div>
       </div>
 
-      {/* ── Drawer: Nueva Plantilla ──────────────────────────────────────────── */}
+      {/* ── Drawer ──────────────────────────────────────────────────────────── */}
       {showDrawer && (
         <div className="fixed inset-0 z-50 flex">
-          {/* Backdrop */}
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeDrawer} />
-
-          {/* Panel — slides in from right */}
           <div className="relative ml-auto w-full max-w-md h-full bg-white dark:bg-gray-900 shadow-2xl flex flex-col">
 
-            {/* Drawer header */}
+            {/* Header */}
             <div className={`${isWA ? 'bg-gradient-to-br from-green-600 to-green-700' : 'bg-gradient-to-br from-blue-600 to-blue-700'} px-5 py-5 flex-shrink-0`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -345,20 +331,16 @@ export default function Plantillas() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={closeDrawer}
-                  className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition"
-                >
+                <button onClick={closeDrawer} className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition">
                   <X size={16} />
                 </button>
               </div>
             </div>
 
-            {/* Drawer form */}
+            {/* Form */}
             <form onSubmit={handleSave} className="flex-1 overflow-y-auto flex flex-col">
               <div className="px-5 py-5 space-y-5 flex-1">
 
-                {/* Name */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
                     Nombre de la plantilla <span className="text-red-500">*</span>
@@ -369,11 +351,9 @@ export default function Plantillas() {
                     value={formName}
                     onChange={e => setFormName(e.target.value)}
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-offset-0 focus:border-transparent placeholder-gray-400 dark:placeholder-gray-500 dark-mode-transition"
-                    style={{ '--tw-ring-color': isWA ? '#16a34a' : '#2563eb' } as React.CSSProperties}
                   />
                 </div>
 
-                {/* Body */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-semibold text-gray-600 dark:text-gray-400">
@@ -400,31 +380,21 @@ export default function Plantillas() {
                     value={formBody}
                     onChange={e => setFormBody(e.target.value)}
                     className={`w-full px-3 py-2.5 rounded-lg border bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-offset-0 focus:border-transparent placeholder-gray-400 dark:placeholder-gray-500 resize-none leading-relaxed dark-mode-transition ${
-                      smsOverLimit || smsHasAccents
-                        ? 'border-red-300 dark:border-red-700'
-                        : 'border-gray-200 dark:border-gray-700'
+                      smsOverLimit || smsHasAccents ? 'border-red-300 dark:border-red-700' : 'border-gray-200 dark:border-gray-700'
                     }`}
                   />
 
-                  {/* SMS warnings */}
                   {channel === 'sms' && (
                     <div className="mt-2 space-y-2">
                       {smsHasAccents && (
                         <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
                           <AlertTriangle size={13} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold leading-snug">
-                              Acentos detectados
-                            </p>
-                            <p className="text-xs text-amber-600 dark:text-amber-400 leading-snug">
-                              Pueden generar cobros extra o truncar el SMS.
-                            </p>
+                            <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold leading-snug">Acentos detectados</p>
+                            <p className="text-xs text-amber-600 dark:text-amber-400 leading-snug">Pueden generar cobros extra o truncar el SMS.</p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={applyRemoveAccents}
-                            className="flex-shrink-0 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-md transition"
-                          >
+                          <button type="button" onClick={applyRemoveAccents}
+                            className="flex-shrink-0 text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded-md transition">
                             Eliminar
                           </button>
                         </div>
@@ -440,7 +410,6 @@ export default function Plantillas() {
                     </div>
                   )}
 
-                  {/* WA hint */}
                   {isWA && (
                     <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
                       Usa <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{'{{1}}'}</code>, <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{'{{2}}'}</code>… para variables de nombre, empresa, etc.
@@ -450,13 +419,16 @@ export default function Plantillas() {
 
               </div>
 
-              {/* Footer buttons */}
               <div className="px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 flex gap-3 flex-shrink-0">
                 <button
                   type="submit"
-                  className={`flex-1 ${accentColor.bg} ${accentColor.hover} text-white font-semibold rounded-xl py-3 text-sm flex items-center justify-center gap-2 transition`}
+                  disabled={saving}
+                  className={`flex-1 ${ac.bg} ${ac.hover} text-white font-semibold rounded-xl py-3 text-sm flex items-center justify-center gap-2 transition disabled:opacity-60`}
                 >
-                  {editingId ? <><Check size={16} /> Guardar cambios</> : <><Plus size={16} /> Guardar plantilla</>}
+                  {saving
+                    ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                    : editingId ? <><Check size={16} /> Guardar cambios</> : <><Plus size={16} /> Guardar plantilla</>
+                  }
                 </button>
                 <button
                   type="button"
