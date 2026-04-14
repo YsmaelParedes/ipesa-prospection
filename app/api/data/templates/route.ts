@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     const supabase = getServerSupabase()
     const { data, error } = await supabase
       .from('templates')
-      .insert([{ channel, name, body }])
+      .insert([{ channel, name, content: body }])
       .select()
       .single()
     if (error) throw error

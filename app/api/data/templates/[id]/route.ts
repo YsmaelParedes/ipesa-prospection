@@ -8,7 +8,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const supabase = getServerSupabase()
     const { data, error } = await supabase
       .from('templates')
-      .update({ name, body })
+      .update({ name, content: body })
       .eq('id', id)
       .select()
       .single()

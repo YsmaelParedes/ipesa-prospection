@@ -15,7 +15,7 @@ interface Template {
   id: string
   channel: Channel
   name: string
-  body: string
+  body: string   // mapeado desde `content` de Supabase
   created_at: string
 }
 
@@ -51,7 +51,8 @@ export default function Plantillas() {
       const res = await fetch(`/api/data/templates?channel=${channel}`)
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      setTemplates(data.templates ?? [])
+      // Supabase guarda el texto en `content`, lo exponemos como `body`
+      setTemplates((data.templates ?? []).map((t: any) => ({ ...t, body: t.content })))
     } catch (err: any) {
       toast.error(err.message ?? 'Error al cargar plantillas')
     } finally {
