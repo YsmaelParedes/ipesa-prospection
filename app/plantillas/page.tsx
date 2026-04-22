@@ -506,32 +506,29 @@ export default function Plantillas() {
                         <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
                           ¿Qué tipo de mensaje necesitas?
                         </label>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <input
-                            type="text"
-                            placeholder={isWA
-                              ? 'ej: oferta de pintura para ferretería'
-                              : 'ej: recordatorio de visita breve'}
-                            value={aiPrompt}
-                            onChange={e => setAiPrompt(e.target.value)}
-                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleGenerateAI() } }}
-                            disabled={aiGenerating}
-                            className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-60"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleGenerateAI}
-                            disabled={aiGenerating || !aiPrompt.trim()}
-                            className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition disabled:opacity-50 w-full sm:w-auto"
-                          >
-                            {aiGenerating
-                              ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generando…</>
-                              : aiDone
-                                ? <><RefreshCw size={13} /> Regenerar</>
-                                : <><Sparkles size={13} /> Generar</>
-                            }
-                          </button>
-                        </div>
+                        <textarea
+                          rows={3}
+                          placeholder={isWA
+                            ? 'ej: mensaje de bienvenida para ferretería nueva, oferta de impermeabilizante, seguimiento después de visita...'
+                            : 'ej: recordatorio de visita, oferta especial breve, confirmación de pedido...'}
+                          value={aiPrompt}
+                          onChange={e => setAiPrompt(e.target.value)}
+                          disabled={aiGenerating}
+                          className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-60 resize-none leading-relaxed"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleGenerateAI}
+                          disabled={aiGenerating || !aiPrompt.trim()}
+                          className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition disabled:opacity-50"
+                        >
+                          {aiGenerating
+                            ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generando…</>
+                            : aiDone
+                              ? <><RefreshCw size={14} /> Regenerar</>
+                              : <><Sparkles size={14} /> Generar plantilla</>
+                          }
+                        </button>
                       </div>
 
                       {(aiGenerating || aiResult) && (
@@ -540,7 +537,7 @@ export default function Plantillas() {
                             <Sparkles size={11} />
                             {aiGenerating ? 'Generando…' : 'Resultado'}
                           </p>
-                          <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed min-h-[3rem]">
+                          <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed min-h-[5rem]">
                             {aiResult}
                             {aiGenerating && <span className="inline-block w-0.5 h-4 bg-violet-500 animate-pulse ml-0.5 align-text-bottom" />}
                           </p>
@@ -548,7 +545,7 @@ export default function Plantillas() {
                             <button
                               type="button"
                               onClick={applyAIResult}
-                              className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition"
+                              className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition"
                             >
                               <Check size={13} /> Usar este texto
                             </button>
