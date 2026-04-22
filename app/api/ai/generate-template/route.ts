@@ -1,9 +1,13 @@
 import { NextRequest } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-
-const anthropic = new Anthropic()
+import OpenAI from 'openai'
 
 export async function POST(req: NextRequest) {
+  if (!process.env.OPENAI_API_KEY) {
+    return Response.json({ error: 'OPENAI_API_KEY no configurada en el servidor' }, { status: 500 })
+  }
+
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
   const { channel, prompt } = await req.json()
 
   if (!prompt?.trim()) {
@@ -33,20 +37,19 @@ REGLAS ESTRICTAS:
   const readable = new ReadableStream({
     async start(controller) {
       try {
-        const stream = anthropic.messages.stream({
-          model: 'claude-haiku-4-5-20251001',
+        const stream = await client.chat.completions.create({
+          model: 'gpt-4o-mini',
           max_tokens: isWA ? 1024 : 256,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userMessage }],
+          stream: true,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userMessage },
+          ],
         })
 
-        for await (const event of stream) {
-          if (
-            event.type === 'content_block_delta' &&
-            event.delta.type === 'text_delta'
-          ) {
-            controller.enqueue(encoder.encode(event.delta.text))
-          }
+        for await (const chunk of stream) {
+          const text = chunk.choices[0]?.delta?.content
+          if (text) controller.enqueue(encoder.encode(text))
         }
         controller.close()
       } catch (err: any) {
