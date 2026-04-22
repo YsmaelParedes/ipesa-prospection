@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
-import OpenAI from 'openai'
+import Anthropic from '@anthropic-ai/sdk'
 
-const client = new OpenAI()
+const anthropic = new Anthropic()
 
 export async function POST(req: NextRequest) {
   const { channel, prompt } = await req.json()
@@ -33,19 +33,20 @@ REGLAS ESTRICTAS:
   const readable = new ReadableStream({
     async start(controller) {
       try {
-        const stream = await client.chat.completions.create({
-          model: 'gpt-4o-mini',
+        const stream = anthropic.messages.stream({
+          model: 'claude-haiku-4-5-20251001',
           max_tokens: isWA ? 1024 : 256,
-          stream: true,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userMessage },
-          ],
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userMessage }],
         })
 
-        for await (const chunk of stream) {
-          const text = chunk.choices[0]?.delta?.content
-          if (text) controller.enqueue(encoder.encode(text))
+        for await (const event of stream) {
+          if (
+            event.type === 'content_block_delta' &&
+            event.delta.type === 'text_delta'
+          ) {
+            controller.enqueue(encoder.encode(event.delta.text))
+          }
         }
         controller.close()
       } catch (err: any) {

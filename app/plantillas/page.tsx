@@ -148,7 +148,11 @@ export default function Plantillas() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channel, prompt: aiPrompt }),
       })
-      if (!res.ok) throw new Error((await res.json()).error ?? 'Error al generar')
+      if (!res.ok) {
+        const ct = res.headers.get('content-type') ?? ''
+        const msg = ct.includes('json') ? (await res.json()).error : `Error ${res.status}`
+        throw new Error(msg ?? 'Error al generar')
+      }
       if (!res.body) throw new Error('No response body')
 
       const reader = res.body.getReader()
@@ -372,9 +376,9 @@ export default function Plantillas() {
 
       {/* ── Drawer ──────────────────────────────────────────────────────────── */}
       {showDrawer && (
-        <div className="fixed inset-0 z-50 flex">
+        <div className="fixed inset-0 z-50 flex flex-col sm:flex-row">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeDrawer} />
-          <div className="relative ml-auto w-full max-w-md h-full bg-white dark:bg-gray-900 shadow-2xl flex flex-col">
+          <div className="relative w-full sm:ml-auto sm:max-w-md h-[93dvh] sm:h-full mt-auto sm:mt-0 rounded-t-2xl sm:rounded-none bg-white dark:bg-gray-900 shadow-2xl flex flex-col">
 
             {/* Header */}
             <div className={`${isWA ? 'bg-gradient-to-br from-green-600 to-green-700' : 'bg-gradient-to-br from-blue-600 to-blue-700'} px-5 py-5 flex-shrink-0`}>
@@ -488,7 +492,7 @@ export default function Plantillas() {
                     <div className="flex items-center gap-2">
                       <Sparkles size={15} className="text-violet-600 dark:text-violet-400" />
                       <span className="text-sm font-semibold text-violet-700 dark:text-violet-300">Asistente IA</span>
-                      <span className="text-xs text-violet-500 dark:text-violet-400">— genera el texto automáticamente</span>
+                      <span className="hidden sm:inline text-xs text-violet-500 dark:text-violet-400">— genera el texto automáticamente</span>
                     </div>
                     {showAI
                       ? <ChevronUp size={15} className="text-violet-500 dark:text-violet-400 flex-shrink-0" />
@@ -502,26 +506,26 @@ export default function Plantillas() {
                         <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
                           ¿Qué tipo de mensaje necesitas?
                         </label>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <input
                             type="text"
                             placeholder={isWA
-                              ? 'ej: saludo inicial para cliente nuevo de seguros'
-                              : 'ej: recordatorio de cita breve'}
+                              ? 'ej: oferta de pintura para ferretería'
+                              : 'ej: recordatorio de visita breve'}
                             value={aiPrompt}
                             onChange={e => setAiPrompt(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleGenerateAI() } }}
                             disabled={aiGenerating}
-                            className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-60"
+                            className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-60"
                           />
                           <button
                             type="button"
                             onClick={handleGenerateAI}
                             disabled={aiGenerating || !aiPrompt.trim()}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition disabled:opacity-50 flex-shrink-0"
+                            className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition disabled:opacity-50 w-full sm:w-auto"
                           >
                             {aiGenerating
-                              ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Generando…</>
                               : aiDone
                                 ? <><RefreshCw size={13} /> Regenerar</>
                                 : <><Sparkles size={13} /> Generar</>
