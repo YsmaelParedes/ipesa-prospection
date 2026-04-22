@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar'
 import toast from 'react-hot-toast'
 import {
   Plus, Copy, Trash2, MessageSquare, Phone, Check, X,
-  AlertTriangle, LayoutTemplate, Smile, Edit2,
+  AlertTriangle, LayoutTemplate, Smile, Edit2, Sparkles, ChevronDown, ChevronUp, RefreshCw,
 } from 'lucide-react'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -40,6 +40,13 @@ export default function Plantillas() {
 
   const [formName, setFormName] = useState('')
   const [formBody, setFormBody] = useState('')
+
+  // ── AI assistant state ─────────────────────────────────────────────────────
+  const [showAI, setShowAI] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [aiGenerating, setAiGenerating] = useState(false)
+  const [aiResult, setAiResult] = useState('')
+  const [aiDone, setAiDone] = useState(false)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -129,10 +136,55 @@ export default function Plantillas() {
     toast.success('Acentos eliminados')
   }
 
+  async function handleGenerateAI() {
+    if (!aiPrompt.trim()) { toast.error('Describe qué tipo de plantilla necesitas'); return }
+    setAiGenerating(true)
+    setAiResult('')
+    setAiDone(false)
+
+    try {
+      const res = await fetch('/api/ai/generate-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channel, prompt: aiPrompt }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Error al generar')
+      if (!res.body) throw new Error('No response body')
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let accumulated = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        accumulated += decoder.decode(value, { stream: true })
+        setAiResult(accumulated)
+      }
+
+      setAiDone(true)
+    } catch (err: any) {
+      toast.error(err.message ?? 'Error al generar con IA')
+    } finally {
+      setAiGenerating(false)
+    }
+  }
+
+  function applyAIResult() {
+    if (!aiResult.trim()) return
+    setFormBody(aiResult.trim())
+    setShowAI(false)
+    textareaRef.current?.focus()
+  }
+
   function openDrawer() {
     setEditingId(null)
     setFormName('')
     setFormBody('')
+    setShowAI(false)
+    setAiPrompt('')
+    setAiResult('')
+    setAiDone(false)
     setShowDrawer(true)
   }
 
@@ -140,6 +192,10 @@ export default function Plantillas() {
     setEditingId(tpl.id)
     setFormName(tpl.name)
     setFormBody(tpl.body)
+    setShowAI(false)
+    setAiPrompt('')
+    setAiResult('')
+    setAiDone(false)
     setShowDrawer(true)
   }
 
@@ -148,6 +204,10 @@ export default function Plantillas() {
     setEditingId(null)
     setFormName('')
     setFormBody('')
+    setShowAI(false)
+    setAiPrompt('')
+    setAiResult('')
+    setAiDone(false)
   }
 
   // ── Colors ─────────────────────────────────────────────────────────────────
@@ -415,6 +475,83 @@ export default function Plantillas() {
                     <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
                       Usa <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{'{{1}}'}</code>, <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{'{{2}}'}</code>… para variables de nombre, empresa, etc.
                     </p>
+                  )}
+                </div>
+
+                {/* ── AI Assistant ──────────────────────────────────────── */}
+                <div className="rounded-xl border border-violet-200 dark:border-violet-800 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowAI(v => !v)}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/30 transition text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={15} className="text-violet-600 dark:text-violet-400" />
+                      <span className="text-sm font-semibold text-violet-700 dark:text-violet-300">Asistente IA</span>
+                      <span className="text-xs text-violet-500 dark:text-violet-400">— genera el texto automáticamente</span>
+                    </div>
+                    {showAI
+                      ? <ChevronUp size={15} className="text-violet-500 dark:text-violet-400 flex-shrink-0" />
+                      : <ChevronDown size={15} className="text-violet-500 dark:text-violet-400 flex-shrink-0" />
+                    }
+                  </button>
+
+                  {showAI && (
+                    <div className="px-4 py-4 space-y-3 bg-white dark:bg-gray-900">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                          ¿Qué tipo de mensaje necesitas?
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder={isWA
+                              ? 'ej: saludo inicial para cliente nuevo de seguros'
+                              : 'ej: recordatorio de cita breve'}
+                            value={aiPrompt}
+                            onChange={e => setAiPrompt(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleGenerateAI() } }}
+                            disabled={aiGenerating}
+                            className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-400 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-60"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleGenerateAI}
+                            disabled={aiGenerating || !aiPrompt.trim()}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition disabled:opacity-50 flex-shrink-0"
+                          >
+                            {aiGenerating
+                              ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              : aiDone
+                                ? <><RefreshCw size={13} /> Regenerar</>
+                                : <><Sparkles size={13} /> Generar</>
+                            }
+                          </button>
+                        </div>
+                      </div>
+
+                      {(aiGenerating || aiResult) && (
+                        <div className="rounded-lg border border-violet-100 dark:border-violet-900 bg-violet-50/50 dark:bg-violet-950/30 p-3">
+                          <p className="text-xs font-semibold text-violet-600 dark:text-violet-400 mb-1.5 flex items-center gap-1">
+                            <Sparkles size={11} />
+                            {aiGenerating ? 'Generando…' : 'Resultado'}
+                          </p>
+                          <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed min-h-[3rem]">
+                            {aiResult}
+                            {aiGenerating && <span className="inline-block w-0.5 h-4 bg-violet-500 animate-pulse ml-0.5 align-text-bottom" />}
+                          </p>
+                          {aiDone && aiResult && (
+                            <button
+                              type="button"
+                              onClick={applyAIResult}
+                              className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold transition"
+                            >
+                              <Check size={13} /> Usar este texto
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
 
