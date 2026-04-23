@@ -1,0 +1,74 @@
+[
+  {
+    "name": "CONSULTORIA, DISEÑO Y CONSTRUCCIÓN",
+    "phone": "2231079448",
+    "whatsapp": "522231079448",
+    "whatsapp_link": "https://wa.me/522231079448",
+    "address": "INDEPENDENCIA 37, SAN BARTOLOME HUEYAPAN, TEPEACA, 75210, PUE",
+    "postal_code": "75210",
+    "segment": "construccion",
+    "activity": "Construccion",
+    "acquisition_channel": "Sección Amarilla",
+    "prospect_status": "nuevo"
+  },
+  {
+    "name": "MATERIALES Y CONSTRUCCIONES EL ALARIFE S.A. DE C.V.",
+    "phone": "7971436719",
+    "whatsapp": "527971436719",
+    "whatsapp_link": "https://wa.me/527971436719",
+    "address": "JUÁREZ 87, AQUIXTLA, AQUIXTLA, 73620, PUE",
+    "postal_code": "73620",
+    "segment": "construccion",
+    "activity": "Construccion",
+    "acquisition_channel": "Sección Amarilla",
+    "prospect_status": "nuevo"
+  },
+  {
+    "name": "CONSULTORIA RECORZ",
+    "phone": "2231755083",
+    "whatsapp": "522231755083",
+    "whatsapp_link": "https://wa.me/522231755083",
+    "address": "AV. TENOCHTITLÁN 15, SANTIAGO ACATLAN, TEPEACA, 75205, PUE",
+    "postal_code": "75205",
+    "segment": "construccion",
+    "activity": "Construccion",
+    "acquisition_channel": "Sección Amarilla",
+    "prospect_status": "nuevo"
+  },
+  {
+    "name": "LA CASA DEL CONSTRUCTOR CHOMPERS S.A. DE C.V.",
+    "phone": "5514818165",
+    "whatsapp": "525514818165",
+    "whatsapp_link": "https://wa.me/525514818165",
+    "address": "JUÁREZ 8, AQUIXTLA, AQUIXTLA, 73620, PUE",
+    "postal_code": "73620",
+    "segment": "construccion",
+    "activity": "Construccion",
+    "acquisition_channel": "Sección Amarilla",
+    "prospect_status": "nuevo"
+  },
+  {
+    "name": "GRUPO A3",
+    "phone": "2221361410",
+    "whatsapp": "522221361410",
+    "whatsapp_link": "https://wa.me/522221361410",
+    "address": "CHOLULA OTE. 9, SAN COSME TEXINTLA, SAN PEDRO CHOLULA, 72767, PUE",
+    "postal_code": "72767",
+    "segment": "construccion",
+    "activity": "Construccion",
+    "acquisition_channel": "Sección Amarilla",
+    "prospect_status": "nuevo"
+  },
+  {
+    "name": "RACOSA COMERCIAL",
+    "phone": "8118135949",
+    "whatsapp": "528118135949",
+    "whatsapp_link": "https://wa.me/528118135949",
+    "address": "CALLE CAMINO NACIONAL 40B, INFONAVIT LADRILLERA, PUEBLA, 72127, PUE",
+    "postal_code": "72127",
+    "segment": "construccion",
+    "activity": "Construccion",
+    "acquisition_channel": "Sección Amarilla",
+    "prospect_status": "nuevo"
+  }
+]
