@@ -205,6 +205,217 @@ function NuevoContactoDrawer({ open, onClose, onSave, segments, defaultSegment }
   )
 }
 
+// === Import Wizard ===
+type ImportMapping = {
+  name: string; apellido: string; phone: string; email: string
+  company: string; address: string; postal_code: string
+  segment: string; acquisition_channel: string; prospect_status: string
+}
+type ImportDefaults = { segment: string; acquisition_channel: string; prospect_status: string }
+type ImportSheet = { name: string; rawRows: any[]; selected: boolean }
+
+function autoDetect(cols: string[]): ImportMapping {
+  const lc = (s: string) => s.toLowerCase().trim()
+  const match = (...aliases: string[]) => cols.find(c => aliases.some(a => lc(c) === a)) ?? ''
+  return {
+    name:                match('nombre', 'name', 'nombres', 'primer nombre', 'nombre completo', 'full name'),
+    apellido:            match('apellido', 'apellidos', 'last name', 'surname'),
+    phone:               match('teléfono', 'telefono', 'tel', 'phone', 'celular', 'móvil', 'movil', 'número', 'numero', 'tel.'),
+    email:               match('email', 'emails', 'correo', 'e-mail', 'mail', 'correo electrónico'),
+    company:             match('empresa', 'company', 'razón social', 'razon social', 'negocio'),
+    address:             match('dirección', 'direccion', 'address', 'domicilio'),
+    postal_code:         match('código postal', 'codigo postal', 'cp', 'postal_code', 'c.p.', 'zip'),
+    segment:             match('etiquetas', 'etiqueta', 'segment', 'segmento', 'categoria', 'categoría'),
+    acquisition_channel: match('canal de adquisición', 'canal de adquisicion', 'canal', 'acquisition_channel', 'fuente'),
+    prospect_status:     match('estado', 'status', 'prospect_status'),
+  }
+}
+
+function mapRow(raw: any, m: ImportMapping, d: ImportDefaults, sheetName: string) {
+  const get = (col: string) => col ? String(raw[col] ?? '').trim() : ''
+  const name = [get(m.name), get(m.apellido)].filter(Boolean).join(' ')
+  const phone = get(m.phone).replace(/\D/g, '')
+  return {
+    name, phone,
+    email:               get(m.email),
+    company:             get(m.company),
+    address:             get(m.address),
+    postal_code:         get(m.postal_code),
+    segment:             get(m.segment) || d.segment || sheetName,
+    acquisition_channel: get(m.acquisition_channel) || d.acquisition_channel,
+    prospect_status:     get(m.prospect_status) || d.prospect_status || 'nuevo',
+  }
+}
+
+interface IWMProps {
+  open: boolean; type: 'xlsx' | 'csv'
+  sheets: ImportSheet[]; columns: string[]
+  mapping: ImportMapping; defaults: ImportDefaults
+  segments: string[]; isDark: boolean; importing: boolean
+  onClose: () => void
+  onSheetsChange: (s: ImportSheet[]) => void
+  onMappingChange: (m: ImportMapping) => void
+  onDefaultsChange: (d: ImportDefaults) => void
+  onImport: (rows: any[]) => void
+}
+
+function ImportWizardModal({ open, type, sheets, columns, mapping, defaults, segments, isDark, importing, onClose, onSheetsChange, onMappingChange, onDefaultsChange, onImport }: IWMProps) {
+  const [showPreview, setShowPreview] = useState(false)
+
+  const allRows = useMemo(
+    () => sheets.filter(s => s.selected).flatMap(s => s.rawRows.map(r => mapRow(r, mapping, defaults, s.name))).filter(r => r.name && r.phone),
+    [sheets, mapping, defaults]
+  )
+
+  if (!open) return null
+
+  const firstRaw = sheets.find(s => s.selected)?.rawRows[0] ?? {}
+  const eg = (col: string) => col && firstRaw[col] != null ? String(firstRaw[col]).slice(0, 20) : '—'
+  const totalRaw = sheets.filter(s => s.selected).reduce((n, s) => n + s.rawRows.length, 0)
+  const preview5 = sheets.filter(s => s.selected).flatMap(s => s.rawRows.map(r => ({ r, n: s.name }))).slice(0, 5).map(({ r, n }) => mapRow(r, mapping, defaults, n))
+
+  const setM = (f: keyof ImportMapping) => (e: React.ChangeEvent<HTMLSelectElement>) => onMappingChange({ ...mapping, [f]: e.target.value })
+  const setD = (f: keyof ImportDefaults) => (e: React.ChangeEvent<HTMLSelectElement>) => onDefaultsChange({ ...defaults, [f]: e.target.value })
+
+  const td = 'px-3 py-2.5 border-b border-gray-50 dark:border-gray-700/50'
+  const colSel = (val: string, fn: (e: React.ChangeEvent<HTMLSelectElement>) => void, req = false) => (
+    <select value={val} onChange={fn} className={`w-full text-xs rounded-lg border px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 dark-mode-transition ${req && !val ? 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white'}`}>
+      <option value="">— No importar —</option>
+      {columns.map(c => <option key={c} value={c}>{c}</option>)}
+    </select>
+  )
+  const defSel = (val: string, fn: (e: React.ChangeEvent<HTMLSelectElement>) => void, opts: { value: string; label: string }[]) => (
+    <select value={val} onChange={fn} className="w-full text-xs rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500">
+      {opts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  )
+
+  const rows: { field: keyof ImportMapping; label: string; req?: boolean; defField?: keyof ImportDefaults; defOpts?: { value: string; label: string }[] }[] = [
+    { field: 'name',               label: 'Nombre',              req: true },
+    { field: 'apellido',           label: 'Apellido (concatena)' },
+    { field: 'phone',              label: 'Teléfono',            req: true },
+    { field: 'email',              label: 'Email' },
+    { field: 'company',            label: 'Empresa' },
+    { field: 'address',            label: 'Dirección' },
+    { field: 'postal_code',        label: 'C.P.' },
+    { field: 'segment',            label: 'Segmento',            defField: 'segment',             defOpts: [{ value: '', label: '— Sin segmento —' }, ...segments.map(s => ({ value: s, label: s }))] },
+    { field: 'acquisition_channel',label: 'Canal',               defField: 'acquisition_channel', defOpts: ACQUISITION_CHANNELS },
+    { field: 'prospect_status',    label: 'Estado',              defField: 'prospect_status',     defOpts: STATUSES },
+  ]
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col dark-mode-transition">
+
+        <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-start flex-shrink-0">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Importar contactos</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Asocia cada campo de la app con una columna del archivo</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 mt-1"><X size={20} /></button>
+        </div>
+
+        <div className="overflow-y-auto flex-1">
+          {type === 'xlsx' && sheets.length > 0 && (
+            <div className="px-6 pt-5 pb-4 border-b border-gray-100 dark:border-gray-700">
+              <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2.5">Hojas a importar</p>
+              <div className="flex flex-wrap gap-2">
+                {sheets.map((s, i) => (
+                  <button key={s.name}
+                    onClick={() => onSheetsChange(sheets.map((sh, j) => j === i ? { ...sh, selected: !sh.selected } : sh))}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 text-xs font-semibold transition-colors"
+                    style={{ borderColor: s.selected ? '#16a34a' : (isDark ? '#374151' : '#e5e7eb'), backgroundColor: s.selected ? (isDark ? '#14532d' : '#f0fdf4') : (isDark ? '#1f2937' : '#fff'), color: s.selected ? (isDark ? '#86efac' : '#166534') : (isDark ? '#9ca3af' : '#6b7280') }}>
+                    {s.selected ? <CheckSquare size={13} /> : <Square size={13} />}
+                    {s.name} <span className="opacity-60">({s.rawRows.length})</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="px-6 py-5">
+            <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Mapeo de columnas</p>
+            <div className="rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-700/50 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-3 py-2.5 text-left w-28">Campo</th>
+                    <th className="px-3 py-2.5 text-left">Columna del archivo</th>
+                    <th className="px-3 py-2.5 text-left w-24">Ejemplo</th>
+                    <th className="px-3 py-2.5 text-left">Por defecto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map(({ field, label, req, defField, defOpts }) => (
+                    <tr key={field}>
+                      <td className={`${td} text-xs font-semibold ${req ? 'text-gray-800 dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'} whitespace-nowrap`}>
+                        {label}{req && <span className="text-red-500 ml-0.5">*</span>}
+                      </td>
+                      <td className={td}>{colSel(mapping[field], setM(field), req)}</td>
+                      <td className={`${td} text-xs font-mono text-gray-400 dark:text-gray-500 truncate max-w-[96px]`}>{eg(mapping[field])}</td>
+                      <td className={td}>
+                        {defField && defOpts
+                          ? defSel(defaults[defField], setD(defField), defOpts)
+                          : <span className="text-xs text-gray-300 dark:text-gray-600">—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="px-6 pb-5">
+            <button onClick={() => setShowPreview(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+              <span className="flex items-center gap-2"><TableProperties size={14} /> Vista previa (primeras {preview5.length} filas)</span>
+              {showPreview ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+            {showPreview && preview5.length > 0 && (
+              <div className="mt-2 overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-700">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-700/50">
+                      {['Nombre', 'Teléfono', 'Email', 'Empresa', 'Segmento'].map(h => (
+                        <th key={h} className="px-3 py-2 text-left font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                    {preview5.map((r, i) => (
+                      <tr key={i} className={!r.name || !r.phone ? 'opacity-40' : ''}>
+                        <td className="px-3 py-2 text-gray-700 dark:text-gray-300 font-medium max-w-[130px] truncate">{r.name || '—'}</td>
+                        <td className={`px-3 py-2 font-mono whitespace-nowrap ${isValidPhone(r.phone) ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>{r.phone || '—'}</td>
+                        <td className="px-3 py-2 text-gray-500 dark:text-gray-400 max-w-[110px] truncate">{r.email || '—'}</td>
+                        <td className="px-3 py-2 text-gray-500 dark:text-gray-400 max-w-[100px] truncate">{r.company || '—'}</td>
+                        <td className="px-3 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">{r.segment || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex items-center gap-3 flex-shrink-0">
+          <div className="flex-1 text-sm">
+            <span className="font-semibold text-gray-800 dark:text-gray-200">{allRows.length.toLocaleString()}</span>
+            <span className="text-gray-500 dark:text-gray-400"> contactos válidos</span>
+            {totalRaw - allRows.length > 0 && (
+              <span className="text-amber-500 dark:text-amber-400 text-xs ml-2">· {(totalRaw - allRows.length).toLocaleString()} sin nombre/tel.</span>
+            )}
+          </div>
+          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button variant="primary" loading={importing} onClick={() => onImport(allRows)} className="bg-green-600 hover:bg-green-700">
+            <FileSpreadsheet size={15} /> Importar {allRows.length.toLocaleString()}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Contactos() {
   const [contacts, setContacts] = useState<any[]>([])
   const [segments, setSegments] = useState<any[]>([])
@@ -232,16 +443,29 @@ export default function Contactos() {
   const [exportOpen, setExportOpen] = useState(false)
   const exportRef = useRef<HTMLDivElement>(null)
 
-  // Excel import
-  const [xlsxModal, setXlsxModal] = useState(false)
-  const [xlsxSheets, setXlsxSheets] = useState<{ name: string; rows: any[]; selected: boolean }[]>([])
-  const [xlsxImporting, setXlsxImporting] = useState(false)
+  // Importar dropdown
+  const [importOpen, setImportOpen] = useState(false)
+  const importRef = useRef<HTMLDivElement>(null)
+  const csvInputRef = useRef<HTMLInputElement>(null)
+  const xlsxInputRef = useRef<HTMLInputElement>(null)
+
+  // Import wizard
+  const EMPTY_MAPPING: ImportMapping = { name: '', apellido: '', phone: '', email: '', company: '', address: '', postal_code: '', segment: '', acquisition_channel: '', prospect_status: '' }
+  const EMPTY_DEFAULTS: ImportDefaults = { segment: '', acquisition_channel: '', prospect_status: 'nuevo' }
+  const [importWizardOpen, setImportWizardOpen] = useState(false)
+  const [importWizardType, setImportWizardType] = useState<'xlsx' | 'csv'>('xlsx')
+  const [importWizardSheets, setImportWizardSheets] = useState<ImportSheet[]>([])
+  const [importWizardColumns, setImportWizardColumns] = useState<string[]>([])
+  const [importWizardMapping, setImportWizardMapping] = useState<ImportMapping>(EMPTY_MAPPING)
+  const [importWizardDefaults, setImportWizardDefaults] = useState<ImportDefaults>(EMPTY_DEFAULTS)
+  const [importWizardLoading, setImportWizardLoading] = useState(false)
 
   useEffect(() => { fetchAll() }, [])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (exportRef.current && !exportRef.current.contains(e.target as Node)) setExportOpen(false)
+      if (importRef.current && !importRef.current.contains(e.target as Node)) setImportOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -448,68 +672,56 @@ export default function Contactos() {
     reader.onload = (ev) => {
       const data = new Uint8Array(ev.target?.result as ArrayBuffer)
       const wb = XLSX.read(data, { type: 'array' })
-      const sheets = wb.SheetNames.map(name => {
-        const raw: any[] = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: '' })
-        const rows = raw.map(r => ({
-          name: [(r['Nombre'] || '').toString().trim(), (r['Apellido'] || '').toString().trim()].filter(Boolean).join(' '),
-          phone: (r['Teléfono'] || r['Telefono'] || r['Tel'] || '').toString().replace(/\s/g, ''),
-          email: (r['Emails'] || r['Email'] || '').toString().trim(),
-          company: (r['Empresa'] || '').toString().trim(),
-          address: (r['Dirección'] || r['Direccion'] || '').toString().trim(),
-          postal_code: (r['Código Postal'] || r['Codigo Postal'] || r['CP'] || r['postal_code'] || '').toString().trim(),
-          segment: (r['Etiquetas'] || r['Etiqueta '] || r['Etiqueta'] || name).toString().trim().toLowerCase(),
-          acquisition_channel: (r['Canal de adquisición'] || r['Canal de adquisicion'] || r['Canal'] || '').toString().trim(),
-          prospect_status: 'nuevo',
-        })).filter(r => r.name && r.phone)
-        return { name, rows, selected: rows.length > 0 }
-      }).filter(s => s.rows.length > 0)
-      setXlsxSheets(sheets); setXlsxModal(true)
+      const sheets: ImportSheet[] = wb.SheetNames.map(name => ({
+        name,
+        rawRows: XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: '' }) as any[],
+        selected: true,
+      })).filter(s => s.rawRows.length > 0)
+      const allCols = [...new Set(sheets.flatMap(s => s.rawRows.flatMap(r => Object.keys(r))))]
+      setImportWizardType('xlsx')
+      setImportWizardSheets(sheets)
+      setImportWizardColumns(allCols)
+      setImportWizardMapping(autoDetect(allCols))
+      setImportWizardDefaults(EMPTY_DEFAULTS)
+      setImportWizardOpen(true)
     }
     reader.readAsArrayBuffer(file)
   }
 
-  const handleXLSXImport = async () => {
-    const sel = xlsxSheets.filter(s => s.selected)
-    const allRows = sel.flatMap(s => s.rows)
-    if (!allRows.length) { toast.error('Selecciona al menos una hoja'); return }
+  const handleImportWizardImport = async (rows: any[]) => {
+    if (!rows.length) { toast.error('Sin contactos válidos'); return }
     try {
-      setXlsxImporting(true)
+      setImportWizardLoading(true)
       let inserted = 0
-      for (let i = 0; i < allRows.length; i += 500) {
+      for (let i = 0; i < rows.length; i += 500) {
         const res = await fetch('/api/data/contacts/import', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contacts: allRows.slice(i, i + 500) }),
+          body: JSON.stringify({ contacts: rows.slice(i, i + 500) }),
         })
         const r = await res.json()
         inserted += Array.isArray(r) ? r.length : 0
       }
-      toast.success(`${inserted} importados · ${allRows.length - inserted} duplicados omitidos`)
-      setXlsxModal(false); setXlsxSheets([]); fetchContacts()
+      toast.success(`${inserted} importados · ${rows.length - inserted} duplicados omitidos`)
+      setImportWizardOpen(false); fetchContacts()
     } catch (error: any) { toast.error(error.message) }
-    finally { setXlsxImporting(false) }
+    finally { setImportWizardLoading(false) }
   }
 
   const handleCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return
+    const file = e.target.files?.[0]; if (!file) return; e.target.value = ''
     Papa.parse(file, {
       header: true,
-      complete: async (results: any) => {
-        try {
-          const data = results.data.filter((r: any) => r.name && r.phone).map((r: any) => ({
-            name: r.name, phone: r.phone, email: r.email || '', company: r.company || '',
-            address: r.address || '', postal_code: r.postal_code || '', segment: r.segment || '',
-            prospect_status: r.prospect_status || 'nuevo', acquisition_channel: r.acquisition_channel || '',
-          }))
-          const res = await fetch('/api/data/contacts/import', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contacts: data }),
-          })
-          if (!res.ok) throw new Error('Error al importar')
-          toast.success(`${data.length} contactos importados`)
-          fetchContacts()
-        } catch (error: any) { toast.error(error.message) }
+      complete: (results: any) => {
+        const rawRows: any[] = (results.data as any[]).filter(r => Object.values(r).some(v => v !== ''))
+        if (!rawRows.length) { toast.error('El archivo CSV está vacío'); return }
+        const columns: string[] = results.meta?.fields || Object.keys(rawRows[0] || {})
+        setImportWizardType('csv')
+        setImportWizardSheets([{ name: '', rawRows, selected: true }])
+        setImportWizardColumns(columns)
+        setImportWizardMapping(autoDetect(columns))
+        setImportWizardDefaults(EMPTY_DEFAULTS)
+        setImportWizardOpen(true)
       },
     })
   }
@@ -621,34 +833,48 @@ export default function Contactos() {
               <Button variant="primary" size="sm" onClick={() => setShowForm(!showForm)}>
                 <Plus size={16} /> <span className="hidden xs:inline sm:inline">Nuevo</span>
               </Button>
-              <label className="cursor-pointer">
-                <div className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 font-semibold rounded-lg px-2.5 py-1.5 inline-flex items-center gap-1 transition text-sm">
-                  <Upload size={14} /> <span className="hidden sm:inline">CSV</span>
-                </div>
-                <input type="file" accept=".csv" onChange={handleCSV} className="hidden" />
-              </label>
-              <label className="cursor-pointer">
-                <div className="bg-green-600 hover:bg-green-700 font-semibold rounded-lg px-2.5 py-1.5 inline-flex items-center gap-1 transition text-sm text-white">
-                  <FileSpreadsheet size={14} /> <span className="hidden sm:inline">Excel</span>
-                </div>
-                <input type="file" accept=".xlsx,.xls" onChange={handleXLSX} className="hidden" />
-              </label>
-              <Button variant="secondary" size="sm" onClick={handleBackup} title="Descargar backup completo">
-                <Download size={14} /> <span className="hidden sm:inline">Backup</span>
-              </Button>
 
-              {/* Exportar Excel con dropdown por segmento */}
+              {/* Hidden file inputs */}
+              <input ref={csvInputRef} type="file" accept=".csv" onChange={handleCSV} className="hidden" />
+              <input ref={xlsxInputRef} type="file" accept=".xlsx,.xls" onChange={handleXLSX} className="hidden" />
+
+              {/* Importar dropdown */}
+              <div className="relative" ref={importRef}>
+                <button
+                  onClick={() => setImportOpen(v => !v)}
+                  className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 font-semibold rounded-lg px-2.5 py-1.5 inline-flex items-center gap-1 transition text-sm"
+                >
+                  <Upload size={14} />
+                  <span className="hidden sm:inline">Importar</span>
+                  <ChevronDown size={12} className={`transition-transform ${importOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {importOpen && (
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden z-30">
+                    <div className="px-3 py-2 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
+                      Importar contactos
+                    </div>
+                    <button onClick={() => { csvInputRef.current?.click(); setImportOpen(false) }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center gap-2">
+                      <Upload size={14} className="text-gray-400" /> Desde CSV
+                    </button>
+                    <button onClick={() => { xlsxInputRef.current?.click(); setImportOpen(false) }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center gap-2">
+                      <FileSpreadsheet size={14} className="text-green-500" /> Desde Excel
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Exportar dropdown */}
               <div className="relative" ref={exportRef}>
                 <button
                   onClick={() => setExportOpen(v => !v)}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg px-2.5 py-1.5 inline-flex items-center gap-1 transition text-sm"
-                  title="Exportar a Excel"
                 >
                   <TableProperties size={14} />
                   <span className="hidden sm:inline">Exportar</span>
                   <ChevronDown size={12} className={`transition-transform ${exportOpen ? 'rotate-180' : ''}`} />
                 </button>
-
                 {exportOpen && (
                   <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden z-30">
                     <div className="px-3 py-2 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
@@ -680,6 +906,11 @@ export default function Contactos() {
                         <span className="text-xs text-gray-400">{contacts.filter(c => !c.segment).length}</span>
                       </button>
                     )}
+                    <div className="border-t border-gray-100 dark:border-gray-700" />
+                    <button onClick={() => { handleBackup(); setExportOpen(false) }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition flex items-center gap-2">
+                      <Download size={14} /> Backup completo (JSON)
+                    </button>
                   </div>
                 )}
               </div>
@@ -1040,61 +1271,22 @@ export default function Contactos() {
         </div>
       </div>
 
-      {/* Modal importar Excel */}
-      {xlsxModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col dark-mode-transition">
-            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-start">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Importar desde Excel</h2>
-                <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Selecciona las hojas que deseas importar</p>
-              </div>
-              <button onClick={() => setXlsxModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={22} /></button>
-            </div>
-            <div className="overflow-y-auto flex-1 p-6 space-y-3">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                  Total: <strong>{xlsxSheets.filter(s => s.selected).flatMap(s => s.rows).length.toLocaleString()}</strong> contactos
-                </span>
-                <div className="flex gap-3">
-                  <button className="text-xs text-blue-600 font-semibold hover:underline" onClick={() => setXlsxSheets(s => s.map(sh => ({ ...sh, selected: true })))}>Todo</button>
-                  <button className="text-xs text-gray-400 font-semibold hover:underline" onClick={() => setXlsxSheets(s => s.map(sh => ({ ...sh, selected: false })))}>Ninguno</button>
-                </div>
-              </div>
-              {xlsxSheets.map((sheet, i) => (
-                <button key={sheet.name} onClick={() => setXlsxSheets(s => s.map((sh, j) => j === i ? { ...sh, selected: !sh.selected } : sh))}
-                  className="w-full flex items-center gap-3 p-4 rounded-xl border-2 transition text-left"
-                  style={{
-                    borderColor: sheet.selected ? '#16a34a' : (isDark ? '#374151' : '#e5e7eb'),
-                    backgroundColor: sheet.selected ? (isDark ? '#14532d' : '#f0fdf4') : (isDark ? '#1f2937' : '#fff'),
-                  }}>
-                  <div style={{ color: sheet.selected ? '#16a34a' : (isDark ? '#6b7280' : '#d1d5db') }}>
-                    {sheet.selected ? <CheckSquare size={20} /> : <Square size={20} />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-800 dark:text-gray-100">{sheet.name}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{sheet.rows.length.toLocaleString()} contactos</p>
-                  </div>
-                  <span className="text-xs font-bold px-2 py-1 rounded-full"
-                    style={{
-                      backgroundColor: sheet.selected ? (isDark ? '#166534' : '#dcfce7') : (isDark ? '#374151' : '#f3f4f6'),
-                      color: sheet.selected ? (isDark ? '#86efac' : '#15803d') : (isDark ? '#9ca3af' : '#9ca3af'),
-                    }}>
-                    {sheet.rows.length.toLocaleString()}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex gap-3 justify-end">
-              <Button variant="secondary" onClick={() => setXlsxModal(false)}>Cancelar</Button>
-              <Button variant="primary" loading={xlsxImporting} onClick={handleXLSXImport} className="bg-green-600 hover:bg-green-700">
-                <FileSpreadsheet size={16} />
-                Importar {xlsxSheets.filter(s => s.selected).flatMap(s => s.rows).length.toLocaleString()} contactos
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ImportWizardModal
+        open={importWizardOpen}
+        type={importWizardType}
+        sheets={importWizardSheets}
+        columns={importWizardColumns}
+        mapping={importWizardMapping}
+        defaults={importWizardDefaults}
+        segments={allSegments}
+        isDark={isDark}
+        importing={importWizardLoading}
+        onClose={() => setImportWizardOpen(false)}
+        onSheetsChange={setImportWizardSheets}
+        onMappingChange={setImportWizardMapping}
+        onDefaultsChange={setImportWizardDefaults}
+        onImport={handleImportWizardImport}
+      />
 
       {/* FAB móvil: Nuevo Contacto */}
       <button
