@@ -35,7 +35,12 @@ export default function Segmentos() {
   const [contacts, setContacts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showDrawer, setShowDrawer] = useState(false)
-  const [form, setForm] = useState({ name: '', description: '', color: '#0284c7' })
+  const [form, setForm] = useState({ name: '', description: '', color: PRESET_COLORS[0] })
+
+  const nextColor = (existingSegments = segments) => {
+    const used = new Set(existingSegments.map((s: any) => s.color?.toLowerCase()))
+    return PRESET_COLORS.find(c => !used.has(c.toLowerCase())) ?? PRESET_COLORS[existingSegments.length % PRESET_COLORS.length]
+  }
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({ name: '', description: '', color: '' })
 
@@ -48,8 +53,10 @@ export default function Segmentos() {
         fetch('/api/data/segments').then(r => r.json()),
         fetch('/api/data/contacts').then(r => r.json()),
       ])
-      setSegments(segs.segments || [])
+      const loadedSegs = segs.segments || []
+      setSegments(loadedSegs)
       setContacts(cts.contacts || [])
+      setForm(f => ({ ...f, color: nextColor(loadedSegs) }))
     } catch { toast.error('Error al cargar datos') }
     finally { setLoading(false) }
   }
@@ -68,7 +75,6 @@ export default function Segmentos() {
       })
       if (!res.ok) throw new Error('Error al crear segmento')
       toast.success('Segmento creado')
-      setForm({ name: '', description: '', color: '#0284c7' })
       setShowDrawer(false)
       fetchAll()
     } catch (error: any) { toast.error(error.message) }
@@ -127,7 +133,7 @@ export default function Segmentos() {
               <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-1">Segmentos</h1>
               <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">Clasifica tus contactos por categoría de negocio</p>
             </div>
-            <Button variant="primary" onClick={() => setShowDrawer(true)}>
+            <Button variant="primary" onClick={() => { setForm({ name: '', description: '', color: nextColor() }); setShowDrawer(true) }}>
               <Plus size={18} /> Nuevo Segmento
             </Button>
           </div>

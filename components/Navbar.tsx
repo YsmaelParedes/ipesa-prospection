@@ -4,17 +4,15 @@ import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useTheme } from '@/components/ThemeProvider'
-import { BarChart3, Users, MessageSquare, Clock, Search, Tag, ChevronDown, Moon, Sun, LogOut, FileText, RefreshCw, X, Grid3X3, LayoutTemplate, MoreHorizontal } from 'lucide-react'
+import { BarChart3, Users, MessageSquare, Clock, Tag, ChevronDown, Moon, Sun, LogOut, FileText, X, Grid3X3, LayoutTemplate, MoreHorizontal } from 'lucide-react'
 
 const mainTabs = [
   { href: '/',            label: 'Dashboard',  icon: BarChart3 },
   { href: '/contactos',  label: 'Contactos',  icon: Users },
   { href: '/mensajeria', label: 'Mensajería', icon: MessageSquare },
-  { href: '/seguimiento',label: 'Seguimiento',icon: RefreshCw },
 ]
 
 const moreItems = [
-  { href: '/scraper',           label: 'Scraper',      icon: Search },
   { href: '/segmentos',         label: 'Segmentos',    icon: Tag },
   { href: '/recordatorios',     label: 'Recordatorios',icon: Clock },
   { href: '/reportes-whatsapp', label: 'Reportes WA',  icon: FileText },
@@ -92,11 +90,6 @@ export default function Navbar() {
                   )}
                 </Link>
               ))}
-              <Link key="/scraper" href="/scraper"
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition duration-200 ${isActive('/scraper') ? 'bg-white/20 text-white' : 'text-white/90 hover:text-white hover:bg-white/15'}`}>
-                <Search size={16} /> Scraper
-              </Link>
-
               {/* Más dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <button onClick={() => setConfigOpen(!configOpen)}

@@ -15,11 +15,6 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
-const TONE_BADGE: Record<string, any> = {
-  confirmacion: 'info', validacion: 'warning', valor: 'success',
-  empuje: 'danger', recordatorio: 'warning', cierre: 'danger',
-}
-
 const NOTE_BADGE: Record<string, any> = {
   objecion: 'danger', interes: 'success', info: 'info', accion: 'warning',
 }
@@ -30,9 +25,8 @@ export default function EditContacto() {
   const id = params.id as string
 
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ name: '', phone: '', email: '', company: '', address: '', postal_code: '', segment: '', prospect_status: '', acquisition_channel: '' })
+  const [form, setForm] = useState({ name: '', phone: '', email: '', company: '', address: '', postal_code: '', segment: '', acquisition_channel: '' })
   const [segments, setSegments] = useState<any[]>([])
-  const [followUps, setFollowUps] = useState<any[]>([])
   const [notes, setNotes] = useState<any[]>([])
   const [newNote, setNewNote] = useState('')
   const [noteType, setNoteType] = useState('info')
@@ -41,15 +35,13 @@ export default function EditContacto() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [contact, fus, nts, segs] = await Promise.all([
+        const [contact, nts, segs] = await Promise.all([
           fetch(`/api/data/contacts/${id}`).then(r => r.json()),
-          fetch(`/api/data/contacts/${id}/follow-ups`).then(r => r.json()),
           fetch(`/api/data/contacts/${id}/notes`).then(r => r.json()),
           fetch('/api/data/segments').then(r => r.json()),
         ])
         if (contact.error) throw new Error(contact.error)
         setForm(contact)
-        setFollowUps(fus || [])
         setNotes(nts || [])
         setSegments(segs.segments || [])
       } catch {
@@ -104,9 +96,6 @@ export default function EditContacto() {
     </>
   )
 
-  const pending = followUps.filter(f => f.status === 'pending')
-  const completed = followUps.filter(f => f.status === 'completed')
-
   return (
     <>
       <Navbar />
@@ -155,13 +144,6 @@ export default function EditContacto() {
                     { value: '', label: 'Sin segmento' },
                     ...segments.map(s => ({ value: s.name, label: s.name })),
                   ]} />
-                  <Select label="Estado" value={form.prospect_status} onChange={e => setForm({ ...form, prospect_status: e.target.value })} options={[
-                    { value: 'nuevo', label: 'Nuevo' },
-                    { value: 'contactado', label: 'Contactado' },
-                    { value: 'interesado', label: 'Interesado' },
-                    { value: 'cliente', label: 'Cliente' },
-                    { value: 'rechazado', label: 'Rechazado' },
-                  ]} />
                   <Button type="submit" variant="primary" className="w-full">
                     <Save size={16} /> Guardar Cambios
                   </Button>
@@ -169,52 +151,8 @@ export default function EditContacto() {
               </Card>
             </div>
 
-            {/* Columna derecha: Seguimiento + Notas */}
+            {/* Columna derecha: Notas */}
             <div className="lg:col-span-2 space-y-6">
-
-              {/* Historial de seguimiento */}
-              <Card variant="elevated" className="overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                  <h2 className="font-bold text-gray-900 dark:text-white">Historial de Seguimiento</h2>
-                  <div className="flex gap-2">
-                    <Badge variant="warning">{pending.length} pendientes</Badge>
-                    <Badge variant="success">{completed.length} completados</Badge>
-                  </div>
-                </div>
-                {followUps.length === 0 ? (
-                  <div className="p-8 text-center text-gray-400 dark:text-gray-500">
-                    <p>Sin seguimientos asignados.</p>
-                    <p className="text-sm mt-1">Ve a <strong>Seguimiento → Nuevo Plan</strong> para asignar una secuencia.</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-gray-50 dark:divide-gray-700/50">
-                    {followUps.map(fu => (
-                      <div key={fu.id} className={`px-6 py-4 ${fu.status === 'completed' ? 'opacity-60' : ''}`}>
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold text-gray-900 dark:text-white text-sm">{fu.follow_up_stages?.stage_name}</span>
-                              <Badge variant={TONE_BADGE[fu.follow_up_stages?.tone] || 'default'} className="text-xs">
-                                {fu.follow_up_stages?.tone}
-                              </Badge>
-                              <Badge variant={fu.status === 'completed' ? 'success' : 'warning'} className="text-xs">
-                                {fu.status === 'completed' ? '✓ Completo' : '⏳ Pendiente'}
-                              </Badge>
-                            </div>
-                            <p className="text-gray-500 dark:text-gray-400 text-xs">{fu.follow_up_stages?.objective}</p>
-                            {fu.notes && (
-                              <p className="text-gray-600 dark:text-gray-400 text-xs mt-1 italic">"{fu.notes}"</p>
-                            )}
-                          </div>
-                          <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap ml-4">
-                            Día {fu.follow_up_stages?.day} · {format(new Date(fu.scheduled_date), "d MMM", { locale: es })}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </Card>
 
               {/* Notas internas */}
               <Card variant="elevated" className="overflow-hidden">

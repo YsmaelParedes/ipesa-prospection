@@ -13,19 +13,11 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
-import { Plus, Upload, Trash2, Edit, Search, FileSpreadsheet, X, CheckSquare, Square, Filter, ChevronDown, ChevronUp, Download, TableProperties, MessageCircle } from 'lucide-react'
+import { Plus, Upload, Trash2, Edit, Search, FileSpreadsheet, X, CheckSquare, Square, Filter, ChevronDown, ChevronUp, Download, TableProperties, MessageCircle, ArrowUp } from 'lucide-react'
 
 function isValidPhone(phone: string): boolean {
   return /^\d{10}$/.test(phone)
 }
-
-const STATUSES = [
-  { value: 'nuevo', label: 'Nuevo' },
-  { value: 'contactado', label: 'Contactado' },
-  { value: 'interesado', label: 'Interesado' },
-  { value: 'cliente', label: 'Cliente' },
-  { value: 'rechazado', label: 'Rechazado' },
-]
 
 const ACQUISITION_CHANNELS = [
   { value: '', label: 'Seleccionar canal...' },
@@ -40,14 +32,7 @@ const ACQUISITION_CHANNELS = [
   { value: 'Feria / Evento', label: 'Feria / Evento' },
   { value: 'Otro', label: 'Otro' },
 ]
-const statusBadge: Record<string, any> = {
-  nuevo: 'info', contactado: 'warning', interesado: 'success', cliente: 'success', rechazado: 'danger',
-}
-const statusLabel: Record<string, string> = {
-  nuevo: 'Nuevo', contactado: 'Contactado', interesado: 'Interesado', cliente: 'Cliente', rechazado: 'Rechazado',
-}
-
-const EMPTY_FORM = { name: '', phone: '', email: '', company: '', address: '', postal_code: '', segment: '', prospect_status: 'nuevo', acquisition_channel: '' }
+const EMPTY_FORM = { name: '', phone: '', email: '', company: '', address: '', postal_code: '', segment: '', acquisition_channel: '' }
 
 interface DrawerProps {
   open: boolean
@@ -169,22 +154,13 @@ function NuevoContactoDrawer({ open, onClose, onSave, segments, defaultSegment }
                     {ACQUISITION_CHANNELS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Segmento</label>
-                    <select value={form.segment} onChange={e => set('segment', e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option value="">Sin segmento</option>
-                      {segments.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Estado</label>
-                    <select value={form.prospect_status} onChange={e => set('prospect_status', e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      {STATUSES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Segmento</label>
+                  <select value={form.segment} onChange={e => set('segment', e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="">Sin segmento</option>
+                    {segments.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </div>
               </div>
             </div>
@@ -209,9 +185,9 @@ function NuevoContactoDrawer({ open, onClose, onSave, segments, defaultSegment }
 type ImportMapping = {
   name: string; apellido: string; phone: string; email: string
   company: string; address: string; postal_code: string
-  segment: string; acquisition_channel: string; prospect_status: string
+  segment: string; acquisition_channel: string
 }
-type ImportDefaults = { segment: string; acquisition_channel: string; prospect_status: string }
+type ImportDefaults = { segment: string; acquisition_channel: string }
 type ImportSheet = { name: string; rawRows: any[]; selected: boolean }
 
 function autoDetect(cols: string[]): ImportMapping {
@@ -227,7 +203,6 @@ function autoDetect(cols: string[]): ImportMapping {
     postal_code:         match('código postal', 'codigo postal', 'cp', 'postal_code', 'c.p.', 'zip'),
     segment:             match('etiquetas', 'etiqueta', 'segment', 'segmento', 'categoria', 'categoría'),
     acquisition_channel: match('canal de adquisición', 'canal de adquisicion', 'canal', 'acquisition_channel', 'fuente'),
-    prospect_status:     match('estado', 'status', 'prospect_status'),
   }
 }
 
@@ -243,7 +218,6 @@ function mapRow(raw: any, m: ImportMapping, d: ImportDefaults, sheetName: string
     postal_code:         get(m.postal_code),
     segment:             get(m.segment) || d.segment || sheetName,
     acquisition_channel: get(m.acquisition_channel) || d.acquisition_channel,
-    prospect_status:     get(m.prospect_status) || d.prospect_status || 'nuevo',
   }
 }
 
@@ -300,7 +274,6 @@ function ImportWizardModal({ open, type, sheets, columns, mapping, defaults, seg
     { field: 'postal_code',        label: 'C.P.' },
     { field: 'segment',            label: 'Segmento',            defField: 'segment',             defOpts: [{ value: '', label: '— Sin segmento —' }, ...segments.map(s => ({ value: s, label: s }))] },
     { field: 'acquisition_channel',label: 'Canal',               defField: 'acquisition_channel', defOpts: ACQUISITION_CHANNELS },
-    { field: 'prospect_status',    label: 'Estado',              defField: 'prospect_status',     defOpts: STATUSES },
   ]
 
   return (
@@ -425,7 +398,6 @@ export default function Contactos() {
 
   // Search & filters within tab
   const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
   const [filterChannel, setFilterChannel] = useState('')
   const [showFilters, setShowFilters] = useState(false)
 
@@ -439,6 +411,14 @@ export default function Contactos() {
   const [bulkChannel, setBulkChannel] = useState('')
   const [bulkSaving, setBulkSaving] = useState(false)
 
+  // Scroll to top
+  const [showScrollTop, setShowScrollTop] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 400)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   // Exportar Excel
   const [exportOpen, setExportOpen] = useState(false)
   const exportRef = useRef<HTMLDivElement>(null)
@@ -450,8 +430,8 @@ export default function Contactos() {
   const xlsxInputRef = useRef<HTMLInputElement>(null)
 
   // Import wizard
-  const EMPTY_MAPPING: ImportMapping = { name: '', apellido: '', phone: '', email: '', company: '', address: '', postal_code: '', segment: '', acquisition_channel: '', prospect_status: '' }
-  const EMPTY_DEFAULTS: ImportDefaults = { segment: '', acquisition_channel: '', prospect_status: 'nuevo' }
+  const EMPTY_MAPPING: ImportMapping = { name: '', apellido: '', phone: '', email: '', company: '', address: '', postal_code: '', segment: '', acquisition_channel: '' }
+  const EMPTY_DEFAULTS: ImportDefaults = { segment: '', acquisition_channel: '' }
   const [importWizardOpen, setImportWizardOpen] = useState(false)
   const [importWizardType, setImportWizardType] = useState<'xlsx' | 'csv'>('xlsx')
   const [importWizardSheets, setImportWizardSheets] = useState<ImportSheet[]>([])
@@ -500,7 +480,7 @@ export default function Contactos() {
     return [
       { key: '__todos__', label: 'Todos', color: '#0369a1', count: contacts.length },
       ...segTabs,
-      ...(sinSeg > 0 ? [{ key: '__sin_segmento__', label: 'Sin segmento', color: '#9ca3af', count: sinSeg }] : []),
+      { key: '__sin_segmento__', label: 'Sin segmento', color: '#9ca3af', count: sinSeg },
     ]
   }, [contacts, segments])
 
@@ -524,7 +504,6 @@ export default function Contactos() {
         if (!(c.name?.toLowerCase().includes(q) || c.phone?.includes(q) ||
           c.company?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q))) return false
       }
-      if (filterStatus && c.prospect_status !== filterStatus) return false
       if (filterChannel && c.acquisition_channel !== filterChannel) return false
       return true
     }).sort((a, b) => {
@@ -533,7 +512,7 @@ export default function Contactos() {
       const cmp = String(va).localeCompare(String(vb), 'es', { numeric: true })
       return sortDir === 'asc' ? cmp : -cmp
     })
-  }, [contacts, activeTab, search, filterStatus, filterChannel, sortBy, sortDir])
+  }, [contacts, activeTab, search, filterChannel, sortBy, sortDir])
 
   const handleAdd = (data: typeof EMPTY_FORM) => {
     const segment = data.segment || (activeTab !== '__todos__' && activeTab !== '__sin_segmento__' ? activeTab : '')
@@ -566,21 +545,6 @@ export default function Contactos() {
     } catch { toast.error('Error al eliminar') }
   }
 
-  const handleStatusChange = async (id: string, newStatus: string) => {
-    setContacts(prev => prev.map(c => c.id === id ? { ...c, prospect_status: newStatus } : c))
-    try {
-      const res = await fetch(`/api/data/contacts/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prospect_status: newStatus }),
-      })
-      if (!res.ok) throw new Error()
-    } catch {
-      const original = contacts.find(x => x.id === id)?.prospect_status
-      setContacts(prev => prev.map(c => c.id === id ? { ...c, prospect_status: original } : c))
-      toast.error('Error al cambiar estado')
-    }
-  }
 
   const lastSelectedIdx = useRef<number>(-1)
 
@@ -744,14 +708,13 @@ export default function Contactos() {
       'Dirección':          c.address || '',
       'CP':                 c.postal_code || '',
       'Segmento':           c.segment || '',
-      'Estado prospecto':   c.prospect_status || '',
       'Canal adquisición':  c.acquisition_channel || '',
       'Fecha creación':     c.created_at ? new Date(c.created_at).toLocaleDateString('es-MX') : '',
     }))
 
     const ws = XLSX.utils.json_to_sheet(data)
     // Anchos de columna
-    ws['!cols'] = [20, 14, 28, 22, 32, 8, 16, 18, 20, 14].map(w => ({ wch: w }))
+    ws['!cols'] = [20, 14, 28, 22, 32, 8, 16, 20, 14].map(w => ({ wch: w }))
 
     const wb = XLSX.utils.book_new()
     const sheetName = segmentFilter === null ? 'Todos' : segmentFilter === '__sin__' ? 'Sin segmento' : segmentFilter.charAt(0).toUpperCase() + segmentFilter.slice(1)
@@ -782,21 +745,10 @@ export default function Contactos() {
     toast.success(`Backup descargado · ${contacts.length} contactos · ${segments.length} segmentos`)
   }
 
-  const activeFilters = [filterStatus, filterChannel].filter(Boolean).length
+  const activeFilters = [filterChannel].filter(Boolean).length
 
   const { theme } = useTheme()
   const isDark = theme === 'dark'
-
-  const statusSelectClass: Record<string, string> = {
-    nuevo:      'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-900/30 dark:text-blue-300',
-    contactado: 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-600 dark:bg-amber-900/30 dark:text-amber-300',
-    interesado: 'border-green-300 bg-green-50 text-green-700 dark:border-green-600 dark:bg-green-900/30 dark:text-green-300',
-    cliente:    'border-green-400 bg-green-100 text-green-800 dark:border-green-500 dark:bg-green-900/40 dark:text-green-200',
-    rechazado:  'border-red-300 bg-red-50 text-red-700 dark:border-red-600 dark:bg-red-900/30 dark:text-red-300',
-  }
-
-  const getStatusSelectClass = (status: string) =>
-    statusSelectClass[status] || 'border-gray-300 bg-gray-50 text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300'
 
   const handleSort = (field: string) => {
     if (sortBy === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -917,8 +869,8 @@ export default function Contactos() {
             </div>
           </div>
 
-          {/* Segment tabs — scrollable pills */}
-          <div className="flex gap-1.5 overflow-x-auto mt-4 mb-3 pb-1 -mx-3 px-3 sm:-mx-4 sm:px-4">
+          {/* Segment tabs — scroll on mobile, wrap on desktop */}
+          <div className="flex flex-nowrap overflow-x-auto gap-1.5 mt-4 mb-3 md:flex-wrap -mx-3 px-3 sm:-mx-4 sm:px-4 pb-1 no-scrollbar">
             {tabs.map(tab => {
               const isActive = activeTab === tab.key
               const color = tab.color || '#0369a1'
@@ -984,27 +936,18 @@ export default function Contactos() {
               {showFilters ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
             </button>
             {(search || activeFilters > 0) && (
-              <button onClick={() => { setSearch(''); setFilterStatus(''); setFilterChannel('') }} className="text-gray-400 hover:text-gray-600 px-1">
+              <button onClick={() => { setSearch(''); setFilterChannel('') }} className="text-gray-400 hover:text-gray-600 px-1">
                 <X size={16} />
               </button>
             )}
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-2 gap-3 mb-3 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm dark-mode-transition">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Estado</label>
-                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                  <option value="">Todos los estados</option>
-                  {STATUSES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Canal de adquisición</label>
-                <select value={filterChannel} onChange={e => setFilterChannel(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                  {channelOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-              </div>
+            <div className="mb-3 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm dark-mode-transition">
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">Canal de adquisición</label>
+              <select value={filterChannel} onChange={e => setFilterChannel(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                {channelOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
             </div>
           )}
 
@@ -1097,14 +1040,6 @@ export default function Contactos() {
                         {/* Row 1: name + status */}
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <p className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">{c.name}</p>
-                          <select
-                            value={c.prospect_status || 'nuevo'}
-                            onChange={e => handleStatusChange(c.id, e.target.value)}
-                            onClick={e => e.stopPropagation()}
-                            className={`text-xs font-semibold rounded-full border px-2 py-0.5 focus:outline-none cursor-pointer flex-shrink-0 ${getStatusSelectClass(c.prospect_status)}`}
-                          >
-                            {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                          </select>
                         </div>
 
                         {/* Row 2: phone */}
@@ -1177,7 +1112,6 @@ export default function Contactos() {
                         <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">Canal</th>
                         <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Segmento</th>
                         <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Descripción</th>
-                        <SortHeader field="prospect_status" label="Estado" />
                         <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Acciones</th>
                       </tr>
                     </thead>
@@ -1213,15 +1147,6 @@ export default function Contactos() {
                             {c.company
                               ? <span className="text-sm text-gray-600 dark:text-gray-300 truncate block">{c.company}</span>
                               : <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>}
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <select
-                              value={c.prospect_status || 'nuevo'}
-                              onChange={e => handleStatusChange(c.id, e.target.value)}
-                              className={`text-xs font-semibold rounded-full border px-2 py-0.5 focus:outline-none cursor-pointer whitespace-nowrap ${getStatusSelectClass(c.prospect_status)}`}
-                            >
-                              {STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                            </select>
                           </td>
                           <td className="px-3 py-2.5">
                             <div className="flex gap-1 items-center">
@@ -1273,6 +1198,17 @@ export default function Contactos() {
         onDefaultsChange={setImportWizardDefaults}
         onImport={handleImportWizardImport}
       />
+
+      {/* Scroll to top */}
+      {showScrollTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-36 right-4 z-40 w-10 h-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 rounded-full shadow-md flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition lg:bottom-6"
+          aria-label="Volver arriba"
+        >
+          <ArrowUp size={18} />
+        </button>
+      )}
 
       {/* FAB móvil: Nuevo Contacto */}
       <button
