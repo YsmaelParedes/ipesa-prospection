@@ -869,37 +869,56 @@ export default function Contactos() {
             </div>
           </div>
 
-          {/* Segment tabs — scroll on mobile, wrap on desktop */}
-          <div className="flex flex-nowrap overflow-x-auto gap-1.5 mt-4 mb-3 md:flex-wrap -mx-3 px-3 sm:-mx-4 sm:px-4 pb-1 no-scrollbar">
-            {tabs.map(tab => {
-              const isActive = activeTab === tab.key
-              const color = tab.color || '#0369a1'
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => { setActiveTab(tab.key); setSelected(new Set()); setSearch('') }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-all focus:outline-none"
-                  style={{
-                    backgroundColor: isActive ? color : (isDark ? '#1f2937' : '#ffffff'),
-                    color: isActive ? '#ffffff' : (isDark ? '#d1d5db' : '#374151'),
-                    boxShadow: isActive ? `0 2px 8px ${color}55` : (isDark ? '0 0 0 1.5px #374151' : '0 0 0 1.5px #e5e7eb'),
-                  }}
-                >
-                  {tab.key !== '__todos__' && tab.key !== '__sin_segmento__' && (
-                    <span className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: isActive ? 'rgba(255,255,255,0.65)' : color }} />
-                  )}
-                  {tab.label}
-                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
+          {/* Segment tabs — dropdown on mobile, pills on desktop */}
+          <div className="mt-4 mb-3">
+
+            {/* Mobile: dropdown */}
+            <div className="md:hidden">
+              <select
+                value={activeTab}
+                onChange={e => { setActiveTab(e.target.value); setSelected(new Set()); setSearch('') }}
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                {tabs.map(tab => (
+                  <option key={tab.key} value={tab.key}>
+                    {tab.label} ({tab.count.toLocaleString()})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Desktop: wrapping pills */}
+            <div className="hidden md:flex flex-wrap gap-1.5">
+              {tabs.map(tab => {
+                const isActive = activeTab === tab.key
+                const color = tab.color || '#0369a1'
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => { setActiveTab(tab.key); setSelected(new Set()); setSearch('') }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all focus:outline-none"
                     style={{
-                      backgroundColor: isActive ? 'rgba(255,255,255,0.22)' : (isDark ? '#374151' : '#f3f4f6'),
-                      color: isActive ? '#ffffff' : (isDark ? '#9ca3af' : '#6b7280'),
-                    }}>
-                    {tab.count.toLocaleString()}
-                  </span>
-                </button>
-              )
-            })}
+                      backgroundColor: isActive ? color : (isDark ? '#1f2937' : '#ffffff'),
+                      color: isActive ? '#ffffff' : (isDark ? '#d1d5db' : '#374151'),
+                      boxShadow: isActive ? `0 2px 8px ${color}55` : (isDark ? '0 0 0 1.5px #374151' : '0 0 0 1.5px #e5e7eb'),
+                    }}
+                  >
+                    {tab.key !== '__todos__' && tab.key !== '__sin_segmento__' && (
+                      <span className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: isActive ? 'rgba(255,255,255,0.65)' : color }} />
+                    )}
+                    {tab.label}
+                    <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
+                      style={{
+                        backgroundColor: isActive ? 'rgba(255,255,255,0.22)' : (isDark ? '#374151' : '#f3f4f6'),
+                        color: isActive ? '#ffffff' : (isDark ? '#9ca3af' : '#6b7280'),
+                      }}>
+                      {tab.count.toLocaleString()}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* Slide-over drawer: Nuevo Contacto */}
