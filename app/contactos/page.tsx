@@ -917,46 +917,32 @@ export default function Contactos() {
             </div>
           </div>
 
-          {/* Segment tabs — mobile: select, desktop: tab bar */}
-          <div className="md:hidden mb-3">
-            <select
-              value={activeTab}
-              onChange={e => { setActiveTab(e.target.value); setSelected(new Set()); setSearch('') }}
-              className="w-full px-3 py-2 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 dark-mode-transition"
-            >
-              {tabs.map(tab => (
-                <option key={tab.key} value={tab.key}>
-                  {tab.label} ({tab.count})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="hidden md:flex flex-wrap items-end gap-0 mb-0 border-b-2 border-gray-200 dark:border-gray-700">
+          {/* Segment tabs — scrollable pills */}
+          <div className="flex gap-1.5 overflow-x-auto mt-4 mb-3 pb-1 -mx-3 px-3 sm:-mx-4 sm:px-4">
             {tabs.map(tab => {
               const isActive = activeTab === tab.key
+              const color = tab.color || '#0369a1'
               return (
                 <button
                   key={tab.key}
                   onClick={() => { setActiveTab(tab.key); setSelected(new Set()); setSearch('') }}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-all border-b-2 -mb-0.5"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-all focus:outline-none"
                   style={{
-                    borderBottomColor: isActive ? (tab.color || '#0369a1') : 'transparent',
-                    color: isActive ? (tab.color || '#0369a1') : (isDark ? '#9ca3af' : '#6b7280'),
-                    backgroundColor: isActive ? (tab.color || '#0369a1') + '20' : 'transparent',
+                    backgroundColor: isActive ? color : (isDark ? '#1f2937' : '#ffffff'),
+                    color: isActive ? '#ffffff' : (isDark ? '#d1d5db' : '#374151'),
+                    boxShadow: isActive ? `0 2px 8px ${color}55` : (isDark ? '0 0 0 1.5px #374151' : '0 0 0 1.5px #e5e7eb'),
                   }}
                 >
                   {tab.key !== '__todos__' && tab.key !== '__sin_segmento__' && (
-                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: tab.color }} />
+                    <span className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: isActive ? 'rgba(255,255,255,0.65)' : color }} />
                   )}
                   {tab.label}
-                  <span
-                    className="text-xs font-bold px-1.5 py-0.5 rounded-full"
+                  <span className="text-xs font-bold px-1.5 py-0.5 rounded-full"
                     style={{
-                      backgroundColor: isActive ? (tab.color || '#0369a1') : (isDark ? '#374151' : '#e5e7eb'),
-                      color: isActive ? '#fff' : (isDark ? '#9ca3af' : '#6b7280'),
-                    }}
-                  >
+                      backgroundColor: isActive ? 'rgba(255,255,255,0.22)' : (isDark ? '#374151' : '#f3f4f6'),
+                      color: isActive ? '#ffffff' : (isDark ? '#9ca3af' : '#6b7280'),
+                    }}>
                     {tab.count.toLocaleString()}
                   </span>
                 </button>
