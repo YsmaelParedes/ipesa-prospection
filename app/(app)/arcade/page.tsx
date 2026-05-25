@@ -107,12 +107,12 @@ export default function ArcadePage() {
   const GY  = () => CH.current - GH()                 // ground Y
   const BX  = () => Math.floor(CW.current * 0.23)     // bird fixed X
   const BR  = () => Math.floor(CW.current * 0.067)    // bird visual radius
-  const BHR = () => BR() * 0.68                       // hitbox radius
-  const PW  = () => Math.floor(CW.current * 0.195)    // pipe width
-  const PG  = () => Math.floor(CH.current * 0.295)    // pipe gap
-  const PS  = () => CW.current * 0.0068               // pipe speed px/frame
-  const GRV = () => CH.current * 0.00082              // gravity px/frame²
-  const FLV = () => -(CH.current * 0.0195)            // flap velocity
+  const BHR = () => BR() * 0.52                       // hitbox radius (forgiving)
+  const PW  = () => Math.floor(CW.current * 0.180)    // pipe width
+  const PG  = () => Math.floor(CH.current * 0.340)    // pipe gap (bigger = easier)
+  const PS  = () => CW.current * 0.0058               // pipe speed px/frame (slower)
+  const GRV = () => CH.current * 0.00076              // gravity px/frame² (lighter)
+  const FLV = () => -(CH.current * 0.0190)            // flap velocity
   const MXV = () => CH.current * 0.026               // max fall velocity
 
   // ── Draw ──────────────────────────────────────────────────────────────────
@@ -297,7 +297,7 @@ export default function ArcadePage() {
 
     // Spawn pipe
     const now = Date.now()
-    if (now - lastPipeRef.current >= 1680) {
+    if (now - lastPipeRef.current >= 2000) {
       const minY = H * 0.26
       const maxY = gY - H * 0.26
       const gapY = minY + Math.random() * (maxY - minY)
@@ -465,9 +465,8 @@ export default function ArcadePage() {
 
           {/* Canvas */}
           <div
-            style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', boxShadow: '0 10px 48px rgba(0,0,0,0.38)', cursor: 'pointer', userSelect: 'none' }}
-            onClick={flap}
-            onTouchStart={e => { e.preventDefault(); flap() }}
+            style={{ position: 'relative', borderRadius: 18, overflow: 'hidden', boxShadow: '0 10px 48px rgba(0,0,0,0.38)', cursor: 'pointer', userSelect: 'none', touchAction: 'none' }}
+            onPointerDown={e => { e.preventDefault(); flap() }}
           >
             <canvas
               ref={canvasRef}
