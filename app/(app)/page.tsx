@@ -2,10 +2,19 @@
 
 import { useEffect, useState } from 'react'
 import { Avatar, CanalChip, EstadoChip, SegmentoChip, TrendIcon, Donut, fmtDate, segColor } from '@/components/IpesaUI'
+import { getDisplayName } from '@/lib/profile'
+
+function greeting(name: string): { text: string; emoji: string } {
+  const h = new Date().getHours()
+  if (h >= 6  && h < 12) return { text: `¡Buenos días, ${name}!`,   emoji: '☀️' }
+  if (h >= 12 && h < 19) return { text: `¡Buenas tardes, ${name}!`, emoji: '🎨' }
+  return                         { text: `¡Buenas noches, ${name}!`, emoji: '🌙' }
+}
 
 export default function DashboardPage() {
-  const [data, setData] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const [data,        setData]        = useState<any>(null)
+  const [loading,     setLoading]     = useState(true)
+  const [displayName, setDisplayName] = useState('')
 
   useEffect(() => {
     fetch('/api/data/dashboard')
@@ -13,6 +22,10 @@ export default function DashboardPage() {
       .then(setData)
       .catch(console.error)
       .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    getDisplayName().then(setDisplayName)
   }, [])
 
   if (loading) return (
@@ -35,8 +48,30 @@ export default function DashboardPage() {
     'Redes Sociales': '#B6589C', 'Campaña Pagada': '#1F3A5F', 'Otro': '#80766B',
   }
 
+  const g = displayName ? greeting(displayName) : null
+
   return (
     <>
+      {/* Saludo personalizado */}
+      {g && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24,
+          padding: '18px 22px', background: 'var(--card)',
+          border: '1px solid var(--line)', borderRadius: 16,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+        }}>
+          <span style={{ fontSize: 32, lineHeight: 1 }}>{g.emoji}</span>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)', lineHeight: 1.2 }}>
+              {g.text}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 3 }}>
+              Aquí tienes el resumen de hoy en IPESA Pinturas
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* KPIs */}
       <div className="kpi-grid">
         <KpiCard label="Contactos totales"  value={m.totalContacts  ?? 0} trend="up"   delta="+8%"  color="#1F3A5F" />

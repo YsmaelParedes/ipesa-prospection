@@ -1,7 +1,7 @@
 // ── IPESA CRM — Service Worker ────────────────────────────────────────────
 // Versión: v1 — actualizar al hacer cambios importantes
-const CACHE_NAME = 'ipesa-v1'
-const PRECACHE   = ['/', '/manifest.json', '/ipesa-logo.png']
+const CACHE_NAME = 'ipesa-v2'
+const PRECACHE   = ['/', '/manifest.json', '/apple-touch-icon.png', '/icon-192.png', '/icon-512.png']
 
 // ── Install: pre-cachear assets básicos ──────────────────────────────────
 self.addEventListener('install', e => {
@@ -65,8 +65,8 @@ self.addEventListener('push', e => {
   e.waitUntil(
     self.registration.showNotification(payload.title, {
       body:             payload.body,
-      icon:             '/ipesa-logo.png',
-      badge:            '/ipesa-logo.png',
+      icon:             '/icon-192.png',
+      badge:            '/icon-192.png',
       tag:              'ipesa-reminder',
       requireInteraction: true,
       vibrate:          [200, 100, 200],

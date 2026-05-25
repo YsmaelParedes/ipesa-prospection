@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import { getDisplayName } from '@/lib/profile'
 
-/* ── Helpers Push Notifications ─────────────────────────────────────────── */
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
@@ -11,6 +12,21 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const output  = new Uint8Array(raw.length)
   for (let i = 0; i < raw.length; i++) output[i] = raw.charCodeAt(i)
   return output.buffer as ArrayBuffer
+}
+
+// Hora LOCAL en formato YYYY-MM-DDTHH:MM (para min en datetime-local)
+function localDatetimeMin(): string {
+  const d   = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// Convierte valor de datetime-local ("YYYY-MM-DDTHH:MM") al formato para guardar en BD
+// La columna reminder_date es timestamp SIN zona horaria → guardar hora LOCAL directamente
+// NO convertir a UTC: si conviertes, PostgreSQL almacena la UTC como si fuera local
+function datetimeLocalToISO(value: string): string {
+  // "2026-05-25T13:02" → "2026-05-25T13:02:00"
+  return value + ':00'
 }
 
 /* ── Iconos ── */
@@ -26,6 +42,7 @@ const Icon = {
   search:    (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>,
   clock:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
   check:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m5 13 4 4L19 7"/></svg>,
+  arcade:    (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><rect x="2" y="6" width="20" height="14" rx="4"/><path d="M8 13h2m-1-1v2"/><circle cx="16" cy="13" r="1" fill="currentColor"/><circle cx="14" cy="11" r="1" fill="currentColor"/><path d="M9 6V4h6v2"/></svg>,
 }
 
 function initials(name: string) {
@@ -52,6 +69,7 @@ const NAV_ITEMS = [
   { id: 'dashboard',      href: '/',                label: 'Dashboard',      icon: Icon.dashboard, mobile: true  },
   { id: 'contactos',      href: '/contactos',       label: 'Contactos',      icon: Icon.contacts,  mobile: true  },
   { id: 'leads',          href: '/leads',           label: 'Leads',          icon: Icon.leads,     mobile: true  },
+  { id: 'arcade',         href: '/arcade',          label: 'Arcade',         icon: Icon.arcade,    mobile: true  },
   { id: 'recordatorios',  href: '/recordatorios',   label: 'Recordatorios',  icon: Icon.clock,     mobile: false },
   { id: 'configuracion',  href: '/configuracion',   label: 'Configuración',  icon: Icon.settings,  mobile: false },
 ]
@@ -60,8 +78,9 @@ const TITLE_MAP: Record<string, { t: string; s: string }> = {
   '/':               { t: 'Dashboard',         s: 'Resumen de actividad'             },
   '/contactos':      { t: 'Contactos',         s: 'Base de clientes registrados'     },
   '/leads':          { t: 'Pipeline de leads', s: 'Gestión de oportunidades'         },
+  '/arcade':         { t: 'Arcade',            s: 'Competencia del staff — IPESA'    },
   '/recordatorios':  { t: 'Recordatorios',     s: 'Seguimiento y tareas pendientes'  },
-  '/configuracion':  { t: 'Configuración',     s: 'Segmentos y canales de la app'    },
+  '/configuracion':  { t: 'Configuración',     s: 'Perfil, segmentos y canales'      },
 }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -84,14 +103,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [pushSupported,   setPushSupported]   = useState(false)
   const [pushSubscribed,  setPushSubscribed]  = useState(false)
   const [pushLoading,     setPushLoading]     = useState(false)
-  const swRegRef = useRef<ServiceWorkerRegistration | null>(null)
+  const [pushError,       setPushError]       = useState('')
+  const swRegRef     = useRef<ServiceWorkerRegistration | null>(null)
+  const notifiedRef  = useRef<Set<string>>(new Set())  // IDs ya notificados esta sesión
 
   const bellRef   = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  /* Display name */
+  /* Display name — desde user_metadata */
   useEffect(() => {
-    try { const s = localStorage.getItem('ipesa_display_name'); if (s) setDisplayName(s) } catch {}
+    getDisplayName().then(setDisplayName)
+  }, [])
+
+  /* Refresca el nombre cuando alguien lo actualiza desde Configuración */
+  useEffect(() => {
+    const refresh = () => getDisplayName().then(setDisplayName)
+    window.addEventListener('ipesa:profile-updated', refresh)
+    return () => window.removeEventListener('ipesa:profile-updated', refresh)
   }, [])
 
   /* Registrar Service Worker + detectar estado de push */
@@ -112,9 +140,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const enablePush = async () => {
     if (!swRegRef.current) return
     setPushLoading(true)
+    setPushError('')
     try {
       const permission = await Notification.requestPermission()
-      if (permission !== 'granted') { setPushLoading(false); return }
+      if (permission !== 'granted') {
+        setPushError('Permiso denegado. Actívalo en Ajustes del navegador.')
+        setPushLoading(false)
+        return
+      }
 
       const VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
       if (!VAPID_KEY) throw new Error('VAPID key no configurada')
@@ -124,14 +157,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         applicationServerKey: urlBase64ToUint8Array(VAPID_KEY),
       })
 
-      await fetch('/api/push/subscribe', {
+      const res = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sub.toJSON()),
       })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `Error ${res.status} al guardar suscripción`)
+      }
+
       setPushSubscribed(true)
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Push] Error al activar:', err)
+      setPushError(err.message || 'Error al activar notificaciones')
     } finally {
       setPushLoading(false)
     }
@@ -141,6 +181,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const disablePush = async () => {
     if (!swRegRef.current) return
     setPushLoading(true)
+    setPushError('')
     try {
       const sub = await swRegRef.current.pushManager.getSubscription()
       if (sub) {
@@ -157,12 +198,46 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }
 
-  /* Load pending reminders */
+  /* Notificación de prueba (verifica que todo funcione) */
+  const testPush = async () => {
+    if (!swRegRef.current || Notification.permission !== 'granted') return
+    await swRegRef.current.showNotification('🔔 IPESA — Prueba exitosa', {
+      body: 'Las notificaciones están configuradas correctamente.',
+      icon: '/ipesa-logo.png',
+      badge: '/ipesa-logo.png',
+      data: { url: '/recordatorios' },
+    })
+  }
+
+  /* Load pending reminders + disparar notificación si alguno vence ahora */
   const loadReminders = useCallback(async () => {
     try {
       const r = await fetch('/api/data/reminders')
       const d = await r.json()
-      setReminders((d.reminders || []).filter((r: any) => !r.completado))
+      const pending = (d.reminders || []).filter((rem: any) => !rem.completado)
+      setReminders(pending)
+
+      // Notificación local cuando la app está abierta y el recordatorio vence
+      if (Notification.permission === 'granted' && swRegRef.current) {
+        const now = Date.now()
+        for (const rem of pending) {
+          const due = new Date(rem.fecha_recordatorio).getTime()
+          // Vence en los próximos 65s o venció hace menos de 65s, y no notificado aún
+          if (Math.abs(due - now) <= 65_000 && !notifiedRef.current.has(rem.id)) {
+            notifiedRef.current.add(rem.id)
+            const nota  = rem.nota || rem.lead_name || 'Recordatorio pendiente'
+            const title = due <= now ? '⏰ Recordatorio vencido' : '🔔 Recordatorio próximo'
+            swRegRef.current.showNotification(title, {
+              body:             nota,
+              icon:             '/ipesa-logo.png',
+              badge:            '/ipesa-logo.png',
+              tag:              `rem-${rem.id}`,
+              requireInteraction: true,
+              data:             { url: '/recordatorios' },
+            })
+          }
+        }
+      }
     } catch {}
   }, [])
 
@@ -211,7 +286,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           lead_id: null,
           lead_name: remNota.trim() || 'Recordatorio',
           nota: remNota.trim(),
-          fecha_recordatorio: new Date(remFecha).toISOString(),
+          fecha_recordatorio: datetimeLocalToISO(remFecha),
         }),
       })
       setRemFecha(''); setRemNota(''); setRemForm(false)
@@ -228,7 +303,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
-    try { localStorage.removeItem('ipesa_display_name') } catch {}
     router.push('/login')
     router.refresh()
   }
@@ -363,7 +437,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         type="datetime-local"
                         value={remFecha}
                         onChange={e => setRemFecha(e.target.value)}
-                        min={new Date().toISOString().slice(0, 16)}
+                        min={localDatetimeMin()}
                         style={{ width: '100%', padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 12.5, outline: 'none', background: '#fff', marginBottom: 8, boxSizing: 'border-box' }}
                       />
                       <button
@@ -405,26 +479,46 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
                   {/* Toggle push notifications */}
                   {pushSupported && (
-                    <div style={{
-                      borderTop: '1px solid var(--line)', padding: '10px 14px',
-                      display: 'flex', alignItems: 'center', gap: 8,
-                    }}>
-                      <span style={{ fontSize: 14 }}>{pushSubscribed ? '🔔' : '🔕'}</span>
-                      <span style={{ fontSize: 12, color: 'var(--muted)', flex: 1 }}>
-                        {pushSubscribed ? 'Notificaciones activas' : 'Recibir alertas aunque la app esté cerrada'}
-                      </span>
-                      <button
-                        onClick={pushSubscribed ? disablePush : enablePush}
-                        disabled={pushLoading}
-                        style={{
-                          padding: '4px 10px', fontSize: 11.5, fontWeight: 700, borderRadius: 6,
-                          cursor: pushLoading ? 'default' : 'pointer', border: 'none',
-                          background: pushSubscribed ? 'var(--ipesa-rose-soft)' : 'var(--ipesa-orange-soft)',
-                          color:      pushSubscribed ? 'var(--ipesa-rose)'     : 'var(--ipesa-orange)',
-                          opacity: pushLoading ? 0.6 : 1,
+                    <div style={{ borderTop: '1px solid var(--line)', padding: '10px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 14 }}>{pushSubscribed ? '🔔' : '🔕'}</span>
+                        <span style={{ fontSize: 12, color: 'var(--muted)', flex: 1, lineHeight: 1.3 }}>
+                          {pushSubscribed ? 'Notificaciones activas' : 'Alertas cuando la app esté cerrada'}
+                        </span>
+                        {pushSubscribed && (
+                          <button
+                            onClick={testPush}
+                            title="Enviar notificación de prueba"
+                            style={{
+                              padding: '4px 8px', fontSize: 11, fontWeight: 600, borderRadius: 6,
+                              cursor: 'pointer', border: '1px solid var(--line)',
+                              background: 'none', color: 'var(--muted)',
+                            }}>
+                            Test
+                          </button>
+                        )}
+                        <button
+                          onClick={pushSubscribed ? disablePush : enablePush}
+                          disabled={pushLoading}
+                          style={{
+                            padding: '4px 10px', fontSize: 11.5, fontWeight: 700, borderRadius: 6,
+                            cursor: pushLoading ? 'default' : 'pointer', border: 'none',
+                            background: pushSubscribed ? 'var(--ipesa-rose-soft)' : 'var(--ipesa-orange-soft)',
+                            color:      pushSubscribed ? 'var(--ipesa-rose)'     : 'var(--ipesa-orange)',
+                            opacity: pushLoading ? 0.6 : 1,
+                          }}>
+                          {pushLoading ? '…' : pushSubscribed ? 'Desactivar' : 'Activar'}
+                        </button>
+                      </div>
+                      {pushError && (
+                        <div style={{
+                          marginTop: 8, padding: '6px 10px', borderRadius: 6,
+                          background: 'var(--ipesa-rose-soft)', color: 'var(--ipesa-rose)',
+                          fontSize: 11.5, fontWeight: 600, lineHeight: 1.4,
                         }}>
-                        {pushLoading ? '…' : pushSubscribed ? 'Desactivar' : 'Activar'}
-                      </button>
+                          ⚠️ {pushError}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -456,14 +550,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         })}
       </nav>
 
-      {/* ── FAB ── */}
-      <button
-        className="fab"
-        onClick={() => window.dispatchEvent(new CustomEvent('ipesa:new-contact'))}
-        aria-label="Nuevo contacto"
-      >
-        <Icon.plus />
-      </button>
+      {/* ── FAB — solo en Contactos ── */}
+      {isContactos && (
+        <button
+          className="fab"
+          onClick={() => window.dispatchEvent(new CustomEvent('ipesa:new-contact'))}
+          aria-label="Nuevo contacto"
+        >
+          <Icon.plus />
+        </button>
+      )}
     </div>
   )
 }

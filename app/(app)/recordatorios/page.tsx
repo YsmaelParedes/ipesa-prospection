@@ -11,6 +11,7 @@ const Ico = {
   lead:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12 }}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
   close:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}><path d="M18 6 6 18M6 6l12 12"/></svg>,
   empty:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 40, height: 40 }}><circle cx="12" cy="12" r="10"/><path d="m5 13 4 4L19 7"/></svg>,
+  edit:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
 }
 
 type Reminder = {
@@ -42,16 +43,27 @@ function fmtTime(iso: string) {
 }
 
 function fmtLabel(iso: string) {
-  const d = new Date(iso)
-  const now = new Date()
+  const d       = new Date(iso)
+  const now     = new Date()
+  const diff    = d.getTime() - now.getTime()
+  const absDiff = Math.abs(diff)
+
+  // Relativo cuando faltan/pasaron menos de 2 horas
+  if (absDiff < 2 * 3_600_000) {
+    // "¡Ahora!" solo si faltan/pasaron ≤ 45 segundos
+    if (absDiff <= 45_000) return '¡Ahora!'
+    const mins = Math.floor(absDiff / 60_000)
+    if (diff > 0) return `En ${mins} min`
+    return `Hace ${mins} min`
+  }
+
   if (isToday(d))    return `Hoy · ${fmtTime(iso)}`
   if (isTomorrow(d)) return `Mañana · ${fmtTime(iso)}`
-  const diff = d.getTime() - now.getTime()
   if (diff < 0) {
-    const days = Math.ceil(Math.abs(diff) / 86400000)
+    const days = Math.ceil(absDiff / 86_400_000)
     return days === 1 ? `Ayer · ${fmtTime(iso)}` : `Hace ${days} días · ${fmtTime(iso)}`
   }
-  const days = Math.floor(diff / 86400000)
+  const days = Math.floor(diff / 86_400_000)
   if (days < 7) return `En ${days} día${days !== 1 ? 's' : ''} · ${fmtTime(iso)}`
   return `${d.getDate()} ${MESES[d.getMonth()]} · ${fmtTime(iso)}`
 }
@@ -64,50 +76,100 @@ function fmtCompletado(iso: string | null) {
 
 /* ── Tarjeta de recordatorio ── */
 function RemCard({
-  r, accent, onComplete, onDelete,
+  r, accent, onComplete, onDelete, onEdit,
 }: {
   r: Reminder; accent: string;
-  onComplete?: () => void; onDelete: () => void;
+  onComplete?: () => void;
+  onDelete:    () => void;
+  onEdit?:     (id: string, nota: string, fecha: string) => Promise<void>;
 }) {
-  const [confirmDel, setConfirmDel] = useState(false)
+  const [confirmDel,  setConfirmDel]  = useState(false)
+  const [editing,     setEditing]     = useState(false)
+  const [editNota,    setEditNota]    = useState(r.nota || r.lead_name || '')
+  const [editFecha,   setEditFecha]   = useState(r.fecha_recordatorio.slice(0, 16))
+  const [saving,      setSaving]      = useState(false)
+  const editRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { if (editing) editRef.current?.focus() }, [editing])
+
   const title = r.nota || r.lead_name || 'Recordatorio'
   const sub   = r.nota && r.lead_name && r.nota !== r.lead_name ? r.lead_name : null
 
+  const handleEditSave = async () => {
+    if (!editNota.trim() || !editFecha || !onEdit) return
+    setSaving(true)
+    await onEdit(r.id, editNota.trim(), editFecha)
+    setSaving(false)
+    setEditing(false)
+  }
+
+  /* ── Modo edición ── */
+  if (editing) {
+    return (
+      <div style={{
+        display: 'flex', gap: 0,
+        background: 'var(--card)', border: '1px solid var(--ipesa-orange)',
+        borderRadius: 12, overflow: 'hidden',
+        boxShadow: '0 0 0 2px var(--ipesa-orange-soft)',
+      }}>
+        <div style={{ width: 4, background: 'var(--ipesa-orange)', flexShrink: 0 }} />
+        <div style={{ flex: 1, padding: '12px 14px' }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>
+            Editar recordatorio
+          </div>
+          <input
+            ref={editRef}
+            value={editNota}
+            onChange={e => setEditNota(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleEditSave(); if (e.key === 'Escape') setEditing(false) }}
+            placeholder="Descripción"
+            style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 13.5, outline: 'none', background: 'var(--paper)', marginBottom: 8, boxSizing: 'border-box' }}
+          />
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            <input
+              type="datetime-local"
+              value={editFecha}
+              onChange={e => setEditFecha(e.target.value)}
+              min={localDatetimeMin()}
+              style={{ flex: 1, minWidth: 160, padding: '8px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 13, outline: 'none', background: 'var(--paper)' }}
+            />
+            <button onClick={() => setEditing(false)} style={{ padding: '8px 12px', fontSize: 12.5, fontWeight: 600, color: 'var(--muted)', cursor: 'pointer', border: '1px solid var(--line)', borderRadius: 7, background: 'none' }}>
+              Cancelar
+            </button>
+            <button
+              onClick={handleEditSave}
+              disabled={!editNota.trim() || !editFecha || saving}
+              className="btn btn-primary"
+              style={{ fontSize: 12.5 }}>
+              {saving ? 'Guardando…' : <><Ico.check /> Guardar</>}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Modo normal ── */
   return (
     <div style={{
       display: 'flex', gap: 0,
       background: 'var(--card)', border: '1px solid var(--line)',
       borderRadius: 12, overflow: 'hidden',
       boxShadow: 'var(--shadow-sm)',
-      transition: 'box-shadow 0.15s',
     }}>
-      {/* Barra de color lateral */}
       <div style={{ width: 4, background: accent, flexShrink: 0 }} />
 
-      {/* Contenido */}
       <div style={{ flex: 1, padding: '12px 14px', minWidth: 0 }}>
         <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--ink)', marginBottom: 4, lineHeight: 1.35 }}>
           {title}
         </div>
-
-        {/* Lead vinculado */}
         {r.lead_id && (
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            fontSize: 11, color: 'var(--ipesa-blue)', fontWeight: 600,
-            background: 'var(--ipesa-blue-soft)', borderRadius: 20,
-            padding: '2px 8px', marginBottom: 5,
-          }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--ipesa-blue)', fontWeight: 600, background: 'var(--ipesa-blue-soft)', borderRadius: 20, padding: '2px 8px', marginBottom: 5 }}>
             <Ico.lead /> Lead: {sub || r.lead_name}
           </div>
         )}
-
-        {/* Fecha */}
         {!r.completado ? (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            fontSize: 12, color: accent, fontWeight: 600,
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: accent, fontWeight: 600 }}>
             <Ico.clock /> {fmtLabel(r.fecha_recordatorio)}
           </div>
         ) : (
@@ -117,48 +179,29 @@ function RemCard({
         )}
       </div>
 
-      {/* Acciones */}
-      <div style={{
-        display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        gap: 4, padding: '10px 12px', flexShrink: 0, borderLeft: '1px solid var(--line)',
-      }}>
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, padding: '10px 12px', flexShrink: 0, borderLeft: '1px solid var(--line)' }}>
         {confirmDel ? (
           <>
-            <button
-              onClick={() => { onDelete(); setConfirmDel(false) }}
-              style={{ padding: '4px 10px', fontSize: 11.5, fontWeight: 700, color: '#fff', background: 'var(--ipesa-rose)', border: 'none', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <button onClick={() => { onDelete(); setConfirmDel(false) }} style={{ padding: '4px 10px', fontSize: 11.5, fontWeight: 700, color: '#fff', background: 'var(--ipesa-rose)', border: 'none', borderRadius: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
               Sí, borrar
             </button>
-            <button
-              onClick={() => setConfirmDel(false)}
-              style={{ padding: '4px 10px', fontSize: 11.5, fontWeight: 600, color: 'var(--muted)', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 6, cursor: 'pointer' }}>
+            <button onClick={() => setConfirmDel(false)} style={{ padding: '4px 10px', fontSize: 11.5, fontWeight: 600, color: 'var(--muted)', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 6, cursor: 'pointer' }}>
               Cancelar
             </button>
           </>
         ) : (
           <>
             {onComplete && (
-              <button
-                onClick={onComplete}
-                title="Marcar como completado"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 4,
-                  padding: '5px 10px', fontSize: 12, fontWeight: 600,
-                  color: 'var(--ipesa-green)', background: 'var(--ipesa-green-soft)',
-                  border: 'none', borderRadius: 7, cursor: 'pointer', whiteSpace: 'nowrap',
-                }}>
+              <button onClick={onComplete} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', fontSize: 12, fontWeight: 600, color: 'var(--ipesa-green)', background: 'var(--ipesa-green-soft)', border: 'none', borderRadius: 7, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 <Ico.check /> Listo
               </button>
             )}
-            <button
-              onClick={() => setConfirmDel(true)}
-              title="Eliminar"
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '5px 10px', fontSize: 12, fontWeight: 600,
-                color: 'var(--muted)', background: 'none',
-                border: '1px solid var(--line)', borderRadius: 7, cursor: 'pointer',
-              }}>
+            {onEdit && !r.completado && (
+              <button onClick={() => setEditing(true)} title="Editar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 10px', color: 'var(--ipesa-blue)', background: 'var(--ipesa-blue-soft)', border: 'none', borderRadius: 7, cursor: 'pointer' }}>
+                <Ico.edit />
+              </button>
+            )}
+            <button onClick={() => setConfirmDel(true)} title="Eliminar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '5px 10px', color: 'var(--muted)', background: 'none', border: '1px solid var(--line)', borderRadius: 7, cursor: 'pointer' }}>
               <Ico.trash />
             </button>
           </>
@@ -169,26 +212,20 @@ function RemCard({
 }
 
 /* ── Grupo con encabezado ── */
-function RemGroup({ label, color, icon, items, onComplete, onDelete }: {
+function RemGroup({ label, color, icon, items, onComplete, onDelete, onEdit }: {
   label: string; color: string; icon: string;
   items: Reminder[];
   onComplete: (id: string) => void;
   onDelete:   (id: string) => void;
+  onEdit:     (id: string, nota: string, fecha: string) => Promise<void>;
 }) {
   if (items.length === 0) return null
   return (
     <div style={{ marginBottom: 28 }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 7,
-        marginBottom: 10,
-      }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
         <span style={{ fontSize: 15 }}>{icon}</span>
         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color }}>{label}</span>
-        <span style={{
-          fontSize: 11, fontWeight: 700, color: 'var(--muted)',
-          background: 'var(--paper)', border: '1px solid var(--line)',
-          borderRadius: 20, padding: '1px 7px',
-        }}>{items.length}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 20, padding: '1px 7px' }}>{items.length}</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {items.map(r => (
@@ -198,11 +235,25 @@ function RemGroup({ label, color, icon, items, onComplete, onDelete }: {
             accent={color}
             onComplete={() => onComplete(r.id)}
             onDelete={() => onDelete(r.id)}
+            onEdit={onEdit}
           />
         ))}
       </div>
     </div>
   )
+}
+
+/* Devuelve la hora LOCAL en formato YYYY-MM-DDTHH:MM (requerido por datetime-local min) */
+function localDatetimeMin(): string {
+  const d   = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+/* Convierte valor de datetime-local a string para la BD
+   La columna reminder_date es timestamp SIN zona horaria → guardar hora LOCAL, no UTC */
+function datetimeLocalToISO(value: string): string {
+  return value + ':00'
 }
 
 /* ── Formulario inline de nuevo recordatorio ── */
@@ -216,7 +267,7 @@ function NuevoForm({ onSave, onCancel }: {
 
   useEffect(() => { inputRef.current?.focus() }, [])
 
-  const minDate = new Date().toISOString().slice(0, 16)
+  const minDate = localDatetimeMin()
 
   const handleSave = async () => {
     if (!nota.trim() || !fecha) return
@@ -302,7 +353,7 @@ export default function RecordatoriosPage() {
         lead_id: null,
         lead_name: nota,
         nota,
-        fecha_recordatorio: new Date(fecha).toISOString(),
+        fecha_recordatorio: datetimeLocalToISO(fecha),
       }),
     })
     setShowForm(false)
@@ -326,14 +377,31 @@ export default function RecordatoriosPage() {
     await load()
   }
 
-  /* Clasificación */
-  const now      = new Date()
-  const pending  = reminders.filter(r => !r.completado).sort((a, b) => new Date(a.fecha_recordatorio).getTime() - new Date(b.fecha_recordatorio).getTime())
-  const done     = reminders.filter(r =>  r.completado).sort((a, b) => new Date(b.completado_at || b.created_at).getTime() - new Date(a.completado_at || a.created_at).getTime())
+  const handleEdit = async (id: string, nota: string, fecha: string) => {
+    await fetch(`/api/data/reminders/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nota,
+        lead_name: nota,
+        fecha_recordatorio: datetimeLocalToISO(fecha),
+      }),
+    })
+    showToast('Recordatorio actualizado ✓')
+    await load()
+  }
 
-  const overdue  = pending.filter(r => new Date(r.fecha_recordatorio) < now && !isToday(new Date(r.fecha_recordatorio)))
-  const todayRem = pending.filter(r => isToday(new Date(r.fecha_recordatorio)))
-  const upcoming = pending.filter(r => new Date(r.fecha_recordatorio) >= now && !isToday(new Date(r.fecha_recordatorio)))
+  /* Clasificación — overdue incluye los de HOY que ya pasaron */
+  const now     = new Date()
+  const pending = reminders.filter(r => !r.completado).sort((a, b) => new Date(a.fecha_recordatorio).getTime() - new Date(b.fecha_recordatorio).getTime())
+  const done    = reminders.filter(r =>  r.completado).sort((a, b) => new Date(b.completado_at || b.created_at).getTime() - new Date(a.completado_at || a.created_at).getTime())
+
+  // Vencido: la hora ya pasó (incluye hoy pasados)
+  const overdue  = pending.filter(r => new Date(r.fecha_recordatorio) < now)
+  // Hoy pendiente: hoy pero todavía no llega la hora
+  const todayRem = pending.filter(r => { const d = new Date(r.fecha_recordatorio); return d >= now && isToday(d) })
+  // Próximos: días futuros
+  const upcoming = pending.filter(r => { const d = new Date(r.fecha_recordatorio); return d >= now && !isToday(d) })
 
   return (
     <>
@@ -417,6 +485,7 @@ export default function RecordatoriosPage() {
               items={overdue}
               onComplete={handleComplete}
               onDelete={handleDelete}
+              onEdit={handleEdit}
             />
             <RemGroup
               label="Hoy"
@@ -425,6 +494,7 @@ export default function RecordatoriosPage() {
               items={todayRem}
               onComplete={handleComplete}
               onDelete={handleDelete}
+              onEdit={handleEdit}
             />
             <RemGroup
               label="Próximos"
@@ -433,6 +503,7 @@ export default function RecordatoriosPage() {
               items={upcoming}
               onComplete={handleComplete}
               onDelete={handleDelete}
+              onEdit={handleEdit}
             />
           </>
         )
