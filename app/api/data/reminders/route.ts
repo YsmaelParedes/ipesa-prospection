@@ -1,42 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/supabase-server'
 
+// ── El campo en la BD se llama reminder_date.
+// ── El resto de la app usa fecha_recordatorio.
+// ── Este archivo hace el mapeo en ambas direcciones.
+
+function toApp(r: any) {
+  if (!r) return r
+  const { reminder_date, ...rest } = r
+  return { ...rest, fecha_recordatorio: reminder_date ?? r.fecha_recordatorio }
+}
+
+function toDB(body: any) {
+  const { fecha_recordatorio, ...rest } = body
+  return { ...rest, ...(fecha_recordatorio !== undefined ? { reminder_date: fecha_recordatorio } : {}) }
+}
+
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = req.nextUrl
-    const pending = searchParams.get('pending')
-
     const supabase = getServerSupabase()
-    let query = supabase
+    const leadId = req.nextUrl.searchParams.get('lead_id')
+
+    let q = supabase
       .from('reminders')
-      .select('*, contacts(name, phone, company), campaigns(name)')
+      .select('*')
       .order('reminder_date', { ascending: true })
 
-    if (pending === 'true') {
-      query = query
-        .eq('is_completed', false)
-        .lte('reminder_date', new Date().toISOString())
-    }
+    if (leadId) q = q.eq('lead_id', leadId)
 
-    const { data, error } = await query
+    const { data, error } = await q
     if (error) throw error
-    return NextResponse.json({ reminders: data })
+    return NextResponse.json({ reminders: (data ?? []).map(toApp) })
   } catch (error: any) {
-    return NextResponse.json({ error: 'Error al obtener recordatorios' }, { status: 500 })
+    console.error('[GET /api/data/reminders]', error?.message)
+    return NextResponse.json({ error: error?.message ?? 'Error al obtener recordatorios' }, { status: 500 })
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const reminder = await req.json()
+    const body = await req.json()
     const supabase = getServerSupabase()
     const { data, error } = await supabase
       .from('reminders')
-      .insert([reminder])
+      .insert([toDB(body)])
       .select()
     if (error) throw error
-    return NextResponse.json(data)
+    return NextResponse.json(toApp(data?.[0]) ?? {})
   } catch (error: any) {
-    return NextResponse.json({ error: 'Error al crear recordatorio' }, { status: 500 })
+    console.error('[POST /api/data/reminders]', error?.message)
+    return NextResponse.json({ error: error?.message ?? 'Error al crear recordatorio' }, { status: 500 })
   }
 }

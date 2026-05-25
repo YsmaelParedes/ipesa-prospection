@@ -2,13 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff, Lock } from 'lucide-react'
 
 export default function LoginPage() {
+  const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
-  const [show, setShow] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [showPass, setShowPass] = useState(false)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,75 +19,100 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Error al iniciar sesión')
+        setError(data.error || 'Credenciales incorrectas. Verifica tu correo y contraseña.')
         return
       }
+      // Derive display name from email (before @)
+      try {
+        const raw = email.split('@')[0].replace(/[._-]/g, ' ')
+        const name = raw.replace(/\b\w/g, l => l.toUpperCase())
+        localStorage.setItem('ipesa_display_name', name)
+      } catch {}
       router.push('/')
       router.refresh()
     } catch {
-      setError('Error de conexión')
+      setError('Error de conexión. Intenta de nuevo.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        {/* Logo / título */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 mb-4 shadow-lg">
-            <Lock className="text-white" size={26} />
+    <div className="login-shell">
+      <div className="login-form-wrap">
+        <form className="login-form" onSubmit={handleSubmit}>
+          <div className="login-form-brand">
+            <img
+              src="/ipesa-logo.png"
+              alt="IPESA Pinturas"
+              style={{ height: 64, objectFit: 'contain', display: 'block', margin: '0 auto' }}
+            />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">IPESA Prospección</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Acceso restringido al equipo interno</p>
-        </div>
 
-        {/* Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 border border-gray-100 dark:border-gray-700">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Contraseña
-              </label>
-              <div className="relative">
-                <input
-                  type={show ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="Ingresa la contraseña"
-                  required
-                  autoFocus
-                  className="w-full px-4 py-2.5 pr-10 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShow(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition"
-                >
-                  {show ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
+          <h2 className="login-form-title">Acceso staff</h2>
+          <p className="login-form-sub">Ingresa tus credenciales para acceder al sistema.</p>
+
+          {error && (
+            <div className="login-error">
+              <svg style={{ width: 16, height: 16, flexShrink: 0, marginTop: 1 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+              <span>{error}</span>
             </div>
+          )}
 
-            {error && (
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">{error}</p>
+          <div className="login-field">
+            <label>Correo electrónico</label>
+            <div className="login-input-wrap">
+              <svg className="login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+              <input
+                type="email"
+                placeholder="usuario@ipesa.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                autoComplete="email"
+                autoFocus
+                required
+              />
+            </div>
+          </div>
+
+          <div className="login-field">
+            <label>Contraseña</label>
+            <div className="login-input-wrap">
+              <svg className="login-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <input
+                type={showPass ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+              <button type="button" className="login-toggle" onClick={() => setShowPass(s => !s)}>
+                {showPass ? 'Ocultar' : 'Mostrar'}
+              </button>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 24 }} />
+
+          <button type="submit" className="login-submit" disabled={loading || !email || !password}>
+            {loading ? (
+              <><span className="login-spinner"></span> Verificando…</>
+            ) : (
+              <>Ingresar al sistema
+                <svg style={{ width: 16, height: 16 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+              </>
             )}
+          </button>
 
-            <button
-              type="submit"
-              disabled={loading || !password}
-              className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold transition flex items-center justify-center gap-2"
-            >
-              {loading && <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />}
-              {loading ? 'Verificando...' : 'Entrar'}
-            </button>
-          </form>
-        </div>
+          <div className="login-foot-help" style={{ marginTop: 20 }}>
+            ¿Problemas para acceder? <a href="#">Contacta a soporte interno</a>
+          </div>
+        </form>
       </div>
     </div>
   )

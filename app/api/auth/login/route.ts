@@ -1,79 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createHmac, randomBytes, timingSafeEqual } from 'crypto'
-
-const APP_PASSWORD = process.env.APP_PASSWORD
-const APP_SECRET = process.env.APP_SECRET
-
-// In-memory rate limiter: IP → { count, resetAt }
-const attempts = new Map<string, { count: number; resetAt: number }>()
-const MAX_ATTEMPTS = 10
-const WINDOW_MS = 15 * 60 * 1000 // 15 minutes
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now()
-  const entry = attempts.get(ip)
-
-  if (!entry || now > entry.resetAt) {
-    attempts.set(ip, { count: 1, resetAt: now + WINDOW_MS })
-    return false
-  }
-
-  entry.count++
-  if (entry.count > MAX_ATTEMPTS) return true
-
-  return false
-}
-
-function sign(token: string): string {
-  return createHmac('sha256', APP_SECRET!).update(token).digest('hex')
-}
+import { createServerClient } from '@supabase/ssr'
 
 export async function POST(req: NextRequest) {
-  if (!APP_PASSWORD || !APP_SECRET) {
-    return NextResponse.json(
-      { error: 'APP_PASSWORD y APP_SECRET deben estar definidos en el entorno' },
-      { status: 500 }
-    )
+  const { email, password } = await req.json()
+
+  if (!email || !password) {
+    return NextResponse.json({ error: 'Correo y contraseña son requeridos' }, { status: 400 })
   }
-
-  const ip =
-    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
-    req.headers.get('x-real-ip') ??
-    'unknown'
-
-  if (isRateLimited(ip)) {
-    return NextResponse.json(
-      { error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' },
-      { status: 429 }
-    )
-  }
-
-  const { password } = await req.json()
-
-  const submitted = Buffer.from(password ?? '')
-  const expected = Buffer.from(APP_PASSWORD)
-  const match =
-    submitted.length === expected.length &&
-    timingSafeEqual(submitted, expected)
-
-  if (!match) {
-    return NextResponse.json({ error: 'Contraseña incorrecta' }, { status: 401 })
-  }
-
-  // Reset counter on successful login
-  attempts.delete(ip)
-
-  const token = randomBytes(32).toString('hex')
-  const signature = sign(token)
-  const cookieValue = `${token}.${signature}`
 
   const res = NextResponse.json({ ok: true })
-  res.cookies.set('session', cookieValue, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 60 * 60 * 24 * 7,
-    path: '/',
-  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => req.cookies.getAll(),
+        setAll: (list) => list.forEach(({ name, value, options }) => res.cookies.set(name, value, options)),
+      },
+    }
+  )
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error) {
+    return NextResponse.json(
+      { error: 'Credenciales incorrectas. Verifica tu correo y contraseña.' },
+      { status: 401 }
+    )
+  }
+
   return res
 }

@@ -16,10 +16,10 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      "style-src 'self' 'unsafe-inline'",
-      "connect-src 'self' https://*.supabase.co https://api.openai.com https://content.twilio.com https://api.twilio.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "connect-src 'self' https://*.supabase.co",
       "img-src 'self' data: blob:",
-      "font-src 'self'",
+      "font-src 'self' https://fonts.gstatic.com",
       "frame-ancestors 'none'",
     ].join('; '),
   },
