@@ -3,6 +3,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
+/* ── Helpers Push Notifications ─────────────────────────────────────────── */
+function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const raw     = window.atob(base64)
+  const output  = new Uint8Array(raw.length)
+  for (let i = 0; i < raw.length; i++) output[i] = raw.charCodeAt(i)
+  return output.buffer as ArrayBuffer
+}
+
 /* ── Iconos ── */
 const Icon = {
   dashboard: (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>,
@@ -70,6 +80,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [remNota,   setRemNota]   = useState('')
   const [remSaving, setRemSaving] = useState(false)
 
+  /* Push notifications */
+  const [pushSupported,   setPushSupported]   = useState(false)
+  const [pushSubscribed,  setPushSubscribed]  = useState(false)
+  const [pushLoading,     setPushLoading]     = useState(false)
+  const swRegRef = useRef<ServiceWorkerRegistration | null>(null)
+
   const bellRef   = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -77,6 +93,69 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try { const s = localStorage.getItem('ipesa_display_name'); if (s) setDisplayName(s) } catch {}
   }, [])
+
+  /* Registrar Service Worker + detectar estado de push */
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+    setPushSupported(true)
+
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(reg => {
+      swRegRef.current = reg
+      // Verificar si ya hay una suscripción activa
+      reg.pushManager.getSubscription().then(sub => {
+        setPushSubscribed(!!sub)
+      })
+    }).catch(err => console.warn('[SW]', err))
+  }, [])
+
+  /* Activar notificaciones push */
+  const enablePush = async () => {
+    if (!swRegRef.current) return
+    setPushLoading(true)
+    try {
+      const permission = await Notification.requestPermission()
+      if (permission !== 'granted') { setPushLoading(false); return }
+
+      const VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+      if (!VAPID_KEY) throw new Error('VAPID key no configurada')
+
+      const sub = await swRegRef.current.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_KEY),
+      })
+
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub.toJSON()),
+      })
+      setPushSubscribed(true)
+    } catch (err) {
+      console.error('[Push] Error al activar:', err)
+    } finally {
+      setPushLoading(false)
+    }
+  }
+
+  /* Desactivar notificaciones push */
+  const disablePush = async () => {
+    if (!swRegRef.current) return
+    setPushLoading(true)
+    try {
+      const sub = await swRegRef.current.pushManager.getSubscription()
+      if (sub) {
+        await fetch('/api/push/subscribe', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        })
+        await sub.unsubscribe()
+      }
+      setPushSubscribed(false)
+    } finally {
+      setPushLoading(false)
+    }
+  }
 
   /* Load pending reminders */
   const loadReminders = useCallback(async () => {
@@ -322,6 +401,31 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         </div>
                       )
                     })
+                  )}
+
+                  {/* Toggle push notifications */}
+                  {pushSupported && (
+                    <div style={{
+                      borderTop: '1px solid var(--line)', padding: '10px 14px',
+                      display: 'flex', alignItems: 'center', gap: 8,
+                    }}>
+                      <span style={{ fontSize: 14 }}>{pushSubscribed ? '🔔' : '🔕'}</span>
+                      <span style={{ fontSize: 12, color: 'var(--muted)', flex: 1 }}>
+                        {pushSubscribed ? 'Notificaciones activas' : 'Recibir alertas aunque la app esté cerrada'}
+                      </span>
+                      <button
+                        onClick={pushSubscribed ? disablePush : enablePush}
+                        disabled={pushLoading}
+                        style={{
+                          padding: '4px 10px', fontSize: 11.5, fontWeight: 700, borderRadius: 6,
+                          cursor: pushLoading ? 'default' : 'pointer', border: 'none',
+                          background: pushSubscribed ? 'var(--ipesa-rose-soft)' : 'var(--ipesa-orange-soft)',
+                          color:      pushSubscribed ? 'var(--ipesa-rose)'     : 'var(--ipesa-orange)',
+                          opacity: pushLoading ? 0.6 : 1,
+                        }}>
+                        {pushLoading ? '…' : pushSubscribed ? 'Desactivar' : 'Activar'}
+                      </button>
+                    </div>
                   )}
                 </div>
               )}

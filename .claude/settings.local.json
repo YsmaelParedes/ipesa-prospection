@@ -116,7 +116,8 @@
       "Bash(grep -iE \"postgres|pg$|knex|drizzle|typeorm|prisma\")",
       "Bash(rm -rf scripts/)",
       "Bash(rm -rf \"Reestrucura de app/\")",
-      "Bash(rm -f \"ipesa logo.png\")"
+      "Bash(rm -f \"ipesa logo.png\")",
+      "Bash(2>&1)"
     ]
   }
 }

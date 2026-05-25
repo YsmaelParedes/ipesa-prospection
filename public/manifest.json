@@ -1,0 +1,50 @@
+{
+  "name": "IPESA Pinturas CRM",
+  "short_name": "IPESA CRM",
+  "description": "Sistema de gestión de contactos y leads — IPESA Pinturas Lomas de Angelópolis",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FAF6EE",
+  "theme_color": "#EE5A24",
+  "orientation": "portrait-primary",
+  "lang": "es",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/ipesa-logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/ipesa-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/ipesa-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Contactos",
+      "url": "/contactos",
+      "description": "Ver contactos"
+    },
+    {
+      "name": "Leads",
+      "url": "/leads",
+      "description": "Ver pipeline de leads"
+    },
+    {
+      "name": "Recordatorios",
+      "url": "/recordatorios",
+      "description": "Ver recordatorios"
+    }
+  ]
+}
