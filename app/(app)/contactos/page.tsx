@@ -39,36 +39,32 @@ function handlePhoneInput(raw: string): string {
   return digits.slice(0, 10)
 }
 
-/* ── Selector de segmento visual ── */
-function SegmentSelector({ tipos, value, onChange }: { tipos: string[]; value: string; onChange: (v: string) => void }) {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-      {tipos.map(t => (
-        <button key={t} type="button"
-          onClick={() => onChange(t)}
-          className="filter-pill"
-          style={{
-            justifyContent: 'flex-start', padding: '10px 12px',
-            background: value === t ? (TIPO_COLORS[t] || 'var(--ipesa-orange)') : 'var(--card)',
-            color: value === t ? '#fff' : 'var(--ink-2)',
-            borderColor: value === t ? (TIPO_COLORS[t] || 'var(--ipesa-orange)') : 'var(--line)',
-          }}>
-          <span style={{ fontSize: 16 }}>{TIPO_ICONS[t] || '📋'}</span> {t}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 /* ── Select helper ── */
-function SelectField({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
+function SelectField({ label, value, options, onChange, required, placeholder }: {
+  label: string; value: string; options: string[]; onChange: (v: string) => void;
+  required?: boolean; placeholder?: string;
+}) {
+  const isEmpty = required && !value
   return (
     <div className="field">
-      <label>{label}</label>
-      <select value={value} onChange={e => onChange(e.target.value)}
-        style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none' }}>
+      <label>{label}{required && ' *'}</label>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          width: '100%', padding: '10px 12px', borderRadius: 9,
+          border: `1px solid ${isEmpty ? 'var(--ipesa-rose)' : 'var(--line)'}`,
+          background: 'var(--card)', fontSize: 13.5, outline: 'none',
+          color: value ? 'var(--ink)' : 'var(--muted)',
+        }}>
+        {placeholder && <option value="">{placeholder}</option>}
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
+      {isEmpty && (
+        <div style={{ color: 'var(--ipesa-rose)', fontSize: 11.5, marginTop: 4 }}>
+          Este campo es obligatorio
+        </div>
+      )}
     </div>
   )
 }
@@ -320,6 +316,7 @@ function ContactDetail({
     setPhoneErr(digits.length > 0 && digits.length < 10 ? 'Debe tener 10 dígitos' : '')
   }
   const canSaveEdit = editForm.name.trim() && editForm.phone.length === 10 && !phoneErr
+    && !!editForm.segment && !!editForm.acquisition_channel
 
   const handleSave = async () => {
     setSaving(true)
@@ -382,11 +379,8 @@ function ContactDetail({
                 <label>Empresa</label>
                 <input value={editForm.company} onChange={e => upd('company', e.target.value)} />
               </div>
-              <SelectField label="Canal de adquisición" value={editForm.acquisition_channel} options={canales} onChange={v => upd('acquisition_channel', v)} />
-              <div className="field">
-                <label>Tipo de cliente *</label>
-                <SegmentSelector tipos={tipos} value={editForm.segment} onChange={v => upd('segment', v)} />
-              </div>
+              <SelectField label="Canal de adquisición" value={editForm.acquisition_channel} options={canales} onChange={v => upd('acquisition_channel', v)} required placeholder="— Seleccionar canal —" />
+              <SelectField label="Tipo de cliente" value={editForm.segment} options={tipos} onChange={v => upd('segment', v)} required placeholder="— Seleccionar tipo —" />
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                 <button className="btn btn-ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>Cancelar</button>
                 <button className="btn btn-primary" disabled={!canSaveEdit || saving} onClick={handleSave} style={{ flex: 1 }}>
@@ -483,8 +477,8 @@ function ContactModal({
     phone: contact?.phone || '',
     email: contact?.email || '',
     company: contact?.company || '',
-    segment: contact?.segment || tipos[0] || 'Hogar',
-    acquisition_channel: contact?.acquisition_channel || canales[0] || 'Referido',
+    segment: contact?.segment || '',
+    acquisition_channel: contact?.acquisition_channel || '',
   })
   const [phoneErr, setPhoneErr] = useState('')
 
@@ -495,6 +489,7 @@ function ContactModal({
     setPhoneErr(digits.length > 0 && digits.length < 10 ? 'Debe tener 10 dígitos' : '')
   }
   const canSave = form.name.trim() && form.phone.length === 10 && !phoneErr
+    && !!form.segment && !!form.acquisition_channel
 
   return (
     <div className="modal" onClick={onClose}>
@@ -518,11 +513,8 @@ function ContactModal({
             <div className="field"><label>Correo</label><input value={form.email} onChange={e => upd('email', e.target.value)} placeholder="cliente@correo.com" /></div>
           </div>
           <div className="field"><label>Empresa</label><input value={form.company} onChange={e => upd('company', e.target.value)} placeholder="Nombre de la empresa (opcional)" /></div>
-          <SelectField label="Canal de adquisición" value={form.acquisition_channel} options={canales} onChange={v => upd('acquisition_channel', v)} />
-          <div className="field">
-            <label>Tipo de cliente *</label>
-            <SegmentSelector tipos={tipos} value={form.segment} onChange={v => upd('segment', v)} />
-          </div>
+          <SelectField label="Canal de adquisición" value={form.acquisition_channel} options={canales} onChange={v => upd('acquisition_channel', v)} required placeholder="— Seleccionar canal —" />
+          <SelectField label="Tipo de cliente" value={form.segment} options={tipos} onChange={v => upd('segment', v)} required placeholder="— Seleccionar tipo —" />
         </div>
         <div className="modal-foot">
           <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
