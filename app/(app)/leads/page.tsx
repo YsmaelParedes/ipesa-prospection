@@ -304,7 +304,7 @@ function LeadDetail({
       await fetch('/api/data/reminders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lead_id: l.id, lead_name: l.name, nota: remNota.trim(), fecha_recordatorio: new Date(remFecha).toISOString() }),
+        body: JSON.stringify({ lead_id: l.id, lead_name: l.name, nota: remNota.trim(), fecha_recordatorio: remFecha + ':00' }),
       })
       setRemFecha(''); setRemNota(''); setShowRemForm(false)
       await loadReminders()
@@ -466,7 +466,7 @@ function LeadDetail({
                     <div style={{ marginBottom: 8 }}>
                       <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 4 }}>Fecha y hora *</label>
                       <input type="datetime-local" value={remFecha} onChange={e => setRemFecha(e.target.value)}
-                        min={new Date().toISOString().slice(0,16)}
+                        min={(() => { const d = new Date(); const off = d.getTimezoneOffset() * 60000; return new Date(d.getTime() - off).toISOString().slice(0,16) })()}
                         style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 13, outline: 'none', background: 'var(--card)' }} />
                     </div>
                     <div style={{ marginBottom: 10 }}>
