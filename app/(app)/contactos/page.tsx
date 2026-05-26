@@ -305,7 +305,11 @@ function ContactDetail({
   useEffect(() => {
     fetch('/api/data/leads')
       .then(r => r.json())
-      .then(d => setLeads((d.leads || []).filter((l: any) => l.contact_id === c.id || l.email === c.email || l.phone === c.phone)))
+      .then(d => setLeads((d.leads || []).filter((l: any) =>
+        l.contact_id === c.id ||
+        (c.email && l.email && l.email === c.email) ||
+        (c.phone && l.phone && l.phone === c.phone)
+      )))
       .catch(() => {})
   }, [c])
 
