@@ -7,7 +7,7 @@ import { getDisplayName } from '@/lib/profile'
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 type Phase = 'idle' | 'playing' | 'over'
-type Pipe  = { x: number; gapY: number; scored: boolean }
+type Pipe  = { x: number; gapY: number; gap: number; scored: boolean }
 type LBRow = { id: string; player_name: string; score: number; created_at: string }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -171,8 +171,8 @@ export default function ArcadePage() {
 
     // ── Pipes ──
     pipesRef.current.forEach(pipe => {
-      const topH  = pipe.gapY - pG / 2
-      const botY  = pipe.gapY + pG / 2
+      const topH  = pipe.gapY - pipe.gap / 2
+      const botY  = pipe.gapY + pipe.gap / 2
       const capH  = Math.max(8, Math.floor(H * 0.034))
       const capPd = Math.floor(W * 0.022)
 
@@ -357,8 +357,10 @@ export default function ArcadePage() {
     const pW  = PW(), pG = PG()
     const bx  = BX()
 
-    // ── Physics ──
-    birdVRef.current  = Math.min(birdVRef.current + GRV() * dt, MXV())
+    // ── Physics — gravity scales up with score ──
+    // 1.0× at 0pts → 1.6× at score 120 (cap), so it gets heavier over time
+    const gravMult = Math.min(1 + scoreRef.current * 0.005, 1.6)
+    birdVRef.current  = Math.min(birdVRef.current + GRV() * gravMult * dt, MXV())
     birdYRef.current += birdVRef.current * dt
 
     // ── Squash decay (visual only) ──
@@ -367,22 +369,25 @@ export default function ArcadePage() {
     // ── Frame accumulator (used for animations) ──
     frameRef.current += dt
 
-    // ── Pipe difficulty: speed scales up gently with score ──
-    // +3.5% per point, capped at 2.2× — so 0 pts = normal, 18 pts ≈ 2x speed
-    const speedMult = Math.min(1 + scoreRef.current * 0.035, 2.2)
+    // ── Difficulty curves — all scale beyond score 100 ──
+    // Speed: +1.2% per point, cap 3.5× at score ~208. At score 100 = 2.2×
+    const speedMult = Math.min(1 + scoreRef.current * 0.012, 3.5)
     const spd = PS() * dt * speedMult
 
-    // ── Pipe spawning — interval shrinks with difficulty ──
-    // Start: 2200ms between pipes, min 1300ms at high score
-    const spawnMs = Math.max(1300, 2200 - scoreRef.current * 45)
+    // Gap: narrows from 100% → 50% of base. Score 0 = full, score 125 = minimum
+    const dynGap = PG() * Math.max(0.50, 1 - scoreRef.current * 0.004)
+
+    // ── Pipe spawning — interval: 2100ms → 900ms min at score ~100 ──
+    const spawnMs = Math.max(900, 2100 - scoreRef.current * 12)
     const now = Date.now()
     if (now - lastPipeRef.current >= spawnMs) {
-      const margin = pG / 2 + H * 0.15   // keep gap away from ceiling and ground
+      const margin  = dynGap / 2 + H * 0.12   // keep gap away from ceiling and ground
       const minGapY = margin
       const maxGapY = gY - margin
       pipesRef.current.push({
         x: W + 16,
         gapY: minGapY + Math.random() * (maxGapY - minGapY),
+        gap:  dynGap,                            // each pipe stores its own gap
         scored: false,
       })
       lastPipeRef.current = now
@@ -408,7 +413,7 @@ export default function ArcadePage() {
     if (by + bhr >= gY || by - bhr <= 0) { endGameRef.current?.(); return }
     for (const p of pipesRef.current) {
       if (bx + bhr > p.x && bx - bhr < p.x + pW) {
-        if (by - bhr < p.gapY - pG / 2 || by + bhr > p.gapY + pG / 2) {
+        if (by - bhr < p.gapY - p.gap / 2 || by + bhr > p.gapY + p.gap / 2) {
           endGameRef.current?.(); return
         }
       }
@@ -511,7 +516,7 @@ export default function ArcadePage() {
   const loadLB = useCallback(async () => {
     setLoadingLB(true); setLbErr(false)
     try {
-      const r = await fetch('/api/data/scores?game=snake')
+      const r = await fetch('/api/data/scores?game=flappy')
       const d = await r.json()
       setLb(d.scores ?? [])
     } catch { setLbErr(true) } finally { setLoadingLB(false) }
@@ -605,20 +610,39 @@ export default function ArcadePage() {
             {/* ── Idle overlay ── */}
             {phase === 'idle' && (
               <div style={overlayBase} onPointerDown={e => { e.preventDefault(); startGame() }}>
-                <div style={{ fontSize: 54, lineHeight: 1, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))' }}>🪣</div>
-                <div style={{ fontSize: 26, fontWeight: 900, color: '#EE5A24', textAlign: 'center', letterSpacing: '-0.5px', textShadow: '0 2px 8px rgba(238,90,36,0.6)' }}>
+                <div style={{ fontSize: 46, lineHeight: 1, filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))' }}>🪣</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: '#EE5A24', textAlign: 'center', letterSpacing: '-0.5px', textShadow: '0 2px 8px rgba(238,90,36,0.6)' }}>
                   IPESA Flappy
                 </div>
-                <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.52)', textAlign: 'center', lineHeight: 1.7 }}>
-                  Vuela el bote de pintura entre los rodillos
-                </div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.32)', marginBottom: 10 }}>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.40)', marginBottom: 2 }}>
                   Hola, <span style={{ color: '#F2B544', fontWeight: 700 }}>{playerName}</span> 👋
                 </div>
+
+                {/* Instrucciones */}
+                <div
+                  onPointerDown={e => e.stopPropagation()}
+                  style={{
+                    width: 'calc(100% - 28px)', background: 'rgba(0,0,0,0.38)',
+                    borderRadius: 12, padding: '10px 14px', border: '1px solid rgba(255,255,255,0.08)',
+                    display: 'flex', flexDirection: 'column', gap: 7,
+                  }}>
+                  {([
+                    ['🪣', 'Eres el bote de pintura IPESA'],
+                    ['🎨', 'Pasa entre los rodillos de pintura'],
+                    ['💥', 'No toques las paredes ni el suelo'],
+                    ['👆', 'Toca / Espacio para volar'],
+                  ] as [string,string][]).map(([emoji, text]) => (
+                    <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                      <span style={{ fontSize: 14, flexShrink: 0 }}>{emoji}</span>
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.72)', fontWeight: 500, lineHeight: 1.3 }}>{text}</span>
+                    </div>
+                  ))}
+                </div>
+
                 <button
                   onPointerDown={e => { e.stopPropagation(); e.preventDefault(); startGame() }}
                   style={{
-                    padding: '14px 44px', fontSize: 17, fontWeight: 900, borderRadius: 14,
+                    padding: '13px 42px', fontSize: 16, fontWeight: 900, borderRadius: 14,
                     background: 'linear-gradient(135deg, #FF6030, #EE4A18)',
                     color: '#fff', border: 'none', cursor: 'pointer',
                     boxShadow: '0 6px 28px rgba(238,90,36,0.65)',
@@ -626,99 +650,110 @@ export default function ArcadePage() {
                   }}>
                   ▶ Jugar
                 </button>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.22)', marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.20)', marginTop: 2 }}>
                   Toca pantalla · Espacio / ↑ para volar
                 </div>
               </div>
             )}
 
-            {/* ── Game Over overlay ── */}
+            {/* ── Game Over overlay (score form incluido aquí) ── */}
             {phase === 'over' && (
-              <div style={overlayBase} onPointerDown={e => { e.preventDefault(); startGame() }}>
-                <div style={{ fontSize: 42, lineHeight: 1 }}>💥</div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
+              <div
+                style={{ ...overlayBase, justifyContent: 'flex-start', paddingTop: 18, gap: 8, overflowY: 'auto' }}
+                onPointerDown={e => { e.preventDefault(); startGame() }}
+              >
+                <div style={{ fontSize: 36, lineHeight: 1 }}>💥</div>
+                <div style={{ fontSize: 21, fontWeight: 900, color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
                   ¡Game Over!
                 </div>
-                <div style={{ textAlign: 'center', marginBottom: 4 }}>
-                  <div style={{ fontSize: 52, fontWeight: 900, color: '#F2B544', lineHeight: 1, textShadow: '0 3px 12px rgba(242,181,68,0.6)' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 50, fontWeight: 900, color: '#F2B544', lineHeight: 1, textShadow: '0 3px 12px rgba(242,181,68,0.6)' }}>
                     {score}
                   </div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)', marginTop: 3 }}>puntos</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)', marginTop: 2 }}>puntos</div>
                   {score > 0 && score >= best && (
-                    <div style={{ fontSize: 13, color: '#52D073', fontWeight: 700, marginTop: 8, textShadow: '0 1px 6px rgba(82,208,115,0.5)' }}>
+                    <div style={{ fontSize: 12.5, color: '#52D073', fontWeight: 700, marginTop: 6, textShadow: '0 1px 6px rgba(82,208,115,0.5)' }}>
                       🎉 ¡Nuevo récord personal!
                     </div>
                   )}
                 </div>
+
+                {/* Form de score — stopPropagation evita reiniciar al tocar */}
+                {score > 0 && !submitted && (
+                  <div
+                    onPointerDown={e => e.stopPropagation()}
+                    style={{
+                      width: 'calc(100% - 24px)', background: 'rgba(0,0,0,0.50)',
+                      borderRadius: 12, padding: '10px 12px',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                    }}
+                  >
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,0.40)', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 8 }}>
+                      Guardar en ranking
+                    </div>
+                    <div style={{ display: 'flex', gap: 7 }}>
+                      <input
+                        value={submitName}
+                        onChange={e => setSubmitName(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') submitScore() }}
+                        placeholder="Tu nombre…"
+                        autoComplete="off"
+                        style={{
+                          flex: 1, padding: '8px 10px', borderRadius: 8,
+                          border: '1px solid rgba(255,255,255,0.18)', fontSize: 13,
+                          outline: 'none', background: 'rgba(255,255,255,0.10)',
+                          color: '#fff', boxSizing: 'border-box',
+                        }}
+                        onFocus={e  => (e.currentTarget.style.borderColor = 'rgba(238,90,36,0.80)')}
+                        onBlur={e   => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)')}
+                      />
+                      <button
+                        onPointerDown={e => e.stopPropagation()}
+                        onClick={submitScore}
+                        disabled={submitting || !submitName.trim()}
+                        style={{
+                          padding: '8px 13px', borderRadius: 8, border: 'none',
+                          background: 'var(--ipesa-orange)', color: '#fff',
+                          fontWeight: 800, fontSize: 12.5, cursor: 'pointer',
+                          opacity: (submitting || !submitName.trim()) ? 0.55 : 1,
+                          whiteSpace: 'nowrap', flexShrink: 0,
+                        }}>
+                        {submitting ? '…' : '💾 Guardar'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {score > 0 && submitted && (
+                  <div
+                    onPointerDown={e => e.stopPropagation()}
+                    style={{
+                      width: 'calc(100% - 24px)', fontSize: 12.5, fontWeight: 700,
+                      textAlign: 'center', padding: '8px 14px', borderRadius: 10,
+                      background: savedMsg.startsWith('✓') ? 'rgba(82,208,115,0.18)' : 'rgba(238,90,36,0.18)',
+                      color: savedMsg.startsWith('✓') ? '#52D073' : '#FFA06A',
+                      border: `1px solid ${savedMsg.startsWith('✓') ? 'rgba(82,208,115,0.35)' : 'rgba(238,90,36,0.35)'}`,
+                    }}>
+                    {savedMsg}
+                  </div>
+                )}
+
                 <button
                   onPointerDown={e => { e.stopPropagation(); e.preventDefault(); startGame() }}
                   style={{
-                    marginTop: 6, padding: '13px 38px', fontSize: 16, fontWeight: 900,
+                    padding: '12px 36px', fontSize: 15, fontWeight: 900,
                     borderRadius: 13, color: '#fff', border: 'none', cursor: 'pointer',
                     background: 'linear-gradient(135deg, #FF6030, #EE4A18)',
                     boxShadow: '0 5px 22px rgba(238,90,36,0.55)',
                   }}>
                   ↺ Reintentar
                 </button>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.22)', marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.20)' }}>
                   o toca la pantalla
                 </div>
               </div>
             )}
           </div>
-
-          {/* ── Score submission (outside canvas, no keyboard-push issues) ── */}
-          {phase === 'over' && score > 0 && !submitted && (
-            <div style={{
-              marginTop: 14, padding: '14px 16px',
-              background: 'var(--card)', borderRadius: 14, border: '1px solid var(--line)',
-            }}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--muted)', marginBottom: 10, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                Guardar score — {score} pt{score !== 1 ? 's' : ''}
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input
-                  value={submitName}
-                  onChange={e => setSubmitName(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') submitScore() }}
-                  placeholder="Tu nombre…"
-                  autoComplete="off"
-                  style={{
-                    flex: 1, padding: '9px 12px', borderRadius: 9,
-                    border: '1px solid var(--line)', fontSize: 13.5,
-                    outline: 'none', background: 'var(--paper)', boxSizing: 'border-box',
-                  }}
-                  onFocus={e  => (e.currentTarget.style.borderColor = 'var(--ipesa-orange)')}
-                  onBlur={e   => (e.currentTarget.style.borderColor = 'var(--line)')}
-                />
-                <button
-                  onClick={submitScore}
-                  disabled={submitting || !submitName.trim()}
-                  style={{
-                    padding: '9px 16px', borderRadius: 9, border: 'none',
-                    background: 'var(--ipesa-orange)', color: '#fff',
-                    fontWeight: 800, fontSize: 13, cursor: 'pointer',
-                    opacity: (submitting || !submitName.trim()) ? 0.55 : 1,
-                    whiteSpace: 'nowrap', flexShrink: 0,
-                  }}>
-                  {submitting ? '…' : '💾 Guardar'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {phase === 'over' && submitted && (
-            <div style={{
-              marginTop: 12, padding: '12px 16px', textAlign: 'center',
-              background: savedMsg.startsWith('✓') ? '#DBEADF' : 'var(--ipesa-orange-soft)',
-              borderRadius: 12,
-              border: `1px solid ${savedMsg.startsWith('✓') ? 'rgba(61,139,92,0.35)' : 'rgba(238,90,36,0.35)'}`,
-              color: savedMsg.startsWith('✓') ? '#1F5536' : 'var(--ipesa-orange)',
-              fontWeight: 700, fontSize: 13,
-            }}>
-              {savedMsg}
-            </div>
-          )}
 
           <div style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--muted-2)', marginTop: 10 }}>
             {phase === 'playing'

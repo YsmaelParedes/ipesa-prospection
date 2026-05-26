@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase } from '@/lib/supabase-server'
+import { getServerSupabase, getAuthClient } from '@/lib/supabase-server'
 
-// ── El campo en la BD se llama reminder_date.
-// ── El resto de la app usa fecha_recordatorio.
-// ── Este archivo hace el mapeo en ambas direcciones.
-
+// ── Mapeos BD ↔ app ────────────────────────────────────────────────────────
 function toApp(r: any) {
   if (!r) return r
   const { reminder_date, ...rest } = r
@@ -16,14 +13,26 @@ function toDB(body: any) {
   return { ...rest, ...(fecha_recordatorio !== undefined ? { reminder_date: fecha_recordatorio } : {}) }
 }
 
+// ── Helper: obtiene el user_id autenticado desde la cookie de sesión ────────
+async function getUser() {
+  const client = await getAuthClient()
+  const { data: { user } } = await client.auth.getUser()
+  return user
+}
+
+// GET /api/data/reminders — solo los del usuario autenticado
 export async function GET(req: NextRequest) {
   try {
+    const user = await getUser()
+    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
     const supabase = getServerSupabase()
-    const leadId = req.nextUrl.searchParams.get('lead_id')
+    const leadId   = req.nextUrl.searchParams.get('lead_id')
 
     let q = supabase
       .from('reminders')
       .select('*')
+      .eq('user_id', user.id)
       .order('reminder_date', { ascending: true })
 
     if (leadId) q = q.eq('lead_id', leadId)
@@ -37,13 +46,17 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// POST /api/data/reminders — crea recordatorio vinculado al usuario autenticado
 export async function POST(req: NextRequest) {
   try {
+    const user = await getUser()
+    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
     const body = await req.json()
     const supabase = getServerSupabase()
     const { data, error } = await supabase
       .from('reminders')
-      .insert([toDB(body)])
+      .insert([{ ...toDB(body), user_id: user.id }])
       .select()
     if (error) throw error
     return NextResponse.json(toApp(data?.[0]) ?? {})
