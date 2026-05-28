@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const [email, setEmail]       = useState('')
@@ -9,7 +8,6 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
-  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,8 +30,7 @@ export default function LoginPage() {
         const name = raw.replace(/\b\w/g, l => l.toUpperCase())
         localStorage.setItem('ipesa_display_name', name)
       } catch {}
-      router.push('/')
-      router.refresh()
+      window.location.href = '/'
     } catch {
       setError('Error de conexión. Intenta de nuevo.')
     } finally {
