@@ -1,31 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getAuthClient } from '@/lib/supabase-server'
+import { getServerSupabase, getUserId, unauthorizedResponse } from '@/lib/supabase-server'
 
 function toDB(body: any) {
   const { fecha_recordatorio, ...rest } = body
   return { ...rest, ...(fecha_recordatorio !== undefined ? { reminder_date: fecha_recordatorio } : {}) }
 }
 
-async function getUser() {
-  const client = await getAuthClient()
-  const { data: { user } } = await client.auth.getUser()
-  return user
-}
-
+// PATCH /api/data/reminders/[id]
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await getUser()
-    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const uid = await getUserId()
+    if (!uid) return unauthorizedResponse()
 
-    const { id } = await params
-    const updates = toDB(await req.json())
+    const { id }   = await params
+    const updates  = toDB(await req.json())
     const supabase = getServerSupabase()
+
+    // Verifica propiedad (permite legacy user_id NULL)
+    const { data: existing } = await supabase
+      .from('reminders')
+      .select('user_id')
+      .eq('id', id)
+      .single()
+
+    if (!existing) return NextResponse.json({ error: 'Recordatorio no encontrado' }, { status: 404 })
+    if (existing.user_id && existing.user_id !== uid) {
+      return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
+    }
+
     const { data, error } = await supabase
       .from('reminders')
-      .update({ ...updates, ...(updates.completado ? { completado_at: new Date().toISOString() } : {}) })
+      .update({
+        ...updates,
+        ...(updates.completado ? { completado_at: new Date().toISOString() } : {}),
+      })
       .eq('id', id)
-      .eq('user_id', user.id)   // solo puede editar sus propios recordatorios
       .select()
+
     if (error) throw error
     return NextResponse.json(data?.[0] ?? {})
   } catch (error: any) {
@@ -34,18 +45,28 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 }
 
+// DELETE /api/data/reminders/[id]
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await getUser()
-    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const uid = await getUserId()
+    if (!uid) return unauthorizedResponse()
 
-    const { id } = await params
+    const { id }   = await params
     const supabase = getServerSupabase()
-    const { error } = await supabase
+
+    // Verifica propiedad
+    const { data: existing } = await supabase
       .from('reminders')
-      .delete()
+      .select('user_id')
       .eq('id', id)
-      .eq('user_id', user.id)   // solo puede borrar sus propios recordatorios
+      .single()
+
+    if (!existing) return NextResponse.json({ error: 'Recordatorio no encontrado' }, { status: 404 })
+    if (existing.user_id && existing.user_id !== uid) {
+      return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
+    }
+
+    const { error } = await supabase.from('reminders').delete().eq('id', id)
     if (error) throw error
     return NextResponse.json({ success: true })
   } catch (error: any) {

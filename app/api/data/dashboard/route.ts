@@ -1,42 +1,48 @@
 import { NextResponse } from 'next/server'
-import { getServerSupabase } from '@/lib/supabase-server'
+import { getServerSupabase, getUserId, unauthorizedResponse } from '@/lib/supabase-server'
 
 export async function GET() {
   try {
+    const uid = await getUserId()
+    if (!uid) return unauthorizedResponse()
+
     const supabase = getServerSupabase()
 
-    const now = new Date()
+    const now          = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
 
     const [
       { count: totalContacts },
-      { data: leadsData, error: leadsError },
+      { data: leadsData,    error: leadsError },
       { data: contactsData },
     ] = await Promise.all([
+      // Contactos: global (compartido entre usuarios)
       supabase.from('contacts').select('*', { count: 'exact', head: true }),
-      supabase.from('leads').select('*').order('created_at', { ascending: false }),
+      // Leads: solo del usuario actual (+ legacy sin user_id)
+      supabase
+        .from('leads')
+        .select('*')
+        .or(`user_id.eq.${uid},user_id.is.null`)
+        .order('created_at', { ascending: false }),
+      // Contactos por segmento: global
       supabase.from('contacts').select('segment, acquisition_channel'),
     ])
 
     if (leadsError) throw leadsError
 
-    const leads = leadsData || []
+    const leads    = leadsData    || []
     const contacts = contactsData || []
 
-    // Metrics from leads
-    const activeStates = ['Nuevo', 'En seguimiento', 'Cotizado']
-    const leadsActivos = leads.filter(l => activeStates.includes(l.estado)).length
-
-    const cierresMes = leads.filter(l =>
-      l.estado === 'Cerrado' && l.created_at >= startOfMonth
-    ).length
-
-    const conversion = leads.length > 0
+    // ── Métricas del usuario ────────────────────────────────────────────────
+    const activeStates  = ['Nuevo', 'En seguimiento', 'Cotizado']
+    const leadsActivos  = leads.filter(l => activeStates.includes(l.estado)).length
+    const cierresMes    = leads.filter(l => l.estado === 'Cerrado' && l.created_at >= startOfMonth).length
+    const conversion    = leads.length > 0
       ? Math.round((leads.filter(l => l.estado === 'Cerrado').length / leads.length) * 100)
       : 0
 
-    // Channel breakdown from leads (last 30 days)
+    // ── Canal breakdown (últimos 30 días, leads del usuario) ─────────────────
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
     const recentLeadsAll = leads.filter(l => l.created_at >= thirtyDaysAgo)
     const channelCounts: Record<string, number> = {}
@@ -49,7 +55,7 @@ export async function GET() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 8)
 
-    // Segment breakdown from contacts
+    // ── Segmento breakdown (contactos globales) ───────────────────────────────
     const segmentCounts: Record<string, number> = {}
     for (const c of contacts) {
       if (c.segment) segmentCounts[c.segment] = (segmentCounts[c.segment] || 0) + 1
@@ -58,41 +64,28 @@ export async function GET() {
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
 
-    // Recent leads (last 6)
+    // ── Leads recientes del usuario ───────────────────────────────────────────
     const recentLeads = leads.slice(0, 6).map(l => ({
-      id: l.id,
-      name: l.name,
-      canal: l.canal,
+      id:     l.id,
+      name:   l.name,
+      canal:  l.canal,
       estado: l.estado,
-      fecha: l.fecha || l.created_at?.slice(0, 10),
+      fecha:  l.fecha || l.created_at?.slice(0, 10),
     }))
 
-    // Activity feed: leads created/closed today
+    // ── Feed de actividad de hoy ──────────────────────────────────────────────
     const todayLeads = leads.filter(l => l.created_at >= startOfToday)
     const activity = [
       ...todayLeads.filter(l => l.estado === 'Cerrado').map(l => ({
-        type: 'close',
-        who: l.name,
-        what: 'cerró como cliente',
-        time: 'hoy',
-        color: '#3D8B5C',
+        type: 'close', who: l.name, what: 'cerró como cliente', time: 'hoy', color: '#3D8B5C',
       })),
       ...todayLeads.filter(l => l.estado !== 'Cerrado').map(l => ({
-        type: 'lead',
-        who: l.name,
-        what: `nuevo lead · ${l.canal}`,
-        time: 'hoy',
-        color: '#EE5A24',
+        type: 'lead', who: l.name, what: `nuevo lead · ${l.canal}`, time: 'hoy', color: '#EE5A24',
       })),
     ].slice(0, 8)
 
     return NextResponse.json({
-      metrics: {
-        totalContacts: totalContacts || 0,
-        leadsActivos,
-        cierresMes,
-        conversion,
-      },
+      metrics: { totalContacts: totalContacts || 0, leadsActivos, cierresMes, conversion },
       byChannel,
       bySegment,
       recentLeads,

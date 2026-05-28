@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getAuthClient } from '@/lib/supabase-server'
+import { getServerSupabase, getUserId, unauthorizedResponse } from '@/lib/supabase-server'
 
 // ── Mapeos BD ↔ app ────────────────────────────────────────────────────────
 function toApp(r: any) {
@@ -13,18 +13,11 @@ function toDB(body: any) {
   return { ...rest, ...(fecha_recordatorio !== undefined ? { reminder_date: fecha_recordatorio } : {}) }
 }
 
-// ── Helper: obtiene el user_id autenticado desde la cookie de sesión ────────
-async function getUser() {
-  const client = await getAuthClient()
-  const { data: { user } } = await client.auth.getUser()
-  return user
-}
-
 // GET /api/data/reminders — solo los del usuario autenticado
 export async function GET(req: NextRequest) {
   try {
-    const user = await getUser()
-    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const uid = await getUserId()
+    if (!uid) return unauthorizedResponse()
 
     const supabase = getServerSupabase()
     const leadId   = req.nextUrl.searchParams.get('lead_id')
@@ -32,7 +25,7 @@ export async function GET(req: NextRequest) {
     let q = supabase
       .from('reminders')
       .select('*')
-      .eq('user_id', user.id)
+      .or(`user_id.eq.${uid},user_id.is.null`)
       .order('reminder_date', { ascending: true })
 
     if (leadId) q = q.eq('lead_id', leadId)
@@ -49,15 +42,16 @@ export async function GET(req: NextRequest) {
 // POST /api/data/reminders — crea recordatorio vinculado al usuario autenticado
 export async function POST(req: NextRequest) {
   try {
-    const user = await getUser()
-    if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    const uid = await getUserId()
+    if (!uid) return unauthorizedResponse()
 
-    const body = await req.json()
+    const body     = await req.json()
     const supabase = getServerSupabase()
     const { data, error } = await supabase
       .from('reminders')
-      .insert([{ ...toDB(body), user_id: user.id }])
+      .insert([{ ...toDB(body), user_id: uid }])
       .select()
+
     if (error) throw error
     return NextResponse.json(toApp(data?.[0]) ?? {})
   } catch (error: any) {
