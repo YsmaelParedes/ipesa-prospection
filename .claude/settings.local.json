@@ -117,7 +117,21 @@
       "Bash(rm -rf scripts/)",
       "Bash(rm -rf \"Reestrucura de app/\")",
       "Bash(rm -f \"ipesa logo.png\")",
-      "Bash(2>&1)"
+      "Bash(2>&1)",
+      "Bash(Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue)",
+      "Bash(Write-Host \"Cache limpiado\")",
+      "Bash(npm audit *)",
+      "Bash(dir \"C:\\\\Users\\\\iysma\\\\Documents\\\\apps_Claude\\\\ipesa-prospection\\\\node_modules\\\\next\\\\dist\\\\server\\\\lib\\\\lru-cache*\")",
+      "Bash(rd /s /q node_modules\\\\next)",
+      "Bash(Remove-Item -Recurse -Force \"C:\\\\Users\\\\iysma\\\\Documents\\\\apps_Claude\\\\ipesa-prospection\\\\node_modules\\\\next\")",
+      "Bash(Write-Host \"Done\")",
+      "Bash(cd \"C:\\\\Users\\\\iysma\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\2888440f-1239-4970-83bf-de17c40bce9e\\\\2c32b982-9bac-42b7-8a95-9f9554fbf89f\\\\skills\\\\xlsx\" && python3 -c \" *)",
+      "Bash(npm list *)",
+      "Bash(rm \"lib/facturapi.ts\" \"supabase/migrations/003_invoices.sql\")",
+      "Bash(rm -rf \"app/api/data/invoices\")",
+      "Bash(npm uninstall *)",
+      "Bash(ls \"C:\\\\Users\\\\iysma\\\\Documents\\\\apps_Claude\\\\relaxinn_software\")",
+      "Bash(rm -rf \"C:\\\\Users\\\\iysma\\\\Documents\\\\apps_Claude\\\\relaxinn_software\\\\lib\\\\facturama\")"
     ]
   }
 }

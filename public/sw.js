@@ -1,18 +1,24 @@
 // ── IPESA CRM — Service Worker ────────────────────────────────────────────
-// Versión: v1 — actualizar al hacer cambios importantes
-const CACHE_NAME = 'ipesa-v2'
-const PRECACHE   = ['/', '/manifest.json', '/apple-touch-icon.png', '/icon-192.png', '/icon-512.png']
+// Versión: v4 — actualizar al hacer cambios importantes
+// Estrategia: cache mínimo (solo recursos PWA esenciales).
+// Next.js ya gestiona el versionado de JS/CSS con content-hash en los URLs,
+// así que no es necesario cachearlos aquí — hacerlo solo acumula basura.
+const CACHE_NAME = 'ipesa-v4'
 
-// ── Install: pre-cachear assets básicos ──────────────────────────────────
+// Solo estos recursos se pre-cachean: son los necesarios para que la PWA
+// funcione offline y para que el ícono/manifest aparezcan correctamente.
+const PRECACHE = ['/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png']
+
+// ── Install: pre-cachear solo recursos PWA ───────────────────────────────
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(PRECACHE))
+      .then(cache => cache.addAll(PRECACHE).catch(() => {}))  // no fallar si un ícono no existe
       .then(() => self.skipWaiting())
   )
 })
 
-// ── Activate: limpiar caches viejos, tomar control ───────────────────────
+// ── Activate: eliminar caches viejos, tomar control ─────────────────────
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
@@ -23,36 +29,36 @@ self.addEventListener('activate', e => {
   )
 })
 
-// ── Fetch: network-first para navegación y API, cache-first para assets ──
+// ── Fetch: network-first para todo ──────────────────────────────────────
+// Next.js ya versiona sus bundles JS/CSS con hashes en el filename,
+// así que el caché del navegador nativo los gestiona correctamente.
+// El SW solo interviene para: iconos/manifest (cache-first) y fallback offline.
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return
 
   const url = new URL(e.request.url)
 
-  // Calls a API: siempre red (datos en tiempo real)
+  // API: siempre red — nunca cachear datos en tiempo real
   if (url.pathname.startsWith('/api/')) return
 
-  // Navegación: red primero, fallback al home cacheado
+  // Navegación: red primero, fallback al home cacheado si no hay red
   if (e.request.mode === 'navigate') {
     e.respondWith(
-      fetch(e.request).catch(() => caches.match('/'))
+      fetch(e.request).catch(() => caches.match('/') ?? fetch(e.request))
     )
     return
   }
 
-  // Recursos estáticos: cache primero, luego red y cachear
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached
-      return fetch(e.request).then(response => {
-        if (response.ok && url.origin === self.location.origin) {
-          const clone = response.clone()
-          caches.open(CACHE_NAME).then(c => c.put(e.request, clone))
-        }
-        return response
-      })
-    })
-  )
+  // Recursos PWA (iconos, manifest): cache-first — son estables
+  if (PRECACHE.some(p => url.pathname === p)) {
+    e.respondWith(
+      caches.match(e.request).then(cached => cached ?? fetch(e.request))
+    )
+    return
+  }
+
+  // Todo lo demás (JS, CSS, fuentes, imágenes): red directa
+  // Next.js usa content-hash filenames así que el cache HTTP nativo es suficiente
 })
 
 // ── Push: mostrar notificación nativa ────────────────────────────────────
@@ -64,16 +70,16 @@ self.addEventListener('push', e => {
 
   e.waitUntil(
     self.registration.showNotification(payload.title, {
-      body:             payload.body,
-      icon:             '/icon-192.png',
-      badge:            '/icon-192.png',
-      tag:              'ipesa-reminder',
+      body:               payload.body,
+      icon:               '/icon-192.png',
+      badge:              '/icon-192.png',
+      tag:                'ipesa-reminder',
       requireInteraction: true,
-      vibrate:          [200, 100, 200],
-      data:             { url: payload.url },
+      vibrate:            [200, 100, 200],
+      data:               { url: payload.url },
       actions: [
-        { action: 'open',   title: 'Ver recordatorio' },
-        { action: 'close',  title: 'Cerrar' },
+        { action: 'open',  title: 'Ver recordatorio' },
+        { action: 'close', title: 'Cerrar' },
       ],
     })
   )
@@ -87,7 +93,6 @@ self.addEventListener('notificationclick', e => {
   const url = e.notification.data?.url || '/recordatorios'
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      // Si ya hay una ventana abierta, enfocamos y navegamos
       for (const client of clientList) {
         if ('focus' in client) {
           client.focus()
@@ -95,7 +100,6 @@ self.addEventListener('notificationclick', e => {
           return
         }
       }
-      // Si no, abrimos nueva ventana
       return self.clients.openWindow(url)
     })
   )

@@ -1,9 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Avatar, TipoChip, CanalChip, fmtDateLong, fmtPhone, normalizePhone } from '@/components/IpesaUI'
-import Papa from 'papaparse'
-import * as XLSX from 'xlsx'
+import { Avatar, TipoChip, CanalChip, FilterDropdown, fmtDateLong, fmtPhone, normalizePhone, isMobilePhone } from '@/components/IpesaUI'
 
 /* ── Iconos ── */
 const Ico = {
@@ -11,11 +9,13 @@ const Ico = {
   phone:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.961.361 1.904.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.906.339 1.849.573 2.81.7a2 2 0 0 1 1.72 2.03Z"/></svg>,
   mail:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>,
   plus:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M12 5v14M5 12h14"/></svg>,
-  upload:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>,
+  upload:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>,
+  download:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>,
   chevron: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--muted-2)' }}><path d="m9 18 6-6-6-6"/></svg>,
   check:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--ipesa-yellow)' }}><path d="m5 13 4 4L19 7"/></svg>,
   edit:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
   trash:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>,
+  xmark:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><path d="M18 6 6 18M6 6l12 12"/></svg>,
 }
 
 const TIPO_COLORS: Record<string, string> = {
@@ -78,9 +78,16 @@ export default function ContactosPage() {
   const [loading, setLoading]         = useState(true)
   const [selected, setSelected]       = useState<any | null>(null)
   const [showNew, setShowNew]         = useState(false)
-  const [showImport, setShowImport]   = useState(false)
-  const [createLeadFor, setCreateLeadFor] = useState<any | null>(null)
-  const [toast, setToast]             = useState('')
+  const [showImport, setShowImport]               = useState(false)
+  const [showExport, setShowExport]               = useState(false)
+  const [showOnlyLandlines, setShowOnlyLandlines] = useState(false)
+  const [toast, setToast]                         = useState('')
+
+  /* Selección múltiple */
+  const [checkedIds, setCheckedIds]       = useState<Set<string>>(new Set())
+  const [confirmBulkDel, setConfirmBulkDel] = useState(false)
+  const [bulkDeleting, setBulkDeleting]   = useState(false)
+  const lastCheckedIdx                    = useRef<number | null>(null)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2400) }
 
@@ -118,8 +125,11 @@ export default function ContactosPage() {
     return () => window.removeEventListener('ipesa:new-contact', h)
   }, [])
 
+  const landlineCount = contacts.filter(c => !isMobilePhone(c.phone)).length
+
   const filtered = contacts.filter(c => {
-    if (tipoFiltro !== 'Todos' && c.segment !== tipoFiltro) return false
+    if (showOnlyLandlines && isMobilePhone(c.phone)) return false
+    if (!showOnlyLandlines && tipoFiltro !== 'Todos' && c.segment !== tipoFiltro) return false
     if (search) {
       const q = search.toLowerCase()
       const hay = `${c.name} ${c.email} ${c.phone} ${c.company || ''} ${c.acquisition_channel || ''}`.toLowerCase()
@@ -143,25 +153,148 @@ export default function ContactosPage() {
     showToast('Contacto eliminado')
   }
 
+  /* ── Selección múltiple ── */
+  const someChecked        = checkedIds.size > 0
+  const allFilteredChecked = filtered.length > 0 && filtered.every(c => checkedIds.has(c.id))
+
+  const clearSelection = () => {
+    setCheckedIds(new Set())
+    lastCheckedIdx.current = null
+    setConfirmBulkDel(false)
+  }
+
+  const toggleAll = () => {
+    setCheckedIds(prev => {
+      const next = new Set(prev)
+      if (allFilteredChecked) filtered.forEach(c => next.delete(c.id))
+      else                     filtered.forEach(c => next.add(c.id))
+      return next
+    })
+    lastCheckedIdx.current = null
+  }
+
+  const toggleCheck = (id: string, idx: number, e: React.MouseEvent) => {
+    if (e.shiftKey && lastCheckedIdx.current !== null) {
+      const from = Math.min(lastCheckedIdx.current, idx)
+      const to   = Math.max(lastCheckedIdx.current, idx)
+      setCheckedIds(prev => {
+        const next = new Set(prev)
+        filtered.slice(from, to + 1).forEach(c => next.add(c.id))
+        return next
+      })
+    } else {
+      setCheckedIds(prev => {
+        const next = new Set(prev)
+        if (next.has(id)) next.delete(id)
+        else              next.add(id)
+        return next
+      })
+      lastCheckedIdx.current = idx
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true)
+    const ids = [...checkedIds]
+    await Promise.all(ids.map(id => fetch(`/api/data/contacts/${id}`, { method: 'DELETE' })))
+    setContacts(prev => prev.filter(c => !checkedIds.has(c.id)))
+    if (selected && checkedIds.has(selected.id)) setSelected(null)
+    const n = ids.length
+    clearSelection()
+    setBulkDeleting(false)
+    showToast(`${n} contacto${n !== 1 ? 's' : ''} eliminado${n !== 1 ? 's' : ''} ✓`)
+  }
+
   return (
     <>
       <div className="section-head">
-        <h2>Base de contactos</h2>
-        <span className="count">{filtered.length} de {contacts.length}</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <button className="btn btn-ghost" onClick={() => setShowImport(true)}>
-            <Ico.upload /> Importar
-          </button>
-        </div>
+        {someChecked ? (
+          /* ── Barra de selección ── */
+          <>
+            <button className="btn btn-ghost" style={{ padding: '6px 10px' }} onClick={clearSelection}>
+              <Ico.xmark /> Cancelar
+            </button>
+            <span style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--ink)' }}>
+              {checkedIds.size} seleccionado{checkedIds.size !== 1 ? 's' : ''}
+            </span>
+            {!confirmBulkDel ? (
+              <button
+                className="btn"
+                style={{ marginLeft: 'auto', background: '#DC2626', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: 5 }}
+                onClick={() => setConfirmBulkDel(true)}
+              >
+                <Ico.trash /> Eliminar {checkedIds.size}
+              </button>
+            ) : (
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, color: '#DC2626', fontWeight: 500 }}>
+                  ¿Eliminar {checkedIds.size} contacto{checkedIds.size !== 1 ? 's' : ''}? No se puede deshacer.
+                </span>
+                <button className="btn btn-ghost" onClick={() => setConfirmBulkDel(false)} disabled={bulkDeleting}>No</button>
+                <button
+                  className="btn"
+                  style={{ background: '#DC2626', color: '#fff', border: 'none', minWidth: 100 }}
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                >
+                  {bulkDeleting ? 'Eliminando…' : 'Sí, eliminar'}
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          /* ── Cabecera normal ── */
+          <>
+            <h2>Base de contactos</h2>
+            <span className="count">{filtered.length} de {contacts.length}</span>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              <button className="btn btn-ghost" onClick={() => setShowExport(true)}>
+                <Ico.download /> Exportar
+              </button>
+              <button className="btn btn-ghost" onClick={() => setShowImport(true)}>
+                <Ico.upload /> Importar
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Barra de búsqueda móvil — siempre visible en mobile (el search del topbar está oculto) */}
+      <div className="search-bar-mobile">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: 'var(--muted)', flexShrink: 0 }}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input
+          placeholder="Buscar contacto…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Escape') setSearch('') }}
+        />
+        {search && (
+          <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 20, lineHeight: 1, padding: '0 2px' }}>×</button>
+        )}
       </div>
 
       <div className="filter-bar">
-        {['Todos', ...tipos].map(t => (
-          <button key={t} className={`filter-pill ${tipoFiltro === t ? 'active' : ''}`} onClick={() => setTipoFiltro(t)}>
-            {t === 'Todos' ? 'Todos los tipos' : t}
-            <span className="count">{countFor(t)}</span>
+        {!showOnlyLandlines && (
+          <FilterDropdown
+            value={tipoFiltro}
+            options={tipos}
+            countFor={countFor}
+            onChange={setTipoFiltro}
+            triggerLabel={v => v === 'Todos' ? 'Todos los tipos' : v}
+            optionLabel={v => v === 'Todos' ? 'Todos los tipos' : v}
+            searchPlaceholder="Buscar tipo…"
+          />
+        )}
+        {landlineCount > 0 && (
+          <button
+            className={`filter-pill ${showOnlyLandlines ? 'active' : ''}`}
+            onClick={() => setShowOnlyLandlines(v => !v)}
+            style={showOnlyLandlines ? { borderColor: '#DC2626', background: '#FEF2F2', color: '#DC2626' } : { borderColor: 'var(--ipesa-rose)', color: 'var(--ipesa-rose)' }}
+          >
+            📞 Fijos detectados
+            <span className="count" style={showOnlyLandlines ? { background: '#FEF2F2', color: '#DC2626' } : undefined}>{landlineCount}</span>
           </button>
-        ))}
+        )}
         <div style={{ marginLeft: 'auto' }} className="search-input">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: 'var(--muted)' }}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <input placeholder="Buscar por nombre, teléfono, canal…" value={search} onChange={e => setSearch(e.target.value)} />
@@ -177,10 +310,19 @@ export default function ContactosPage() {
           {search || tipoFiltro !== 'Todos' ? 'Sin resultados para este filtro.' : 'No hay contactos aún. Importa o crea el primero.'}
         </div>
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap contacts-table">
           <table className="table">
             <thead>
               <tr>
+                <th style={{ width: 44, paddingRight: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={allFilteredChecked}
+                    onChange={toggleAll}
+                    title="Seleccionar todos"
+                    style={{ width: 15, height: 15, accentColor: 'var(--ipesa-orange)', cursor: 'pointer', display: 'block', margin: '0 auto' }}
+                  />
+                </th>
                 <th>Nombre</th>
                 <th>Teléfono</th>
                 <th>Canal</th>
@@ -190,26 +332,51 @@ export default function ContactosPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(c => (
-                <tr key={c.id} onClick={() => setSelected(c)}>
-                  <td>
-                    <div className="cell-name">
-                      <Avatar name={c.name} color={TIPO_COLORS[c.segment]} size={32} />
-                      <div>
-                        <div className="nm">{c.name}</div>
-                        <div className="em">{c.company || c.email || ''}</div>
+              {filtered.map((c, idx) => {
+                const isChecked = checkedIds.has(c.id)
+                return (
+                  <tr
+                    key={c.id}
+                    onClick={() => { if (someChecked) toggleCheck(c.id, idx, { shiftKey: false } as any); else setSelected(c) }}
+                    style={{ background: isChecked ? 'rgba(238,90,36,0.06)' : undefined, userSelect: 'none' }}
+                  >
+                    <td
+                      style={{ width: 44, paddingRight: 0 }}
+                      onClick={e => { e.stopPropagation(); toggleCheck(c.id, idx, e) }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {}}
+                        style={{ width: 15, height: 15, accentColor: 'var(--ipesa-orange)', cursor: 'pointer', display: 'block', margin: '0 auto', pointerEvents: 'none' }}
+                      />
+                    </td>
+                    <td>
+                      <div className="cell-name">
+                        <Avatar name={c.name} color={TIPO_COLORS[c.segment]} size={32} />
+                        <div>
+                          <div className="nm">{c.name}</div>
+                          <div className="em">{c.company || c.email || ''}</div>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td data-label="Teléfono" className="cell-mono">{fmtPhone(c.phone)}</td>
-                  <td data-label="Canal">
-                    {c.acquisition_channel ? <CanalChip value={c.acquisition_channel} small /> : <span style={{ color: 'var(--muted-2)', fontSize: 12 }}>—</span>}
-                  </td>
-                  <td data-label="Tipo"><TipoChip value={c.segment || '—'} /></td>
-                  <td data-label="Registro" className="cell-muted">{fmtDateLong(c.created_at?.slice(0, 10) || '')}</td>
-                  <td className="cell-chevron" style={{ width: 40, textAlign: 'right' }}><Ico.chevron /></td>
-                </tr>
-              ))}
+                    </td>
+                    <td data-label="Teléfono" className="cell-mono">
+                      {fmtPhone(c.phone)}
+                      {!isMobilePhone(c.phone) && (
+                        <span style={{ marginLeft: 6, fontSize: 10, background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-sans)', fontWeight: 600, verticalAlign: 'middle' }}>Fijo</span>
+                      )}
+                    </td>
+                    <td data-label="Canal">
+                      {c.acquisition_channel ? <CanalChip value={c.acquisition_channel} small /> : <span style={{ color: 'var(--muted-2)', fontSize: 12 }}>—</span>}
+                    </td>
+                    <td data-label="Tipo"><TipoChip value={c.segment || '—'} /></td>
+                    <td data-label="Registro" className="cell-muted">{fmtDateLong(c.created_at?.slice(0, 10) || '')}</td>
+                    <td className="cell-chevron" style={{ width: 40, textAlign: 'right' }}>
+                      {isChecked ? <Ico.check /> : <Ico.chevron />}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -221,30 +388,11 @@ export default function ContactosPage() {
           tipos={tipos}
           canales={canales}
           onClose={() => setSelected(null)}
-          onCreateLead={(c) => { setSelected(null); setCreateLeadFor(c) }}
-          onUpdated={handleContactUpdated}
+            onUpdated={handleContactUpdated}
           onDeleted={handleContactDeleted}
         />
       )}
 
-      {createLeadFor && (
-        <NewLeadFromContact
-          contact={createLeadFor}
-          canales={canales}
-          tipos={tipos}
-          onClose={() => setCreateLeadFor(null)}
-          onSave={async (form) => {
-            const r = await fetch('/api/data/leads', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(form),
-            })
-            if (r.ok) { showToast('Lead creado ✓'); load() }
-            else showToast('Error al crear lead')
-            setCreateLeadFor(null)
-          }}
-        />
-      )}
 
       {showNew && (
         <ContactModal
@@ -271,6 +419,14 @@ export default function ContactosPage() {
         />
       )}
 
+      {showExport && (
+        <ExportModal
+          contacts={contacts}
+          tipos={tipos}
+          onClose={() => setShowExport(false)}
+        />
+      )}
+
       {toast && (
         <div className="toast-fixed">
           <Ico.check />
@@ -283,10 +439,10 @@ export default function ContactosPage() {
 
 /* ── Slide-over detalle de contacto ── */
 function ContactDetail({
-  contact: c, tipos, canales, onClose, onCreateLead, onUpdated, onDeleted,
+  contact: c, tipos, canales, onClose, onUpdated, onDeleted,
 }: {
   contact: any; tipos: string[]; canales: string[];
-  onClose: () => void; onCreateLead: (c: any) => void;
+  onClose: () => void;
   onUpdated: (c: any) => void; onDeleted: (id: string) => void;
 }) {
   const [leads, setLeads]         = useState<any[]>([])
@@ -450,16 +606,13 @@ function ContactDetail({
 
         <div className="detail-foot">
           {!editing && <>
-            {c.phone && <a href={`tel:${normalizePhone(c.phone)}`} className="btn btn-ghost"><Ico.phone /> Llamar</a>}
-            {c.email && <a href={`mailto:${c.email}`} className="btn btn-ghost"><Ico.mail /> Correo</a>}
-            <button className="btn btn-ghost" onClick={() => { setEditing(true); setConfirmDel(false) }} style={{ color: 'var(--ink-2)' }}>
+            {c.phone && <a href={`tel:${normalizePhone(c.phone)}`} className="btn btn-ghost btn-ghost-call"><Ico.phone /> Llamar</a>}
+            {c.email && <a href={`mailto:${c.email}`} className="btn btn-ghost btn-ghost-mail"><Ico.mail /> Correo</a>}
+            <button className="btn btn-ghost btn-ghost-call" onClick={() => { setEditing(true); setConfirmDel(false) }} style={{ color: 'var(--ink-2)' }}>
               <Ico.edit /> Editar
             </button>
-            <button className="btn btn-ghost" onClick={() => { setConfirmDel(true); setEditing(false) }} style={{ color: 'var(--ipesa-rose)' }}>
+            <button className="btn btn-ghost btn-ghost-danger" onClick={() => { setConfirmDel(true); setEditing(false) }} style={{ color: 'var(--ipesa-rose)' }}>
               <Ico.trash /> Eliminar
-            </button>
-            <button className="btn btn-primary" onClick={() => onCreateLead(c)}>
-              <Ico.plus /> Crear lead
             </button>
           </>}
         </div>
@@ -531,78 +684,74 @@ function ContactModal({
   )
 }
 
-/* ── Modal: crear lead desde contacto ── */
-function NewLeadFromContact({ contact: c, canales, tipos, onClose, onSave }: { contact: any; canales: string[]; tipos: string[]; onClose: () => void; onSave: (d: any) => void }) {
-  const today = new Date().toISOString().slice(0, 10)
-  const [form, setForm] = useState({
-    canal:    c.acquisition_channel || canales[0] || 'Referido',
-    segmento: c.segment             || tipos[0]  || 'Hogar',
-    monto:    '',
-    fecha:    today,
-    notas:    '',
-  })
-  const [saving, setSaving] = useState(false)
-  const upd = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
-  const selectStyle = { width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none' }
+/* ── Modal de exportación XLSX ── */
+function ExportModal({ contacts, tipos, onClose }: { contacts: any[]; tipos: string[]; onClose: () => void }) {
+  const [mode, setMode]       = useState<'all' | 'segment'>('all')
+  const [segment, setSegment] = useState(tipos[0] || '')
 
-  const handleSave = async () => {
-    setSaving(true)
-    await onSave({ name: c.name, phone: c.phone, email: c.email || '', contact_id: c.id,
-      canal: form.canal, segmento: form.segmento, estado: 'Nuevo',
-      monto: form.monto ? Number(form.monto) : null, fecha: form.fecha, notas: form.notas || null })
-    setSaving(false)
+  const count = mode === 'all' ? contacts.length : contacts.filter(c => c.segment === segment).length
+
+  const doExport = async () => {
+    const data = mode === 'all' ? contacts : contacts.filter(c => c.segment === segment)
+    const rows = data.map(c => ({
+      'Nombre':         c.name || '',
+      'Teléfono':       normalizePhone(c.phone),
+      'Para SMS (52+)': c.phone ? `52${normalizePhone(c.phone)}` : '',
+      'Correo':         c.email || '',
+      'Empresa':        c.company || '',
+      'Tipo':           c.segment || '',
+      'Canal':          c.acquisition_channel || '',
+      'Dirección':      c.address || '',
+      'Fecha registro': c.created_at?.slice(0, 10) || '',
+    }))
+    const XLSX = await import('xlsx')
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Contactos')
+    const suffix = mode === 'segment' ? `-${segment.toLowerCase().replace(/\s+/g, '-')}` : ''
+    XLSX.writeFile(wb, `contactos-ipesa${suffix}-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    onClose()
   }
 
   return (
     <div className="modal" onClick={onClose}>
-      <div className="modal-card" onClick={e => e.stopPropagation()}>
+      <div className="modal-card" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
         <div className="modal-head">
-          <h3>Crear lead</h3>
+          <h3>Exportar contactos</h3>
           <button className="modal-close btn-icon" onClick={onClose}><Ico.close /></button>
         </div>
         <div className="modal-body">
-          <div style={{ background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 10, padding: '12px 14px', marginBottom: 18 }}>
-            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>Contacto de origen</div>
-            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>{c.name}</div>
-            <div style={{ fontSize: 12.5, color: 'var(--muted)', display: 'flex', gap: 10 }}>
-              {c.phone && <span>{fmtPhone(c.phone)}</span>}
-              {c.email && <span>{c.email}</span>}
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '12px 14px', borderRadius: 9, border: `2px solid ${mode === 'all' ? 'var(--ipesa-orange)' : 'var(--line)'}`, background: mode === 'all' ? 'rgba(238,90,36,0.05)' : 'var(--card)' }}>
+              <input type="radio" checked={mode === 'all'} onChange={() => setMode('all')} style={{ accentColor: 'var(--ipesa-orange)', flexShrink: 0 }} />
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 13.5 }}>Todos los contactos</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)' }}>{contacts.length} contactos en total</div>
+              </div>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '12px 14px', borderRadius: 9, border: `2px solid ${mode === 'segment' ? 'var(--ipesa-orange)' : 'var(--line)'}`, background: mode === 'segment' ? 'rgba(238,90,36,0.05)' : 'var(--card)' }}>
+              <input type="radio" checked={mode === 'segment'} onChange={() => setMode('segment')} style={{ accentColor: 'var(--ipesa-orange)', flexShrink: 0, marginTop: 3 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: 13.5 }}>Por segmento</div>
+                {mode === 'segment' ? (
+                  <select value={segment} onChange={e => setSegment(e.target.value)} onClick={e => e.stopPropagation()}
+                    style={{ marginTop: 8, width: '100%', padding: '7px 10px', borderRadius: 7, border: '1px solid var(--line)', background: 'var(--card)', fontSize: 13, outline: 'none', cursor: 'pointer' }}>
+                    {tipos.map(t => <option key={t} value={t}>{t} ({contacts.filter(c => c.segment === t).length})</option>)}
+                  </select>
+                ) : (
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>Filtrar por tipo de cliente</div>
+                )}
+              </div>
+            </label>
           </div>
-          <div className="field-row">
-            <div className="field">
-              <label>Canal</label>
-              <select value={form.canal} onChange={e => upd('canal', e.target.value)} style={selectStyle}>
-                {canales.map(ch => <option key={ch} value={ch}>{ch}</option>)}
-              </select>
-            </div>
-            <div className="field">
-              <label>Segmento</label>
-              <select value={form.segmento} onChange={e => upd('segmento', e.target.value)} style={selectStyle}>
-                {tipos.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-          </div>
-          <div className="field-row">
-            <div className="field">
-              <label>Valor estimado (MXN)</label>
-              <input type="number" min="0" value={form.monto} onChange={e => upd('monto', e.target.value)} placeholder="0.00" inputMode="decimal" />
-            </div>
-            <div className="field">
-              <label>Fecha</label>
-              <input type="date" value={form.fecha} onChange={e => upd('fecha', e.target.value)} />
-            </div>
-          </div>
-          <div className="field">
-            <label>Notas iniciales</label>
-            <textarea value={form.notas} onChange={e => upd('notas', e.target.value)}
-              placeholder="Observaciones, producto de interés, etc." rows={3} style={{ resize: 'vertical', minHeight: 72 }} />
+          <div style={{ marginTop: 14, padding: '10px 12px', background: 'var(--paper)', borderRadius: 8, fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.6 }}>
+            Columnas incluidas: Nombre · Teléfono · Para SMS (52+) · Correo · Empresa · Tipo · Canal · Dirección · Fecha
           </div>
         </div>
         <div className="modal-foot">
-          <button className="btn btn-ghost" onClick={onClose} disabled={saving}>Cancelar</button>
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            <Ico.plus /> {saving ? 'Guardando…' : 'Crear lead'}
+          <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary" onClick={doExport} disabled={count === 0}>
+            <Ico.download /> Descargar {count} contactos
           </button>
         </div>
       </div>
@@ -610,20 +759,25 @@ function NewLeadFromContact({ contact: c, canales, tipos, onClose, onSave }: { c
   )
 }
 
-/* ── Modal de importación CSV/XLSX ── */
+/* ── Modal de importación CSV/XLSX (con previsualización y solo celulares) ── */
 function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const [step, setStep]         = useState<'drop'|'map'|'import'>('drop')
+  type Step = 'drop' | 'map' | 'preview' | 'importing'
+  const [step, setStep]         = useState<Step>('drop')
   const [rows, setRows]         = useState<any[]>([])
   const [headers, setHeaders]   = useState<string[]>([])
-  const [mapping, setMapping]   = useState<Record<string,string>>({})
+  const [mapping, setMapping]   = useState<Record<string, string>>({})
   const [progress, setProgress] = useState(0)
   const [total, setTotal]       = useState(0)
   const [dragging, setDragging] = useState(false)
   const [error, setError]       = useState('')
+  const [preview, setPreview]   = useState<{
+    valid: any[]; landlines: number; invalid: number; noName: number
+  } | null>(null)
 
-  const parseFile = (file: File) => {
+  const parseFile = async (file: File) => {
     setError('')
     if (file.name.match(/\.xlsx?$/i)) {
+      const XLSX = await import('xlsx')
       const reader = new FileReader()
       reader.onload = e => {
         try {
@@ -642,6 +796,7 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
       }
       reader.readAsBinaryString(file)
     } else {
+      const Papa = (await import('papaparse')).default
       Papa.parse(file, {
         header: true, skipEmptyLines: true,
         complete: res => {
@@ -659,29 +814,53 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
     if (file) parseFile(file)
   }
 
-  const doImport = async () => {
-    setStep('import'); setTotal(rows.length); setProgress(0)
-    let done = 0
+  const buildPreview = () => {
+    let landlines = 0, invalid = 0, noName = 0
+    const valid: any[] = []
     for (const row of rows) {
       const contact: any = {}
       CAMPOS_DESTINO.forEach(dest => {
         const src = mapping[dest]
         if (src && row[src] !== undefined) contact[dest] = String(row[src]).trim()
       })
-      if (!contact.name) { done++; setProgress(done); continue }
-      if (contact.phone) contact.phone = normalizePhone(contact.phone)
-      await fetch('/api/data/contacts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(contact) })
+      if (!contact.name?.trim()) { noName++; continue }
+      const raw = contact.phone || ''
+      const normalized = normalizePhone(raw)
+      if (!raw || normalized.length !== 10) { invalid++; continue }
+      if (!isMobilePhone(normalized)) { landlines++; continue }
+      contact.phone = normalized
+      valid.push(contact)
+    }
+    setPreview({ valid, landlines, invalid, noName })
+    setStep('preview')
+  }
+
+  const doImport = async () => {
+    if (!preview) return
+    setStep('importing'); setTotal(preview.valid.length); setProgress(0)
+    let done = 0
+    for (const contact of preview.valid) {
+      await fetch('/api/data/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contact),
+      })
       done++; setProgress(done)
     }
     onDone()
   }
 
+  const titleMap: Record<Step, string> = {
+    drop: 'Importar contactos', map: 'Mapeo de columnas',
+    preview: 'Previsualización', importing: 'Importando…',
+  }
+
   return (
-    <div className="modal" onClick={onClose}>
+    <div className="modal" onClick={step === 'importing' ? undefined : onClose}>
       <div className="modal-card" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
         <div className="modal-head">
-          <h3>{step === 'drop' ? 'Importar contactos' : step === 'map' ? 'Mapeo de columnas' : 'Importando…'}</h3>
-          <button className="modal-close btn-icon" onClick={onClose}><Ico.close /></button>
+          <h3>{titleMap[step]}</h3>
+          {step !== 'importing' && <button className="modal-close btn-icon" onClick={onClose}><Ico.close /></button>}
         </div>
         <div className="modal-body">
           {step === 'drop' && (
@@ -694,12 +873,17 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
                 <div style={{ color: 'var(--muted)', fontSize: 12, marginBottom: 12 }}>o haz clic para seleccionar</div>
                 <input type="file" accept=".csv,.xlsx,.xls" onChange={e => { const f = e.target.files?.[0]; if (f) parseFile(f) }} />
               </label>
+              <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--paper)', borderRadius: 8, fontSize: 12, color: 'var(--muted)' }}>
+                ℹ️ Solo se importarán números <strong>celulares</strong>. Los fijos y los inválidos se omiten automáticamente.
+              </div>
               {error && <div style={{ color: 'var(--ipesa-rose)', fontSize: 13, marginTop: 10 }}>{error}</div>}
             </>
           )}
           {step === 'map' && (
             <>
-              <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14 }}>Asocia las columnas ({rows.length} filas) con los campos de IPESA.</p>
+              <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14 }}>
+                Asocia las columnas del archivo <strong>({rows.length} filas)</strong> con los campos de IPESA.
+              </p>
               <div>
                 {CAMPOS_DESTINO.map(dest => (
                   <div className="map-row" key={dest}>
@@ -713,21 +897,58 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
               </div>
             </>
           )}
-          {step === 'import' && (
+          {step === 'preview' && preview && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ padding: '14px 16px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, textAlign: 'center' }}>
+                  <div style={{ fontSize: 30, fontWeight: 700, color: '#16A34A', lineHeight: 1 }}>{preview.valid.length}</div>
+                  <div style={{ fontSize: 12, color: '#166534', marginTop: 4, fontWeight: 600 }}>Celulares válidos</div>
+                  <div style={{ fontSize: 11, color: '#4ADE80', marginTop: 2 }}>Se importarán ✓</div>
+                </div>
+                <div style={{ padding: '14px 16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, textAlign: 'center' }}>
+                  <div style={{ fontSize: 30, fontWeight: 700, color: '#DC2626', lineHeight: 1 }}>{preview.landlines + preview.invalid + preview.noName}</div>
+                  <div style={{ fontSize: 12, color: '#7F1D1D', marginTop: 4, fontWeight: 600 }}>Se omitirán</div>
+                  <div style={{ fontSize: 11, color: '#FCA5A5', marginTop: 2 }}>No aptos para SMS</div>
+                </div>
+              </div>
+              {(preview.landlines > 0 || preview.invalid > 0 || preview.noName > 0) && (
+                <div style={{ padding: '10px 14px', background: 'var(--paper)', borderRadius: 9, fontSize: 12.5, color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {preview.landlines > 0 && <span>📞 <strong>{preview.landlines}</strong> número{preview.landlines !== 1 ? 's' : ''} fijo{preview.landlines !== 1 ? 's' : ''}</span>}
+                  {preview.invalid > 0  && <span>⚠️ <strong>{preview.invalid}</strong> teléfono{preview.invalid !== 1 ? 's' : ''} con formato inválido</span>}
+                  {preview.noName > 0   && <span>👤 <strong>{preview.noName}</strong> fila{preview.noName !== 1 ? 's' : ''} sin nombre</span>}
+                </div>
+              )}
+              {preview.valid.length === 0 && (
+                <div style={{ padding: '12px', background: '#FEF2F2', borderRadius: 9, fontSize: 13, color: '#DC2626', textAlign: 'center', fontWeight: 500 }}>
+                  No hay contactos válidos para importar en este archivo.
+                </div>
+              )}
+            </div>
+          )}
+          {step === 'importing' && (
             <div style={{ textAlign: 'center', padding: '24px 0' }}>
               <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 10 }}>Importando {progress} de {total}…</div>
-              <div className="progress-bar"><div className="progress-fill" style={{ width: `${(progress/total)*100}%` }}></div></div>
+              <div className="progress-bar"><div className="progress-fill" style={{ width: `${total > 0 ? (progress / total) * 100 : 0}%` }}></div></div>
             </div>
           )}
         </div>
-        {step !== 'import' && (
+        {step !== 'importing' && (
           <div className="modal-foot">
-            <button className="btn btn-ghost" onClick={step === 'map' ? () => setStep('drop') : onClose}>
-              {step === 'map' ? 'Volver' : 'Cancelar'}
+            <button className="btn btn-ghost" onClick={
+              step === 'preview' ? () => setStep('map')
+              : step === 'map' ? () => setStep('drop')
+              : onClose
+            }>
+              {step === 'drop' ? 'Cancelar' : 'Volver'}
             </button>
             {step === 'map' && (
-              <button className="btn btn-primary" onClick={doImport} disabled={!mapping.name && !mapping.phone}>
-                <Ico.plus /> Importar {rows.length} contactos
+              <button className="btn btn-primary" onClick={buildPreview} disabled={!mapping.name && !mapping.phone}>
+                Previsualizar →
+              </button>
+            )}
+            {step === 'preview' && preview && preview.valid.length > 0 && (
+              <button className="btn btn-primary" onClick={doImport}>
+                <Ico.plus /> Importar {preview.valid.length} celulares
               </button>
             )}
           </div>

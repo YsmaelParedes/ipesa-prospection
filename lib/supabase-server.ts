@@ -41,6 +41,21 @@ export async function getUserId(): Promise<string | null> {
   }
 }
 
+// ─── Rol de usuario: 'admin' ve todo, 'employee' ve solo lo suyo ──────────────
+export type UserRole = 'admin' | 'employee'
+
+export async function getUserContext(): Promise<{ uid: string; role: UserRole } | null> {
+  try {
+    const client = await getAuthClient()
+    const { data: { user }, error } = await client.auth.getUser()
+    if (error || !user) return null
+    const role: UserRole = user.user_metadata?.role === 'admin' ? 'admin' : 'employee'
+    return { uid: user.id, role }
+  } catch {
+    return null
+  }
+}
+
 // ─── Respuesta 401 estándar ────────────────────────────────────────────────────
 export function unauthorizedResponse() {
   return Response.json({ error: 'No autorizado — sesión no válida' }, { status: 401 })

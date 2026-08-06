@@ -42,7 +42,7 @@ const Icon = {
   search:    (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>,
   clock:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
   check:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m5 13 4 4L19 7"/></svg>,
-  arcade:    (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><rect x="2" y="6" width="20" height="14" rx="4"/><path d="M8 13h2m-1-1v2"/><circle cx="16" cy="13" r="1" fill="currentColor"/><circle cx="14" cy="11" r="1" fill="currentColor"/><path d="M9 6V4h6v2"/></svg>,
+  arrowUp:   (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 19V5M5 12l7-7 7 7"/></svg>,
 }
 
 function initials(name: string) {
@@ -69,8 +69,7 @@ const NAV_ITEMS = [
   { id: 'dashboard',      href: '/',                label: 'Dashboard',      icon: Icon.dashboard, mobile: true  },
   { id: 'contactos',      href: '/contactos',       label: 'Contactos',      icon: Icon.contacts,  mobile: true  },
   { id: 'leads',          href: '/leads',           label: 'Leads',          icon: Icon.leads,     mobile: true  },
-  { id: 'arcade',         href: '/arcade',          label: 'Arcade',         icon: Icon.arcade,    mobile: true  },
-  { id: 'recordatorios',  href: '/recordatorios',   label: 'Recordatorios',  icon: Icon.clock,     mobile: false },
+  { id: 'recordatorios',  href: '/recordatorios',   label: 'Recordatorios',  icon: Icon.clock,     mobile: true  },
   { id: 'configuracion',  href: '/configuracion',   label: 'Configuración',  icon: Icon.settings,  mobile: false },
 ]
 
@@ -78,9 +77,8 @@ const TITLE_MAP: Record<string, { t: string; s: string }> = {
   '/':               { t: 'Dashboard',         s: 'Resumen de actividad'             },
   '/contactos':      { t: 'Contactos',         s: 'Base de clientes registrados'     },
   '/leads':          { t: 'Pipeline de leads', s: 'Gestión de oportunidades'         },
-  '/arcade':         { t: 'Arcade',            s: 'Competencia del staff — IPESA'    },
   '/recordatorios':  { t: 'Recordatorios',     s: 'Seguimiento y tareas pendientes'  },
-  '/configuracion':  { t: 'Configuración',     s: 'Perfil, segmentos y canales'      },
+  '/configuracion':  { t: 'Configuración',     s: 'Segmentos y canales'              },
 }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -92,6 +90,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [bellOpen,    setBellOpen]    = useState(false)
   const [reminders,   setReminders]   = useState<any[]>([])
   const [search,      setSearch]      = useState('')
+  const [showScrollTop, setShowScrollTop] = useState(false)
 
   /* General reminder form inside bell panel */
   const [remForm,   setRemForm]   = useState(false)
@@ -109,6 +108,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const bellRef   = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+
+  /* Botón "volver arriba" — visible tras scrollear hacia abajo */
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 400)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   /* Display name — desde user_metadata */
   useEffect(() => {
@@ -129,9 +136,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
     navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(reg => {
       swRegRef.current = reg
-      // Verificar si ya hay una suscripción activa
       reg.pushManager.getSubscription().then(sub => {
         setPushSubscribed(!!sub)
+        // Re-guardar la suscripción existente para garantizar que user_id esté vinculado.
+        // Resuelve el caso donde el usuario activó push antes del fix multi-usuario.
+        if (sub) {
+          fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sub.toJSON()),
+          }).catch(() => {})
+        }
       })
     }).catch(err => console.warn('[SW]', err))
   }, [])
@@ -198,15 +213,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }
 
-  /* Notificación de prueba (verifica que todo funcione) */
+  /* Notificación de prueba — usa el servidor (verifica VAPID keys + user_id en DB) */
   const testPush = async () => {
-    if (!swRegRef.current || Notification.permission !== 'granted') return
-    await swRegRef.current.showNotification('🔔 IPESA — Prueba exitosa', {
-      body: 'Las notificaciones están configuradas correctamente.',
-      icon: '/ipesa-logo.png',
-      badge: '/ipesa-logo.png',
-      data: { url: '/recordatorios' },
-    })
+    setPushError('')
+    setPushLoading(true)
+    try {
+      const res  = await fetch('/api/push/test', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        setPushError(data.error || `Error ${res.status}`)
+      } else if (data.sent === 0) {
+        setPushError('Se envió pero el navegador no recibió la notificación. Revisa los permisos del sitio.')
+      }
+      // Si res.ok y sent > 0, la notificación se ve en pantalla
+    } catch (e: any) {
+      setPushError('No se pudo conectar al servidor de prueba.')
+    } finally {
+      setPushLoading(false)
+    }
   }
 
   /* Load pending reminders + disparar notificación si alguno vence ahora */
@@ -243,7 +267,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     loadReminders()
-    const t = setInterval(loadReminders, 60_000)
+    const t = setInterval(loadReminders, 120_000)  // cada 2 min — suficiente para recordatorios
     return () => clearInterval(t)
   }, [loadReminders])
 
@@ -559,6 +583,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <Icon.plus />
         </button>
       )}
+
+      {/* ── Volver arriba — visible en todas las secciones tras hacer scroll ── */}
+      <button
+        className={`scroll-top-btn ${showScrollTop ? 'visible' : ''}`}
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        aria-label="Volver arriba"
+        title="Volver arriba"
+        tabIndex={showScrollTop ? 0 : -1}
+      >
+        <Icon.arrowUp />
+      </button>
     </div>
   )
 }

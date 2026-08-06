@@ -304,6 +304,89 @@ a { color: inherit; text-decoration: none; }
 .btn-icon:hover { background: var(--paper); }
 
 /* ============================================================
+   CONFIGURACIÓN — tabs y filas de usuario (roles)
+   ============================================================ */
+.config-tabs {
+  display: flex; gap: 2px; width: fit-content; max-width: 100%;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.config-tabs::-webkit-scrollbar { display: none; }
+.config-tab-btn {
+  display: flex; align-items: center; gap: 7px; flex-shrink: 0; white-space: nowrap;
+  padding: 8px 18px; border-radius: 8px; font-size: 13.5px; font-weight: 600;
+  cursor: pointer; border: none; transition: all 0.15s;
+}
+
+.user-row-head { display: flex; align-items: center; gap: 10px; }
+.user-row-name { min-width: 0; flex: 1; }
+.role-badge, .change-role-btn { flex-shrink: 0; }
+
+@media (max-width: 640px) {
+  .user-row-head { flex-wrap: wrap; row-gap: 10px; }
+  .user-row-name { flex-basis: 100%; }
+  .role-badge { order: 2; }
+  .change-role-btn { order: 3; margin-left: auto; }
+}
+
+/* ============================================================
+   ICON ACTION BUTTONS — llamar / WhatsApp / correo / editar / eliminar
+   Botón compacto con tinte de color por acción + micro-interacción al
+   hover/tap. Reemplaza los botones cuadrados grises genéricos.
+   ============================================================ */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  background: var(--paper);
+  color: var(--muted);
+  transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+.icon-btn svg { width: 14px; height: 14px; transition: transform 0.16s ease; display: block; }
+.icon-btn:hover { transform: translateY(-2px) scale(1.08); box-shadow: var(--shadow); }
+.icon-btn:active { transform: scale(0.92); transition-duration: 0.08s; }
+.icon-btn:focus-visible { outline: 2px solid var(--ipesa-orange); outline-offset: 2px; }
+.icon-btn:disabled { opacity: 0.5; cursor: wait; transform: none; box-shadow: none; }
+
+.icon-btn-call { background: var(--ipesa-blue-soft); color: var(--ipesa-blue); }
+.icon-btn-call:hover { background: var(--ipesa-blue); color: #fff; }
+
+.icon-btn-whatsapp { background: #DCF5E3; color: #1B9E4B; }
+.icon-btn-whatsapp:hover { background: #25D366; color: #fff; }
+
+.icon-btn-mail { background: var(--ipesa-orange-soft); color: var(--ipesa-orange-deep); }
+.icon-btn-mail:hover { background: var(--ipesa-orange); color: #fff; }
+
+.icon-btn-edit { background: var(--ipesa-blue-soft); color: var(--ipesa-blue); }
+.icon-btn-edit:hover { background: var(--ipesa-blue); color: #fff; }
+
+.icon-btn-success { background: var(--ipesa-green-soft); color: var(--ipesa-green); }
+.icon-btn-success:hover { background: var(--ipesa-green); color: #fff; }
+
+.icon-btn-delete { background: var(--paper); color: var(--muted); border: 1px solid var(--line); }
+.icon-btn-delete:hover { background: var(--ipesa-rose-soft); color: var(--ipesa-rose); border-color: transparent; }
+.icon-btn-delete:hover svg { transform: rotate(-8deg); }
+
+@media (max-width: 960px) {
+  .icon-btn { width: 40px; height: 40px; border-radius: 11px; }
+  .icon-btn svg { width: 17px; height: 17px; }
+}
+
+/* Variantes de color para .btn-ghost con texto (Llamar, WhatsApp, Editar, Eliminar) */
+.btn-ghost { transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease, color 0.12s ease; }
+.btn-ghost:hover { transform: translateY(-1px); }
+.btn-ghost:active { transform: scale(0.97); }
+.btn-ghost-call:hover     { background: var(--ipesa-blue-soft);   border-color: transparent; color: var(--ipesa-blue); }
+.btn-ghost-whatsapp:hover { background: #DCF5E3;                  border-color: transparent; color: #1B9E4B; }
+.btn-ghost-mail:hover     { background: var(--ipesa-orange-soft); border-color: transparent; color: var(--ipesa-orange-deep); }
+.btn-ghost-danger:hover   { background: var(--ipesa-rose-soft);   border-color: transparent; color: var(--ipesa-rose); }
+
+/* ============================================================
    KPIs
    ============================================================ */
 
@@ -447,6 +530,9 @@ a { color: inherit; text-decoration: none; }
 .chip-constructora { background: var(--ipesa-yellow-soft); color: #8A6308; }
 .chip-arq-dis      { background: var(--ipesa-green-soft);  color: #1F5536; }
 .chip-generic      { background: #E8E2D6; color: #5A5045; }
+
+/* Barra de búsqueda dedicada en mobile — oculta en desktop */
+.search-bar-mobile { display: none; }
 
 /* ---------- Filter bar ---------- */
 .filter-bar {
@@ -866,6 +952,21 @@ a { color: inherit; text-decoration: none; }
 .fab:active { transform: scale(0.94); }
 .fab svg { width: 24px; height: 24px; }
 
+/* ── Botón flotante "volver arriba" — aparece al hacer scroll ── */
+.scroll-top-btn {
+  position: fixed; right: 28px; bottom: 28px; z-index: 24;
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--card); border: 1px solid var(--line); color: var(--ink-2);
+  box-shadow: var(--shadow-lg); cursor: pointer;
+  opacity: 0; transform: translateY(14px) scale(0.9); pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.34,1.56,0.64,1), background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.scroll-top-btn.visible { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.scroll-top-btn:hover { background: var(--ipesa-orange); color: #fff; border-color: var(--ipesa-orange); transform: translateY(-3px) scale(1.06); }
+.scroll-top-btn:active { transform: scale(0.92); }
+.scroll-top-btn svg { width: 18px; height: 18px; }
+
 @media (max-width: 1280px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .dash-grid { grid-template-columns: 1fr; }
@@ -886,6 +987,8 @@ a { color: inherit; text-decoration: none; }
   .topbar-actions .btn { display: none; }
   .btn-icon { width: 38px; height: 38px; }
   .content { padding: 16px 16px 100px; }
+  /* Mobile: bottom-nav ocupa la derecha completa, se mueve a la izquierda para no chocar con el FAB */
+  .scroll-top-btn { left: 18px; right: auto; bottom: 92px; width: 46px; height: 46px; }
   .section-head h2 { font-size: 17px; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 18px; }
   .kpi { padding: 14px; }
@@ -903,6 +1006,21 @@ a { color: inherit; text-decoration: none; }
   .filter-bar { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; margin-left: -16px; margin-right: -16px; padding: 0 16px 4px; -webkit-overflow-scrolling: touch; }
   .filter-bar::-webkit-scrollbar { display: none; }
   .filter-bar > * { flex-shrink: 0; }
+  /* Ocultar el search dentro del filter-bar en mobile — lo reemplaza .search-bar-mobile */
+  .filter-bar .search-input { display: none; }
+
+  /* Search bar móvil: visible solo en mobile */
+  .search-bar-mobile {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: 10px 14px;
+    margin-bottom: 4px; box-sizing: border-box;
+  }
+  .search-bar-mobile input {
+    border: none; outline: none; background: none; flex: 1;
+    font-size: 14px; color: var(--ink); font-family: var(--font-body);
+  }
+  .search-bar-mobile input::placeholder { color: var(--muted-2); }
   .kanban { grid-template-columns: repeat(5, 84vw); gap: 10px; overflow-x: auto; margin: 0 -16px; padding: 0 16px 6px; }
   .panel { padding: 16px; }
   .donut-wrap { flex-direction: column; align-items: stretch; gap: 16px; }
@@ -917,15 +1035,27 @@ a { color: inherit; text-decoration: none; }
   .table tbody tr { background: var(--card); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 10px; padding: 14px; box-shadow: var(--shadow-sm); cursor: pointer; }
   .table tbody tr:hover { background: var(--card); transform: translateY(-1px); box-shadow: var(--shadow); }
   .table tbody td { padding: 0; border: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+  /* td:first-child = cabecera de la card (funciona para leads: nombre es la 1ª col) */
   .table tbody td:first-child { padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px dashed var(--line); justify-content: flex-start; }
-  .table tbody td:not(:first-child)::before { content: attr(data-label); font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; flex-shrink: 0; }
+  /* Labels en celdas de datos — omite la cabecera y el chevron */
+  .table tbody td:not(:first-child)::before { content: attr(data-label); font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; flex-shrink: 0; min-width: 56px; }
   .table tbody td + td { margin-top: 8px; }
   .table tbody td.cell-chevron { display: none; }
+  /* Ocultar fecha en mobile para ahorrar espacio */
+  .table tbody td[data-label="Fecha"] { display: none; }
+
+  /* ── Tabla de contactos: td:first-child = checkbox → ocultar; nombre = 2ª col ── */
+  .contacts-table .table tbody td:first-child { display: none; padding: 0; margin: 0; border: none; }
+  .contacts-table .table tbody td:nth-child(2) { padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px dashed var(--line); justify-content: flex-start; }
+  .contacts-table .table tbody td:nth-child(2)::before { content: none; } /* nombre sin label */
+  .contacts-table .table tbody td:not(:first-child):not(:nth-child(2))::before { content: attr(data-label); font-size: 10.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; flex-shrink: 0; min-width: 56px; }
+  .contacts-table .table tbody td[data-label="Registro"] { display: none; }
   .detail-head { padding: 22px 18px 16px; }
   .detail-body { padding: 18px 18px 22px; }
   .detail-title { font-size: 21px; }
-  .detail-foot { padding: 12px 14px; gap: 6px; }
-  .detail-foot .btn { font-size: 12px; padding: 9px 10px; }
+  .detail-foot { padding: 12px 14px; gap: 8px; }
+  .detail-foot .btn { font-size: 12.5px; padding: 12px 10px; min-height: 44px; }
+  .icon-btn { width: 42px; height: 42px; }
   .kv-grid { grid-template-columns: 1fr; padding: 14px; gap: 12px; }
   .field-row { grid-template-columns: 1fr; gap: 0; }
   .topbar-brand-mini .brand-sub { display: none; }
@@ -950,6 +1080,9 @@ a { color: inherit; text-decoration: none; }
 @supports (padding: max(0px)) {
   .bottom-nav { bottom: max(12px, env(safe-area-inset-bottom)); }
   .fab { bottom: max(92px, calc(env(safe-area-inset-bottom) + 80px)); }
+  @media (max-width: 960px) {
+    .scroll-top-btn { bottom: max(92px, calc(env(safe-area-inset-bottom) + 80px)); }
+  }
 }
 
 /* ============================================================

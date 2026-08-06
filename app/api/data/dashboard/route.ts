@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
-import { getServerSupabase, getUserId, unauthorizedResponse } from '@/lib/supabase-server'
+import { getServerSupabase, getUserContext, unauthorizedResponse } from '@/lib/supabase-server'
 
 export async function GET() {
   try {
-    const uid = await getUserId()
-    if (!uid) return unauthorizedResponse()
+    const ctx = await getUserContext()
+    if (!ctx) return unauthorizedResponse()
+    const { uid, role } = ctx
 
     const supabase = getServerSupabase()
 
@@ -12,21 +13,23 @@ export async function GET() {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
 
+    // Admin: leads de todos los usuarios (supervisión). Empleado: solo los suyos (+ legacy).
+    const leadsQuery = role === 'admin'
+      ? supabase.from('leads').select('*').order('created_at', { ascending: false })
+      : supabase.from('leads').select('*').or(`user_id.eq.${uid},user_id.is.null`).order('created_at', { ascending: false })
+
     const [
       { count: totalContacts },
       { data: leadsData,    error: leadsError },
       { data: contactsData },
+      usersResult,
     ] = await Promise.all([
       // Contactos: global (compartido entre usuarios)
       supabase.from('contacts').select('*', { count: 'exact', head: true }),
-      // Leads: solo del usuario actual (+ legacy sin user_id)
-      supabase
-        .from('leads')
-        .select('*')
-        .or(`user_id.eq.${uid},user_id.is.null`)
-        .order('created_at', { ascending: false }),
+      leadsQuery,
       // Contactos por segmento: global
       supabase.from('contacts').select('segment, acquisition_channel'),
+      role === 'admin' ? supabase.auth.admin.listUsers({ perPage: 200 }) : Promise.resolve(null),
     ])
 
     if (leadsError) throw leadsError
@@ -34,12 +37,28 @@ export async function GET() {
     const leads    = leadsData    || []
     const contacts = contactsData || []
 
+    // ── Desglose por vendedor (solo admin) ──────────────────────────────────
+    let byOwner: { name: string; count: number }[] = []
+    if (role === 'admin' && usersResult) {
+      const nameByUid = new Map(
+        (usersResult.data?.users ?? []).map(u => [u.id, (u.user_metadata?.display_name as string)?.trim() || u.email || 'Usuario'])
+      )
+      const ownerCounts: Record<string, number> = {}
+      for (const l of leads) {
+        const name = l.user_id ? (nameByUid.get(l.user_id) ?? 'Usuario') : 'Sin asignar'
+        ownerCounts[name] = (ownerCounts[name] || 0) + 1
+      }
+      byOwner = Object.entries(ownerCounts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+    }
+
     // ── Métricas del usuario ────────────────────────────────────────────────
     const activeStates  = ['Nuevo', 'En seguimiento', 'Cotizado']
     const leadsActivos  = leads.filter(l => activeStates.includes(l.estado)).length
-    const cierresMes    = leads.filter(l => l.estado === 'Cerrado' && l.created_at >= startOfMonth).length
+    const cierresMes    = leads.filter(l => l.estado === 'Ganado / Venta realizada' && l.created_at >= startOfMonth).length
     const conversion    = leads.length > 0
-      ? Math.round((leads.filter(l => l.estado === 'Cerrado').length / leads.length) * 100)
+      ? Math.round((leads.filter(l => l.estado === 'Ganado / Venta realizada').length / leads.length) * 100)
       : 0
 
     // ── Canal breakdown (últimos 30 días, leads del usuario) ─────────────────
@@ -76,10 +95,10 @@ export async function GET() {
     // ── Feed de actividad de hoy ──────────────────────────────────────────────
     const todayLeads = leads.filter(l => l.created_at >= startOfToday)
     const activity = [
-      ...todayLeads.filter(l => l.estado === 'Cerrado').map(l => ({
+      ...todayLeads.filter(l => l.estado === 'Ganado / Venta realizada').map(l => ({
         type: 'close', who: l.name, what: 'cerró como cliente', time: 'hoy', color: '#3D8B5C',
       })),
-      ...todayLeads.filter(l => l.estado !== 'Cerrado').map(l => ({
+      ...todayLeads.filter(l => l.estado !== 'Ganado / Venta realizada').map(l => ({
         type: 'lead', who: l.name, what: `nuevo lead · ${l.canal}`, time: 'hoy', color: '#EE5A24',
       })),
     ].slice(0, 8)
@@ -88,8 +107,10 @@ export async function GET() {
       metrics: { totalContacts: totalContacts || 0, leadsActivos, cierresMes, conversion },
       byChannel,
       bySegment,
+      byOwner,
       recentLeads,
       activity,
+      isAdmin: role === 'admin',
     })
   } catch (error: any) {
     console.error('[GET /api/data/dashboard]', error?.message ?? error)

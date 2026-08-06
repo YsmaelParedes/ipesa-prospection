@@ -37,8 +37,11 @@ export default function DashboardPage() {
   const m = data?.metrics ?? {}
   const bySegment: any[] = (data?.bySegment ?? []).map((s: any, i: number) => ({ ...s, color: s.color || segColor(s.name, i) }))
   const byChannel: any[] = data?.byChannel ?? []
+  const byOwner: any[] = data?.byOwner ?? []
   const recentLeads: any[] = data?.recentLeads ?? []
   const activity: any[] = data?.activity ?? []
+  const isAdmin = !!data?.isAdmin
+  const maxOwner = Math.max(...byOwner.map((o: any) => o.count), 1)
 
   const maxCh = Math.max(...byChannel.map((c: any) => c.count), 1)
   const segTotal = bySegment.reduce((s: number, d: any) => s + d.count, 0) || 1
@@ -130,6 +133,27 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Row admin: desglose por vendedor */}
+      {isAdmin && byOwner.length > 0 && (
+        <div className="dash-grid">
+          <div className="panel" style={{ gridColumn: '1 / -1' }}>
+            <div className="panel-head">
+              <div className="panel-title">Leads por vendedor</div>
+              <span className="panel-sub">supervisión de equipo</span>
+            </div>
+            <div className="barchart">
+              {byOwner.map((o: any) => (
+                <div className="bar-row" key={o.name}>
+                  <div className="bar-label"><span className="dot" style={{ background: '#1F3A5F' }}></span>{o.name}</div>
+                  <div className="bar-track"><div className="bar-fill" style={{ width: `${(o.count / maxOwner) * 100}%`, background: '#1F3A5F' }}></div></div>
+                  <div className="bar-value">{o.count}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Row 2 */}
       <div className="dash-grid">

@@ -13,3 +13,12 @@ export async function getDisplayName(): Promise<string> {
     || user.email?.split('@')[0]
     || 'Staff'
 }
+
+/**
+ * Obtiene el rol del usuario actual ('admin' | 'employee') desde user_metadata.
+ */
+export async function getUserRole(): Promise<'admin' | 'employee'> {
+  const supabase = createSupabaseBrowser()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user?.user_metadata?.role === 'admin' ? 'admin' : 'employee'
+}
