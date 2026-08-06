@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { getDisplayName } from '@/lib/profile'
+import { CHANGELOG, CURRENT_VERSION } from '@/lib/changelog'
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
@@ -43,6 +44,8 @@ const Icon = {
   clock:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
   check:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m5 13 4 4L19 7"/></svg>,
   arrowUp:   (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 19V5M5 12l7-7 7 7"/></svg>,
+  sparkles:  (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.1 2.1M15.6 15.6l2.1 2.1M6.3 17.7l2.1-2.1M15.6 8.4l2.1-2.1"/><circle cx="12" cy="12" r="2.2"/></svg>,
+  close:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M18 6 6 18M6 6l12 12"/></svg>,
 }
 
 function initials(name: string) {
@@ -91,6 +94,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [reminders,   setReminders]   = useState<any[]>([])
   const [search,      setSearch]      = useState('')
   const [showScrollTop, setShowScrollTop] = useState(false)
+  const [whatsNewOpen,  setWhatsNewOpen]  = useState(false)
 
   /* General reminder form inside bell panel */
   const [remForm,   setRemForm]   = useState(false)
@@ -108,6 +112,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const bellRef   = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+
+  /* Notas de versión — se muestran solas la primera vez que hay una nueva */
+  useEffect(() => {
+    try {
+      const lastSeen = window.localStorage.getItem('ipesa:whatsnew:lastSeen')
+      if (lastSeen !== CURRENT_VERSION) setWhatsNewOpen(true)
+    } catch {}
+  }, [])
+
+  const closeWhatsNew = () => {
+    setWhatsNewOpen(false)
+    try { window.localStorage.setItem('ipesa:whatsnew:lastSeen', CURRENT_VERSION) } catch {}
+  }
 
   /* Botón "volver arriba" — visible tras scrollear hacia abajo */
   useEffect(() => {
@@ -420,6 +437,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               )}
             </div>
 
+            {/* Novedades — notas de versión */}
+            <button className="btn-icon" title="Novedades" onClick={() => setWhatsNewOpen(true)}>
+              <Icon.sparkles style={{ width: 16, height: 16, color: 'var(--ink-2)' }} />
+            </button>
+
             {/* Bell + panel de recordatorios */}
             <div className="bell-wrap" ref={bellRef}>
               <button className="btn-icon" title="Recordatorios" onClick={() => { setBellOpen(o => !o); setRemForm(false) }}>
@@ -594,6 +616,35 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       >
         <Icon.arrowUp />
       </button>
+
+      {/* ── Novedades — notas de versión ── */}
+      {whatsNewOpen && (
+        <div className="modal" onClick={closeWhatsNew}>
+          <div className="modal-card" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3>🎉 Novedades</h3>
+              <button className="modal-close btn-icon" onClick={closeWhatsNew}><Icon.close style={{ width: 16, height: 16 }} /></button>
+            </div>
+            <div className="modal-body">
+              {CHANGELOG.map((entry, i) => (
+                <div key={entry.version} style={{ marginBottom: i < CHANGELOG.length - 1 ? 22 : 0 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 2 }}>{entry.title}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>{entry.date}</div>
+                  <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {entry.items.map((it, j) => (
+                      <li key={j} style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>{it}</li>
+                    ))}
+                  </ul>
+                  {i < CHANGELOG.length - 1 && <div style={{ borderTop: '1px solid var(--line)', marginTop: 22 }} />}
+                </div>
+              ))}
+            </div>
+            <div className="modal-foot">
+              <button className="btn btn-primary" onClick={closeWhatsNew}>Entendido</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
