@@ -60,6 +60,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (error) throw error
     return NextResponse.json(data)
   } catch (error: any) {
+    console.error('[PUT /api/data/contacts/[id]]', error?.message ?? error)
+    if (error?.code === '23505') {
+      const field = error.message?.includes('phone') ? 'número de teléfono' : error.message?.includes('email') ? 'correo' : 'dato'
+      return NextResponse.json({ error: `Ya existe un contacto con este ${field}` }, { status: 400 })
+    }
     return NextResponse.json({ error: 'Error al actualizar contacto' }, { status: 500 })
   }
 }

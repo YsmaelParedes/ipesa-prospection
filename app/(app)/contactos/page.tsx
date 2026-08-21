@@ -405,9 +405,14 @@ export default function ContactosPage() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ ...form, phone: normalizePhone(form.phone) }),
             })
-            if (r.ok) { showToast('Contacto creado ✓'); load() }
-            else showToast('Error al crear contacto')
-            setShowNew(false)
+            if (r.ok) {
+              showToast('Contacto creado ✓')
+              load()
+              setShowNew(false)
+              return
+            }
+            const d = await r.json().catch(() => ({}))
+            return d.error || 'Error al crear contacto'
           }}
         />
       )}
@@ -457,6 +462,7 @@ function ContactDetail({
     address: c.address || '',
   })
   const [phoneErr, setPhoneErr]   = useState('')
+  const [saveError, setSaveError] = useState('')
 
   useEffect(() => {
     fetch('/api/data/leads')
@@ -480,6 +486,7 @@ function ContactDetail({
 
   const handleSave = async () => {
     setSaving(true)
+    setSaveError('')
     const r = await fetch(`/api/data/contacts/${c.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -489,6 +496,9 @@ function ContactDetail({
       const updated = await r.json()
       onUpdated(Array.isArray(updated) ? updated[0] : updated)
       setEditing(false)
+    } else {
+      const d = await r.json().catch(() => ({}))
+      setSaveError(d.error || 'Error al guardar los cambios')
     }
     setSaving(false)
   }
@@ -541,6 +551,7 @@ function ContactDetail({
               </div>
               <SelectField label="Canal de adquisición" value={editForm.acquisition_channel} options={canales} onChange={v => upd('acquisition_channel', v)} required placeholder="— Seleccionar canal —" />
               <SelectField label="Tipo de cliente" value={editForm.segment} options={tipos} onChange={v => upd('segment', v)} required placeholder="— Seleccionar tipo —" />
+              {saveError && <div style={{ color: 'var(--ipesa-rose)', fontSize: 12.5, marginTop: 4 }}>{saveError}</div>}
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                 <button className="btn btn-ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>Cancelar</button>
                 <button className="btn btn-primary" disabled={!canSaveEdit || saving} onClick={handleSave} style={{ flex: 1 }}>
@@ -626,7 +637,7 @@ function ContactModal({
   contact, tipos, canales, onClose, onSave,
 }: {
   contact?: any; tipos: string[]; canales: string[];
-  onClose: () => void; onSave: (d: any) => void;
+  onClose: () => void; onSave: (d: any) => Promise<string | void>;
 }) {
   const isEdit = !!contact
   const [form, setForm] = useState({
@@ -638,6 +649,8 @@ function ContactModal({
     acquisition_channel: contact?.acquisition_channel || '',
   })
   const [phoneErr, setPhoneErr] = useState('')
+  const [saving, setSaving]     = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const upd = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
   const onPhoneChange = (raw: string) => {
@@ -647,6 +660,14 @@ function ContactModal({
   }
   const canSave = form.name.trim() && form.phone.length === 10 && !phoneErr
     && !!form.segment && !!form.acquisition_channel
+
+  const handleSubmit = async () => {
+    if (!canSave) return
+    setSaving(true); setSaveError('')
+    const err = await onSave(form)
+    setSaving(false)
+    if (err) setSaveError(err)
+  }
 
   return (
     <div className="modal" onClick={onClose}>
@@ -672,11 +693,12 @@ function ContactModal({
           <div className="field"><label>Empresa</label><input value={form.company} onChange={e => upd('company', e.target.value)} placeholder="Nombre de la empresa (opcional)" /></div>
           <SelectField label="Canal de adquisición" value={form.acquisition_channel} options={canales} onChange={v => upd('acquisition_channel', v)} required placeholder="— Seleccionar canal —" />
           <SelectField label="Tipo de cliente" value={form.segment} options={tipos} onChange={v => upd('segment', v)} required placeholder="— Seleccionar tipo —" />
+          {saveError && <div style={{ color: 'var(--ipesa-rose)', fontSize: 12.5, marginTop: 4 }}>{saveError}</div>}
         </div>
         <div className="modal-foot">
           <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-primary" disabled={!canSave} onClick={() => { if (canSave) onSave(form) }}>
-            <Ico.plus /> {isEdit ? 'Guardar cambios' : 'Guardar contacto'}
+          <button className="btn btn-primary" disabled={!canSave || saving} onClick={handleSubmit}>
+            <Ico.plus /> {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Guardar contacto'}
           </button>
         </div>
       </div>
