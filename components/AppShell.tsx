@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { getDisplayName } from '@/lib/profile'
 import { CHANGELOG, CURRENT_VERSION } from '@/lib/changelog'
+import { SYSTEM_NOTICE } from '@/lib/systemNotice'
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
@@ -46,6 +47,7 @@ const Icon = {
   arrowUp:   (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 19V5M5 12l7-7 7 7"/></svg>,
   sparkles:  (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.1 2.1M15.6 15.6l2.1 2.1M6.3 17.7l2.1-2.1M15.6 8.4l2.1-2.1"/><circle cx="12" cy="12" r="2.2"/></svg>,
   close:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M18 6 6 18M6 6l12 12"/></svg>,
+  wrench:    (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>,
 }
 
 function initials(name: string) {
@@ -95,6 +97,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [search,      setSearch]      = useState('')
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [whatsNewOpen,  setWhatsNewOpen]  = useState(false)
+  const [noticeVisible, setNoticeVisible] = useState(false)
 
   /* General reminder form inside bell panel */
   const [remForm,   setRemForm]   = useState(false)
@@ -120,6 +123,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       if (lastSeen !== CURRENT_VERSION) setWhatsNewOpen(true)
     } catch {}
   }, [])
+
+  /* Aviso de sistema en mejoras — banner descartable, ver lib/systemNotice.ts */
+  useEffect(() => {
+    if (!SYSTEM_NOTICE.active) return
+    try {
+      const dismissed = window.localStorage.getItem('ipesa:notice:dismissed')
+      if (dismissed !== SYSTEM_NOTICE.id) setNoticeVisible(true)
+    } catch {
+      setNoticeVisible(true)
+    }
+  }, [])
+
+  const dismissNotice = () => {
+    setNoticeVisible(false)
+    try { window.localStorage.setItem('ipesa:notice:dismissed', SYSTEM_NOTICE.id) } catch {}
+  }
 
   const closeWhatsNew = () => {
     setWhatsNewOpen(false)
@@ -578,6 +597,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             )}
           </div>
         </div>
+
+        {noticeVisible && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 20px', margin: '0 24px', marginTop: 16,
+            background: 'var(--ipesa-yellow-soft)', border: '1px solid #F0E0B5',
+            borderRadius: 10, fontSize: 13, color: '#5A4416',
+          }}>
+            <Icon.wrench style={{ width: 15, height: 15, flexShrink: 0 }} />
+            <span style={{ flex: 1 }}>{SYSTEM_NOTICE.message}</span>
+            <button onClick={dismissNotice} title="Cerrar"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5A4416', flexShrink: 0, display: 'grid', placeItems: 'center', padding: 4 }}>
+              <Icon.close style={{ width: 15, height: 15 }} />
+            </button>
+          </div>
+        )}
 
         <div className="content">{children}</div>
       </main>
