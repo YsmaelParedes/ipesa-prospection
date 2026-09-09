@@ -299,11 +299,13 @@ function UsersSection() {
 
 /* ── Prueba de conexión con WhatsApp Cloud API (temporal, hasta tener la sección de Campañas) ── */
 function WhatsAppTestSection() {
-  const [phone, setPhone]   = useState('')
-  const [sending, setSending] = useState(false)
-  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
+  const [phone, setPhone]       = useState('')
+  const [template, setTemplate] = useState('')
+  const [language, setLanguage] = useState('es_MX')
+  const [sending, setSending]   = useState(false)
+  const [result, setResult]     = useState<{ ok: boolean; msg: string } | null>(null)
 
-  const canSend = /^\d{10,15}$/.test(phone)
+  const canSend = /^\d{10,15}$/.test(phone) && template.trim().length > 0
 
   const handleTest = async () => {
     setSending(true); setResult(null)
@@ -311,7 +313,7 @@ function WhatsAppTestSection() {
       const r = await fetch('/api/whatsapp/test-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: phone }),
+        body: JSON.stringify({ to: phone, template: template.trim(), language }),
       })
       const d = await r.json()
       if (r.ok) setResult({ ok: true, msg: `Enviado ✓ (id: ${d.messageId})` })
@@ -333,24 +335,50 @@ function WhatsAppTestSection() {
         <div>
           <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>Probar conexión de WhatsApp</div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>
-            Envía la plantilla de ejemplo "hello_world" para confirmar que Meta quedó bien configurado
+            Envía una plantilla aprobada para confirmar que Meta quedó bien configurado
           </div>
         </div>
       </div>
 
-      <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8, display: 'block' }}>
-        Número destino (con código de país, solo dígitos)
-      </label>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <input
-          value={phone}
-          onChange={e => { setPhone(e.target.value.replace(/\D/g, '')); setResult(null) }}
-          placeholder="5212221234567"
-          style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none' }}
-        />
-        <button className="btn btn-primary" onClick={handleTest} disabled={!canSend || sending} style={{ flexShrink: 0 }}>
-          {sending ? 'Enviando…' : 'Enviar prueba'}
-        </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8, display: 'block' }}>
+            Nombre exacto de la plantilla aprobada en Meta
+          </label>
+          <input
+            value={template}
+            onChange={e => { setTemplate(e.target.value); setResult(null) }}
+            placeholder="ej. saludo_ipesa"
+            style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none', boxSizing: 'border-box' }}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8, display: 'block' }}>
+            Idioma de la plantilla
+          </label>
+          <input
+            value={language}
+            onChange={e => { setLanguage(e.target.value); setResult(null) }}
+            placeholder="es_MX"
+            style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none', boxSizing: 'border-box' }}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8, display: 'block' }}>
+            Número destino (con código de país, solo dígitos)
+          </label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              value={phone}
+              onChange={e => { setPhone(e.target.value.replace(/\D/g, '')); setResult(null) }}
+              placeholder="5212221234567"
+              style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none' }}
+            />
+            <button className="btn btn-primary" onClick={handleTest} disabled={!canSend || sending} style={{ flexShrink: 0 }}>
+              {sending ? 'Enviando…' : 'Enviar prueba'}
+            </button>
+          </div>
+        </div>
       </div>
       {result && (
         <div style={{ marginTop: 12, fontSize: 13, color: result.ok ? 'var(--ipesa-green)' : 'var(--ipesa-rose)', fontWeight: 600 }}>
