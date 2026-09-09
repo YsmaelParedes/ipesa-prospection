@@ -11,6 +11,7 @@ const Ico = {
   tag:     () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}><path d="M12 2H2v10l10 10 10-10L12 2z"/><circle cx="7" cy="7" r="1" fill="currentColor"/></svg>,
   channel: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
   users:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  whatsapp: () => <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 16, height: 16 }}><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.8.9-1 1.1c-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.4-.9-.8-1.5-1.8-1.7-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.3-.7.3-1.2.2-1.4 0-.1-.3-.2-.6-.4Zm-5.5 7.5c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.5 4.4-9.9 9.9-9.9s9.9 4.4 9.9 9.9-4.5 9.9-10 9.9Zm8.4-18.3C18.2 1.5 15.2.3 12 .3 5.4.3.1 5.6.1 12.2c0 2.1.6 4.2 1.6 6L0 24l5.9-1.5c1.7 1 3.7 1.5 5.7 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4Z"/></svg>,
 }
 
 function norm(s: string) {
@@ -296,9 +297,73 @@ function UsersSection() {
   )
 }
 
+/* ── Prueba de conexión con WhatsApp Cloud API (temporal, hasta tener la sección de Campañas) ── */
+function WhatsAppTestSection() {
+  const [phone, setPhone]   = useState('')
+  const [sending, setSending] = useState(false)
+  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+  const canSend = /^\d{10,15}$/.test(phone)
+
+  const handleTest = async () => {
+    setSending(true); setResult(null)
+    try {
+      const r = await fetch('/api/whatsapp/test-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: phone }),
+      })
+      const d = await r.json()
+      if (r.ok) setResult({ ok: true, msg: `Enviado ✓ (id: ${d.messageId})` })
+      else setResult({ ok: false, msg: d.error || 'Error al enviar' })
+    } catch {
+      setResult({ ok: false, msg: 'Error de red' })
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div style={{ maxWidth: 500 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+        <span style={{
+          width: 38, height: 38, borderRadius: 10, background: '#DCF5E3',
+          color: '#1B9E4B', display: 'grid', placeItems: 'center', flexShrink: 0,
+        }}><Ico.whatsapp /></span>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>Probar conexión de WhatsApp</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>
+            Envía la plantilla de ejemplo "hello_world" para confirmar que Meta quedó bien configurado
+          </div>
+        </div>
+      </div>
+
+      <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8, display: 'block' }}>
+        Número destino (con código de país, solo dígitos)
+      </label>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          value={phone}
+          onChange={e => { setPhone(e.target.value.replace(/\D/g, '')); setResult(null) }}
+          placeholder="5212221234567"
+          style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none' }}
+        />
+        <button className="btn btn-primary" onClick={handleTest} disabled={!canSend || sending} style={{ flexShrink: 0 }}>
+          {sending ? 'Enviando…' : 'Enviar prueba'}
+        </button>
+      </div>
+      {result && (
+        <div style={{ marginTop: 12, fontSize: 13, color: result.ok ? 'var(--ipesa-green)' : 'var(--ipesa-rose)', fontWeight: 600 }}>
+          {result.msg}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ── Página ── */
 export default function ConfiguracionPage() {
-  const [tab, setTab] = useState<'segment' | 'canal' | 'users'>('segment')
+  const [tab, setTab] = useState<'segment' | 'canal' | 'users' | 'whatsapp'>('segment')
   const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => { getUserRole().then(r => setIsAdmin(r === 'admin')) }, [])
@@ -307,6 +372,7 @@ export default function ConfiguracionPage() {
     { id: 'segment' as const, label: 'Segmentos',              icon: <Ico.tag /> },
     { id: 'canal'   as const, label: 'Canales de adquisición', icon: <Ico.channel /> },
     ...(isAdmin ? [{ id: 'users' as const, label: 'Usuarios', icon: <Ico.users /> }] : []),
+    ...(isAdmin ? [{ id: 'whatsapp' as const, label: 'WhatsApp', icon: <Ico.whatsapp /> }] : []),
   ]
 
   return (
@@ -336,6 +402,7 @@ export default function ConfiguracionPage() {
           description="Orígenes de contacto disponibles al registrar contactos y leads" />
       )}
       {tab === 'users' && isAdmin && <UsersSection key="users" />}
+      {tab === 'whatsapp' && isAdmin && <WhatsAppTestSection key="whatsapp" />}
     </>
   )
 }
