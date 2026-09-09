@@ -16,16 +16,7 @@ export type WhatsAppSendResult = {
   error?: string
 }
 
-/**
- * Envía un mensaje de plantilla (obligatorio fuera de la ventana de 24h de
- * atención al cliente). `to` debe ir en formato E.164 sin "+" (ej. 5212221234567).
- */
-export async function sendWhatsAppTemplate(
-  to: string,
-  templateName: string,
-  languageCode: string = 'es_MX',
-  components?: WhatsAppTemplateComponent[]
-): Promise<WhatsAppSendResult> {
+async function postToGraph(payload: Record<string, unknown>): Promise<WhatsAppSendResult> {
   const token         = process.env.WHATSAPP_ACCESS_TOKEN
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
 
@@ -40,16 +31,7 @@ export async function sendWhatsAppTemplate(
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to,
-        type: 'template',
-        template: {
-          name: templateName,
-          language: { code: languageCode },
-          ...(components?.length ? { components } : {}),
-        },
-      }),
+      body: JSON.stringify({ messaging_product: 'whatsapp', ...payload }),
     })
 
     const data = await res.json()
@@ -62,4 +44,53 @@ export async function sendWhatsAppTemplate(
   } catch (error: any) {
     return { ok: false, error: error?.message || 'Error de red al contactar la API de WhatsApp' }
   }
+}
+
+/**
+ * Envía un mensaje de plantilla (obligatorio fuera de la ventana de 24h de
+ * atención al cliente). `to` debe ir en formato E.164 sin "+" (ej. 5212221234567).
+ */
+export async function sendWhatsAppTemplate(
+  to: string,
+  templateName: string,
+  languageCode: string = 'es_MX',
+  components?: WhatsAppTemplateComponent[]
+): Promise<WhatsAppSendResult> {
+  return postToGraph({
+    to,
+    type: 'template',
+    template: {
+      name: templateName,
+      language: { code: languageCode },
+      ...(components?.length ? { components } : {}),
+    },
+  })
+}
+
+/**
+ * Envía texto libre — solo funciona dentro de la ventana de 24h desde el
+ * último mensaje del cliente (si no, Meta responde con error de reenganche).
+ */
+export async function sendWhatsAppText(to: string, body: string): Promise<WhatsAppSendResult> {
+  return postToGraph({
+    to,
+    type: 'text',
+    text: { body },
+  })
+}
+
+/**
+ * Normaliza un número de WhatsApp (con código de país, ej. "5212221234567"
+ * o "525212221234567") al formato de 10 dígitos usado en `contacts.phone`.
+ * Misma lógica que normalizePhone() de components/IpesaUI.tsx, duplicada
+ * aquí para evitar importar un archivo 'use client' desde código de servidor.
+ */
+export function normalizeWhatsAppPhone(raw: string): string {
+  if (!raw) return ''
+  const digits = raw.replace(/\D/g, '')
+  if (digits.startsWith('521') && digits.length === 13) return digits.slice(3)
+  if (digits.startsWith('52')  && digits.length === 12) return digits.slice(2)
+  if (digits.startsWith('1')   && digits.length === 11) return digits.slice(1)
+  if (digits.length > 10) return digits.slice(-10)
+  return digits
 }

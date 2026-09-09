@@ -48,6 +48,7 @@ const Icon = {
   sparkles:  (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.1 2.1M15.6 15.6l2.1 2.1M6.3 17.7l2.1-2.1M15.6 8.4l2.1-2.1"/><circle cx="12" cy="12" r="2.2"/></svg>,
   close:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M18 6 6 18M6 6l12 12"/></svg>,
   wrench:    (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>,
+  whatsapp:  (p: any) => <svg viewBox="0 0 24 24" fill="currentColor" {...p}><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.8.9-1 1.1c-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.4-.9-.8-1.5-1.8-1.7-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.3-.7.3-1.2.2-1.4 0-.1-.3-.2-.6-.4Zm-5.5 7.5c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.5 4.4-9.9 9.9-9.9s9.9 4.4 9.9 9.9-4.5 9.9-10 9.9Zm8.4-18.3C18.2 1.5 15.2.3 12 .3 5.4.3.1 5.6.1 12.2c0 2.1.6 4.2 1.6 6L0 24l5.9-1.5c1.7 1 3.7 1.5 5.7 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4Z"/></svg>,
 }
 
 function initials(name: string) {
@@ -75,6 +76,7 @@ const NAV_ITEMS = [
   { id: 'contactos',      href: '/contactos',       label: 'Contactos',      icon: Icon.contacts,  mobile: true  },
   { id: 'leads',          href: '/leads',           label: 'Leads',          icon: Icon.leads,     mobile: true  },
   { id: 'recordatorios',  href: '/recordatorios',   label: 'Recordatorios',  icon: Icon.clock,     mobile: true  },
+  { id: 'whatsapp',       href: '/whatsapp',        label: 'WhatsApp',       icon: Icon.whatsapp,  mobile: false },
   { id: 'configuracion',  href: '/configuracion',   label: 'Configuración',  icon: Icon.settings,  mobile: false },
 ]
 
@@ -83,6 +85,7 @@ const TITLE_MAP: Record<string, { t: string; s: string }> = {
   '/contactos':      { t: 'Contactos',         s: 'Base de clientes registrados'     },
   '/leads':          { t: 'Pipeline de leads', s: 'Gestión de oportunidades'         },
   '/recordatorios':  { t: 'Recordatorios',     s: 'Seguimiento y tareas pendientes'  },
+  '/whatsapp':       { t: 'WhatsApp',          s: 'Conversaciones con contactos'     },
   '/configuracion':  { t: 'Configuración',     s: 'Segmentos y canales'              },
 }
 

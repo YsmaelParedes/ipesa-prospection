@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase } from '@/lib/supabase-server'
+import { normalizeWhatsAppPhone } from '@/lib/whatsapp'
 
 /**
  * GET — verificación del webhook (Meta la llama una sola vez al guardar la
@@ -31,26 +32,37 @@ export async function POST(req: NextRequest) {
       for (const change of entry.changes ?? []) {
         const value = change.value ?? {}
 
-        // Estados de mensajes que nosotros enviamos (campañas)
+        // Estados de mensajes salientes que nosotros enviamos
         for (const status of value.statuses ?? []) {
           const update: Record<string, unknown> = {
             status: status.status, // sent | delivered | read | failed
             updated_at: new Date().toISOString(),
           }
-          if (status.status === 'delivered') update.delivered_at = new Date(Number(status.timestamp) * 1000).toISOString()
-          if (status.status === 'read')      update.read_at      = new Date(Number(status.timestamp) * 1000).toISOString()
           if (status.errors?.[0]) {
-            update.error_code    = String(status.errors[0].code ?? '')
             update.error_message = status.errors[0].title ?? status.errors[0].message ?? ''
           }
-
-          await supabase.from('message_logs').update(update).eq('message_sid', status.id)
+          await supabase.from('whatsapp_messages').update(update).eq('wa_message_id', status.id)
         }
 
-        // Mensajes entrantes (respuestas de contactos) — se registran para diagnóstico.
-        // Fase 2: enlazar con lead_activities / notificar al vendedor dueño del contacto.
+        // Mensajes entrantes (respuestas de contactos) — se guardan para la bandeja de entrada
         for (const msg of value.messages ?? []) {
-          console.log('[whatsapp webhook] mensaje entrante de', msg.from, '·', msg.text?.body ?? `(${msg.type})`)
+          const phone = normalizeWhatsAppPhone(msg.from)
+          const bodyText = msg.text?.body ?? `[${msg.type}]`
+
+          const { data: contact } = await supabase
+            .from('contacts')
+            .select('id')
+            .eq('phone', phone)
+            .maybeSingle()
+
+          await supabase.from('whatsapp_messages').insert([{
+            contact_id: contact?.id ?? null,
+            phone,
+            direction: 'inbound',
+            body: bodyText,
+            wa_message_id: msg.id,
+            status: 'received',
+          }])
         }
       }
     }
