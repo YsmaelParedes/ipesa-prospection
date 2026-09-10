@@ -5,9 +5,13 @@
 
 const GRAPH_VERSION = 'v21.0'
 
+export type WhatsAppTemplateParameter =
+  | { type: 'text'; text: string }
+  | { type: 'image'; image: { link: string } }
+
 export type WhatsAppTemplateComponent = {
   type: 'body' | 'header' | 'button'
-  parameters: Array<{ type: 'text'; text: string }>
+  parameters: WhatsAppTemplateParameter[]
 }
 
 export type WhatsAppSendResult = {

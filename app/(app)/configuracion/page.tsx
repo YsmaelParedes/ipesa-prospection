@@ -302,6 +302,8 @@ function WhatsAppTestSection() {
   const [phone, setPhone]       = useState('')
   const [template, setTemplate] = useState('')
   const [language, setLanguage] = useState('es_MX')
+  const [headerImageUrl, setHeaderImageUrl] = useState('')
+  const [bodyParam, setBodyParam] = useState('')
   const [sending, setSending]   = useState(false)
   const [result, setResult]     = useState<{ ok: boolean; msg: string } | null>(null)
 
@@ -313,7 +315,7 @@ function WhatsAppTestSection() {
       const r = await fetch('/api/whatsapp/test-send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: phone, template: template.trim(), language }),
+        body: JSON.stringify({ to: phone, template: template.trim(), language, headerImageUrl, bodyParam }),
       })
       const d = await r.json()
       if (r.ok) setResult({ ok: true, msg: `Enviado ✓ (id: ${d.messageId})` })
@@ -360,6 +362,28 @@ function WhatsAppTestSection() {
             value={language}
             onChange={e => { setLanguage(e.target.value); setResult(null) }}
             placeholder="es_MX"
+            style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none', boxSizing: 'border-box' }}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8, display: 'block' }}>
+            Variable {'{{1}}'} del cuerpo <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(opcional — ej. nombre del cliente)</span>
+          </label>
+          <input
+            value={bodyParam}
+            onChange={e => { setBodyParam(e.target.value); setResult(null) }}
+            placeholder="Carlos"
+            style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none', boxSizing: 'border-box' }}
+          />
+        </div>
+        <div>
+          <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8, display: 'block' }}>
+            URL de imagen de encabezado <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(opcional — solo si la plantilla tiene encabezado de imagen)</span>
+          </label>
+          <input
+            value={headerImageUrl}
+            onChange={e => { setHeaderImageUrl(e.target.value); setResult(null) }}
+            placeholder="https://…"
             style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none', boxSizing: 'border-box' }}
           />
         </div>

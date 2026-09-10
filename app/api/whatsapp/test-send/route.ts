@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getUserContext, unauthorizedResponse } from '@/lib/supabase-server'
-import { sendWhatsAppTemplate } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate, WhatsAppTemplateComponent } from '@/lib/whatsapp'
 
 // POST /api/whatsapp/test-send — envía una plantilla a un número de prueba
 // (solo admin, para verificar que la integración de Meta quedó bien configurada)
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Sin permisos de administrador' }, { status: 403 })
   }
 
-  const { to, template, language } = await req.json()
+  const { to, template, language, headerImageUrl, bodyParam } = await req.json()
   if (!to || typeof to !== 'string' || !/^\d{10,15}$/.test(to)) {
     return NextResponse.json({ error: 'to debe ser un número en formato 52XXXXXXXXXX (solo dígitos)' }, { status: 400 })
   }
@@ -19,7 +19,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'template es requerido (el nombre exacto de la plantilla aprobada en Meta)' }, { status: 400 })
   }
 
-  const result = await sendWhatsAppTemplate(to, template.trim(), (language && typeof language === 'string') ? language : 'es_MX')
+  const components: WhatsAppTemplateComponent[] = []
+  if (headerImageUrl && typeof headerImageUrl === 'string' && headerImageUrl.trim()) {
+    components.push({ type: 'header', parameters: [{ type: 'image', image: { link: headerImageUrl.trim() } }] })
+  }
+  if (bodyParam && typeof bodyParam === 'string' && bodyParam.trim()) {
+    components.push({ type: 'body', parameters: [{ type: 'text', text: bodyParam.trim() }] })
+  }
+
+  const result = await sendWhatsAppTemplate(
+    to,
+    template.trim(),
+    (language && typeof language === 'string') ? language : 'es_MX',
+    components
+  )
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 502 })
   }
