@@ -19,6 +19,26 @@ export async function GET(req: NextRequest) {
 }
 
 /**
+ * Extrae un texto legible del mensaje entrante sin importar el tipo:
+ * texto libre, tap a un botón de respuesta rápida de una plantilla, o
+ * respuesta interactiva (lista/botones). Cae a una etiqueta genérica
+ * solo si es un tipo que de plano no trae texto (imagen, audio, etc.).
+ */
+function extractMessageText(msg: any): string {
+  if (msg.text?.body) return msg.text.body
+  if (msg.type === 'button' && msg.button?.text) return `👉 ${msg.button.text}`
+  if (msg.type === 'interactive') {
+    const title = msg.interactive?.button_reply?.title ?? msg.interactive?.list_reply?.title
+    if (title) return `👉 ${title}`
+  }
+  const LABELS: Record<string, string> = {
+    image: '📷 Imagen', audio: '🎤 Audio', video: '🎥 Video',
+    document: '📄 Documento', sticker: '🏷️ Sticker', location: '📍 Ubicación',
+  }
+  return LABELS[msg.type] ?? `[${msg.type}]`
+}
+
+/**
  * POST — eventos entrantes de WhatsApp Cloud API: estados de mensajes salientes
  * (sent/delivered/read/failed) y mensajes entrantes de contactos.
  * Siempre responde 200 rápido — Meta reintenta agresivamente si no recibe 200.
@@ -47,7 +67,7 @@ export async function POST(req: NextRequest) {
         // Mensajes entrantes (respuestas de contactos) — se guardan para la bandeja de entrada
         for (const msg of value.messages ?? []) {
           const phone = normalizeWhatsAppPhone(msg.from)
-          const bodyText = msg.text?.body ?? `[${msg.type}]`
+          const bodyText = extractMessageText(msg)
 
           const { data: contact } = await supabase
             .from('contacts')

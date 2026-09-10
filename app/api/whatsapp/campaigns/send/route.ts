@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getUserContext, unauthorizedResponse } from '@/lib/supabase-server'
 import { sendWhatsAppTemplate, WhatsAppTemplateComponent } from '@/lib/whatsapp'
+import { WHATSAPP_TEMPLATES } from '@/lib/whatsappTemplates'
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
 
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
   const supabase = getServerSupabase()
   const templateName = template.trim()
   const languageCode = (language && typeof language === 'string') ? language : 'es_MX'
+  const templateDef  = WHATSAPP_TEMPLATES.find(t => t.name === templateName)
 
   const { data: contacts, error } = await supabase
     .from('contacts')
@@ -44,23 +46,28 @@ export async function POST(req: NextRequest) {
       continue
     }
 
+    const firstName = (c.name || '').trim().split(/\s+/)[0] || 'cliente'
+
     const components: WhatsAppTemplateComponent[] = []
     if (headerImageUrl) {
       components.push({ type: 'header', parameters: [{ type: 'image', image: { link: headerImageUrl } }] })
     }
     if (personalize) {
-      const firstName = (c.name || '').trim().split(/\s+/)[0] || 'cliente'
       components.push({ type: 'body', parameters: [{ type: 'text', text: firstName }] })
     }
 
     const to = c.phone.length === 10 ? `52${c.phone}` : c.phone
     const sendResult = await sendWhatsAppTemplate(to, templateName, languageCode, components)
 
+    const renderedBody = templateDef
+      ? templateDef.bodyPreview.replace('{{1}}', personalize ? firstName : '{{1}}')
+      : `[Plantilla: ${templateName}]`
+
     await supabase.from('whatsapp_messages').insert([{
       contact_id: c.id,
       phone: c.phone,
       direction: 'outbound',
-      body: `[Plantilla: ${templateName}]`,
+      body: renderedBody,
       wa_message_id: sendResult.messageId ?? null,
       status: sendResult.ok ? 'sent' : 'failed',
       template_name: templateName,
