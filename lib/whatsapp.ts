@@ -7,7 +7,7 @@ const GRAPH_VERSION = 'v21.0'
 
 export type WhatsAppTemplateParameter =
   | { type: 'text'; text: string }
-  | { type: 'image'; image: { link: string } }
+  | { type: 'image'; image: { link: string } | { id: string } }
 
 export type WhatsAppTemplateComponent = {
   type: 'body' | 'header' | 'button'
@@ -81,6 +81,46 @@ export async function sendWhatsAppText(to: string, body: string): Promise<WhatsA
     type: 'text',
     text: { body },
   })
+}
+
+export type WhatsAppUploadResult = {
+  ok: boolean
+  mediaId?: string
+  error?: string
+}
+
+/**
+ * Sube una imagen a los servidores de Meta para usarla como encabezado de
+ * plantilla sin necesitar una URL pública — regresa un media id reutilizable
+ * en todos los envíos de una misma campaña.
+ */
+export async function uploadWhatsAppMedia(fileBuffer: Buffer, mimeType: string, filename: string): Promise<WhatsAppUploadResult> {
+  const token         = process.env.WHATSAPP_ACCESS_TOKEN
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
+
+  if (!token || !phoneNumberId) {
+    return { ok: false, error: 'WHATSAPP_ACCESS_TOKEN o WHATSAPP_PHONE_NUMBER_ID no configurados' }
+  }
+
+  try {
+    const form = new FormData()
+    form.append('messaging_product', 'whatsapp')
+    form.append('file', new Blob([new Uint8Array(fileBuffer)], { type: mimeType }), filename)
+
+    const res = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/media`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    })
+
+    const data = await res.json()
+    if (!res.ok) {
+      return { ok: false, error: data?.error?.message || `Error HTTP ${res.status}` }
+    }
+    return { ok: true, mediaId: data.id }
+  } catch (error: any) {
+    return { ok: false, error: error?.message || 'Error de red al subir la imagen' }
+  }
 }
 
 /**

@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { Avatar, TipoChip, CanalChip, FilterDropdown, fmtDateLong, fmtPhone, normalizePhone, isMobilePhone } from '@/components/IpesaUI'
+import { getUserRole } from '@/lib/profile'
+import { WHATSAPP_TEMPLATES } from '@/lib/whatsappTemplates'
 
 /* ── Iconos ── */
 const Ico = {
@@ -16,6 +18,9 @@ const Ico = {
   edit:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
   trash:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>,
   xmark:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><path d="M18 6 6 18M6 6l12 12"/></svg>,
+  whatsapp: () => <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 14, height: 14 }}><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.8.9-1 1.1c-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.4-.9-.8-1.5-1.8-1.7-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.3-.7.3-1.2.2-1.4 0-.1-.3-.2-.6-.4Zm-5.5 7.5c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.5 4.4-9.9 9.9-9.9s9.9 4.4 9.9 9.9-4.5 9.9-10 9.9Zm8.4-18.3C18.2 1.5 15.2.3 12 .3 5.4.3.1 5.6.1 12.2c0 2.1.6 4.2 1.6 6L0 24l5.9-1.5c1.7 1 3.7 1.5 5.7 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4Z"/></svg>,
+  send:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>,
+  image:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22, color: 'var(--muted-2)' }}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>,
 }
 
 const TIPO_COLORS: Record<string, string> = {
@@ -82,6 +87,10 @@ export default function ContactosPage() {
   const [showExport, setShowExport]               = useState(false)
   const [showOnlyLandlines, setShowOnlyLandlines] = useState(false)
   const [toast, setToast]                         = useState('')
+  const [isAdmin, setIsAdmin]                      = useState(false)
+  const [showWhatsAppCampaign, setShowWhatsAppCampaign] = useState(false)
+
+  useEffect(() => { getUserRole().then(r => setIsAdmin(r === 'admin')) }, [])
 
   /* Selección múltiple */
   const [checkedIds, setCheckedIds]       = useState<Set<string>>(new Set())
@@ -218,13 +227,24 @@ export default function ContactosPage() {
               {checkedIds.size} seleccionado{checkedIds.size !== 1 ? 's' : ''}
             </span>
             {!confirmBulkDel ? (
-              <button
-                className="btn"
-                style={{ marginLeft: 'auto', background: '#DC2626', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: 5 }}
-                onClick={() => setConfirmBulkDel(true)}
-              >
-                <Ico.trash /> Eliminar {checkedIds.size}
-              </button>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                {isAdmin && (
+                  <button
+                    className="btn"
+                    style={{ background: '#1B9E4B', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: 5 }}
+                    onClick={() => setShowWhatsAppCampaign(true)}
+                  >
+                    <Ico.whatsapp /> Enviar WhatsApp
+                  </button>
+                )}
+                <button
+                  className="btn"
+                  style={{ background: '#DC2626', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: 5 }}
+                  onClick={() => setConfirmBulkDel(true)}
+                >
+                  <Ico.trash /> Eliminar {checkedIds.size}
+                </button>
+              </div>
             ) : (
               <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 13, color: '#DC2626', fontWeight: 500 }}>
@@ -429,6 +449,15 @@ export default function ContactosPage() {
           contacts={contacts}
           tipos={tipos}
           onClose={() => setShowExport(false)}
+        />
+      )}
+
+      {showWhatsAppCampaign && (
+        <WhatsAppCampaignModal
+          contactIds={[...checkedIds]}
+          contacts={contacts}
+          onClose={() => setShowWhatsAppCampaign(false)}
+          onDone={() => { setShowWhatsAppCampaign(false); clearSelection() }}
         />
       )}
 
@@ -775,6 +804,190 @@ function ExportModal({ contacts, tipos, onClose }: { contacts: any[]; tipos: str
           <button className="btn btn-primary" onClick={doExport} disabled={count === 0}>
             <Ico.download /> Descargar {count} contactos
           </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Modal de campaña de WhatsApp — plantilla + vista previa + envío a los contactos elegidos ── */
+function WhatsAppCampaignModal({
+  contactIds, contacts, onClose, onDone,
+}: {
+  contactIds: string[]; contacts: any[]; onClose: () => void; onDone: () => void
+}) {
+  const [templateName, setTemplateName] = useState(WHATSAPP_TEMPLATES[0]?.name ?? '')
+  const template = WHATSAPP_TEMPLATES.find(t => t.name === templateName)
+
+  const [imagePreviewUrl, setImagePreviewUrl] = useState('')
+  const [mediaId, setMediaId]           = useState('')
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [personalize, setPersonalize]   = useState(true)
+  const [sending, setSending]           = useState(false)
+  const [error, setError]               = useState('')
+  const [results, setResults]           = useState<{ sent: number; failed: number; details: any[] } | null>(null)
+
+  const selectedContacts = contacts.filter(c => contactIds.includes(c.id))
+  const exampleName = (selectedContacts[0]?.name || 'Cliente').trim().split(/\s+/)[0]
+  const previewBody = template?.bodyPreview.replace('{{1}}', personalize ? exampleName : '{{1}}') ?? ''
+
+  const handleFile = async (file: File | undefined) => {
+    if (!file) return
+    setImagePreviewUrl(URL.createObjectURL(file))
+    setMediaId(''); setError(''); setUploadingImage(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const r = await fetch('/api/whatsapp/media', { method: 'POST', body: fd })
+      const d = await r.json()
+      if (!r.ok) { setError(d.error || 'Error al subir la imagen'); return }
+      setMediaId(d.mediaId)
+    } catch {
+      setError('Error de red al subir la imagen')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  const canSend = !!template && (!template.hasImageHeader || !!mediaId) && !uploadingImage && !sending && selectedContacts.length > 0
+
+  const handleSend = async () => {
+    if (!template) return
+    setSending(true); setError('')
+    try {
+      const r = await fetch('/api/whatsapp/campaigns/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contactIds, template: template.name, language: template.language,
+          headerImageId: mediaId || undefined, personalize,
+        }),
+      })
+      const d = await r.json()
+      if (!r.ok) { setError(d.error || 'Error al enviar la campaña'); return }
+      setResults({ sent: d.sent, failed: d.failed, details: d.results })
+    } catch {
+      setError('Error de red al enviar')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="modal" onClick={sending ? undefined : onClose}>
+      <div className="modal-card" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-head">
+          <h3>Enviar plantilla de WhatsApp</h3>
+          <button className="modal-close btn-icon" onClick={onClose}><Ico.close /></button>
+        </div>
+
+        <div className="modal-body">
+          {results ? (
+            /* ── Resultado del envío ── */
+            <div>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                <div style={{ flex: 1, padding: '14px', background: 'var(--ipesa-green-soft)', borderRadius: 10, textAlign: 'center' }}>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--ipesa-green)' }}>{results.sent}</div>
+                  <div style={{ fontSize: 12, color: 'var(--ink-2)' }}>enviados</div>
+                </div>
+                <div style={{ flex: 1, padding: '14px', background: results.failed > 0 ? 'var(--ipesa-rose-soft)' : 'var(--paper)', borderRadius: 10, textAlign: 'center' }}>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: results.failed > 0 ? 'var(--ipesa-rose)' : 'var(--muted)' }}>{results.failed}</div>
+                  <div style={{ fontSize: 12, color: 'var(--ink-2)' }}>fallidos</div>
+                </div>
+              </div>
+              {results.failed > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+                  {results.details.filter(r => !r.ok).map((r, i) => (
+                    <div key={i} style={{ padding: '8px 12px', background: 'var(--paper)', borderRadius: 8, fontSize: 12.5 }}>
+                      <strong>{r.name || 'Contacto'}</strong>: <span style={{ color: 'var(--ipesa-rose)' }}>{r.error}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="field">
+                <label>Plantilla</label>
+                <select
+                  value={templateName}
+                  onChange={e => { setTemplateName(e.target.value); setMediaId(''); setImagePreviewUrl('') }}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none' }}
+                >
+                  {WHATSAPP_TEMPLATES.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
+                </select>
+              </div>
+
+              {template && (
+                <div style={{ display: 'flex', gap: 16, marginTop: 16, flexWrap: 'wrap' }}>
+                  {/* Vista previa tipo burbuja de WhatsApp */}
+                  <div style={{ flex: '1 1 240px', minWidth: 240 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8, display: 'block' }}>
+                      Vista previa
+                    </label>
+                    <div style={{ background: '#E5DDD5', borderRadius: 12, padding: 12 }}>
+                      <div style={{ background: '#fff', borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+                        {template.hasImageHeader && (
+                          <div style={{ width: '100%', aspectRatio: '1.4', background: 'var(--paper)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                            {imagePreviewUrl ? (
+                              <img src={imagePreviewUrl} alt="Encabezado" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : <Ico.image />}
+                          </div>
+                        )}
+                        <div style={{ padding: '10px 12px' }}>
+                          <div style={{ fontSize: 13, color: '#111', lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>{previewBody}</div>
+                          {template.footer && <div style={{ fontSize: 11.5, color: '#8696a0', marginTop: 6 }}>{template.footer}</div>}
+                        </div>
+                        {template.buttonLabel && (
+                          <div style={{ borderTop: '1px solid var(--line)', padding: '9px 12px', textAlign: 'center', fontSize: 13, color: '#00a5f4', fontWeight: 600 }}>
+                            ↩ {template.buttonLabel}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Configuración */}
+                  <div style={{ flex: '1 1 240px', minWidth: 240, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {template.hasImageHeader && (
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8, display: 'block' }}>
+                          Imagen de encabezado *
+                        </label>
+                        <input type="file" accept="image/*" onChange={e => handleFile(e.target.files?.[0])} style={{ fontSize: 12.5 }} />
+                        {uploadingImage && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>Subiendo…</div>}
+                        {mediaId && <div style={{ fontSize: 12, color: 'var(--ipesa-green)', marginTop: 6 }}>Imagen lista ✓</div>}
+                      </div>
+                    )}
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-2)', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={personalize} onChange={e => setPersonalize(e.target.checked)} />
+                      Personalizar con el nombre de cada contacto
+                    </label>
+
+                    <div style={{ padding: '10px 12px', background: 'var(--paper)', borderRadius: 9, fontSize: 12.5, color: 'var(--ink-2)' }}>
+                      Se enviará a <strong>{selectedContacts.length}</strong> contacto{selectedContacts.length !== 1 ? 's' : ''} seleccionado{selectedContacts.length !== 1 ? 's' : ''}.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {error && <div style={{ color: 'var(--ipesa-rose)', fontSize: 12.5, marginTop: 12 }}>{error}</div>}
+            </>
+          )}
+        </div>
+
+        <div className="modal-foot">
+          {results ? (
+            <button className="btn btn-primary" onClick={onDone} style={{ flex: 1, justifyContent: 'center' }}>Listo</button>
+          ) : (
+            <>
+              <button className="btn btn-ghost" onClick={onClose} disabled={sending}>Cancelar</button>
+              <button className="btn btn-primary" onClick={handleSend} disabled={!canSend}>
+                <Ico.send /> {sending ? 'Enviando…' : `Enviar a ${selectedContacts.length}`}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
