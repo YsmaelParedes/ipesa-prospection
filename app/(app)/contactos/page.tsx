@@ -819,8 +819,10 @@ function WhatsAppCampaignModal({
   const [templateName, setTemplateName] = useState(WHATSAPP_TEMPLATES[0]?.name ?? '')
   const template = WHATSAPP_TEMPLATES.find(t => t.name === templateName)
 
-  const [imagePreviewUrl, setImagePreviewUrl] = useState('')
-  const [mediaId, setMediaId]           = useState('')
+  const [savedImageUrl, setSavedImageUrl] = useState('')   // imagen ya guardada para esta plantilla (Supabase Storage)
+  const [checkingImage, setCheckingImage] = useState(false)
+  const [replacingImage, setReplacingImage] = useState(false) // true = mostrar el input para subir/reemplazar
+  const [localPreviewUrl, setLocalPreviewUrl] = useState('')  // vista previa instantánea del archivo elegido
   const [uploadingImage, setUploadingImage] = useState(false)
   const [personalize, setPersonalize]   = useState(true)
   const [sending, setSending]           = useState(false)
@@ -830,18 +832,32 @@ function WhatsAppCampaignModal({
   const selectedContacts = contacts.filter(c => contactIds.includes(c.id))
   const exampleName = (selectedContacts[0]?.name || 'Cliente').trim().split(/\s+/)[0]
   const previewBody = template?.bodyPreview.replace('{{1}}', personalize ? exampleName : '{{1}}') ?? ''
+  const imageToShow = localPreviewUrl || savedImageUrl
+
+  // Al elegir/cambiar de plantilla, revisa si ya hay una imagen guardada para ella
+  useEffect(() => {
+    if (!template?.hasImageHeader) { setSavedImageUrl(''); return }
+    setCheckingImage(true); setSavedImageUrl(''); setLocalPreviewUrl(''); setReplacingImage(false)
+    fetch(`/api/whatsapp/template-image?template=${encodeURIComponent(template.name)}`)
+      .then(r => r.json())
+      .then(d => setSavedImageUrl(d.url || ''))
+      .catch(() => {})
+      .finally(() => setCheckingImage(false))
+  }, [template?.name])
 
   const handleFile = async (file: File | undefined) => {
-    if (!file) return
-    setImagePreviewUrl(URL.createObjectURL(file))
-    setMediaId(''); setError(''); setUploadingImage(true)
+    if (!file || !template) return
+    setLocalPreviewUrl(URL.createObjectURL(file))
+    setError(''); setUploadingImage(true)
     try {
       const fd = new FormData()
       fd.append('file', file)
-      const r = await fetch('/api/whatsapp/media', { method: 'POST', body: fd })
+      fd.append('template', template.name)
+      const r = await fetch('/api/whatsapp/template-image', { method: 'POST', body: fd })
       const d = await r.json()
       if (!r.ok) { setError(d.error || 'Error al subir la imagen'); return }
-      setMediaId(d.mediaId)
+      setSavedImageUrl(d.url)
+      setReplacingImage(false)
     } catch {
       setError('Error de red al subir la imagen')
     } finally {
@@ -849,7 +865,8 @@ function WhatsAppCampaignModal({
     }
   }
 
-  const canSend = !!template && (!template.hasImageHeader || !!mediaId) && !uploadingImage && !sending && selectedContacts.length > 0
+  const hasImageReady = !template?.hasImageHeader || !!savedImageUrl
+  const canSend = !!template && hasImageReady && !uploadingImage && !checkingImage && !sending && selectedContacts.length > 0
 
   const handleSend = async () => {
     if (!template) return
@@ -860,7 +877,7 @@ function WhatsAppCampaignModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contactIds, template: template.name, language: template.language,
-          headerImageId: mediaId || undefined, personalize,
+          headerImageUrl: savedImageUrl || undefined, personalize,
         }),
       })
       const d = await r.json()
@@ -911,7 +928,7 @@ function WhatsAppCampaignModal({
                 <label>Plantilla</label>
                 <select
                   value={templateName}
-                  onChange={e => { setTemplateName(e.target.value); setMediaId(''); setImagePreviewUrl('') }}
+                  onChange={e => setTemplateName(e.target.value)}
                   style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none' }}
                 >
                   {WHATSAPP_TEMPLATES.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
@@ -929,8 +946,8 @@ function WhatsAppCampaignModal({
                       <div style={{ background: '#fff', borderRadius: 8, overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
                         {template.hasImageHeader && (
                           <div style={{ width: '100%', aspectRatio: '1.4', background: 'var(--paper)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                            {imagePreviewUrl ? (
-                              <img src={imagePreviewUrl} alt="Encabezado" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            {imageToShow ? (
+                              <img src={imageToShow} alt="Encabezado" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : <Ico.image />}
                           </div>
                         )}
@@ -954,9 +971,30 @@ function WhatsAppCampaignModal({
                         <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8, display: 'block' }}>
                           Imagen de encabezado *
                         </label>
-                        <input type="file" accept="image/*" onChange={e => handleFile(e.target.files?.[0])} style={{ fontSize: 12.5 }} />
-                        {uploadingImage && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>Subiendo…</div>}
-                        {mediaId && <div style={{ fontSize: 12, color: 'var(--ipesa-green)', marginTop: 6 }}>Imagen lista ✓</div>}
+                        {checkingImage ? (
+                          <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Revisando…</div>
+                        ) : savedImageUrl && !replacingImage ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 12.5, color: 'var(--ipesa-green)', fontWeight: 600 }}>✓ Ya guardada, se reutiliza automáticamente</span>
+                            <button type="button" onClick={() => setReplacingImage(true)}
+                              style={{ fontSize: 12, color: 'var(--ipesa-orange)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                              Cambiar
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <input type="file" accept="image/*" onChange={e => handleFile(e.target.files?.[0])} style={{ fontSize: 12.5 }} />
+                            {uploadingImage && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>Subiendo…</div>}
+                            {savedImageUrl && !uploadingImage && (
+                              <div style={{ marginTop: 6 }}>
+                                <button type="button" onClick={() => setReplacingImage(false)}
+                                  style={{ fontSize: 12, color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
+                                  Cancelar, usar la que ya estaba
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
                     )}
 

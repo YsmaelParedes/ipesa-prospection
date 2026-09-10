@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Sin permisos de administrador' }, { status: 403 })
   }
 
-  const { contactIds, template, language, headerImageId, personalize } = await req.json()
+  const { contactIds, template, language, headerImageUrl, personalize } = await req.json()
 
   if (!Array.isArray(contactIds) || contactIds.length === 0) {
     return NextResponse.json({ error: 'contactIds debe ser un arreglo no vacío' }, { status: 400 })
@@ -45,8 +45,8 @@ export async function POST(req: NextRequest) {
     }
 
     const components: WhatsAppTemplateComponent[] = []
-    if (headerImageId) {
-      components.push({ type: 'header', parameters: [{ type: 'image', image: { id: headerImageId } }] })
+    if (headerImageUrl) {
+      components.push({ type: 'header', parameters: [{ type: 'image', image: { link: headerImageUrl } }] })
     }
     if (personalize) {
       const firstName = (c.name || '').trim().split(/\s+/)[0] || 'cliente'
