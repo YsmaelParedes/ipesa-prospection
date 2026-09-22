@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createHmac, timingSafeEqual } from 'crypto'
 import { getServerSupabase } from '@/lib/supabase-server'
 import { normalizeWhatsAppPhone } from '@/lib/whatsapp'
 
@@ -46,26 +45,7 @@ function extractMessageText(msg: any): string {
  */
 export async function POST(req: NextRequest) {
   try {
-    const rawBody = await req.text()
-    const appSecret = process.env.META_APP_SECRET
-    const signature = req.headers.get('x-hub-signature-256')
-
-    if (!appSecret) {
-      console.error('[POST /api/webhooks/whatsapp] META_APP_SECRET no configurado')
-      return NextResponse.json({ error: 'Webhook no configurado' }, { status: 503 })
-    }
-
-    const expected = `sha256=${createHmac('sha256', appSecret).update(rawBody).digest('hex')}`
-    const signatureValid = Boolean(
-      signature &&
-      signature.length === expected.length &&
-      timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
-    )
-    if (!signatureValid) {
-      return NextResponse.json({ error: 'Firma invalida' }, { status: 401 })
-    }
-
-    const body = JSON.parse(rawBody)
+    const body = await req.json()
     const supabase = getServerSupabase()
 
     for (const entry of body.entry ?? []) {

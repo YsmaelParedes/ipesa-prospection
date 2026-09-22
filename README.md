@@ -1,27 +1,5 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## WhatsApp Cloud API con coexistencia
-
-La conexion se inicia desde **Configuracion > WhatsApp > Conectar numero** en https://ipesa-prospection.vercel.app/configuracion. Configura estas variables en **Vercel > Project Settings > Environment Variables** para Production y vuelve a desplegar antes de abrir el flujo:
-
-```dotenv
-NEXT_PUBLIC_APP_URL=https://ipesa-prospection.vercel.app
-META_APP_ID=
-META_APP_SECRET=
-META_EMBEDDED_SIGNUP_CONFIG_ID=
-META_GRAPH_VERSION=v26.0
-WHATSAPP_WEBHOOK_VERIFY_TOKEN=
-
-# Completar con los valores que muestra el flujo al finalizar:
-WHATSAPP_WABA_ID=
-WHATSAPP_PHONE_NUMBER_ID=
-WHATSAPP_ACCESS_TOKEN=
-```
-
-En Meta configura como callback `https://ipesa-prospection.vercel.app/api/webhooks/whatsapp` y usa exactamente el mismo valor de `WHATSAPP_WEBHOOK_VERIFY_TOKEN`. Agrega `ipesa-prospection.vercel.app` a los dominios permitidos de la app de Meta y configura Facebook Login for Business para la plataforma web. El `META_APP_SECRET` y el token de WhatsApp nunca deben usar el prefijo `NEXT_PUBLIC_`.
-
-Los valores obtenidos al terminar Embedded Signup se copian a las variables de Production en Vercel. Vuelve a desplegar para que el envio de mensajes use `WHATSAPP_PHONE_NUMBER_ID` y `WHATSAPP_ACCESS_TOKEN`. La `.env.local` del equipo solo se usa en desarrollo y puede conservar `http://localhost:3000`.
-
 ## Getting Started
 
 First, run the development server:

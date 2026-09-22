@@ -3,7 +3,7 @@
  * Requiere WHATSAPP_ACCESS_TOKEN y WHATSAPP_PHONE_NUMBER_ID en el entorno.
  */
 
-const GRAPH_VERSION = process.env.META_GRAPH_VERSION ?? 'v26.0'
+const GRAPH_VERSION = 'v21.0'
 
 export type WhatsAppTemplateParameter =
   | { type: 'text'; text: string }
