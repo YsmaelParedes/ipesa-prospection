@@ -209,7 +209,7 @@ export default function WhatsAppSetupSection() {
     setWorking(true)
     // Debe ejecutarse directamente dentro del clic para que el navegador no bloquee el popup.
     try {
-      window.FB.login(async response => {
+      window.FB.login(response => {
         clearPopupWatch()
         if (attemptRef.current !== attempt) return
         const code = response.authResponse?.code
@@ -218,13 +218,11 @@ export default function WhatsAppSetupSection() {
           setError('Meta no devolvio un codigo de autorizacion. Revisa la ventana emergente y vuelve a intentarlo.')
           return
         }
-        try {
-          await exchangeCode(code)
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'No se pudo terminar la conexion')
-        } finally {
-          setWorking(false)
-        }
+        void exchangeCode(code)
+          .catch(err => {
+            setError(err instanceof Error ? err.message : 'No se pudo terminar la conexion')
+          })
+          .finally(() => setWorking(false))
       }, {
         config_id: config.configId,
         response_type: 'code',
