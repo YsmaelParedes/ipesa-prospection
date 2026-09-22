@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { getUserRole } from '@/lib/profile'
+import WhatsAppSetupSection from '@/components/WhatsAppSetupSection'
 
 /* ── Iconos ── */
 const Ico = {
@@ -413,6 +414,24 @@ function WhatsAppTestSection() {
   )
 }
 
+function WhatsAppSection() {
+  const [view, setView] = useState<'connect' | 'test'>('connect')
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+        <button className={`btn ${view === 'connect' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setView('connect')}>
+          Conectar numero
+        </button>
+        <button className={`btn ${view === 'test' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setView('test')}>
+          Probar envio
+        </button>
+      </div>
+      {view === 'connect' ? <WhatsAppSetupSection /> : <WhatsAppTestSection />}
+    </div>
+  )
+}
+
 /* ── Página ── */
 export default function ConfiguracionPage() {
   const [tab, setTab] = useState<'segment' | 'canal' | 'users' | 'whatsapp'>('segment')
@@ -454,7 +473,7 @@ export default function ConfiguracionPage() {
           description="Orígenes de contacto disponibles al registrar contactos y leads" />
       )}
       {tab === 'users' && isAdmin && <UsersSection key="users" />}
-      {tab === 'whatsapp' && isAdmin && <WhatsAppTestSection key="whatsapp" />}
+      {tab === 'whatsapp' && isAdmin && <WhatsAppSection key="whatsapp" />}
     </>
   )
 }

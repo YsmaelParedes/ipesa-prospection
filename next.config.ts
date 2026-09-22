@@ -6,8 +6,8 @@ const isDev = process.env.NODE_ENV === 'development'
 // React dev mode requires 'unsafe-eval' for error overlays and call-stack reconstruction.
 // In production it is never needed — kept strict there.
 const scriptSrc = isDev
-  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-  : "script-src 'self' 'unsafe-inline'"
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://connect.facebook.net"
+  : "script-src 'self' 'unsafe-inline' https://connect.facebook.net"
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options',  value: 'nosniff' },
@@ -26,9 +26,10 @@ const securityHeaders = [
       "default-src 'self'",
       scriptSrc,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
-      "img-src 'self' data: blob:",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.facebook.com https://*.facebook.net",
+      "img-src 'self' data: blob: https://*.facebook.com https://*.facebook.net https://*.fbcdn.net",
       "font-src 'self' https://fonts.gstatic.com",
+      "frame-src https://*.facebook.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
