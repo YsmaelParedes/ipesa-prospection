@@ -7,6 +7,7 @@ type SignupConfig = {
   configId: string
   graphVersion: string
   configured: boolean
+  missing: string[]
   webhookUrl: string
   webhookVerifyTokenConfigured: boolean
 }
@@ -225,6 +226,11 @@ export default function WhatsAppSetupSection() {
         >
           {working ? 'Terminando conexion…' : !config ? 'Cargando…' : !config.configured ? 'Configuracion incompleta' : !sdkReady ? 'Cargando Meta…' : 'Conectar WhatsApp'}
         </button>
+        {config && config.missing.length > 0 && (
+          <div style={{ marginTop: 12, color: 'var(--ipesa-rose)', fontSize: 12.5, lineHeight: 1.5 }}>
+            Faltan en el despliegue de Vercel: {config.missing.join(', ')}. Comprueba el entorno Production y vuelve a desplegar.
+          </div>
+        )}
       </div>
 
       {config && (

@@ -25,12 +25,18 @@ export async function GET(req: NextRequest) {
   const configId = process.env.META_EMBEDDED_SIGNUP_CONFIG_ID ?? ''
   const graphVersion = process.env.META_GRAPH_VERSION ?? 'v26.0'
   const appUrl = req.nextUrl.origin.replace(/\/$/, '')
+  const missing = [
+    ['META_APP_ID', appId],
+    ['META_APP_SECRET', process.env.META_APP_SECRET ?? ''],
+    ['META_EMBEDDED_SIGNUP_CONFIG_ID', configId],
+  ].filter(([, value]) => !value.trim()).map(([name]) => name)
 
   return noStore({
     appId,
     configId,
     graphVersion,
-    configured: Boolean(appId && configId && process.env.META_APP_SECRET),
+    configured: missing.length === 0,
+    missing,
     webhookUrl: `${appUrl}/api/webhooks/whatsapp`,
     webhookVerifyTokenConfigured: Boolean(process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN),
   })
