@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 type SignupConfig = {
   appId: string
@@ -77,6 +77,21 @@ export default function WhatsAppSetupSection() {
   const [error, setError] = useState('')
   const [session, setSession] = useState<SessionData>({})
   const [token, setToken] = useState<TokenResult | null>(null)
+  const attemptRef = useRef(0)
+  const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const blurListenerRef = useRef<(() => void) | null>(null)
+
+  const clearPopupWatch = useCallback(() => {
+    if (popupTimerRef.current) clearTimeout(popupTimerRef.current)
+    if (blurListenerRef.current) window.removeEventListener('blur', blurListenerRef.current)
+    popupTimerRef.current = null
+    blurListenerRef.current = null
+  }, [])
+
+  useEffect(() => () => {
+    attemptRef.current++
+    clearPopupWatch()
+  }, [clearPopupWatch])
 
   useEffect(() => {
     fetch('/api/whatsapp/embedded-signup', { cache: 'no-store' })
@@ -140,9 +155,13 @@ export default function WhatsAppSetupSection() {
           businessId: data.business_id || data.businessId,
         })
       } else if (message.event === 'CANCEL') {
+        clearPopupWatch()
+        attemptRef.current++
         setWorking(false)
         setError('El proceso se cancelo antes de terminar')
       } else if (message.event === 'ERROR') {
+        clearPopupWatch()
+        attemptRef.current++
         setWorking(false)
         setError(message.data?.error_message || 'Meta devolvio un error durante la conexion')
       }
@@ -150,7 +169,7 @@ export default function WhatsAppSetupSection() {
 
     window.addEventListener('message', receiveMessage)
     return () => window.removeEventListener('message', receiveMessage)
-  }, [])
+  }, [clearPopupWatch])
 
   const exchangeCode = useCallback(async (code: string) => {
     const response = await fetch('/api/whatsapp/embedded-signup', {
@@ -173,32 +192,55 @@ export default function WhatsAppSetupSection() {
       return
     }
 
+    clearPopupWatch()
+    const attempt = ++attemptRef.current
+    let popupOpened = false
+    const markPopupOpen = () => { popupOpened = true }
+    blurListenerRef.current = markPopupOpen
+    window.addEventListener('blur', markPopupOpen)
+    popupTimerRef.current = setTimeout(() => {
+      clearPopupWatch()
+      if (!popupOpened && attemptRef.current === attempt) {
+        setWorking(false)
+        setError('No se abrio la ventana de Meta. Permite las ventanas emergentes para ipesa-prospection.vercel.app e intentalo de nuevo.')
+      }
+    }, 8000)
+
     setWorking(true)
     // Debe ejecutarse directamente dentro del clic para que el navegador no bloquee el popup.
-    window.FB.login(async response => {
-      const code = response.authResponse?.code
-      if (!code) {
-        setWorking(false)
-        setError('Meta no devolvio un codigo de autorizacion')
-        return
-      }
-      try {
-        await exchangeCode(code)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'No se pudo terminar la conexion')
-      } finally {
-        setWorking(false)
-      }
-    }, {
-      config_id: config.configId,
-      response_type: 'code',
-      override_default_response_type: true,
-      extras: {
-        setup: {},
-        featureType: 'whatsapp_business_app_onboarding',
-        sessionInfoVersion: '3',
-      },
-    })
+    try {
+      window.FB.login(async response => {
+        clearPopupWatch()
+        if (attemptRef.current !== attempt) return
+        const code = response.authResponse?.code
+        if (!code) {
+          setWorking(false)
+          setError('Meta no devolvio un codigo de autorizacion. Revisa la ventana emergente y vuelve a intentarlo.')
+          return
+        }
+        try {
+          await exchangeCode(code)
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'No se pudo terminar la conexion')
+        } finally {
+          setWorking(false)
+        }
+      }, {
+        config_id: config.configId,
+        response_type: 'code',
+        override_default_response_type: true,
+        extras: {
+          setup: {},
+          featureType: 'whatsapp_business_app_onboarding',
+          sessionInfoVersion: '3',
+        },
+      })
+    } catch (err) {
+      clearPopupWatch()
+      attemptRef.current++
+      setWorking(false)
+      setError(err instanceof Error ? err.message : 'No se pudo abrir el registro de Meta')
+    }
   }
 
   return (
