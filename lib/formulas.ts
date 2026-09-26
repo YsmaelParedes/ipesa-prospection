@@ -1,11 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-// Conversión a partir de la unidad fuente del catálogo: "shots" de 1/48 de
-// onza líquida (de ahí "48 Shots" en el nombre del PDF original).
-export const SHOTS_PER_OZ = 48
-export const ML_PER_OZ = 29.5735295625
-
 export type Colourant = {
   code: string
   shotsPerLiter: number | null
@@ -84,10 +79,4 @@ export function searchColors(colors: FormulaColor[], query: string, limit = 60):
     }
   }
   return out
-}
-
-/** mL de colorante para un volumen objetivo (en litros), a partir de la tasa por litro. */
-export function scaleColourantMl(mlPerLiter: number | null, liters: number): number | null {
-  if (mlPerLiter == null || !Number.isFinite(liters) || liters < 0) return null
-  return mlPerLiter * liters
 }

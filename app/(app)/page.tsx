@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Avatar, CanalChip, EstadoChip, SegmentoChip, TrendIcon, Donut, fmtDate, segColor } from '@/components/IpesaUI'
+import { Avatar, CanalChip, EstadoChip, TrendIcon, Donut, fmtDate, segColor } from '@/components/IpesaUI'
 import { getDisplayName } from '@/lib/profile'
 
 function greeting(name: string): { text: string; emoji: string } {
@@ -35,7 +35,7 @@ export default function DashboardPage() {
   )
 
   const m = data?.metrics ?? {}
-  const bySegment: any[] = (data?.bySegment ?? []).map((s: any, i: number) => ({ ...s, color: s.color || segColor(s.name, i) }))
+  const bySegment: any[] = (data?.bySegment ?? []).map((s: any, i: number) => ({ ...s, color: s.color || segColor(i) }))
   const byChannel: any[] = data?.byChannel ?? []
   const byOwner: any[] = data?.byOwner ?? []
   const recentLeads: any[] = data?.recentLeads ?? []

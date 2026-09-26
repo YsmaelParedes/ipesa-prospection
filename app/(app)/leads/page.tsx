@@ -239,7 +239,7 @@ export default function LeadsPage() {
       ) : view === 'tabla' ? (
         <LeadsTable leads={filtered} onSelect={setSelected} isAdmin={isAdmin} />
       ) : (
-        <LeadsKanban leads={filtered} onSelect={setSelected} onChangeEstado={updateEstado} isAdmin={isAdmin} />
+        <LeadsKanban leads={filtered} onSelect={setSelected} isAdmin={isAdmin} />
       )}
 
       {selected && (
@@ -249,7 +249,6 @@ export default function LeadsPage() {
           configSegmentos={configSegmentos}
           onClose={() => setSelected(null)}
           onChangeEstado={updateEstado}
-          onRefresh={load}
           onUpdated={upd => { setLeads(prev => prev.map(l => l.id === upd.id ? upd : l)); setSelected(upd); showToast('Lead actualizado ✓') }}
           onDeleted={id  => { setLeads(prev => prev.filter(l => l.id !== id)); setSelected(null); showToast('Lead eliminado') }}
         />
@@ -325,7 +324,7 @@ function LeadsTable({ leads, onSelect, isAdmin }: { leads: any[]; onSelect: (l: 
   )
 }
 
-function LeadsKanban({ leads, onSelect, onChangeEstado, isAdmin }: { leads: any[]; onSelect: (l: any) => void; onChangeEstado: (id: string, e: string) => void; isAdmin?: boolean }) {
+function LeadsKanban({ leads, onSelect, isAdmin }: { leads: any[]; onSelect: (l: any) => void; isAdmin?: boolean }) {
   return (
     <div className="kanban">
       {ESTADOS.map(estado => {
@@ -791,11 +790,11 @@ function RemindersTab({ lead }: { lead: any }) {
 ══════════════════════════════════════════════════════════ */
 function LeadDetail({
   lead: l, configCanales, configSegmentos,
-  onClose, onChangeEstado, onRefresh, onUpdated, onDeleted,
+  onClose, onChangeEstado, onUpdated, onDeleted,
 }: {
   lead: any; configCanales: string[]; configSegmentos: string[];
   onClose: () => void; onChangeEstado: (id: string, e: string) => void;
-  onRefresh: () => void; onUpdated: (l: any) => void; onDeleted: (id: string) => void;
+  onUpdated: (l: any) => void; onDeleted: (id: string) => void;
 }) {
   type DTab = 'info' | 'actividades' | 'recordatorios'
   const [tab, setTab]           = useState<DTab>('info')

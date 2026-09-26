@@ -42,7 +42,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['169.254.50.114'],
 
   // Librerías solo de servidor — no intentar incluirlas en el bundle del cliente
-  serverExternalPackages: ['web-push', 'sharp'],
+  serverExternalPackages: ['web-push'],
 
   // Tree-shake Supabase — importa solo los módulos usados
   experimental: {

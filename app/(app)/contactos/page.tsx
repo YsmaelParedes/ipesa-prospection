@@ -26,9 +26,6 @@ const Ico = {
 const TIPO_COLORS: Record<string, string> = {
   'Constructor': '#F2B544', 'Arquitecto': '#3D8B5C', 'Hogar': '#EE5A24', 'Empresa': '#1F3A5F',
 }
-const TIPO_ICONS: Record<string, string> = {
-  'Constructor': '🔨', 'Arquitecto': '📐', 'Hogar': '🏠', 'Empresa': '🏢',
-}
 const TIPOS_DEFAULT  = ['Constructor', 'Arquitecto', 'Hogar', 'Empresa']
 const CANALES_DEFAULT = ['Referido', 'Visita a Tienda', 'WhatsApp', 'Redes Sociales', 'Campaña Pagada', 'Otro']
 

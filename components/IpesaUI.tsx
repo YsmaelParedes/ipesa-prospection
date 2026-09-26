@@ -173,7 +173,7 @@ export function TipoChip({ value, small }: { value: string; small?: boolean }) {
 
 /* Color determinístico para segmentos dinámicos en gráficas */
 const SEG_COLORS = ['#EE5A24', '#1F3A5F', '#3D8B5C', '#F2B544', '#B6589C', '#C44D4D', '#80766B']
-export function segColor(name: string, index: number) {
+export function segColor(index: number) {
   return SEG_COLORS[index % SEG_COLORS.length]
 }
 
