@@ -13,6 +13,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026-09-26',
+    date: '26 de septiembre, 2026',
+    title: 'Nueva sección: Fórmulas',
+    items: [
+      'Nueva sección "Fórmulas" en el menú para igualar colores de Vinipesa Matte (INFINITE 2000) manualmente.',
+      'Busca cualquier color por nombre o código y elige el volumen a preparar: Litro, Galón, Cubeta o cualquier cantidad personalizada en litros o mL.',
+      'Las cantidades de colorante se muestran ya convertidas a mL, listas para dosificar.',
+    ],
+  },
+  {
     version: '2026-08-06',
     date: '6 de agosto, 2026',
     title: 'Roles de administrador y accesos rápidos',

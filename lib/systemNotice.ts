@@ -6,6 +6,6 @@
  */
 export const SYSTEM_NOTICE = {
   active: true,
-  id: '2026-09-mejoras-whatsapp',
-  message: 'Estamos haciendo mejoras al sistema (integración de WhatsApp). Podrías notar cambios temporales en Configuración — no afecta tus contactos, leads ni recordatorios.',
+  id: '2026-09-formulas',
+  message: 'Estamos agregando la sección Fórmulas (igualación de colores). Podrías notar ajustes en los próximos días — no afecta tus contactos, leads ni recordatorios.',
 }
