@@ -124,10 +124,10 @@ export default function FormulasPage() {
         </span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 380px) 1fr', gap: 16, alignItems: 'start' }}>
+      <div className="formulas-grid">
         {/* ── Columna izquierda: búsqueda + resultados ── */}
-        <div className="panel" style={{ padding: 16 }}>
-          <div className="search-input" style={{ marginBottom: 12 }}>
+        <div className={`panel formulas-list ${selected ? 'is-hidden' : ''}`} style={{ padding: 16 }}>
+          <div className="formulas-search" style={{ marginBottom: 12 }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: 'var(--muted)', flexShrink: 0 }}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             <input
               placeholder="Buscar por nombre o código (ej. AB238-1, Red Planet)…"
@@ -144,7 +144,7 @@ export default function FormulasPage() {
             {loading ? 'Buscando…' : query ? `${matchCount} resultado${matchCount !== 1 ? 's' : ''}` : `Primeros ${results.length} colores`}
           </div>
 
-          <div style={{ maxHeight: 560, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div className="formulas-results" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {results.map(c => {
               const isActive = selected?.code === c.code
               const hasWarning = c.colourants.some(cn => cn.needsReview)
@@ -182,11 +182,15 @@ export default function FormulasPage() {
         {/* ── Columna derecha: detalle + calculadora ── */}
         <div className="panel" style={{ padding: 20, minHeight: 400 }}>
           {!selected ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 360, color: 'var(--muted)', fontSize: 13.5, textAlign: 'center' }}>
+            <div className="formulas-detail-empty" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 360, color: 'var(--muted)', fontSize: 13.5, textAlign: 'center' }}>
               Selecciona un color de la lista para ver su fórmula convertida a mL.
             </div>
           ) : (
             <>
+              <button className="formulas-back btn btn-ghost" onClick={() => setSelected(null)} style={{ marginBottom: 14, alignItems: 'center', gap: 6 }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}><path d="m15 18-6-6 6-6" /></svg>
+                Volver a la lista
+              </button>
               <div className="panel-head" style={{ marginBottom: 16, gap: 14 }}>
                 <Swatch hex={selected.swatch} size={48} />
                 <div>
@@ -248,8 +252,8 @@ export default function FormulasPage() {
                       const ml = cn.mlPerLiter != null ? cn.mlPerLiter * liters : null
                       return (
                         <tr key={i} style={{ cursor: 'default' }}>
-                          <td style={{ fontWeight: 600 }}>{cn.code}</td>
-                          <td>
+                          <td data-label="Colorante" style={{ fontWeight: 600 }}>{cn.code}</td>
+                          <td data-label="Cantidad">
                             {cn.needsReview || ml == null ? (
                               <span style={{ color: 'var(--ipesa-rose)', fontWeight: 600 }} title="Este valor no cuadra en el documento fuente — verifica la fórmula original antes de usarla">
                                 ⚠ Verificar fórmula original

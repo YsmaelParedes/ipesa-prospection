@@ -21,6 +21,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Busca cualquier color por nombre o código y elige el volumen a preparar: Litro, Galón, Cubeta o cualquier cantidad personalizada en litros o mL.',
       'Las cantidades de colorante se muestran ya convertidas a mL, listas para dosificar.',
       'Cada color ahora muestra su muestra de color real (tomada del PDF original) junto al nombre, en la lista y en el detalle.',
+      'Fórmulas ahora se ve bien en celular: la búsqueda ya no desaparece, y al elegir un color se abre a pantalla completa con un botón para volver a la lista.',
     ],
   },
   {
