@@ -17,6 +17,7 @@ type FormulaColor = {
   name: string
   base: string
   colourants: Colourant[]
+  swatch?: string
 }
 
 type CatalogSummary = { id: string; productLine: string; fandeck: string; colorCount: number }
@@ -43,6 +44,18 @@ function fmtMl(v: number | null): string {
   if (v < 10) return v.toFixed(2)
   if (v < 100) return v.toFixed(1)
   return Math.round(v).toString()
+}
+
+function Swatch({ hex, size = 22 }: { hex?: string; size?: number }) {
+  return (
+    <span
+      style={{
+        width: size, height: size, borderRadius: '50%', flexShrink: 0,
+        background: hex || 'var(--paper)',
+        border: hex ? '1px solid rgba(0,0,0,0.12)' : '1px dashed var(--line-strong)',
+      }}
+    />
+  )
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -146,6 +159,7 @@ export default function FormulasPage() {
                     display: 'flex', alignItems: 'center', gap: 8,
                   }}
                 >
+                  <Swatch hex={c.swatch} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--ink)' }}>{c.code}</div>
                     <div style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
@@ -173,7 +187,8 @@ export default function FormulasPage() {
             </div>
           ) : (
             <>
-              <div className="panel-head" style={{ marginBottom: 16 }}>
+              <div className="panel-head" style={{ marginBottom: 16, gap: 14 }}>
+                <Swatch hex={selected.swatch} size={48} />
                 <div>
                   <div className="panel-title">{selected.code} — {selected.name}</div>
                   <div className="panel-sub" style={{ marginLeft: 0 }}>Base {selected.base}</div>

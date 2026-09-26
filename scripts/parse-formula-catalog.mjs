@@ -20,6 +20,10 @@
  *     "C:\Users\iysma\Downloads\IPESA Vinipesa Mate - 48 Shots - INFINITE 2000.md" \
  *     vinipesa-matte-infinite-2000 \
  *     data/formulas/vinipesa-matte-infinite-2000.json
+ *
+ * Después de correr esto, corre scripts/extract-pdf-swatches.py sobre el
+ * mismo .json para agregar la muestra de color ("swatch") de cada color —
+ * este script no la genera, solo la borra si ya estaba (regenera desde cero).
  */
 
 import fs from 'node:fs'

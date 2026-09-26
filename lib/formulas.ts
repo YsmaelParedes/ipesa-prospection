@@ -14,6 +14,8 @@ export type FormulaColor = {
   name: string
   base: string
   colourants: Colourant[]
+  /** Muestra de color extraída del PDF original, en formato "#rrggbb". */
+  swatch?: string
 }
 
 export type FormulaCatalog = {

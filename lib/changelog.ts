@@ -20,6 +20,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Nueva sección "Fórmulas" en el menú para igualar colores de Vinipesa Matte (INFINITE 2000) manualmente.',
       'Busca cualquier color por nombre o código y elige el volumen a preparar: Litro, Galón, Cubeta o cualquier cantidad personalizada en litros o mL.',
       'Las cantidades de colorante se muestran ya convertidas a mL, listas para dosificar.',
+      'Cada color ahora muestra su muestra de color real (tomada del PDF original) junto al nombre, en la lista y en el detalle.',
     ],
   },
   {
