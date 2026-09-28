@@ -13,6 +13,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026-09-28',
+    date: '28 de septiembre, 2026',
+    title: 'Panel de campañas en WhatsApp',
+    items: [
+      'Nueva pestaña "Campañas" dentro de WhatsApp (solo administradores) para elegir contactos y mandar una plantilla aprobada sin pasar por Contactos.',
+      'Selector de contactos con buscador y "Elegir todos", más vista previa de la plantilla igual que antes.',
+    ],
+  },
+  {
     version: '2026-09-26',
     date: '26 de septiembre, 2026',
     title: 'Nueva sección: Fórmulas',
