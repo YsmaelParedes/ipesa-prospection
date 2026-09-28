@@ -5,6 +5,7 @@ import { Avatar, TipoChip, CanalChip, FilterDropdown, fmtDateLong, fmtPhone, nor
 import { getUserRole } from '@/lib/profile'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
 import { useWhatsAppCampaignQuota, CampaignQuotaNote } from '@/components/WhatsAppCampaignQuota'
+import { useCampaignSend, CampaignConfirmPanel, CampaignProgressPanel } from '@/components/WhatsAppCampaignSend'
 
 /* ── Iconos ── */
 const Ico = {
@@ -815,73 +816,60 @@ function WhatsAppCampaignModal({
   contactIds: string[]; contacts: any[]; onClose: () => void; onDone: () => void
 }) {
   const [selection, setSelection] = useState<WhatsAppTemplateSelection | null>(null)
-  const [sending, setSending]     = useState(false)
-  const [error, setError]         = useState('')
-  const [results, setResults]     = useState<{ sent: number; failed: number; details: any[] } | null>(null)
   const { quota, refetch: refetchQuota } = useWhatsAppCampaignQuota()
+  const { phase, total, done, sent, failed, outcomes, askConfirm, backToForm, run } = useCampaignSend()
 
   const selectedContacts = contacts.filter(c => contactIds.includes(c.id))
   const exampleName = (selectedContacts[0]?.name || 'Cliente').trim().split(/\s+/)[0]
 
-  const overQuota = !!quota && (selectedContacts.length > quota.maxPerRequest || selectedContacts.length > quota.remaining)
-  const canSend = !!selection?.ready && !sending && selectedContacts.length > 0 && !overQuota
+  const overQuota = !!quota && selectedContacts.length > quota.remaining
+  const canSend = !!selection?.ready && selectedContacts.length > 0 && !overQuota
+  const busy = phase === 'sending'
 
-  const handleSend = async () => {
+  const handleConfirmed = async () => {
     if (!selection) return
-    setSending(true); setError('')
-    try {
-      const r = await fetch('/api/whatsapp/campaigns/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contactIds, template: selection.templateName, language: selection.language,
-          headerImageUrl: selection.savedImageUrl || undefined, personalize: selection.personalize,
-          bodyPreview: selection.bodyPreview,
-        }),
-      })
-      const d = await r.json()
-      if (!r.ok) { setError(d.error || 'Error al enviar la campaña'); return }
-      setResults({ sent: d.sent, failed: d.failed, details: d.results })
-      refetchQuota()
-    } catch {
-      setError('Error de red al enviar')
-    } finally {
-      setSending(false)
-    }
+    await run(selectedContacts.map(c => ({ id: c.id, name: c.name, phone: c.phone })), selection)
+    refetchQuota()
   }
 
   return (
-    <div className="modal" onClick={sending ? undefined : onClose}>
+    <div className="modal" onClick={busy ? undefined : onClose}>
       <div className="modal-card" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
         <div className="modal-head">
           <h3>Enviar plantilla de WhatsApp</h3>
-          <button className="modal-close btn-icon" onClick={onClose}><Ico.close /></button>
+          {!busy && <button className="modal-close btn-icon" onClick={onClose}><Ico.close /></button>}
         </div>
 
         <div className="modal-body">
-          {results ? (
-            /* ── Resultado del envío ── */
+          {phase === 'results' ? (
             <div>
               <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
                 <div style={{ flex: 1, padding: '14px', background: 'var(--ipesa-green-soft)', borderRadius: 10, textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--ipesa-green)' }}>{results.sent}</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--ipesa-green)' }}>{sent}</div>
                   <div style={{ fontSize: 12, color: 'var(--ink-2)' }}>enviados</div>
                 </div>
-                <div style={{ flex: 1, padding: '14px', background: results.failed > 0 ? 'var(--ipesa-rose-soft)' : 'var(--paper)', borderRadius: 10, textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: results.failed > 0 ? 'var(--ipesa-rose)' : 'var(--muted)' }}>{results.failed}</div>
+                <div style={{ flex: 1, padding: '14px', background: failed > 0 ? 'var(--ipesa-rose-soft)' : 'var(--paper)', borderRadius: 10, textAlign: 'center' }}>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: failed > 0 ? 'var(--ipesa-rose)' : 'var(--muted)' }}>{failed}</div>
                   <div style={{ fontSize: 12, color: 'var(--ink-2)' }}>fallidos</div>
                 </div>
               </div>
-              {results.failed > 0 && (
+              {failed > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
-                  {results.details.filter(r => !r.ok).map((r, i) => (
+                  {outcomes.filter(o => !o.ok).map((o, i) => (
                     <div key={i} style={{ padding: '8px 12px', background: 'var(--paper)', borderRadius: 8, fontSize: 12.5 }}>
-                      <strong>{r.name || 'Contacto'}</strong>: <span style={{ color: 'var(--ipesa-rose)' }}>{r.error}</span>
+                      <strong>{o.name || 'Contacto'}</strong>: <span style={{ color: 'var(--ipesa-rose)' }}>{o.error}</span>
                     </div>
                   ))}
                 </div>
               )}
             </div>
+          ) : phase === 'sending' ? (
+            <CampaignProgressPanel total={total} done={done} sent={sent} failed={failed} />
+          ) : phase === 'confirm' ? (
+            <CampaignConfirmPanel
+              targetCount={selectedContacts.length} selection={selection} quota={quota}
+              onConfirm={handleConfirmed} onCancel={backToForm}
+            />
           ) : (
             <>
               <WhatsAppTemplatePicker exampleName={exampleName} onChange={setSelection} />
@@ -890,24 +878,24 @@ function WhatsAppCampaignModal({
                 Se enviará a <strong>{selectedContacts.length}</strong> contacto{selectedContacts.length !== 1 ? 's' : ''} seleccionado{selectedContacts.length !== 1 ? 's' : ''}.
               </div>
               <CampaignQuotaNote quota={quota} selectedCount={selectedContacts.length} />
-
-              {error && <div style={{ color: 'var(--ipesa-rose)', fontSize: 12.5, marginTop: 12 }}>{error}</div>}
             </>
           )}
         </div>
 
-        <div className="modal-foot">
-          {results ? (
-            <button className="btn btn-primary" onClick={onDone} style={{ flex: 1, justifyContent: 'center' }}>Listo</button>
-          ) : (
-            <>
-              <button className="btn btn-ghost" onClick={onClose} disabled={sending}>Cancelar</button>
-              <button className="btn btn-primary" onClick={handleSend} disabled={!canSend}>
-                <Ico.send /> {sending ? 'Enviando…' : `Enviar a ${selectedContacts.length}`}
-              </button>
-            </>
-          )}
-        </div>
+        {(phase === 'idle' || phase === 'results') && (
+          <div className="modal-foot">
+            {phase === 'results' ? (
+              <button className="btn btn-primary" onClick={onDone} style={{ flex: 1, justifyContent: 'center' }}>Listo</button>
+            ) : (
+              <>
+                <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+                <button className="btn btn-primary" onClick={askConfirm} disabled={!canSend}>
+                  <Ico.send /> Enviar a {selectedContacts.length}
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

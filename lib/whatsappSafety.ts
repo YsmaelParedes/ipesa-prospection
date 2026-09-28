@@ -9,16 +9,12 @@
  */
 
 // Pausa entre cada envío dentro de una campaña (ms), con jitter para que el
-// patrón no se vea perfectamente robótico.
+// patrón no se vea perfectamente robótico. El cliente manda un contacto por
+// petición y espera esto entre una y otra — así la función del servidor
+// nunca queda esperando varios minutos (sin riesgo de timeout) y la UI
+// puede mostrar una barra de progreso real en vez de un solo spinner ciego.
 export const CAMPAIGN_SEND_DELAY_MS  = 3000
 export const CAMPAIGN_SEND_JITTER_MS = 800
-
-// Máximo de contactos por click de "Enviar". Limitado por el tiempo máximo
-// de ejecución de una función en Vercel (300s): con la pausa de arriba,
-// más de ~60 mensajes en una sola llamada arriesga que la función se corte
-// a la mitad de la campaña. Para listas más grandes, se manda en varias
-// tandas — que además es buena práctica anti-spam por sí sola.
-export const CAMPAIGN_MAX_PER_REQUEST = 60
 
 // Tope de plantillas enviadas por día (ventana móvil de 24h). Conservador
 // mientras la verificación de negocio en Meta siga pendiente — se puede
