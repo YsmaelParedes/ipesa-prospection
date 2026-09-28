@@ -19,6 +19,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     items: [
       'Nueva pestaña "Campañas" dentro de WhatsApp (solo administradores) para elegir contactos y mandar una plantilla aprobada sin pasar por Contactos.',
       'Selector de contactos con buscador y "Elegir todos", más vista previa de la plantilla igual que antes.',
+      'Reglas para cuidar el número: pausa de ~3 segundos entre cada envío, máximo 60 contactos por tanda y tope de 200 plantillas al día, con aviso en pantalla de cuánto queda antes de mandar.',
     ],
   },
   {

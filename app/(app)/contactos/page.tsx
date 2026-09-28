@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { Avatar, TipoChip, CanalChip, FilterDropdown, fmtDateLong, fmtPhone, normalizePhone, isMobilePhone } from '@/components/IpesaUI'
 import { getUserRole } from '@/lib/profile'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
+import { useWhatsAppCampaignQuota, CampaignQuotaNote } from '@/components/WhatsAppCampaignQuota'
 
 /* ── Iconos ── */
 const Ico = {
@@ -817,11 +818,13 @@ function WhatsAppCampaignModal({
   const [sending, setSending]     = useState(false)
   const [error, setError]         = useState('')
   const [results, setResults]     = useState<{ sent: number; failed: number; details: any[] } | null>(null)
+  const { quota, refetch: refetchQuota } = useWhatsAppCampaignQuota()
 
   const selectedContacts = contacts.filter(c => contactIds.includes(c.id))
   const exampleName = (selectedContacts[0]?.name || 'Cliente').trim().split(/\s+/)[0]
 
-  const canSend = !!selection?.ready && !sending && selectedContacts.length > 0
+  const overQuota = !!quota && (selectedContacts.length > quota.maxPerRequest || selectedContacts.length > quota.remaining)
+  const canSend = !!selection?.ready && !sending && selectedContacts.length > 0 && !overQuota
 
   const handleSend = async () => {
     if (!selection) return
@@ -838,6 +841,7 @@ function WhatsAppCampaignModal({
       const d = await r.json()
       if (!r.ok) { setError(d.error || 'Error al enviar la campaña'); return }
       setResults({ sent: d.sent, failed: d.failed, details: d.results })
+      refetchQuota()
     } catch {
       setError('Error de red al enviar')
     } finally {
@@ -884,6 +888,7 @@ function WhatsAppCampaignModal({
               <div style={{ padding: '10px 12px', background: 'var(--paper)', borderRadius: 9, fontSize: 12.5, color: 'var(--ink-2)', marginTop: 14 }}>
                 Se enviará a <strong>{selectedContacts.length}</strong> contacto{selectedContacts.length !== 1 ? 's' : ''} seleccionado{selectedContacts.length !== 1 ? 's' : ''}.
               </div>
+              <CampaignQuotaNote quota={quota} selectedCount={selectedContacts.length} />
 
               {error && <div style={{ color: 'var(--ipesa-rose)', fontSize: 12.5, marginTop: 12 }}>{error}</div>}
             </>

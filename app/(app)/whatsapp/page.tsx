@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { Avatar, fmtPhone } from '@/components/IpesaUI'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
+import { useWhatsAppCampaignQuota, CampaignQuotaNote } from '@/components/WhatsAppCampaignQuota'
 import { getUserRole } from '@/lib/profile'
 
 const Ico = {
@@ -286,6 +287,7 @@ function CampaignsPanel() {
   const [sending, setSending]     = useState(false)
   const [error, setError]         = useState('')
   const [results, setResults]     = useState<{ sent: number; failed: number; details: any[] } | null>(null)
+  const { quota, refetch: refetchQuota } = useWhatsAppCampaignQuota()
 
   useEffect(() => {
     fetch('/api/data/contacts')
@@ -311,14 +313,19 @@ function CampaignsPanel() {
 
   const selectAllFiltered = () => setCheckedIds(prev => {
     const next = new Set(prev)
-    filtered.forEach(c => next.add(c.id))
+    const cap = quota?.maxPerRequest ?? Infinity
+    for (const c of filtered) {
+      if (next.size >= cap) break
+      next.add(c.id)
+    }
     return next
   })
   const clearSelection = () => setCheckedIds(new Set())
 
   const selectedContacts = contacts.filter(c => checkedIds.has(c.id))
   const exampleName = (selectedContacts[0]?.name || 'Cliente').trim().split(/\s+/)[0]
-  const canSend = !!selection?.ready && !sending && selectedContacts.length > 0
+  const overQuota = !!quota && (selectedContacts.length > quota.maxPerRequest || selectedContacts.length > quota.remaining)
+  const canSend = !!selection?.ready && !sending && selectedContacts.length > 0 && !overQuota
 
   const handleSend = async () => {
     if (!selection) return
@@ -335,6 +342,7 @@ function CampaignsPanel() {
       const d = await r.json()
       if (!r.ok) { setError(d.error || 'Error al enviar la campaña'); return }
       setResults({ sent: d.sent, failed: d.failed, details: d.results })
+      refetchQuota()
     } catch {
       setError('Error de red al enviar')
     } finally {
@@ -441,6 +449,7 @@ function CampaignsPanel() {
       }}>
         <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
           <WhatsAppTemplatePicker exampleName={exampleName} onChange={setSelection} />
+          <CampaignQuotaNote quota={quota} selectedCount={selectedContacts.length} />
           {error && <div style={{ color: 'var(--ipesa-rose)', fontSize: 12.5, marginTop: 12 }}>{error}</div>}
         </div>
         <div style={{ padding: 14, borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
