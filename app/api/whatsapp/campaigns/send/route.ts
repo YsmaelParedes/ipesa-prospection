@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getUserContext, unauthorizedResponse } from '@/lib/supabase-server'
 import { sendWhatsAppTemplate, WhatsAppTemplateComponent } from '@/lib/whatsapp'
-import { WHATSAPP_TEMPLATES } from '@/lib/whatsappTemplates'
 import { CAMPAIGN_DAILY_LIMIT, CAMPAIGN_MAX_PER_REQUEST, campaignDelayMs, wait } from '@/lib/whatsappSafety'
 
 // Con la pausa entre envíos, una tanda completa puede acercarse a varios
@@ -49,7 +48,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Sin permisos de administrador' }, { status: 403 })
   }
 
-  const { contactIds, template, language, headerImageUrl, personalize } = await req.json()
+  const { contactIds, template, language, headerImageUrl, personalize, bodyPreview } = await req.json()
 
   if (!Array.isArray(contactIds) || contactIds.length === 0) {
     return NextResponse.json({ error: 'contactIds debe ser un arreglo no vacío' }, { status: 400 })
@@ -77,7 +76,7 @@ export async function POST(req: NextRequest) {
 
   const templateName = template.trim()
   const languageCode = (language && typeof language === 'string') ? language : 'es_MX'
-  const templateDef  = WHATSAPP_TEMPLATES.find(t => t.name === templateName)
+  const bodyTemplate = (typeof bodyPreview === 'string' && bodyPreview.trim()) ? bodyPreview : ''
 
   const { data: contacts, error } = await supabase
     .from('contacts')
@@ -106,8 +105,8 @@ export async function POST(req: NextRequest) {
     const to = c.phone.length === 10 ? `52${c.phone}` : c.phone
     const sendResult = await sendWhatsAppTemplate(to, templateName, languageCode, components)
 
-    const renderedBody = templateDef
-      ? templateDef.bodyPreview.replace('{{1}}', personalize ? firstName : '{{1}}')
+    const renderedBody = bodyTemplate
+      ? bodyTemplate.replace('{{1}}', personalize ? firstName : '{{1}}')
       : `[Plantilla: ${templateName}]`
 
     await supabase.from('whatsapp_messages').insert([{

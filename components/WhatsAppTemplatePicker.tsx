@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { WHATSAPP_TEMPLATES } from '@/lib/whatsappTemplates'
+import { WHATSAPP_TEMPLATES, type WhatsAppTemplateDef } from '@/lib/whatsappTemplates'
 
 const Ico = {
   image: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22, color: 'var(--muted-2)' }}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>,
@@ -10,6 +10,7 @@ const Ico = {
 export type WhatsAppTemplateSelection = {
   templateName: string
   language: string
+  bodyPreview: string   // texto crudo con {{1}}, para que el servidor arme el texto guardado sin volver a consultar Meta
   savedImageUrl: string
   personalize: boolean
   ready: boolean
@@ -27,8 +28,11 @@ export function WhatsAppTemplatePicker({
   exampleName: string
   onChange: (sel: WhatsAppTemplateSelection) => void
 }) {
-  const [templateName, setTemplateName] = useState(WHATSAPP_TEMPLATES[0]?.name ?? '')
-  const template = WHATSAPP_TEMPLATES.find(t => t.name === templateName)
+  const [templates, setTemplates] = useState<WhatsAppTemplateDef[]>([])
+  const [loadingTemplates, setLoadingTemplates] = useState(true)
+  const [templatesError, setTemplatesError] = useState('')
+  const [templateName, setTemplateName] = useState('')
+  const template = templates.find(t => t.name === templateName)
 
   const [savedImageUrl, setSavedImageUrl] = useState('')
   const [checkingImage, setCheckingImage] = useState(false)
@@ -43,6 +47,25 @@ export function WhatsAppTemplatePicker({
   const hasImageReady = !template?.hasImageHeader || !!savedImageUrl
   const ready = !!template && hasImageReady && !uploadingImage && !checkingImage
 
+  // Plantillas aprobadas: se consultan en vivo a Meta; si falla (o falta
+  // configurar WHATSAPP_BUSINESS_ACCOUNT_ID) cae al catálogo local fijo.
+  useEffect(() => {
+    fetch('/api/whatsapp/templates')
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) setTemplatesError(d.error)
+        const list: WhatsAppTemplateDef[] = d.templates?.length ? d.templates : WHATSAPP_TEMPLATES
+        setTemplates(list)
+        setTemplateName(prev => (prev && list.some(t => t.name === prev)) ? prev : (list[0]?.name ?? ''))
+      })
+      .catch(() => {
+        setTemplatesError('No se pudo consultar Meta, usando catálogo local')
+        setTemplates(WHATSAPP_TEMPLATES)
+        setTemplateName(prev => prev || (WHATSAPP_TEMPLATES[0]?.name ?? ''))
+      })
+      .finally(() => setLoadingTemplates(false))
+  }, [])
+
   // Al elegir/cambiar de plantilla, revisa si ya hay una imagen guardada para ella
   useEffect(() => {
     if (!template?.hasImageHeader) { setSavedImageUrl(''); return }
@@ -55,7 +78,10 @@ export function WhatsAppTemplatePicker({
   }, [template?.name])
 
   useEffect(() => {
-    onChange({ templateName, language: template?.language ?? 'es_MX', savedImageUrl, personalize, ready })
+    onChange({
+      templateName, language: template?.language ?? 'es_MX', bodyPreview: template?.bodyPreview ?? '',
+      savedImageUrl, personalize, ready,
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateName, savedImageUrl, personalize, ready])
 
@@ -83,13 +109,22 @@ export function WhatsAppTemplatePicker({
     <div>
       <div className="field">
         <label>Plantilla</label>
-        <select
-          value={templateName}
-          onChange={e => setTemplateName(e.target.value)}
-          style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none' }}
-        >
-          {WHATSAPP_TEMPLATES.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
-        </select>
+        {loadingTemplates ? (
+          <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Consultando plantillas aprobadas en Meta…</div>
+        ) : templates.length === 0 ? (
+          <div style={{ fontSize: 12.5, color: 'var(--ipesa-rose)' }}>No hay plantillas aprobadas disponibles.</div>
+        ) : (
+          <select
+            value={templateName}
+            onChange={e => setTemplateName(e.target.value)}
+            style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none' }}
+          >
+            {templates.map(t => <option key={`${t.name}_${t.language}`} value={t.name}>{t.label}</option>)}
+          </select>
+        )}
+        {templatesError && (
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4 }}>⚠️ {templatesError}</div>
+        )}
       </div>
 
       {template && (

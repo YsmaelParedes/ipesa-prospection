@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { Avatar, fmtPhone } from '@/components/IpesaUI'
+import { Avatar, TipoChip, fmtPhone } from '@/components/IpesaUI'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
 import { useWhatsAppCampaignQuota, CampaignQuotaNote } from '@/components/WhatsAppCampaignQuota'
 import { getUserRole } from '@/lib/profile'
@@ -33,7 +33,9 @@ type Message = {
   created_at: string
 }
 
-type Contact = { id: string; name: string; phone: string }
+type Contact = { id: string; name: string; phone: string; segment?: string | null }
+
+const SEGMENTOS_DEFAULT = ['Constructor', 'Arquitecto', 'Hogar', 'Empresa']
 
 const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
 function fmtWhen(iso: string) {
@@ -282,6 +284,8 @@ function CampaignsPanel() {
   const [contacts, setContacts]   = useState<Contact[]>([])
   const [loading, setLoading]     = useState(true)
   const [search, setSearch]       = useState('')
+  const [segmentos, setSegmentos] = useState<string[]>(SEGMENTOS_DEFAULT)
+  const [segmentFilter, setSegmentFilter] = useState('Todos')
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [selection, setSelection] = useState<WhatsAppTemplateSelection | null>(null)
   const [sending, setSending]     = useState(false)
@@ -295,13 +299,20 @@ function CampaignsPanel() {
       .then(d => setContacts((d.contacts || []).filter((c: any) => !!c.phone)))
       .catch(() => {})
       .finally(() => setLoading(false))
+    fetch('/api/data/config?type=segment')
+      .then(r => r.json())
+      .then(d => { if (d.items?.length) setSegmentos(d.items.map((i: any) => i.label)) })
+      .catch(() => {})
   }, [])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return contacts
-    return contacts.filter(c => c.name?.toLowerCase().includes(q) || c.phone?.includes(q))
-  }, [contacts, search])
+    return contacts.filter(c => {
+      if (segmentFilter !== 'Todos' && c.segment !== segmentFilter) return false
+      if (!q) return true
+      return c.name?.toLowerCase().includes(q) || c.phone?.includes(q)
+    })
+  }, [contacts, search, segmentFilter])
 
   const toggle = (id: string) => {
     setCheckedIds(prev => {
@@ -337,6 +348,7 @@ function CampaignsPanel() {
         body: JSON.stringify({
           contactIds: [...checkedIds], template: selection.templateName, language: selection.language,
           headerImageUrl: selection.savedImageUrl || undefined, personalize: selection.personalize,
+          bodyPreview: selection.bodyPreview,
         }),
       })
       const d = await r.json()
@@ -400,9 +412,17 @@ function CampaignsPanel() {
               style={{ width: '100%', padding: '8px 10px 8px 30px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--paper)', fontSize: 13, outline: 'none' }}
             />
           </div>
+          <select
+            value={segmentFilter}
+            onChange={e => setSegmentFilter(e.target.value)}
+            style={{ width: '100%', marginTop: 8, padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--paper)', fontSize: 12.5, outline: 'none' }}
+          >
+            <option value="Todos">Todos los tipos</option>
+            {segmentos.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
           <div style={{ display: 'flex', gap: 10, marginTop: 8, fontSize: 12 }}>
             <button onClick={selectAllFiltered} style={{ background: 'none', border: 'none', color: 'var(--ipesa-orange)', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
-              Elegir todos {search ? `(${filtered.length})` : ''}
+              Elegir todos {(search || segmentFilter !== 'Todos') ? `(${filtered.length})` : ''}
             </button>
             {checkedIds.size > 0 && (
               <button onClick={clearSelection} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 0 }}>
@@ -435,7 +455,10 @@ function CampaignsPanel() {
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {c.name || fmtPhone(c.phone)}
                 </div>
-                <div style={{ fontSize: 11.5, color: 'var(--muted)' }}>{fmtPhone(c.phone)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{fmtPhone(c.phone)}</span>
+                  {c.segment && <TipoChip value={c.segment} small />}
+                </div>
               </div>
             </label>
           ))}

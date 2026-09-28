@@ -836,6 +836,7 @@ function WhatsAppCampaignModal({
         body: JSON.stringify({
           contactIds, template: selection.templateName, language: selection.language,
           headerImageUrl: selection.savedImageUrl || undefined, personalize: selection.personalize,
+          bodyPreview: selection.bodyPreview,
         }),
       })
       const d = await r.json()
