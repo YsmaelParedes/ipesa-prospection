@@ -42,7 +42,13 @@ export function WhatsAppTemplatePicker({
   const [personalize, setPersonalize] = useState(true)
   const [uploadError, setUploadError] = useState('')
 
-  const previewBody = template?.bodyPreview.replace('{{1}}', personalize ? exampleName : '{{1}}') ?? ''
+  // Solo tiene sentido mandar el parámetro de personalización si la
+  // plantilla realmente trae {{1}} en el cuerpo — si no, Meta rechaza el
+  // envío entero con "Number of parameters does not match" (#132000).
+  const hasBodyVariable = /\{\{\d+\}\}/.test(template?.bodyPreview ?? '')
+  const effectivePersonalize = personalize && hasBodyVariable
+
+  const previewBody = template?.bodyPreview.replace('{{1}}', effectivePersonalize ? exampleName : '{{1}}') ?? ''
   const imageToShow = localPreviewUrl || savedImageUrl
   const hasImageReady = !template?.hasImageHeader || !!savedImageUrl
   const ready = !!template && hasImageReady && !uploadingImage && !checkingImage
@@ -80,10 +86,10 @@ export function WhatsAppTemplatePicker({
   useEffect(() => {
     onChange({
       templateName, language: template?.language ?? 'es_MX', bodyPreview: template?.bodyPreview ?? '',
-      savedImageUrl, personalize, ready,
+      savedImageUrl, personalize: effectivePersonalize, ready,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [templateName, savedImageUrl, personalize, ready])
+  }, [templateName, savedImageUrl, effectivePersonalize, ready])
 
   const handleFile = async (file: File | undefined) => {
     if (!file || !template) return
@@ -190,10 +196,14 @@ export function WhatsAppTemplatePicker({
               </div>
             )}
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-2)', cursor: 'pointer' }}>
-              <input type="checkbox" checked={personalize} onChange={e => setPersonalize(e.target.checked)} />
-              Personalizar con el nombre de cada contacto
-            </label>
+            {hasBodyVariable ? (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-2)', cursor: 'pointer' }}>
+                <input type="checkbox" checked={personalize} onChange={e => setPersonalize(e.target.checked)} />
+                Personalizar con el nombre de cada contacto
+              </label>
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--muted)' }}>Esta plantilla no tiene variables — el texto es el mismo para todos.</div>
+            )}
           </div>
         </div>
       )}

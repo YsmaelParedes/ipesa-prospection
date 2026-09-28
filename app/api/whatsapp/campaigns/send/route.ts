@@ -14,6 +14,7 @@ async function sentInLast24h(supabase: ReturnType<typeof getServerSupabase>): Pr
     .select('id', { count: 'exact', head: true })
     .eq('direction', 'outbound')
     .not('template_name', 'is', null)
+    .neq('status', 'failed') // un envío rechazado por Meta no cuenta para el límite diario
     .gte('created_at', since)
   if (error) throw error
   return count ?? 0
