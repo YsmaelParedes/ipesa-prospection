@@ -33,3 +33,10 @@ drop index if exists public.whatsapp_messages_unread_idx;
 drop index if exists public.whatsapp_messages_template_sent_idx;
 
 drop view if exists public.whatsapp_conversations;
+
+-- Llaves foráneas simples reemplazadas por las compuestas por tienda
+-- (20261003120300_same_store_references.sql)
+alter table public.leads             drop constraint if exists leads_contact_id_fkey;
+alter table public.whatsapp_messages drop constraint if exists whatsapp_messages_contact_id_fkey;
+alter table public.lead_activities   drop constraint if exists lead_activities_lead_id_fkey;
+alter table public.reminders         drop constraint if exists reminders_lead_id_fkey;

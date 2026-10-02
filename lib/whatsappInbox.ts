@@ -19,7 +19,7 @@ const CONTACT_FIELDS = 'id, name, phone, email, company, segment, acquisition_ch
  * teléfono, incluyendo formatos heredados 52…/521…) y los indexa por
  * teléfono normalizado de 10 dígitos.
  */
-export async function contactsForPhones(phones: string[], contactIds: string[] = []): Promise<Map<string, ContactSummary>> {
+export async function contactsForPhones(storeId: string, phones: string[], contactIds: string[] = []): Promise<Map<string, ContactSummary>> {
   const supabase = getServerSupabase()
   const variants = [...new Set(phones)].flatMap(p => [p, `52${p}`, `521${p}`])
   const ids = [...new Set(contactIds)]
@@ -27,8 +27,8 @@ export async function contactsForPhones(phones: string[], contactIds: string[] =
   const chunks = <T,>(list: T[], size: number) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, i * size + size))
 
   const results = await Promise.all([
-    ...chunks(ids, 150).map(part => supabase.from('contacts').select(CONTACT_FIELDS).in('id', part)),
-    ...chunks(variants, 300).map(part => supabase.from('contacts').select(CONTACT_FIELDS).in('phone', part)),
+    ...chunks(ids, 150).map(part => supabase.from('contacts').select(CONTACT_FIELDS).eq('store_id', storeId).in('id', part)),
+    ...chunks(variants, 300).map(part => supabase.from('contacts').select(CONTACT_FIELDS).eq('store_id', storeId).in('phone', part)),
   ])
   const map = new Map<string, ContactSummary>()
   for (const { data } of results) {
@@ -40,7 +40,7 @@ export async function contactsForPhones(phones: string[], contactIds: string[] =
   return map
 }
 
-export async function contactForPhone(phone: string, contactId?: string | null): Promise<ContactSummary | null> {
-  const map = await contactsForPhones([phone], contactId ? [contactId] : [])
+export async function contactForPhone(storeId: string, phone: string, contactId?: string | null): Promise<ContactSummary | null> {
+  const map = await contactsForPhones(storeId, [phone], contactId ? [contactId] : [])
   return map.get(phone) ?? (contactId ? [...map.values()].find(c => c.id === contactId) ?? null : null)
 }

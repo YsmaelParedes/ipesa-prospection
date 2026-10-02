@@ -5,8 +5,8 @@ import { serverError } from '@/lib/validation'
 
 // POST /api/push/test — envía una notificación de prueba al usuario autenticado
 export async function POST() {
-  const ctx = await requireUser()
-  if (ctx instanceof Response) return ctx
+  const user = await requireUser()
+  if (user instanceof Response) return user
 
   if (!configureWebPush()) {
     return NextResponse.json({ error: 'Las notificaciones no están configuradas en el servidor (faltan las llaves VAPID).' }, { status: 500 })
@@ -15,7 +15,7 @@ export async function POST() {
   const { data: subs, error } = await getServerSupabase()
     .from('push_subscriptions')
     .select('endpoint, p256dh, auth')
-    .eq('user_id', ctx.uid)
+    .eq('user_id', user.id)
   if (error) return serverError('POST /api/push/test', error, 'Error al enviar notificación de prueba')
 
   if (!subs?.length) {

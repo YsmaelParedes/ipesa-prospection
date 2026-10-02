@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, requireUser } from '@/lib/supabase-server'
+import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 import { REMINDER_SCHEMA, reminderToApp, reminderToDB } from '@/lib/reminders'
 import { getAccessibleLead } from '@/lib/leads'
 
 type Ctx = { params: Promise<{ id: string }> }
 
-async function ownReminder(uid: string, id: string) {
-  const { data } = await getServerSupabase().from('reminders').select('user_id').eq('id', id).maybeSingle()
+async function ownReminder(uid: string, storeId: string, id: string) {
+  const { data } = await getServerSupabase().from('reminders').select('user_id')
+    .eq('id', id).eq('store_id', storeId).maybeSingle()
   return !!data && data.user_id === uid
 }
 
 // PATCH /api/data/reminders/[id]
 export async function PATCH(req: NextRequest, { params }: Ctx) {
-  const ctx = await requireUser()
+  const ctx = await requireStore({ write: true })
   if (ctx instanceof Response) return ctx
 
   const { id } = await params
@@ -26,7 +27,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const updates = reminderToDB(parsed.data) as Record<string, unknown>
   if (Object.keys(updates).length === 0) return jsonError('No se proporcionaron campos válidos para actualizar')
 
-  if (!(await ownReminder(ctx.uid, id))) return jsonError('Recordatorio no encontrado', 404)
+  if (!(await ownReminder(ctx.uid, ctx.storeId, id))) return jsonError('Recordatorio no encontrado', 404)
   if (updates.lead_id && !(await getAccessibleLead(ctx, updates.lead_id as string))) return jsonError('Lead no encontrado', 404)
 
   // Volver a notificar si se reprograma o se reactiva el recordatorio. La
@@ -44,6 +45,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       ...(resetPush ? { push_sent: false } : {}),
     })
     .eq('id', id)
+    .eq('store_id', ctx.storeId)
     .select()
   if (error) return serverError('PATCH /api/data/reminders/[id]', error, 'Error al actualizar recordatorio')
   return NextResponse.json(data?.[0] ? reminderToApp(data[0]) : {})
@@ -51,14 +53,14 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
 // DELETE /api/data/reminders/[id]
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  const ctx = await requireUser()
+  const ctx = await requireStore({ write: true })
   if (ctx instanceof Response) return ctx
 
   const { id } = await params
   if (!isUUID(id)) return jsonError('Recordatorio no encontrado', 404)
-  if (!(await ownReminder(ctx.uid, id))) return jsonError('Recordatorio no encontrado', 404)
+  if (!(await ownReminder(ctx.uid, ctx.storeId, id))) return jsonError('Recordatorio no encontrado', 404)
 
-  const { error } = await getServerSupabase().from('reminders').delete().eq('id', id)
+  const { error } = await getServerSupabase().from('reminders').delete().eq('id', id).eq('store_id', ctx.storeId)
   if (error) return serverError('DELETE /api/data/reminders/[id]', error, 'Error al eliminar recordatorio')
   return NextResponse.json({ success: true })
 }

@@ -1,25 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, requireUser } from '@/lib/supabase-server'
+import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 import { CONTACT_COLUMNS, duplicateContactMessage, linkWhatsAppMessages, parseContact } from '@/lib/contacts'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 export async function GET(_req: NextRequest, { params }: Ctx) {
-  const ctx = await requireUser()
+  const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
 
   const { id } = await params
   if (!isUUID(id)) return jsonError('Contacto no encontrado', 404)
 
-  const { data, error } = await getServerSupabase().from('contacts').select(CONTACT_COLUMNS).eq('id', id).maybeSingle()
+  const { data, error } = await getServerSupabase().from('contacts').select(CONTACT_COLUMNS).eq('id', id).eq('store_id', ctx.storeId).maybeSingle()
   if (error) return serverError('GET /api/data/contacts/[id]', error, 'Error al obtener contacto')
   if (!data) return jsonError('Contacto no encontrado', 404)
   return NextResponse.json(data)
 }
 
 export async function PUT(req: NextRequest, { params }: Ctx) {
-  const ctx = await requireUser()
+  const ctx = await requireStore({ write: true })
   if (ctx instanceof Response) return ctx
 
   const { id } = await params
@@ -42,24 +42,25 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     .from('contacts')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
+    .eq('store_id', ctx.storeId)
     .select(CONTACT_COLUMNS)
   if (error) {
     if (error.code === '23505') return jsonError(duplicateContactMessage(error.message))
     return serverError('PUT /api/data/contacts/[id]', error, 'Error al actualizar contacto')
   }
   if (!data?.length) return jsonError('Contacto no encontrado', 404)
-  if ('phone' in updates) await linkWhatsAppMessages(data)
+  if ('phone' in updates) await linkWhatsAppMessages(ctx.storeId, data)
   return NextResponse.json(data)
 }
 
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  const ctx = await requireUser()
+  const ctx = await requireStore({ write: true })
   if (ctx instanceof Response) return ctx
 
   const { id } = await params
   if (!isUUID(id)) return jsonError('Contacto no encontrado', 404)
 
-  const { error } = await getServerSupabase().from('contacts').delete().eq('id', id)
+  const { error } = await getServerSupabase().from('contacts').delete().eq('id', id).eq('store_id', ctx.storeId)
   if (error) return serverError('DELETE /api/data/contacts/[id]', error, 'Error al eliminar contacto')
   return NextResponse.json({ success: true })
 }

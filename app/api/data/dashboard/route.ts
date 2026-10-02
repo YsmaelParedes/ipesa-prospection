@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getServerSupabase, getUserNameMap, requireUser } from '@/lib/supabase-server'
+import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
 import { ownLeadsFilter } from '@/lib/leads'
 import { serverError } from '@/lib/validation'
 import { CAMPAIGN_DAILY_LIMIT } from '@/lib/whatsappSafety'
@@ -27,20 +27,21 @@ function mexicoBoundaries() {
 }
 
 export async function GET() {
-  const ctx = await requireUser()
+  const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
-  const isAdmin = ctx.role === 'admin'
+  const { isAdmin, storeId } = ctx
 
   try {
     const supabase = getServerSupabase()
     const { startOfToday, startOfMonth, startOfLastMonth } = mexicoBoundaries()
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
-    // Admin: leads de todos (supervisión). Empleado: solo los suyos (+ legacy).
-    let leadsQuery = supabase.from('leads').select('id, name, canal, estado, fecha, created_at, user_id').order('created_at', { ascending: false })
+    // Admin: leads de toda la tienda (supervisión). Vendedor: solo los suyos (+ legacy).
+    let leadsQuery = supabase.from('leads').select('id, name, canal, estado, fecha, created_at, user_id')
+      .eq('store_id', storeId).order('created_at', { ascending: false })
     if (!isAdmin) leadsQuery = leadsQuery.or(ownLeadsFilter(ctx.uid))
 
-    const contactsCount = () => supabase.from('contacts').select('id', { count: 'exact', head: true })
+    const contactsCount = () => supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('store_id', storeId)
 
     const [
       { count: totalContacts },
@@ -57,12 +58,12 @@ export async function GET() {
       contactsCount().gte('created_at', startOfMonth),
       contactsCount().gte('created_at', startOfLastMonth).lt('created_at', startOfMonth),
       leadsQuery,
-      supabase.from('contacts').select('segment'),
-      supabase.from('whatsapp_conversations').select('phone', { count: 'exact', head: true }).gt('unread', 0),
-      supabase.from('whatsapp_messages').select('id', { count: 'exact', head: true }).eq('direction', 'inbound').gte('created_at', startOfToday),
-      supabase.from('whatsapp_messages').select('id', { count: 'exact', head: true })
+      supabase.from('contacts').select('segment').eq('store_id', storeId),
+      supabase.from('whatsapp_threads').select('phone', { count: 'exact', head: true }).eq('store_id', storeId).gt('unread', 0),
+      supabase.from('whatsapp_messages').select('id', { count: 'exact', head: true }).eq('store_id', storeId).eq('direction', 'inbound').gte('created_at', startOfToday),
+      supabase.from('whatsapp_messages').select('id', { count: 'exact', head: true }).eq('store_id', storeId)
         .eq('direction', 'outbound').not('template_name', 'is', null).neq('status', 'failed').gte('created_at', since24h),
-      isAdmin ? getUserNameMap().catch(() => new Map<string, string>()) : Promise.resolve(null),
+      isAdmin ? getUserNameMap(storeId).catch(() => new Map<string, string>()) : Promise.resolve(null),
     ])
     if (leadsError) throw leadsError
 

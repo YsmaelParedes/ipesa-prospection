@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/supabase-server'
+import { requireStore } from '@/lib/supabase-server'
 import { sanitizeTemplateParam, sendWhatsAppTemplate, type WhatsAppTemplateComponent } from '@/lib/whatsapp'
 import { jsonError, readJson } from '@/lib/validation'
+import { WHATSAPP_NOT_CONNECTED, getStoreWhatsAppCreds } from '@/lib/storeWhatsApp'
 
 // POST /api/whatsapp/test-send — envía una plantilla a un número de prueba
-// (solo admin, para verificar que la integración de Meta quedó bien configurada)
+// (dueño/admin, para verificar que la integración de Meta quedó bien configurada)
 export async function POST(req: NextRequest) {
-  const ctx = await requireAdmin()
+  const ctx = await requireStore({ admin: true, module: 'whatsapp', write: true })
   if (ctx instanceof Response) return ctx
 
   const body = await readJson(req)
@@ -28,7 +29,9 @@ export async function POST(req: NextRequest) {
   }
 
   const lang = typeof language === 'string' && /^[a-zA-Z_]{2,10}$/.test(language) ? language : 'es_MX'
-  const result = await sendWhatsAppTemplate(to, template.trim(), lang, components)
+  const creds = await getStoreWhatsAppCreds(ctx.storeId)
+  if (!creds) return jsonError(WHATSAPP_NOT_CONNECTED, 409)
+  const result = await sendWhatsAppTemplate(creds, to, template.trim(), lang, components)
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 502 })
   return NextResponse.json({ success: true, messageId: result.messageId })
 }

@@ -28,6 +28,8 @@ function authorized(req: NextRequest): boolean {
 //   · vencidos (overdue)
 //   · programados para las próximas 25 h
 // La columna push_sent evita reenvíos si el cron corre dos veces en el mismo día.
+// Recorre las tiendas de toda la plataforma a propósito: cada recordatorio es
+// personal y solo se envía a los dispositivos de su propio dueño (user_id).
 export async function GET(req: NextRequest) {
   // Falla cerrado: sin CRON_SECRET configurado nadie puede dispararlo.
   if (!authorized(req)) {

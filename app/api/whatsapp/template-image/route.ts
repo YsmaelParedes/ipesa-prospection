@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, requireAdmin, requireUser } from '@/lib/supabase-server'
+import { getServerSupabase, requireStore } from '@/lib/supabase-server'
+import { getStoreWhatsAppRow } from '@/lib/storeWhatsApp'
 import { jsonError, serverError } from '@/lib/validation'
 
 const BUCKET   = 'whatsapp-media'
@@ -14,29 +15,44 @@ function detectImage(bytes: Uint8Array): { mime: string; ext: string } | null {
   return null
 }
 
+// Cada tienda guarda sus imágenes en su carpeta (<store_id>/<plantilla>.<ext>);
+// la tienda original conserva las que subió antes en la raíz del bucket.
+async function findImage(storeId: string, template: string) {
+  const supabase = getServerSupabase()
+  const { data, error } = await supabase.storage.from(BUCKET).list(storeId, { search: template })
+  if (error) throw error
+  const own = (data ?? []).find(f => f.name.startsWith(`${template}.`))
+  if (own) return { path: `${storeId}/${own.name}`, updatedAt: own.updated_at }
+  if ((await getStoreWhatsAppRow(storeId))?.credentials_source === 'env') {
+    const { data: legacy } = await supabase.storage.from(BUCKET).list('', { search: template })
+    const old = (legacy ?? []).find(f => f.name.startsWith(`${template}.`))
+    if (old) return { path: old.name, updatedAt: old.updated_at }
+  }
+  return null
+}
+
 // GET /api/whatsapp/template-image?template=nombre — URL pública guardada (o null)
 export async function GET(req: NextRequest) {
-  const ctx = await requireUser()
+  const ctx = await requireStore({ module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
 
   const template = req.nextUrl.searchParams.get('template') ?? ''
   if (!TEMPLATE_RE.test(template)) return jsonError('template inválido')
 
-  const supabase = getServerSupabase()
-  const { data, error } = await supabase.storage.from(BUCKET).list('', { search: template })
-  if (error) return serverError('GET /api/whatsapp/template-image', error, 'Error al consultar la imagen')
-
-  const match = (data ?? []).find(f => f.name.startsWith(`${template}.`))
+  let match: { path: string; updatedAt: string | null } | null
+  try { match = await findImage(ctx.storeId, template) } catch (error) {
+    return serverError('GET /api/whatsapp/template-image', error, 'Error al consultar la imagen')
+  }
   if (!match) return NextResponse.json({ url: null })
   // ?v= evita que el navegador muestre la versión anterior tras reemplazarla
-  const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(match.name)
-  const version = match.updated_at ? `?v=${Date.parse(match.updated_at)}` : ''
+  const { data: pub } = getServerSupabase().storage.from(BUCKET).getPublicUrl(match.path)
+  const version = match.updatedAt ? `?v=${Date.parse(match.updatedAt)}` : ''
   return NextResponse.json({ url: `${pub.publicUrl}${version}` })
 }
 
-// POST /api/whatsapp/template-image — sube/reemplaza la imagen de una plantilla (solo admin)
+// POST /api/whatsapp/template-image — sube/reemplaza la imagen de una plantilla (dueño/admin)
 export async function POST(req: NextRequest) {
-  const ctx = await requireAdmin()
+  const ctx = await requireStore({ admin: true, module: 'whatsapp', write: true })
   if (ctx instanceof Response) return ctx
 
   let form: FormData
@@ -55,11 +71,11 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = getServerSupabase()
     // Limpia versiones previas con otra extensión para no acumular archivos huérfanos
-    const { data: existing } = await supabase.storage.from(BUCKET).list('', { search: template })
-    const stale = (existing ?? []).filter(f => f.name.startsWith(`${template}.`)).map(f => f.name)
+    const { data: existing } = await supabase.storage.from(BUCKET).list(ctx.storeId, { search: template })
+    const stale = (existing ?? []).filter(f => f.name.startsWith(`${template}.`)).map(f => `${ctx.storeId}/${f.name}`)
     if (stale.length) await supabase.storage.from(BUCKET).remove(stale)
 
-    const path = `${template}.${kind.ext}`
+    const path = `${ctx.storeId}/${template}.${kind.ext}`
     const { error } = await supabase.storage.from(BUCKET).upload(path, buffer, { contentType: kind.mime, upsert: true })
     if (error) throw error
 

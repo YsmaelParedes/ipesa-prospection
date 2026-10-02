@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireUser } from '@/lib/supabase-server'
+import { requireStore } from '@/lib/supabase-server'
 import { loadCatalog, searchColors } from '@/lib/formulas'
 import { jsonError, serverError } from '@/lib/validation'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ catalogId: string }> }) {
-  const ctx = await requireUser()
+  const ctx = await requireStore({ module: 'formulas' })
   if (ctx instanceof Response) return ctx
 
   try {

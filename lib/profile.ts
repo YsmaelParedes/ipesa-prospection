@@ -1,40 +1,80 @@
-import type { User } from '@supabase/supabase-js'
-import { createSupabaseBrowser } from './supabase'
-
 /**
- * Usuario actual en el navegador. getUser() hace una llamada de red a
- * Supabase Auth; antes cada página la repetía 2-3 veces (nombre, rol…). Se
- * memoiza la promesa durante la vida de la pestaña — con la navegación del
- * lado del cliente (next/link) se resuelve una sola vez por sesión.
- * El rol aquí solo decide qué se MUESTRA; el servidor lo vuelve a validar.
+ * Sesión en el navegador: usuario, tienda activa, rol y módulos (de
+ * /api/me). Se memoiza durante la vida de la pestaña; invalidateSession()
+ * la vuelve a pedir (cambio de tienda, de nombre, de configuración).
+ * Solo decide qué se MUESTRA: cada ruta de la API vuelve a validar todo.
  */
-let userPromise: Promise<User | null> | null = null
+import { useEffect, useState } from 'react'
+import type { StoreAccess, StoreModules, StoreRole, StoreStatus } from './stores'
 
-function currentUser(): Promise<User | null> {
-  if (!userPromise) {
-    userPromise = createSupabaseBrowser().auth.getUser()
-      .then(({ data }) => data.user)
-      .catch(() => { userPromise = null; return null })
+export type ClientStore = {
+  id: string
+  slug: string
+  name: string
+  phone: string | null
+  email: string | null
+  address: string | null
+  city: string | null
+  state: string | null
+  logoUrl: string | null
+  status: StoreStatus
+  plan: string
+  planLabel: string
+  maxUsers: number
+  trialEndsAt: string | null
+  trialDaysLeft: number | null
+  paidUntil: string | null
+  access: StoreAccess
+  modules: StoreModules
+  onboardingCompleted: boolean
+}
+
+export type Session = {
+  user: { id: string; email: string; name: string }
+  store: ClientStore | null
+  role?: StoreRole
+  isAdmin?: boolean
+  isOwner?: boolean
+  stores: { id: string; name: string; role: StoreRole; logoUrl: string | null }[]
+  platformAdmin: boolean
+}
+
+const EVENT = 'ipesa:session-changed'
+let sessionPromise: Promise<Session | null> | null = null
+
+export function loadSession(): Promise<Session | null> {
+  if (!sessionPromise) {
+    sessionPromise = fetch('/api/me', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() as Promise<Session> : null))
+      .catch(() => { sessionPromise = null; return null })
   }
-  return userPromise
+  return sessionPromise
 }
 
-/** Fuerza a volver a leer el usuario (p. ej. después de editar el perfil). */
-export function invalidateCurrentUser() {
-  userPromise = null
+/** Vuelve a pedir la sesión y avisa a los componentes montados. */
+export function invalidateSession() {
+  sessionPromise = null
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(EVENT))
 }
 
-/** display_name de user_metadata → prefijo del email → 'Staff' */
+/** undefined = cargando · null = sin sesión */
+export function useSession(): Session | null | undefined {
+  const [session, setSession] = useState<Session | null | undefined>(undefined)
+  useEffect(() => {
+    let alive = true
+    const load = () => loadSession().then(s => { if (alive) setSession(s) })
+    load()
+    window.addEventListener(EVENT, load)
+    return () => { alive = false; window.removeEventListener(EVENT, load) }
+  }, [])
+  return session
+}
+
 export async function getDisplayName(): Promise<string> {
-  const user = await currentUser()
-  if (!user) return 'Staff'
-  return (user.user_metadata?.display_name as string)?.trim()
-    || user.email?.split('@')[0]
-    || 'Staff'
+  return (await loadSession())?.user.name || 'Staff'
 }
 
-/** Rol del usuario actual desde app_metadata (no editable por el usuario). */
+/** 'admin' = dueño o administrador de la tienda activa. */
 export async function getUserRole(): Promise<'admin' | 'employee'> {
-  const user = await currentUser()
-  return user?.app_metadata?.role === 'admin' ? 'admin' : 'employee'
+  return (await loadSession())?.isAdmin ? 'admin' : 'employee'
 }

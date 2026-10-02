@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, requireUser } from '@/lib/supabase-server'
+import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 import { CONTACT_COLUMNS, duplicateContactMessage, linkWhatsAppMessages, parseContact } from '@/lib/contacts'
 
 const MAX_BULK = 500
 
-// GET /api/data/contacts — base compartida de contactos
+// GET /api/data/contacts — base de contactos de la tienda (compartida por su equipo)
 export async function GET() {
-  const ctx = await requireUser()
+  const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
 
   const { data, error } = await getServerSupabase()
     .from('contacts')
     .select(CONTACT_COLUMNS)
+    .eq('store_id', ctx.storeId)
     .order('created_at', { ascending: false })
   if (error) return serverError('GET /api/data/contacts', error, 'Error al obtener contactos')
   return NextResponse.json({ contacts: data })
@@ -25,7 +26,7 @@ export async function GET() {
  *    teléfonos ya registrados se omiten en vez de fallar todo el lote.
  */
 export async function POST(req: NextRequest) {
-  const ctx = await requireUser()
+  const ctx = await requireStore({ write: true })
   if (ctx instanceof Response) return ctx
 
   const body = await readJson(req)
@@ -45,36 +46,36 @@ export async function POST(req: NextRequest) {
       const phone = parsed.data.phone as string
       if (seen.has(phone)) { invalid++; continue }
       seen.add(phone)
-      rows.push(parsed.data)
+      rows.push({ ...parsed.data, store_id: ctx.storeId })
     }
     if (!rows.length) return NextResponse.json({ inserted: 0, duplicates: 0, invalid })
 
     const { data, error } = await supabase
       .from('contacts')
-      .upsert(rows, { onConflict: 'phone', ignoreDuplicates: true })
+      .upsert(rows, { onConflict: 'store_id,phone', ignoreDuplicates: true })
       .select('id, phone')
     if (error) return serverError('POST /api/data/contacts (bulk)', error, 'Error al importar contactos')
 
     const inserted = data?.length ?? 0
-    if (inserted) await linkWhatsAppMessages(data!)
+    if (inserted) await linkWhatsAppMessages(ctx.storeId, data!)
     return NextResponse.json({ inserted, duplicates: rows.length - inserted, invalid })
   }
 
   const parsed = parseContact(body)
   if (!parsed.ok) return jsonError(parsed.error)
 
-  const { data, error } = await supabase.from('contacts').insert([parsed.data]).select(CONTACT_COLUMNS)
+  const { data, error } = await supabase.from('contacts').insert([{ ...parsed.data, store_id: ctx.storeId }]).select(CONTACT_COLUMNS)
   if (error) {
     if (error.code === '23505') return jsonError(duplicateContactMessage(error.message))
     return serverError('POST /api/data/contacts', error, 'Error al crear contacto')
   }
-  await linkWhatsAppMessages(data ?? [])
+  await linkWhatsAppMessages(ctx.storeId, data ?? [])
   return NextResponse.json(data)
 }
 
 // DELETE /api/data/contacts — borrado masivo { ids: string[] }
 export async function DELETE(req: NextRequest) {
-  const ctx = await requireUser()
+  const ctx = await requireStore({ write: true })
   if (ctx instanceof Response) return ctx
 
   const body = await readJson(req)
@@ -83,7 +84,7 @@ export async function DELETE(req: NextRequest) {
   if (ids.length > MAX_BULK) return jsonError(`Se permite eliminar máximo ${MAX_BULK} contactos a la vez`)
   if (!ids.every(isUUID)) return jsonError('ids inválidos')
 
-  const { error } = await getServerSupabase().from('contacts').delete().in('id', ids)
+  const { error } = await getServerSupabase().from('contacts').delete().eq('store_id', ctx.storeId).in('id', ids)
   if (error) return serverError('DELETE /api/data/contacts', error, 'Error al eliminar contactos')
   return NextResponse.json({ success: true, deleted: ids.length })
 }

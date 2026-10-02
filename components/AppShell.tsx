@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { getDisplayName, invalidateCurrentUser } from '@/lib/profile'
+import { usePathname, useRouter } from 'next/navigation'
+import { invalidateSession, useSession } from '@/lib/profile'
 import { CHANGELOG, CURRENT_VERSION } from '@/lib/changelog'
 import { SYSTEM_NOTICE } from '@/lib/systemNotice'
+import { ROLE_LABELS, STATUS_LABELS, type StoreModule } from '@/lib/stores'
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
@@ -62,6 +63,10 @@ const Icon = {
   wrench:    (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>,
   whatsapp:  (p: any) => <svg viewBox="0 0 24 24" fill="currentColor" {...p}><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.8.9-1 1.1c-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.4-.9-.8-1.5-1.8-1.7-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.3-.7.3-1.2.2-1.4 0-.1-.3-.2-.6-.4Zm-5.5 7.5c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.5 4.4-9.9 9.9-9.9s9.9 4.4 9.9 9.9-4.5 9.9-10 9.9Zm8.4-18.3C18.2 1.5 15.2.3 12 .3 5.4.3.1 5.6.1 12.2c0 2.1.6 4.2 1.6 6L0 24l5.9-1.5c1.7 1 3.7 1.5 5.7 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4Z"/></svg>,
   flask:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M9 2v6.3a2 2 0 0 1-.3 1L3.5 18a2 2 0 0 0 1.7 3h13.6a2 2 0 0 0 1.7-3l-5.2-8.7a2 2 0 0 1-.3-1V2"/><path d="M7 2h10M6 14h12"/></svg>,
+  store:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M3 9 4.5 4h15L21 9"/><path d="M3 9h18v1a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9Z"/><path d="M5 13v7h14v-7"/><path d="M10 20v-4h4v4"/></svg>,
+  chevrons:  (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>,
+  shield:    (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>,
+  lock:      (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>,
 }
 
 function initials(name: string) {
@@ -84,13 +89,14 @@ function fmtRem(iso: string) {
   return `${d.getDate()} ${['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][d.getMonth()]}`
 }
 
-const NAV_ITEMS = [
+type NavItem = { id: string; href: string; label: string; short: string; icon: (p: any) => React.ReactElement; mobile: boolean; module?: StoreModule }
+const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard',     href: '/',              label: 'Dashboard',     short: 'Inicio',    icon: Icon.dashboard, mobile: true  },
   { id: 'contactos',     href: '/contactos',     label: 'Contactos',     short: 'Contactos', icon: Icon.contacts,  mobile: true  },
   { id: 'leads',         href: '/leads',         label: 'Leads',         short: 'Leads',     icon: Icon.leads,     mobile: true  },
-  { id: 'whatsapp',      href: '/whatsapp',      label: 'WhatsApp',      short: 'WhatsApp',  icon: Icon.whatsapp,  mobile: true  },
+  { id: 'whatsapp',      href: '/whatsapp',      label: 'WhatsApp',      short: 'WhatsApp',  icon: Icon.whatsapp,  mobile: true, module: 'whatsapp' },
   { id: 'recordatorios', href: '/recordatorios', label: 'Recordatorios', short: 'Pendientes', icon: Icon.clock,    mobile: true  },
-  { id: 'formulas',      href: '/formulas',      label: 'Fórmulas',      short: 'Fórmulas',  icon: Icon.flask,     mobile: false },
+  { id: 'formulas',      href: '/formulas',      label: 'Fórmulas',      short: 'Fórmulas',  icon: Icon.flask,     mobile: false, module: 'formulas' },
   { id: 'configuracion', href: '/configuracion', label: 'Configuración', short: 'Ajustes',   icon: Icon.settings,  mobile: false },
 ]
 
@@ -101,7 +107,8 @@ const TITLE_MAP: Record<string, { t: string; s: string }> = {
   '/recordatorios':  { t: 'Recordatorios',     s: 'Seguimiento y tareas pendientes'     },
   '/whatsapp':       { t: 'WhatsApp',          s: 'Conversaciones y campañas'           },
   '/formulas':       { t: 'Fórmulas',          s: 'Igualación de colores'               },
-  '/configuracion':  { t: 'Configuración',     s: 'Catálogos, usuarios e integraciones' },
+  '/configuracion':  { t: 'Configuración',     s: 'Tu tienda, equipo e integraciones'   },
+  '/plataforma':     { t: 'Plataforma',        s: 'Tiendas, pruebas y suscripciones'    },
 }
 
 // Páginas tipo "app" que ocupan exactamente el alto de la pantalla
@@ -109,9 +116,13 @@ const FILL_ROUTES = ['/whatsapp']
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router   = useRouter()
+  const session  = useSession()
+  const store    = session?.store ?? null
+  const displayName = session?.user.name || 'Staff'
 
   const [drawerOpen,  setDrawerOpen]  = useState(false)
-  const [displayName, setDisplayName] = useState('Staff')
+  const [storeMenuOpen, setStoreMenuOpen] = useState(false)
   const [bellOpen,    setBellOpen]    = useState(false)
   const [reminders,   setReminders]   = useState<any[]>([])
   const [search,      setSearch]      = useState('')
@@ -177,13 +188,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  /* Display name — desde user_metadata (se refresca si alguien edita el perfil) */
+  /* Sin tienda todavía (cuenta recién creada) → asistente de alta */
   useEffect(() => {
-    getDisplayName().then(setDisplayName)
-    const refresh = () => { invalidateCurrentUser(); getDisplayName().then(setDisplayName) }
-    window.addEventListener('ipesa:profile-updated', refresh)
-    return () => window.removeEventListener('ipesa:profile-updated', refresh)
-  }, [])
+    if (session && !session.store) router.replace('/bienvenida')
+  }, [session, router])
+
+  /* Cambiar de tienda (solo si pertenece a varias) */
+  const switchStore = async (storeId: string) => {
+    setStoreMenuOpen(false)
+    if (storeId === store?.id) return
+    const r = await fetch('/api/stores/switch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storeId }),
+    })
+    if (r.ok) { invalidateSession(); window.location.href = '/' }
+  }
 
   /* WhatsApp: conversaciones sin leer (menú + título de la pestaña) */
   const loadWaUnread = useCallback(() => {
@@ -396,6 +414,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isActive     = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   const isContactos  = isActive('/contactos')
   const fill         = FILL_ROUTES.some(r => pathname.startsWith(r))
+  // Menú según los módulos activos de la tienda (mientras carga, todo visible)
+  const navItems     = NAV_ITEMS.filter(it => !it.module || !store || store.modules[it.module])
+  const readonly     = store?.access === 'readonly'
+  const trialLeft    = store?.status === 'trial' && !readonly ? store.trialDaysLeft : null
 
   const now        = new Date()
   const badgeCount = reminders.length
@@ -413,12 +435,36 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* ── Sidebar ── */}
       <aside className={`sidebar ${drawerOpen ? 'open' : ''}`}>
         <div className="brand">
-          <img src="/ipesa-logo.png" alt="IPESA Pinturas" width={480} height={209} className="brand-logo" />
+          <img src={store?.logoUrl || '/ipesa-logo.png'} alt={store?.name || 'IPESA Pinturas'} width={480} height={209} className="brand-logo" />
+          {store && (
+            <div className="store-switch">
+              <button
+                className="store-switch-btn"
+                onClick={() => session && session.stores.length > 1 && setStoreMenuOpen(o => !o)}
+                aria-expanded={storeMenuOpen}
+                title={session && session.stores.length > 1 ? 'Cambiar de tienda' : store.name}
+              >
+                <Icon.store className="store-switch-icon" />
+                <span className="store-switch-name">{store.name}</span>
+                {session && session.stores.length > 1 && <Icon.chevrons className="store-switch-chev" />}
+              </button>
+              {storeMenuOpen && session && (
+                <div className="store-menu" role="menu">
+                  {session.stores.map(s => (
+                    <button key={s.id} role="menuitem" className={`store-menu-item ${s.id === store.id ? 'current' : ''}`} onClick={() => switchStore(s.id)}>
+                      <span>{s.name}</span>
+                      <small>{ROLE_LABELS[s.role]}</small>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="nav-label">Menú</div>
         <nav className="nav">
-          {NAV_ITEMS.map(it => {
+          {navItems.map(it => {
             const Ic = it.icon
             return (
               <Link key={it.id} href={it.href} className={`nav-item ${isActive(it.href) ? 'active' : ''}`}>
@@ -428,13 +474,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             )
           })}
+          {session?.platformAdmin && (
+            <Link href="/plataforma" className={`nav-item nav-item-platform ${isActive('/plataforma') ? 'active' : ''}`}>
+              <Icon.shield className="nav-icon" />
+              <span>Plataforma</span>
+            </Link>
+          )}
         </nav>
 
         <div className="user-card">
           <div className="avatar-ring"><div className="avatar">{initials(displayName)}</div></div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="user-name">{displayName}</div>
-            <div className="user-role">Sesión activa</div>
+            <div className="user-role">{session?.role ? ROLE_LABELS[session.role] : 'Sesión activa'}</div>
           </div>
           <button onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión" className="logout-btn">
             <Icon.logout style={{ width: 16, height: 16 }} />
@@ -614,6 +666,27 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
+        {readonly && store && (
+          <div className="plan-banner readonly" role="status">
+            <Icon.lock style={{ width: 16, height: 16, flexShrink: 0 }} />
+            <span>
+              <strong>Modo solo lectura.</strong>{' '}
+              {store.status === 'trial' ? 'Terminó tu prueba gratis' : store.status === 'active' ? 'Venció el pago de tu suscripción' : `Tu tienda está ${STATUS_LABELS[store.status].toLowerCase()}`}:
+              puedes consultar y exportar tu información, pero no registrar cambios.
+            </span>
+            <Link href="/configuracion?tab=plan" className="plan-banner-cta">Activar</Link>
+          </div>
+        )}
+        {trialLeft !== null && (
+          <div className="plan-banner trial" role="status">
+            <Icon.sparkles style={{ width: 16, height: 16, flexShrink: 0 }} />
+            <span>
+              Prueba gratis: {trialLeft === 0 ? 'termina hoy' : `te ${trialLeft === 1 ? 'queda 1 día' : `quedan ${trialLeft} días`}`}.
+            </span>
+            <Link href="/configuracion?tab=plan" className="plan-banner-cta">Ver plan</Link>
+          </div>
+        )}
+
         {noticeVisible && (
           <div className="system-notice">
             <Icon.wrench style={{ width: 15, height: 15, flexShrink: 0 }} />
@@ -629,7 +702,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* ── Bottom nav (mobile) ── */}
       <nav className="bottom-nav" aria-label="Navegación principal">
-        {NAV_ITEMS.filter(it => it.mobile).map(it => {
+        {navItems.filter(it => it.mobile).map(it => {
           const Ic = it.icon
           return (
             <Link key={it.id} href={it.href} className={isActive(it.href) ? 'active' : ''} aria-current={isActive(it.href) ? 'page' : undefined}>

@@ -38,11 +38,12 @@ export function duplicateContactMessage(dbMessage = ''): string {
  * Vincula a los contactos recién creados/editados los mensajes de WhatsApp
  * de su número que llegaron cuando aún no estaban registrados.
  */
-export async function linkWhatsAppMessages(contacts: { id: string; phone: string }[]) {
+export async function linkWhatsAppMessages(storeId: string, contacts: { id: string; phone: string }[]) {
   await Promise.all(contacts.map(c =>
     getServerSupabase()
       .from('whatsapp_messages')
       .update({ contact_id: c.id })
+      .eq('store_id', storeId)
       .eq('phone', normalizePhone(c.phone))
       .is('contact_id', null),
   ))

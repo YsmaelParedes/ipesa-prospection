@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
-import { requireUser } from '@/lib/supabase-server'
-import { GRAPH_VERSION, countTemplateVariables } from '@/lib/whatsapp'
+import { requireStore } from '@/lib/supabase-server'
+import { countTemplateVariables, graphFetch } from '@/lib/whatsapp'
+import { getStoreWhatsAppCreds } from '@/lib/storeWhatsApp'
 import type { WhatsAppTemplateDef } from '@/lib/whatsappTemplates'
 
-// Las plantillas cambian poco: se cachean 5 min por instancia para no
-// consultar Meta cada vez que alguien abre un selector.
-let cache: { at: number; templates: WhatsAppTemplateDef[] } | null = null
+// Las plantillas cambian poco: se cachean 5 min por tienda e instancia para
+// no consultar Meta cada vez que alguien abre un selector.
+const cache = new Map<string, { at: number; templates: WhatsAppTemplateDef[] }>()
 const TTL = 5 * 60 * 1000
 
 function toDef(t: any): WhatsAppTemplateDef {
@@ -44,28 +45,26 @@ function toDef(t: any): WhatsAppTemplateDef {
  * cliente caiga al catálogo local sin romper la UI.
  */
 export async function GET() {
-  const ctx = await requireUser()
+  const ctx = await requireStore({ module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
 
-  if (cache && Date.now() - cache.at < TTL) return NextResponse.json({ templates: cache.templates })
+  const hit = cache.get(ctx.storeId)
+  if (hit && Date.now() - hit.at < TTL) return NextResponse.json({ templates: hit.templates })
 
-  const token  = process.env.WHATSAPP_ACCESS_TOKEN
-  const wabaId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID
-  if (!token || !wabaId) {
-    return NextResponse.json({ error: 'WHATSAPP_BUSINESS_ACCOUNT_ID no está configurado en el entorno', templates: [] })
+  const creds = await getStoreWhatsAppCreds(ctx.storeId)
+  if (!creds?.wabaId) {
+    return NextResponse.json({ error: 'Falta el ID de la cuenta de WhatsApp Business (WABA) en Configuración → WhatsApp', templates: [] })
   }
 
   try {
-    const url = `https://graph.facebook.com/${GRAPH_VERSION}/${encodeURIComponent(wabaId)}/message_templates?fields=name,status,language,category,components&limit=200`
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store', signal: AbortSignal.timeout(15_000) })
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      console.error('[GET /api/whatsapp/templates]', data?.error?.message ?? res.status)
-      return NextResponse.json({ error: `Meta respondió con error ${res.status} al consultar plantillas`, templates: [] })
+    const { ok, status, data } = await graphFetch(creds, `${encodeURIComponent(creds.wabaId)}/message_templates?fields=name,status,language,category,components&limit=200`)
+    if (!ok) {
+      console.error('[GET /api/whatsapp/templates]', data?.error?.message ?? status)
+      return NextResponse.json({ error: `Meta respondió con error ${status} al consultar plantillas`, templates: [] })
     }
 
     const templates = (data.data ?? []).filter((t: any) => t.status === 'APPROVED').map(toDef)
-    cache = { at: Date.now(), templates }
+    cache.set(ctx.storeId, { at: Date.now(), templates })
     return NextResponse.json({ templates })
   } catch {
     return NextResponse.json({ error: 'Error de red al consultar plantillas en Meta', templates: [] })

@@ -1,17 +1,22 @@
 /**
  * Cliente de servidor para WhatsApp Cloud API (Meta oficial, sin BSP).
- * Variables de entorno:
- *   WHATSAPP_ACCESS_TOKEN         token permanente del usuario del sistema
- *   WHATSAPP_PHONE_NUMBER_ID      id del número emisor
- *   WHATSAPP_BUSINESS_ACCOUNT_ID  id de la cuenta (WABA) — plantillas y salud del número
- *   WHATSAPP_APP_SECRET           secreto de la app — verifica la firma del webhook
- *   WHATSAPP_WEBHOOK_VERIFY_TOKEN token de verificación del webhook
+ * Cada tienda usa su propio número: todas las funciones reciben las
+ * credenciales de la tienda (ver lib/storeWhatsApp.ts). La tienda que migró
+ * del modelo de una sola tienda usa las variables de entorno:
+ *   WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_BUSINESS_ACCOUNT_ID,
+ *   WHATSAPP_APP_SECRET, WHATSAPP_WEBHOOK_VERIFY_TOKEN
  *   WHATSAPP_GRAPH_VERSION        opcional, versión de Graph API (default v21.0)
  */
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
 export const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0'
-const GRAPH = `https://graph.facebook.com/${GRAPH_VERSION}`
+
+export type WhatsAppCreds = {
+  token: string
+  phoneNumberId: string
+  wabaId: string | null
+  appSecret: string | null
+}
 
 export type WhatsAppTemplateParameter =
   | { type: 'text'; text: string }
@@ -29,11 +34,6 @@ export type WhatsAppSendResult = {
   code?: number
 }
 
-function credentials() {
-  const token         = process.env.WHATSAPP_ACCESS_TOKEN
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID
-  return token && phoneNumberId ? { token, phoneNumberId } : null
-}
 
 /**
  * Errores frecuentes de Meta traducidos a algo accionable. El texto original
@@ -61,10 +61,8 @@ export function friendlyWhatsAppError(code: number | undefined, fallback: string
   return (code !== undefined && FRIENDLY_ERRORS[code]) || fallback
 }
 
-async function graphFetch(path: string, init: RequestInit = {}): Promise<{ ok: boolean; status: number; data: any }> {
-  const creds = credentials()
-  if (!creds) return { ok: false, status: 500, data: { error: { message: 'WHATSAPP_ACCESS_TOKEN o WHATSAPP_PHONE_NUMBER_ID no configurados' } } }
-  const res = await fetch(`${GRAPH}/${path}`, {
+export async function graphFetch(creds: Pick<WhatsAppCreds, 'token'>, path: string, init: RequestInit = {}): Promise<{ ok: boolean; status: number; data: any }> {
+  const res = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/${path}`, {
     ...init,
     headers: { Authorization: `Bearer ${creds.token}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
     cache: 'no-store',
@@ -74,11 +72,9 @@ async function graphFetch(path: string, init: RequestInit = {}): Promise<{ ok: b
   return { ok: res.ok, status: res.status, data }
 }
 
-async function postMessage(payload: Record<string, unknown>): Promise<WhatsAppSendResult> {
-  const creds = credentials()
-  if (!creds) return { ok: false, error: 'WhatsApp no está configurado (faltan WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID)' }
+async function postMessage(creds: WhatsAppCreds, payload: Record<string, unknown>): Promise<WhatsAppSendResult> {
   try {
-    const { ok, status, data } = await graphFetch(`${creds.phoneNumberId}/messages`, {
+    const { ok, status, data } = await graphFetch(creds, `${creds.phoneNumberId}/messages`, {
       method: 'POST',
       body: JSON.stringify({ messaging_product: 'whatsapp', ...payload }),
     })
@@ -98,12 +94,13 @@ async function postMessage(payload: Record<string, unknown>): Promise<WhatsAppSe
  * atención al cliente). `to` en formato E.164 sin "+" (ej. 5212221234567).
  */
 export function sendWhatsAppTemplate(
+  creds: WhatsAppCreds,
   to: string,
   templateName: string,
   languageCode = 'es_MX',
   components?: WhatsAppTemplateComponent[],
 ): Promise<WhatsAppSendResult> {
-  return postMessage({
+  return postMessage(creds, {
     to,
     type: 'template',
     template: {
@@ -115,15 +112,13 @@ export function sendWhatsAppTemplate(
 }
 
 /** Texto libre — solo dentro de las 24 h desde el último mensaje del cliente. */
-export function sendWhatsAppText(to: string, body: string): Promise<WhatsAppSendResult> {
-  return postMessage({ to, type: 'text', text: { body, preview_url: true } })
+export function sendWhatsAppText(creds: WhatsAppCreds, to: string, body: string): Promise<WhatsAppSendResult> {
+  return postMessage(creds, { to, type: 'text', text: { body, preview_url: true } })
 }
 
 /** Marca un mensaje entrante como leído (palomitas azules para el cliente). */
-export async function markWhatsAppRead(waMessageId: string): Promise<void> {
-  const creds = credentials()
-  if (!creds) return
-  await graphFetch(`${creds.phoneNumberId}/messages`, {
+export async function markWhatsAppRead(creds: WhatsAppCreds, waMessageId: string): Promise<void> {
+  await graphFetch(creds, `${creds.phoneNumberId}/messages`, {
     method: 'POST',
     body: JSON.stringify({ messaging_product: 'whatsapp', status: 'read', message_id: waMessageId }),
   }).catch(() => {})
@@ -134,10 +129,8 @@ export async function markWhatsAppRead(waMessageId: string): Promise<void> {
  * temporal (≈5 min) que a su vez exige el token, así que la app hace de
  * proxy: el navegador nunca ve el token.
  */
-export async function downloadWhatsAppMedia(mediaId: string): Promise<{ body: ArrayBuffer; mime: string } | null> {
-  const creds = credentials()
-  if (!creds) return null
-  const meta = await graphFetch(encodeURIComponent(mediaId)).catch(() => null)
+export async function downloadWhatsAppMedia(creds: WhatsAppCreds, mediaId: string): Promise<{ body: ArrayBuffer; mime: string } | null> {
+  const meta = await graphFetch(creds, encodeURIComponent(mediaId)).catch(() => null)
   const url = meta?.ok ? meta.data?.url as string | undefined : undefined
   // La URL debe ser de Meta: nunca seguir una URL arbitraria con el token.
   if (!url || !/^https:\/\/[a-z0-9.-]+\.(fbsbx|facebook|whatsapp)\.(com|net)\//i.test(url)) return null
@@ -159,10 +152,9 @@ export type PhoneHealth = {
 }
 
 /** Calidad del número y nivel de mensajería — clave para no ser restringido por Meta. */
-export async function getPhoneHealth(): Promise<PhoneHealth | null> {
-  const creds = credentials()
-  if (!creds) return null
+export async function getPhoneHealth(creds: WhatsAppCreds): Promise<PhoneHealth | null> {
   const { ok, data } = await graphFetch(
+    creds,
     `${creds.phoneNumberId}?fields=display_phone_number,verified_name,quality_rating,messaging_limit_tier,name_status`,
   ).catch(() => ({ ok: false, data: null }))
   if (!ok || !data) return null

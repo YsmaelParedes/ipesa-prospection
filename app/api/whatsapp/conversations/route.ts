@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, requireUser } from '@/lib/supabase-server'
+import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { contactsForPhones } from '@/lib/whatsappInbox'
 import { isWindowOpen } from '@/lib/whatsappSafety'
 import { serverError } from '@/lib/validation'
@@ -8,11 +8,11 @@ const PAGE = 100
 
 /**
  * GET /api/whatsapp/conversations?filter=all|unread|unknown&q=texto&before=ISO
- * Una fila por número (vista whatsapp_conversations), con el contacto del
+ * Una fila por número de la tienda (vista whatsapp_threads), con el contacto del
  * CRM vinculado, no leídos y estado de la ventana de 24 h.
  */
 export async function GET(req: NextRequest) {
-  const ctx = await requireUser()
+  const ctx = await requireStore({ module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
 
   const filter = req.nextUrl.searchParams.get('filter') ?? 'all'
@@ -21,8 +21,9 @@ export async function GET(req: NextRequest) {
 
   try {
     let query = getServerSupabase()
-      .from('whatsapp_conversations')
+      .from('whatsapp_threads')
       .select('*')
+      .eq('store_id', ctx.storeId)
       .order('last_at', { ascending: false })
       // Con búsqueda se filtra en memoria sobre un rango mayor
       .limit(q ? 1000 : PAGE + 1)
@@ -34,6 +35,7 @@ export async function GET(req: NextRequest) {
     const rows = data ?? []
 
     const contacts = await contactsForPhones(
+      ctx.storeId,
       rows.map(r => r.phone),
       rows.map(r => r.contact_id).filter(Boolean),
     )

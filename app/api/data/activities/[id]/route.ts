@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, requireUser, type UserContext } from '@/lib/supabase-server'
+import { getServerSupabase, requireStore, type StoreContext } from '@/lib/supabase-server'
 import { isUUID, jsonError, parseFields, readJson, serverError, type Schema } from '@/lib/validation'
 import { ACTIVITY_TYPES } from '@/lib/leads'
 
@@ -12,16 +12,17 @@ const ACTIVITY_UPDATE_SCHEMA: Schema = {
   activity_date: { type: 'datetime', label: 'Fecha' },
 }
 
-/** Solo quien la registró (o un admin) puede editarla/borrarla. */
-async function canModify(ctx: UserContext, id: string): Promise<boolean | null> {
-  const { data } = await getServerSupabase().from('lead_activities').select('user_id').eq('id', id).maybeSingle()
+/** Solo quien la registró (o un admin de la tienda) puede editarla/borrarla. */
+async function canModify(ctx: StoreContext, id: string): Promise<boolean | null> {
+  const { data } = await getServerSupabase().from('lead_activities').select('user_id')
+    .eq('id', id).eq('store_id', ctx.storeId).maybeSingle()
   if (!data) return null
-  return ctx.role === 'admin' || !data.user_id || data.user_id === ctx.uid
+  return ctx.isAdmin || !data.user_id || data.user_id === ctx.uid
 }
 
 // PATCH /api/data/activities/[id]
 export async function PATCH(req: NextRequest, { params }: Ctx) {
-  const ctx = await requireUser()
+  const ctx = await requireStore({ write: true })
   if (ctx instanceof Response) return ctx
 
   const { id } = await params
@@ -37,14 +38,15 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (allowed === null) return jsonError('No encontrado', 404)
   if (!allowed) return jsonError('Sin permisos', 403)
 
-  const { data, error } = await getServerSupabase().from('lead_activities').update(parsed.data).eq('id', id).select()
+  const { data, error } = await getServerSupabase().from('lead_activities').update(parsed.data)
+    .eq('id', id).eq('store_id', ctx.storeId).select()
   if (error) return serverError('PATCH /api/data/activities/[id]', error, 'Error al actualizar')
   return NextResponse.json(data?.[0] ?? {})
 }
 
 // DELETE /api/data/activities/[id]
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  const ctx = await requireUser()
+  const ctx = await requireStore({ write: true })
   if (ctx instanceof Response) return ctx
 
   const { id } = await params
@@ -54,7 +56,7 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
   if (allowed === null) return jsonError('No encontrado', 404)
   if (!allowed) return jsonError('Sin permisos', 403)
 
-  const { error } = await getServerSupabase().from('lead_activities').delete().eq('id', id)
+  const { error } = await getServerSupabase().from('lead_activities').delete().eq('id', id).eq('store_id', ctx.storeId)
   if (error) return serverError('DELETE /api/data/activities/[id]', error, 'Error al eliminar')
   return NextResponse.json({ success: true })
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, requireAdmin, requireUser } from '@/lib/supabase-server'
+import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { jsonError, readJson, serverError } from '@/lib/validation'
 
 // Tipos reales en la BD (CHECK type IN ('segment','canal'))
@@ -7,15 +7,16 @@ const CONFIG_TYPES = ['segment', 'canal'] as const
 type ConfigType = typeof CONFIG_TYPES[number]
 const isConfigType = (v: unknown): v is ConfigType => typeof v === 'string' && (CONFIG_TYPES as readonly string[]).includes(v)
 
-// GET /api/data/config[?type=segment|canal] — cualquier usuario (alimenta los formularios)
+// GET /api/data/config[?type=segment|canal] — catálogos de la tienda (alimentan los formularios)
 export async function GET(req: NextRequest) {
-  const ctx = await requireUser()
+  const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
 
   const type = req.nextUrl.searchParams.get('type')
   if (type && !isConfigType(type)) return jsonError('Tipo de configuración no válido')
 
-  let q = getServerSupabase().from('app_config').select('id, type, label, created_at').order('label', { ascending: true })
+  let q = getServerSupabase().from('app_config').select('id, type, label, created_at')
+    .eq('store_id', ctx.storeId).order('label', { ascending: true })
   if (type) q = q.eq('type', type)
   const { data, error } = await q
   if (error) return serverError('GET /api/data/config', error, 'Error al obtener config')
@@ -23,9 +24,9 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ items: data ?? [] }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
-// POST /api/data/config — solo administradores (cambia las opciones de todos)
+// POST /api/data/config — solo administradores (cambia las opciones de todo el equipo)
 export async function POST(req: NextRequest) {
-  const ctx = await requireAdmin()
+  const ctx = await requireStore({ admin: true, write: true })
   if (ctx instanceof Response) return ctx
 
   const body = await readJson(req)
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
   if (!label) return jsonError('label es requerido')
   if (label.length > 100) return jsonError('label excede 100 caracteres')
 
-  const { data, error } = await getServerSupabase().from('app_config').insert([{ type: body.type, label }]).select()
+  const { data, error } = await getServerSupabase().from('app_config').insert([{ type: body.type, label, store_id: ctx.storeId }]).select()
   if (error) {
     if (error.code === '23505') return jsonError(`Ya existe "${label}"`)
     return serverError('POST /api/data/config', error, 'Error al crear item')

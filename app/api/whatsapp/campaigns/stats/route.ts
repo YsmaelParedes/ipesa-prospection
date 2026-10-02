@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, requireAdmin } from '@/lib/supabase-server'
+import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { TEMPLATE_REPEAT_DAYS } from '@/lib/whatsappSafety'
 import { serverError } from '@/lib/validation'
 
@@ -23,7 +23,7 @@ type TemplateStats = {
  * no repetirla a la misma persona antes de TEMPLATE_REPEAT_DAYS días).
  */
 export async function GET(req: NextRequest) {
-  const ctx = await requireAdmin()
+  const ctx = await requireStore({ admin: true, module: 'campaigns' })
   if (ctx instanceof Response) return ctx
 
   const days = Math.min(Math.max(Number(req.nextUrl.searchParams.get('days')) || 30, 1), 90)
@@ -34,10 +34,12 @@ export async function GET(req: NextRequest) {
     const [{ data: sends, error }, { data: inbound, error: inError }] = await Promise.all([
       supabase.from('whatsapp_messages')
         .select('phone, template_name, status, error_message, created_at')
+        .eq('store_id', ctx.storeId)
         .eq('direction', 'outbound').not('template_name', 'is', null)
         .gte('created_at', since).order('created_at', { ascending: true }).limit(10000),
       supabase.from('whatsapp_messages')
         .select('phone, created_at')
+        .eq('store_id', ctx.storeId)
         .eq('direction', 'inbound').gte('created_at', since).limit(10000),
     ])
     if (error) throw error

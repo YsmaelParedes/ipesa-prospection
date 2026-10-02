@@ -16,5 +16,7 @@ export async function POST(req: NextRequest) {
   )
 
   await supabase.auth.signOut()
+  // La tienda activa es una preferencia del navegador: se olvida al salir
+  res.cookies.delete('ipesa_store')
   return res
 }

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, requireUser } from '@/lib/supabase-server'
+import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 import { REMINDER_SCHEMA, reminderToApp, reminderToDB } from '@/lib/reminders'
 import { getAccessibleLead } from '@/lib/leads'
 
-// GET /api/data/reminders[?lead_id=uuid] — solo los del usuario autenticado
+// GET /api/data/reminders[?lead_id=uuid] — los del usuario en la tienda activa
 export async function GET(req: NextRequest) {
-  const ctx = await requireUser()
+  const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
 
   const leadId = req.nextUrl.searchParams.get('lead_id')
@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
     .from('reminders')
     .select('id, lead_id, lead_name, nota, reminder_date, completado, completado_at, created_at, type, priority')
     .eq('user_id', ctx.uid)
+    .eq('store_id', ctx.storeId)
     .order('reminder_date', { ascending: true })
   if (leadId) q = q.eq('lead_id', leadId)
 
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/data/reminders — crea recordatorio vinculado al usuario autenticado
 export async function POST(req: NextRequest) {
-  const ctx = await requireUser()
+  const ctx = await requireStore({ write: true })
   if (ctx instanceof Response) return ctx
 
   const body = await readJson(req)
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await getServerSupabase()
     .from('reminders')
-    .insert([{ ...reminderToDB(parsed.data), user_id: ctx.uid }])
+    .insert([{ ...reminderToDB(parsed.data), user_id: ctx.uid, store_id: ctx.storeId }])
     .select()
   if (error) return serverError('POST /api/data/reminders', error, 'Error al crear recordatorio')
   return NextResponse.json(data?.[0] ? reminderToApp(data[0]) : {})

@@ -1,5 +1,5 @@
 import type { Schema } from './validation'
-import { getServerSupabase, type UserContext } from './supabase-server'
+import { getServerSupabase, type StoreContext } from './supabase-server'
 
 export const LEAD_ESTADOS = ['Nuevo', 'En seguimiento', 'Cotizado', 'Ganado / Venta realizada', 'Perdido'] as const
 export const ACTIVITY_TYPES = ['call', 'email', 'whatsapp', 'quote', 'meeting', 'visit', 'note'] as const
@@ -21,15 +21,23 @@ export const LEAD_SCHEMA: Schema = {
 }
 
 /**
- * ¿Puede este usuario ver/editar el lead? Admin: todos. Empleado: los suyos
- * y los heredados sin dueño (user_id NULL, de antes del modo multiusuario).
+ * ¿Puede este usuario ver/editar el lead? Solo leads de la tienda activa.
+ * Dueño/admin: todos. Vendedor: los suyos y los heredados sin dueño
+ * (user_id NULL, de antes del modo multiusuario).
  * Devuelve el lead (id, user_id, name) o null si no existe / no tiene acceso.
  */
-export async function getAccessibleLead(ctx: UserContext, leadId: string) {
-  const { data } = await getServerSupabase().from('leads').select('id, user_id, name').eq('id', leadId).maybeSingle()
+export async function getAccessibleLead(ctx: StoreContext, leadId: string) {
+  const { data } = await getServerSupabase().from('leads').select('id, user_id, name')
+    .eq('id', leadId).eq('store_id', ctx.storeId).maybeSingle()
   if (!data) return null
-  if (ctx.role !== 'admin' && data.user_id && data.user_id !== ctx.uid) return null
+  if (!ctx.isAdmin && data.user_id && data.user_id !== ctx.uid) return null
   return data
+}
+
+/** ¿El contacto pertenece a la tienda? (antes de ligarlo a un lead) */
+export async function contactInStore(storeId: string, contactId: string): Promise<boolean> {
+  const { data } = await getServerSupabase().from('contacts').select('id').eq('id', contactId).eq('store_id', storeId).maybeSingle()
+  return !!data
 }
 
 /** Filtro PostgREST de visibilidad para empleados (uid viene de la sesión, no del cliente). */

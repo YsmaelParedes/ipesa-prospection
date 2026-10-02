@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, requireUser } from '@/lib/supabase-server'
+import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, parseFields, readJson, serverError, type Schema } from '@/lib/validation'
 import { ACTIVITY_TYPES, getAccessibleLead } from '@/lib/leads'
 
@@ -13,7 +13,7 @@ const ACTIVITY_SCHEMA: Schema = {
 
 // GET /api/data/activities?lead_id=xxx — historial de un lead al que el usuario tiene acceso
 export async function GET(req: NextRequest) {
-  const ctx = await requireUser()
+  const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
 
   const leadId = req.nextUrl.searchParams.get('lead_id')
@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
     .from('lead_activities')
     .select('*')
     .eq('lead_id', leadId)
+    .eq('store_id', ctx.storeId)
     .order('activity_date', { ascending: false })
   if (error) return serverError('GET /api/data/activities', error, 'Error al obtener actividades')
   return NextResponse.json({ activities: data ?? [] })
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/data/activities
 export async function POST(req: NextRequest) {
-  const ctx = await requireUser()
+  const ctx = await requireStore({ write: true })
   if (ctx instanceof Response) return ctx
 
   const body = await readJson(req)
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await getServerSupabase()
     .from('lead_activities')
-    .insert([{ ...parsed.data, user_id: ctx.uid }])
+    .insert([{ ...parsed.data, user_id: ctx.uid, store_id: ctx.storeId }])
     .select()
   if (error) return serverError('POST /api/data/activities', error, 'Error al crear actividad')
   return NextResponse.json(data?.[0] ?? {})
