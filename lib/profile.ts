@@ -69,12 +69,3 @@ export function useSession(): Session | null | undefined {
   }, [])
   return session
 }
-
-export async function getDisplayName(): Promise<string> {
-  return (await loadSession())?.user.name || 'Staff'
-}
-
-/** 'admin' = dueño o administrador de la tienda activa. */
-export async function getUserRole(): Promise<'admin' | 'employee'> {
-  return (await loadSession())?.isAdmin ? 'admin' : 'employee'
-}

@@ -23,7 +23,7 @@ const TABS: { id: TabId; label: string; hint: string; icon: (p: React.SVGProps<S
   { id: 'equipo',       label: 'Equipo',       hint: 'Usuarios e invitaciones', icon: Ico.users, admin: true },
   { id: 'whatsapp',     label: 'WhatsApp',     hint: 'Conexión y respuestas',   icon: WhatsAppGlyph, admin: true, module: 'whatsapp' },
   { id: 'plan',         label: 'Plan',         hint: 'Prueba y suscripción',    icon: Ico.card, admin: true },
-  { id: 'cuenta',       label: 'Mi cuenta',    hint: 'Nombre y contraseña',     icon: Ico.user },
+  { id: 'cuenta',       label: 'Mi cuenta',    hint: 'Perfil, avisos y contraseña', icon: Ico.user },
 ]
 
 export default function ConfiguracionPage() {

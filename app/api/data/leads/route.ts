@@ -24,16 +24,27 @@ export async function GET(req: NextRequest) {
       q = q.or(ownLeadsFilter(ctx.uid))
     }
 
-    const [{ data, error }, names] = await Promise.all([
+    const [{ data, error }, names, { data: pending }] = await Promise.all([
       q,
       ctx.isAdmin ? getUserNameMap(ctx.storeId).catch(() => new Map<string, string>()) : Promise.resolve(null),
+      // Próximo seguimiento programado de cada lead (de cualquier persona del equipo)
+      getServerSupabase().from('reminders').select('lead_id, reminder_date')
+        .eq('store_id', ctx.storeId).eq('completado', false).not('lead_id', 'is', null),
     ])
     if (error) throw error
 
+    const nextByLead = new Map<string, string>()
+    for (const r of pending ?? []) {
+      const prev = nextByLead.get(r.lead_id)
+      if (!prev || r.reminder_date < prev) nextByLead.set(r.lead_id, r.reminder_date)
+    }
+
     const visible = (data ?? []).filter(l => ctx.isAdmin || !l.user_id || l.user_id === ctx.uid)
-    const leads = names
-      ? visible.map(l => ({ ...l, owner_name: l.user_id ? (names.get(l.user_id) ?? 'Usuario') : 'Sin asignar' }))
-      : visible
+    const leads = visible.map(l => ({
+      ...l,
+      next_reminder_at: nextByLead.get(l.id) ?? null,
+      ...(names ? { owner_name: l.user_id ? (names.get(l.user_id) ?? 'Usuario') : 'Sin asignar' } : {}),
+    }))
     return NextResponse.json({ leads })
   } catch (error) {
     return serverError('GET /api/data/leads', error, 'Error al obtener leads')

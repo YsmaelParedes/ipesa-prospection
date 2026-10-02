@@ -15,6 +15,23 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026-10-02.3',
+    date: '2 de octubre, 2026',
+    title: 'Todo más ordenado y a la mano',
+    items: [
+      'Nuevo Inicio: arriba ves lo que toca hoy (recordatorios vencidos y del día, leads sin seguimiento y chats sin leer) y lo urgente aparece primero.',
+      'Buscador en la barra superior: encuentra cualquier cliente o lead por nombre, teléfono o empresa desde cualquier pantalla (atajo: tecla /). Si no existe, lo das de alta ahí mismo.',
+      'Botón "+ Nuevo" para crear un contacto, un lead o un recordatorio sin cambiar de pantalla. En el celular, el botón rojo crea lo de la pantalla en la que estás.',
+      'El menú sigue el orden del día: Inicio, WhatsApp, Contactos, Leads y Agenda, con el mismo nombre en computadora y celular. "Recordatorios" ahora se llama Agenda y muestra cuántos tienes para hoy.',
+      'Leads: pestañas de Abiertos, Ganados y Perdidos, y una columna de Seguimiento que avisa cuáles están vencidos o sin próxima llamada. La ficha abre directo en el seguimiento, con la etapa siempre a la vista.',
+      'Al registrar una llamada, visita o cotización, el CRM te propone cuándo volver a contactar al cliente. Una cotización puede actualizar sola el valor del lead.',
+      'Ficha del contacto: crea un lead o programa un seguimiento desde ahí, y ve sus leads y pendientes en un solo lugar.',
+      'Contactos: un solo buscador, filtros por segmento y canal, y "Exportar" baja exactamente lo que estás viendo. Al importar, las columnas se reconocen solas.',
+      'Agenda: pospón un recordatorio con un clic (1 hora, mañana, en 3 días o el lunes) y abre el lead de cada pendiente desde su tarjeta.',
+      'Los avisos en el celular se activan ahora en Configuración → Mi cuenta. "Tipo de cliente" se llama Segmento en toda la app.',
+    ],
+  },
+  {
     version: '2026-10-02.2',
     date: '2 de octubre, 2026',
     title: 'Nueva imagen y tu tienda en la nube',

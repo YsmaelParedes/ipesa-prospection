@@ -203,8 +203,8 @@ export function WhatsAppCampaigns() {
               <WaIcon.search />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar nombre o teléfono…" />
             </label>
-            <select className="wa-select" value={segmentFilter} onChange={e => setSegmentFilter(e.target.value)} aria-label="Tipo de cliente">
-              <option value="Todos">Todos los tipos</option>
+            <select className="wa-select" value={segmentFilter} onChange={e => setSegmentFilter(e.target.value)} aria-label="Segmento">
+              <option value="Todos">Todos los segmentos</option>
               {segmentos.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             <label className="wa-check-row">

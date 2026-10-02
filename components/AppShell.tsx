@@ -4,35 +4,17 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { BrandLogo } from '@/components/Brand'
+import GlobalSearch from '@/components/GlobalSearch'
+import { QuickCreateFab, QuickCreateHost, QuickCreateMenu } from '@/components/QuickCreate'
 import { APP_NAME } from '@/lib/brand'
 import { invalidateSession, useSession } from '@/lib/profile'
 import { signOut } from '@/lib/signOut'
 import { CHANGELOG, CURRENT_VERSION } from '@/lib/changelog'
 import { SYSTEM_NOTICE } from '@/lib/systemNotice'
 import { ROLE_LABELS, STATUS_LABELS, type StoreModule } from '@/lib/stores'
-
-/* ── Helpers ─────────────────────────────────────────────────────────────── */
-function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const raw     = window.atob(base64)
-  const output  = new Uint8Array(raw.length)
-  for (let i = 0; i < raw.length; i++) output[i] = raw.charCodeAt(i)
-  return output.buffer as ArrayBuffer
-}
-
-// Hora LOCAL en formato YYYY-MM-DDTHH:MM (para min en datetime-local)
-function localDatetimeMin(): string {
-  const d   = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-// La columna reminder_date es timestamp SIN zona horaria → se guarda la hora
-// LOCAL tal cual ("2026-05-25T13:02" → "2026-05-25T13:02:00"), sin pasar a UTC.
-function datetimeLocalToISO(value: string): string {
-  return value + ':00'
-}
+import { reminderSubject, reminderTitle, type Reminder } from '@/lib/crm'
+import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
+import { fmtDue, isDueToday, isOverdue } from '@/lib/datetime'
 
 /** Ejecuta `fn` cada `ms` solo con la pestaña visible (y al volver a ella). */
 function useVisibleInterval(fn: () => void, ms: number) {
@@ -48,108 +30,90 @@ function useVisibleInterval(fn: () => void, ms: number) {
 }
 
 /* ── Iconos ── */
+type IconProps = React.SVGProps<SVGSVGElement>
+const stroke = (d: React.ReactNode, w = 2) => function Svg(p: IconProps) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}>{d}</svg>
+}
 const Icon = {
-  dashboard: (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>,
-  contacts:  (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-  leads:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
-  settings:  (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
-  bell:      (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>,
-  menu:      (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M3 6h18M3 12h18M3 18h18"/></svg>,
-  plus:      (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 5v14M5 12h14"/></svg>,
-  logout:    (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>,
-  search:    (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>,
-  clock:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
-  check:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m5 13 4 4L19 7"/></svg>,
-  arrowUp:   (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 19V5M5 12l7-7 7 7"/></svg>,
-  sparkles:  (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.1 2.1M15.6 15.6l2.1 2.1M6.3 17.7l2.1-2.1M15.6 8.4l2.1-2.1"/><circle cx="12" cy="12" r="2.2"/></svg>,
-  close:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M18 6 6 18M6 6l12 12"/></svg>,
-  wrench:    (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>,
-  whatsapp:  (p: any) => <svg viewBox="0 0 24 24" fill="currentColor" {...p}><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.8.9-1 1.1c-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.4-.9-.8-1.5-1.8-1.7-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.3-.7.3-1.2.2-1.4 0-.1-.3-.2-.6-.4Zm-5.5 7.5c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.5 4.4-9.9 9.9-9.9s9.9 4.4 9.9 9.9-4.5 9.9-10 9.9Zm8.4-18.3C18.2 1.5 15.2.3 12 .3 5.4.3.1 5.6.1 12.2c0 2.1.6 4.2 1.6 6L0 24l5.9-1.5c1.7 1 3.7 1.5 5.7 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4Z"/></svg>,
-  flask:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M9 2v6.3a2 2 0 0 1-.3 1L3.5 18a2 2 0 0 0 1.7 3h13.6a2 2 0 0 0 1.7-3l-5.2-8.7a2 2 0 0 1-.3-1V2"/><path d="M7 2h10M6 14h12"/></svg>,
-  store:     (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M3 9 4.5 4h15L21 9"/><path d="M3 9h18v1a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9Z"/><path d="M5 13v7h14v-7"/><path d="M10 20v-4h4v4"/></svg>,
-  chevrons:  (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>,
-  shield:    (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>,
-  lock:      (p: any) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>,
+  home:      stroke(<><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z" /></>),
+  contacts:  stroke(<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>),
+  leads:     stroke(<path d="M22 12h-4l-3 9L9 3l-3 9H2" />),
+  calendar:  stroke(<><rect x="3" y="4" width="18" height="17" rx="2.5" /><path d="M16 2v4M8 2v4M3 10h18" /><path d="m9 15.5 2 2 4-4" /></>),
+  settings:  stroke(<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>),
+  bell:      stroke(<><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></>),
+  menu:      stroke(<path d="M3 6h18M3 12h18M3 18h18" />, 2.2),
+  plus:      stroke(<path d="M12 5v14M5 12h14" />, 2.4),
+  logout:    stroke(<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />),
+  check:     stroke(<path d="m5 13 4 4L19 7" />, 2.4),
+  arrowUp:   stroke(<path d="M12 19V5M5 12l7-7 7 7" />, 2.4),
+  sparkles:  stroke(<><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.1 2.1M15.6 15.6l2.1 2.1M6.3 17.7l2.1-2.1M15.6 8.4l2.1-2.1" /><circle cx="12" cy="12" r="2.2" /></>),
+  close:     stroke(<path d="M18 6 6 18M6 6l12 12" />),
+  wrench:    stroke(<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />),
+  flask:     stroke(<><path d="M9 2v6.3a2 2 0 0 1-.3 1L3.5 18a2 2 0 0 0 1.7 3h13.6a2 2 0 0 0 1.7-3l-5.2-8.7a2 2 0 0 1-.3-1V2" /><path d="M7 2h10M6 14h12" /></>),
+  store:     stroke(<><path d="M3 9 4.5 4h15L21 9" /><path d="M3 9h18v1a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9Z" /><path d="M5 13v7h14v-7" /><path d="M10 20v-4h4v4" /></>),
+  chevrons:  stroke(<path d="m7 15 5 5 5-5M7 9l5-5 5 5" />),
+  shield:    stroke(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />),
+  lock:      stroke(<><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></>),
+  bellOff:   stroke(<><path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0M2 2l20 20" /></>),
+  whatsapp:  (p: IconProps) => <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...p}><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.8.9-1 1.1c-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.4-.9-.8-1.5-1.8-1.7-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.3-.7.3-1.2.2-1.4 0-.1-.3-.2-.6-.4Zm-5.5 7.5c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.5 4.4-9.9 9.9-9.9s9.9 4.4 9.9 9.9-4.5 9.9-10 9.9Zm8.4-18.3C18.2 1.5 15.2.3 12 .3 5.4.3.1 5.6.1 12.2c0 2.1.6 4.2 1.6 6L0 24l5.9-1.5c1.7 1 3.7 1.5 5.7 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4Z" /></svg>,
 }
 
 function initials(name: string) {
   return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 }
 
-function fmtRem(iso: string) {
-  const d = new Date(iso)
-  const now = new Date()
-  const diff = d.getTime() - now.getTime()
-  const days = Math.floor(diff / 86400000)
-  const hrs  = Math.floor(diff / 3600000)
-  const mins = Math.floor(diff / 60000)
-  if (mins < -60 * 24)  return `Venció hace ${Math.abs(days)} día${Math.abs(days) !== 1 ? 's' : ''}`
-  if (mins < -60)       return `Venció hace ${Math.abs(hrs)} h`
-  if (mins < 0)         return `Venció hace ${Math.abs(mins)} min`
-  if (mins < 60)        return `En ${mins} min`
-  if (hrs < 24)         return `En ${hrs} h`
-  if (days === 1)       return 'Mañana'
-  return `${d.getDate()} ${['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][d.getMonth()]}`
-}
-
-type NavItem = { id: string; href: string; label: string; short: string; icon: (p: any) => React.ReactElement; mobile: boolean; module?: StoreModule }
+/* Menú en el orden del día a día. Mismo nombre en computadora y celular. */
+type NavItem = { id: string; href: string; label: string; icon: (p: IconProps) => React.ReactElement; mobile: boolean; module?: StoreModule }
 const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard',     href: '/',              label: 'Dashboard',     short: 'Inicio',    icon: Icon.dashboard, mobile: true  },
-  { id: 'contactos',     href: '/contactos',     label: 'Contactos',     short: 'Contactos', icon: Icon.contacts,  mobile: true  },
-  { id: 'leads',         href: '/leads',         label: 'Leads',         short: 'Leads',     icon: Icon.leads,     mobile: true  },
-  { id: 'whatsapp',      href: '/whatsapp',      label: 'WhatsApp',      short: 'WhatsApp',  icon: Icon.whatsapp,  mobile: true, module: 'whatsapp' },
-  { id: 'recordatorios', href: '/recordatorios', label: 'Recordatorios', short: 'Pendientes', icon: Icon.clock,    mobile: true  },
-  { id: 'formulas',      href: '/formulas',      label: 'Fórmulas',      short: 'Fórmulas',  icon: Icon.flask,     mobile: false, module: 'formulas' },
-  { id: 'configuracion', href: '/configuracion', label: 'Configuración', short: 'Ajustes',   icon: Icon.settings,  mobile: false },
+  { id: 'inicio',    href: '/',              label: 'Inicio',    icon: Icon.home,     mobile: true },
+  { id: 'whatsapp',  href: '/whatsapp',      label: 'WhatsApp',  icon: Icon.whatsapp, mobile: true, module: 'whatsapp' },
+  { id: 'contactos', href: '/contactos',     label: 'Contactos', icon: Icon.contacts, mobile: true },
+  { id: 'leads',     href: '/leads',         label: 'Leads',     icon: Icon.leads,    mobile: true },
+  { id: 'agenda',    href: '/recordatorios', label: 'Agenda',    icon: Icon.calendar, mobile: true },
+]
+const TOOL_ITEMS: NavItem[] = [
+  { id: 'formulas',  href: '/formulas',      label: 'Fórmulas',  icon: Icon.flask,    mobile: false, module: 'formulas' },
 ]
 
 const TITLE_MAP: Record<string, { t: string; s: string }> = {
-  '/':               { t: 'Dashboard',         s: 'Resumen de actividad'                },
-  '/contactos':      { t: 'Contactos',         s: 'Base de clientes registrados'        },
-  '/leads':          { t: 'Pipeline de leads', s: 'Gestión de oportunidades'            },
-  '/recordatorios':  { t: 'Recordatorios',     s: 'Seguimiento y tareas pendientes'     },
-  '/whatsapp':       { t: 'WhatsApp',          s: 'Conversaciones y campañas'           },
-  '/formulas':       { t: 'Fórmulas',          s: 'Igualación de colores'               },
-  '/configuracion':  { t: 'Configuración',     s: 'Tu tienda, equipo e integraciones'   },
-  '/plataforma':     { t: 'Plataforma',        s: 'Tiendas, pruebas y suscripciones'    },
+  '/':               { t: 'Inicio',        s: 'Lo que hay que atender hoy'         },
+  '/whatsapp':       { t: 'WhatsApp',      s: 'Conversaciones y campañas'          },
+  '/contactos':      { t: 'Contactos',     s: 'Tu base de clientes'                },
+  '/leads':          { t: 'Leads',         s: 'Oportunidades de venta'             },
+  '/recordatorios':  { t: 'Agenda',        s: 'Recordatorios y seguimientos'       },
+  '/formulas':       { t: 'Fórmulas',      s: 'Igualación de colores'              },
+  '/configuracion':  { t: 'Configuración', s: 'Tu tienda, equipo e integraciones'  },
+  '/plataforma':     { t: 'Plataforma',    s: 'Tiendas, pruebas y suscripciones'   },
 }
 
 // Páginas tipo "app" que ocupan exactamente el alto de la pantalla
 const FILL_ROUTES = ['/whatsapp']
+// Botón flotante (celular): qué crea en cada pantalla (en Inicio, a elegir)
+const FAB_ROUTES: Record<string, 'contact' | 'lead' | 'reminder' | undefined> = {
+  '/': undefined, '/contactos': 'contact', '/leads': 'lead', '/recordatorios': 'reminder',
+}
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router   = useRouter()
   const session  = useSession()
   const store    = session?.store ?? null
-  const displayName = session?.user.name || 'Staff'
+  const displayName = session?.user.name || ''
 
-  const [drawerOpen,  setDrawerOpen]  = useState(false)
+  const [drawerOpen,    setDrawerOpen]    = useState(false)
   const [storeMenuOpen, setStoreMenuOpen] = useState(false)
-  const [bellOpen,    setBellOpen]    = useState(false)
-  const [reminders,   setReminders]   = useState<any[]>([])
-  const [search,      setSearch]      = useState('')
+  const [bellOpen,      setBellOpen]      = useState(false)
+  const [reminders,     setReminders]     = useState<Reminder[]>([])
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [whatsNewOpen,  setWhatsNewOpen]  = useState(false)
   const [noticeVisible, setNoticeVisible] = useState(false)
   const [waUnread,      setWaUnread]      = useState(0)
+  const [pushState,     setPushState]     = useState<'unsupported' | 'off' | 'on'>('unsupported')
+  const [now,           setNow]           = useState(() => new Date())
 
-  /* General reminder form inside bell panel */
-  const [remForm,   setRemForm]   = useState(false)
-  const [remFecha,  setRemFecha]  = useState('')
-  const [remNota,   setRemNota]   = useState('')
-  const [remSaving, setRemSaving] = useState(false)
-
-  /* Push notifications */
-  const [pushSupported,   setPushSupported]   = useState(false)
-  const [pushSubscribed,  setPushSubscribed]  = useState(false)
-  const [pushWhatsapp,    setPushWhatsapp]    = useState(true)
-  const [pushLoading,     setPushLoading]     = useState(false)
-  const [pushError,       setPushError]       = useState('')
-  const swRegRef     = useRef<ServiceWorkerRegistration | null>(null)
-  const notifiedRef  = useRef<Set<string>>(new Set())  // IDs ya notificados esta sesión
-
-  const bellRef = useRef<HTMLDivElement>(null)
+  const swRegRef    = useRef<ServiceWorkerRegistration | null>(null)
+  const notifiedRef = useRef<Set<string>>(new Set())  // IDs ya notificados esta sesión
+  const bellRef      = useRef<HTMLDivElement>(null)
   const storeMenuRef = useRef<HTMLDivElement>(null)
 
   /* Cerrar el menú de tiendas al hacer clic fuera o con Escape */
@@ -191,7 +155,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     try { window.localStorage.setItem('crm:whatsnew:lastSeen', CURRENT_VERSION) } catch {}
   }
 
-  /* Cerrar el menú lateral al navegar */
+  /* Cerrar el menú lateral y la campana al navegar */
   useEffect(() => { setDrawerOpen(false); setBellOpen(false) }, [pathname])
 
   /* Botón "volver arriba" — visible tras scrollear hacia abajo */
@@ -234,15 +198,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     document.title = waUnread > 0 ? `(${waUnread > 99 ? '99+' : waUnread}) ${base}` : base
   }, [waUnread, pathname])
 
-  /* Registrar Service Worker + detectar estado de push */
+  /* Service Worker (avisos push) — los ajustes viven en Configuración → Mi cuenta */
+  const checkPush = useCallback(() => {
+    const reg = swRegRef.current
+    if (!reg) return
+    reg.pushManager.getSubscription().then(sub => setPushState(sub ? 'on' : 'off')).catch(() => {})
+  }, [])
   useEffect(() => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
-    setPushSupported(true)
-
     navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(reg => {
       swRegRef.current = reg
       reg.pushManager.getSubscription().then(sub => {
-        setPushSubscribed(!!sub)
+        setPushState(sub ? 'on' : 'off')
         if (!sub) return
         // Re-guardar la suscripción para garantizar que quede ligada al usuario actual
         fetch('/api/push/subscribe', {
@@ -250,102 +217,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(sub.toJSON()),
         }).catch(() => {})
-        fetch(`/api/push/subscribe?endpoint=${encodeURIComponent(sub.endpoint)}`)
-          .then(r => (r.ok ? r.json() : null))
-          .then(d => { if (d) setPushWhatsapp(d.notifyWhatsapp !== false) })
-          .catch(() => {})
       })
     }).catch(err => console.warn('[SW]', err))
-  }, [])
-
-  /* Activar notificaciones push */
-  const enablePush = async () => {
-    if (!swRegRef.current) return
-    setPushLoading(true)
-    setPushError('')
-    try {
-      const permission = await Notification.requestPermission()
-      if (permission !== 'granted') {
-        setPushError('Permiso denegado. Actívalo en Ajustes del navegador.')
-        return
-      }
-
-      const VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-      if (!VAPID_KEY) throw new Error('VAPID key no configurada')
-
-      const sub = await swRegRef.current.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_KEY),
-      })
-
-      const res = await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...sub.toJSON(), notifyWhatsapp: pushWhatsapp }),
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || `Error ${res.status} al guardar suscripción`)
-      }
-      setPushSubscribed(true)
-    } catch (err: any) {
-      console.error('[Push] Error al activar:', err)
-      setPushError(err.message || 'Error al activar notificaciones')
-    } finally {
-      setPushLoading(false)
-    }
-  }
-
-  /* Desactivar notificaciones push */
-  const disablePush = async () => {
-    if (!swRegRef.current) return
-    setPushLoading(true)
-    setPushError('')
-    try {
-      const sub = await swRegRef.current.pushManager.getSubscription()
-      if (sub) {
-        await fetch('/api/push/subscribe', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ endpoint: sub.endpoint }),
-        })
-        await sub.unsubscribe()
-      }
-      setPushSubscribed(false)
-    } finally {
-      setPushLoading(false)
-    }
-  }
-
-  /* Avisos de WhatsApp en este dispositivo */
-  const toggleWhatsappPush = async () => {
-    const next = !pushWhatsapp
-    setPushWhatsapp(next)
-    const sub = await swRegRef.current?.pushManager.getSubscription()
-    if (!sub) return
-    const r = await fetch('/api/push/subscribe', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ endpoint: sub.endpoint, notifyWhatsapp: next }),
-    }).catch(() => null)
-    if (!r?.ok) setPushWhatsapp(!next)
-  }
-
-  /* Notificación de prueba — usa el servidor (verifica VAPID keys + user_id en DB) */
-  const testPush = async () => {
-    setPushError('')
-    setPushLoading(true)
-    try {
-      const res  = await fetch('/api/push/test', { method: 'POST' })
-      const data = await res.json()
-      if (!res.ok) setPushError(data.error || `Error ${res.status}`)
-      else if (data.sent === 0) setPushError('Se envió pero el navegador no recibió la notificación. Revisa los permisos del sitio.')
-    } catch {
-      setPushError('No se pudo conectar al servidor de prueba.')
-    } finally {
-      setPushLoading(false)
-    }
-  }
+    window.addEventListener('crm:push-changed', checkPush)
+    return () => window.removeEventListener('crm:push-changed', checkPush)
+  }, [checkPush])
 
   /* Recordatorios pendientes + notificación local si alguno vence ahora */
   const loadReminders = useCallback(async () => {
@@ -353,18 +229,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       const r = await fetch('/api/data/reminders')
       if (!r.ok) return
       const d = await r.json()
-      const pending = (d.reminders || []).filter((rem: any) => !rem.completado)
+      const pending: Reminder[] = (d.reminders || []).filter((rem: Reminder) => !rem.completado)
       setReminders(pending)
+      setNow(new Date())
 
       if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && swRegRef.current) {
-        const now = Date.now()
+        const t = Date.now()
         for (const rem of pending) {
           const due = new Date(rem.fecha_recordatorio).getTime()
           // Vence en los próximos 65 s o venció hace menos de 65 s, y no notificado aún
-          if (Math.abs(due - now) <= 65_000 && !notifiedRef.current.has(rem.id)) {
+          if (Math.abs(due - t) <= 65_000 && !notifiedRef.current.has(rem.id)) {
             notifiedRef.current.add(rem.id)
-            swRegRef.current.showNotification(due <= now ? '⏰ Recordatorio vencido' : '🔔 Recordatorio próximo', {
-              body: rem.nota || rem.lead_name || 'Recordatorio pendiente',
+            swRegRef.current.showNotification(due <= t ? '⏰ Recordatorio vencido' : '🔔 Recordatorio próximo', {
+              body: reminderTitle(rem),
               icon: '/icon-192.png',
               badge: '/icon-192.png',
               tag: `rem-${rem.id}`,
@@ -377,24 +254,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     } catch {}
   }, [])
   useVisibleInterval(loadReminders, 60_000)
+  useDataChanged(['reminder'], loadReminders)
 
-  /* Cerrar campana con clic fuera */
+  /* Cerrar campana con clic fuera o Escape */
   useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
-        setBellOpen(false)
-        setRemForm(false)
-      }
-    }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [])
-
-  /* Búsqueda global → cada página escucha crm:search */
-  const dispatchSearch = (q: string) => {
-    window.dispatchEvent(new CustomEvent('crm:search', { detail: q }))
-  }
-  useEffect(() => { setSearch('') }, [pathname])
+    if (!bellOpen) return
+    const onDown = (e: MouseEvent) => { if (bellRef.current && !bellRef.current.contains(e.target as Node)) setBellOpen(false) }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setBellOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
+  }, [bellOpen])
 
   const completeReminder = async (id: string) => {
     const r = await fetch(`/api/data/reminders/${id}`, {
@@ -402,44 +272,44 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ completado: true }),
     })
-    if (r.ok) setReminders(prev => prev.filter(x => x.id !== id))
-  }
-
-  const saveGeneralReminder = async () => {
-    if (!remFecha) return
-    setRemSaving(true)
-    try {
-      await fetch('/api/data/reminders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lead_id: null,
-          lead_name: remNota.trim() || 'Recordatorio',
-          nota: remNota.trim(),
-          fecha_recordatorio: datetimeLocalToISO(remFecha),
-        }),
-      })
-      setRemFecha(''); setRemNota(''); setRemForm(false)
-      await loadReminders()
-    } finally { setRemSaving(false) }
+    if (r.ok) {
+      setReminders(prev => prev.filter(x => x.id !== id))
+      notifyDataChanged('reminder')
+    }
   }
 
   const currentTitle = TITLE_MAP[pathname] ?? { t: APP_NAME, s: '' }
   const isActive     = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
-  const isContactos  = isActive('/contactos')
   const fill         = FILL_ROUTES.some(r => pathname.startsWith(r))
   // Menú según los módulos activos de la tienda (mientras carga, todo visible)
-  const navItems     = NAV_ITEMS.filter(it => !it.module || !store || store.modules[it.module])
+  const withModule   = (it: NavItem) => !it.module || !store || store.modules[it.module]
+  const navItems     = NAV_ITEMS.filter(withModule)
+  const toolItems    = TOOL_ITEMS.filter(withModule)
   const readonly     = store?.access === 'readonly'
   // El dueño puede abrir otra sucursal; el menú aparece si hay a dónde cambiar o algo que agregar
   const canAddStore  = !!session?.isOwner
   const hasStoreMenu = !!session && (session.stores.length > 1 || canAddStore)
   const trialLeft    = store?.status === 'trial' && !readonly ? store.trialDaysLeft : null
+  const showFab      = !readonly && pathname in FAB_ROUTES
 
-  const now        = new Date()
-  const badgeCount = reminders.length
+  // Lo que toca hoy (vencidos + hoy): contador de la campana y de Agenda
+  const dueCount = reminders.filter(r => isDueToday(r.fecha_recordatorio, now)).length
+  const badgeFor = (id: string) =>
+    id === 'whatsapp' && waUnread > 0 ? { n: waUnread, cls: 'wa' }
+    : id === 'agenda' && dueCount > 0 ? { n: dueCount, cls: 'due' }
+    : null
 
-  const handleLogout = () => signOut()
+  const navLink = (it: NavItem) => {
+    const Ic = it.icon
+    const badge = badgeFor(it.id)
+    return (
+      <Link key={it.id} href={it.href} className={`nav-item ${isActive(it.href) ? 'active' : ''}`} aria-current={isActive(it.href) ? 'page' : undefined}>
+        <Ic className="nav-icon" />
+        <span>{it.label}</span>
+        {badge && <span className={`nav-count ${badge.cls}`}>{badge.n > 99 ? '99+' : badge.n}</span>}
+      </Link>
+    )
+  }
 
   return (
     <div className="app">
@@ -484,18 +354,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
-        <div className="nav-label">Menú</div>
-        <nav className="nav">
-          {navItems.map(it => {
-            const Ic = it.icon
-            return (
-              <Link key={it.id} href={it.href} className={`nav-item ${isActive(it.href) ? 'active' : ''}`}>
-                <Ic className="nav-icon" />
-                <span>{it.label}</span>
-                {it.id === 'whatsapp' && waUnread > 0 && <span className="nav-count wa">{waUnread > 99 ? '99+' : waUnread}</span>}
-              </Link>
-            )
-          })}
+        <nav className="nav" aria-label="Menú principal">
+          {navItems.map(navLink)}
+        </nav>
+
+        {toolItems.length > 0 && (
+          <>
+            <div className="nav-label">Herramientas</div>
+            <nav className="nav" aria-label="Herramientas">{toolItems.map(navLink)}</nav>
+          </>
+        )}
+
+        <nav className="nav nav-bottom" aria-label="Ajustes">
+          <Link href="/configuracion" className={`nav-item ${isActive('/configuracion') ? 'active' : ''}`} aria-current={isActive('/configuracion') ? 'page' : undefined}>
+            <Icon.settings className="nav-icon" />
+            <span>Configuración</span>
+          </Link>
           {session?.platformAdmin && (
             <Link href="/plataforma" className={`nav-item nav-item-platform ${isActive('/plataforma') ? 'active' : ''}`}>
               <Icon.shield className="nav-icon" />
@@ -505,17 +379,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="user-card">
-          <div className="avatar-ring"><div className="avatar">{initials(displayName)}</div></div>
+          <div className="avatar-ring"><div className="avatar">{displayName ? initials(displayName) : '·'}</div></div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="user-name">{displayName}</div>
-            <div className="user-role">{session?.role ? ROLE_LABELS[session.role] : 'Sesión activa'}</div>
+            <div className="user-name">{displayName || '…'}</div>
+            <div className="user-role">{session?.role ? ROLE_LABELS[session.role] : ''}</div>
           </div>
-          <button onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión" className="logout-btn">
+          <button onClick={() => signOut()} title="Cerrar sesión" aria-label="Cerrar sesión" className="logout-btn">
             <Icon.logout style={{ width: 16, height: 16 }} />
           </button>
         </div>
         <button className="version-btn" onClick={() => setWhatsNewOpen(true)} title="Ver novedades de esta versión">
-          v{CURRENT_VERSION}
+          <Icon.sparkles style={{ width: 12, height: 12 }} /> Novedades · v{CURRENT_VERSION}
         </button>
       </aside>
 
@@ -532,84 +406,34 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="topbar-title-block">
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 0 }}>
-              <div className="topbar-title">{currentTitle.t}</div>
+              <h1 className="topbar-title">{currentTitle.t}</h1>
               <div className="topbar-sub">{currentTitle.s}</div>
             </div>
           </div>
 
           <div className="topbar-actions">
-            {/* La búsqueda global solo aplica a páginas con lista (Contactos/Leads) */}
-            {!fill && (
-              <div className="search-input">
-                <Icon.search style={{ width: 16, height: 16, color: 'var(--muted)' }} />
-                <input
-                  placeholder="Buscar…"
-                  value={search}
-                  onChange={e => { setSearch(e.target.value); dispatchSearch(e.target.value) }}
-                  onKeyDown={e => { if (e.key === 'Escape') { setSearch(''); dispatchSearch('') } }}
-                />
-                {search && (
-                  <button onClick={() => { setSearch(''); dispatchSearch('') }} aria-label="Limpiar búsqueda"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '0 4px', fontSize: 14, lineHeight: 1 }}>
-                    ×
-                  </button>
-                )}
-              </div>
-            )}
+            <GlobalSearch />
+            {!readonly && <QuickCreateMenu />}
 
-            <button className="btn-icon" title="Novedades" aria-label="Novedades" onClick={() => setWhatsNewOpen(true)}>
-              <Icon.sparkles style={{ width: 16, height: 16, color: 'var(--ink-2)' }} />
-            </button>
-
-            {/* Bell + panel de recordatorios */}
+            {/* Campana: recordatorios pendientes */}
             <div className="bell-wrap" ref={bellRef}>
-              <button className="btn-icon" title="Recordatorios" aria-label="Recordatorios" onClick={() => { setBellOpen(o => !o); setRemForm(false) }}>
-                <Icon.bell style={{ width: 16, height: 16, color: badgeCount > 0 ? 'var(--brand)' : 'var(--ink-2)' }} />
-                {badgeCount > 0 && <span className="bell-badge">{badgeCount > 9 ? '9+' : badgeCount}</span>}
+              <button className="btn-icon" title="Recordatorios" aria-label={`Recordatorios${dueCount ? `: ${dueCount} para hoy` : ''}`} aria-expanded={bellOpen}
+                onClick={() => { setBellOpen(o => !o); setNow(new Date()) }}>
+                <Icon.bell style={{ width: 16, height: 16, color: dueCount > 0 ? 'var(--brand)' : 'var(--ink-2)' }} />
+                {dueCount > 0 && <span className="bell-badge">{dueCount > 9 ? '9+' : dueCount}</span>}
               </button>
 
               {bellOpen && (
                 <div className="notif-panel">
                   <div className="notif-head">
-                    <Icon.clock style={{ width: 15, height: 15, color: 'var(--brand)' }} />
                     Recordatorios
-                    {badgeCount > 0 && (
-                      <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--font-body)', fontWeight: 500 }}>
-                        {badgeCount} pendiente{badgeCount !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                    <button onClick={() => setRemForm(f => !f)}
-                      style={{ marginLeft: 'auto', background: remForm ? 'var(--brand)' : 'var(--paper)', color: remForm ? '#fff' : 'var(--brand)', border: '1px solid var(--brand)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                      {remForm ? '× Cancelar' : '+ Nuevo'}
-                    </button>
-                  </div>
-
-                  {remForm && (
-                    <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)', background: 'var(--brand-soft)' }}>
-                      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>Nuevo recordatorio</div>
-                      <input
-                        type="text"
-                        value={remNota}
-                        onChange={e => setRemNota(e.target.value)}
-                        placeholder="Descripción del recordatorio…"
-                        maxLength={1000}
-                        style={{ width: '100%', padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 12.5, outline: 'none', background: '#fff', marginBottom: 7, boxSizing: 'border-box' }}
-                      />
-                      <input
-                        type="datetime-local"
-                        value={remFecha}
-                        onChange={e => setRemFecha(e.target.value)}
-                        min={localDatetimeMin()}
-                        style={{ width: '100%', padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 12.5, outline: 'none', background: '#fff', marginBottom: 8, boxSizing: 'border-box' }}
-                      />
-                      <button
-                        onClick={saveGeneralReminder}
-                        disabled={!remFecha || remSaving}
-                        style={{ width: '100%', padding: '7px', background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', opacity: (!remFecha || remSaving) ? 0.5 : 1 }}>
-                        {remSaving ? 'Guardando…' : '✓ Crear recordatorio'}
+                    <span className="notif-head-sub">{reminders.length ? `${reminders.length} pendiente${reminders.length !== 1 ? 's' : ''}` : ''}</span>
+                    {!readonly && (
+                      <button className="notif-new" onClick={() => { setBellOpen(false); openQuickCreate({ kind: 'reminder' }) }}>
+                        <Icon.plus style={{ width: 12, height: 12 }} /> Nuevo
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {reminders.length === 0 ? (
                     <div className="notif-empty">
@@ -617,74 +441,35 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       Sin recordatorios pendientes
                     </div>
                   ) : (
-                    reminders.map(r => {
-                      const overdue  = new Date(r.fecha_recordatorio) < now
-                      const dotColor = overdue ? 'var(--brand)' : 'var(--warning-fill)'
+                    reminders.slice(0, 8).map(r => {
+                      const overdue = isOverdue(r.fecha_recordatorio, now)
+                      const subject = reminderSubject(r)
                       return (
                         <div className="notif-row" key={r.id}>
-                          <span className="notif-dot" style={{ background: dotColor }}></span>
+                          <span className="notif-dot" style={{ background: overdue ? 'var(--brand)' : isDueToday(r.fecha_recordatorio, now) ? 'var(--warning-fill)' : 'var(--c-cyan)' }}></span>
                           <div className="notif-info">
-                            <div className="notif-lead">{r.lead_name || r.nota || 'Recordatorio'}</div>
-                            {r.nota && r.nota !== r.lead_name && <div className="notif-nota">{r.nota}</div>}
-                            <div className="notif-time" style={{ color: overdue ? 'var(--brand)' : 'var(--muted-2)' }}>
-                              {fmtRem(r.fecha_recordatorio)}
-                            </div>
+                            <div className="notif-lead">{reminderTitle(r)}</div>
+                            {subject && <div className="notif-nota">{subject}</div>}
+                            <div className="notif-time" style={{ color: overdue ? 'var(--brand)' : undefined }}>{fmtDue(r.fecha_recordatorio, now)}</div>
                           </div>
-                          <button className="notif-done" onClick={() => completeReminder(r.id)}>✓ Listo</button>
+                          {!readonly && <button className="notif-done" onClick={() => completeReminder(r.id)}>✓ Listo</button>}
                         </div>
                       )
                     })
                   )}
 
-                  {pushSupported && (
-                    <div style={{ borderTop: '1px solid var(--line)', padding: '10px 14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 14 }}>{pushSubscribed ? '🔔' : '🔕'}</span>
-                        <span style={{ fontSize: 12, color: 'var(--muted)', flex: 1, lineHeight: 1.3 }}>
-                          {pushSubscribed ? 'Notificaciones activas' : 'Alertas cuando la app esté cerrada'}
-                        </span>
-                        {pushSubscribed && (
-                          <button onClick={testPush} title="Enviar notificación de prueba"
-                            style={{ padding: '4px 8px', fontSize: 11, fontWeight: 600, borderRadius: 6, cursor: 'pointer', border: '1px solid var(--line)', background: 'none', color: 'var(--muted)' }}>
-                            Test
-                          </button>
-                        )}
-                        <button
-                          onClick={pushSubscribed ? disablePush : enablePush}
-                          disabled={pushLoading}
-                          style={{
-                            padding: '4px 10px', fontSize: 11.5, fontWeight: 700, borderRadius: 6,
-                            cursor: pushLoading ? 'default' : 'pointer', border: 'none',
-                            background: pushSubscribed ? 'var(--danger-soft)' : 'var(--brand-soft)',
-                            color:      pushSubscribed ? 'var(--danger)'     : 'var(--brand)',
-                            opacity: pushLoading ? 0.6 : 1,
-                          }}>
-                          {pushLoading ? '…' : pushSubscribed ? 'Desactivar' : 'Activar'}
-                        </button>
-                      </div>
-                      {pushSubscribed && (
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, fontSize: 12, color: 'var(--ink-2)', cursor: 'pointer' }}>
-                          <input type="checkbox" checked={pushWhatsapp} onChange={toggleWhatsappPush} style={{ accentColor: '#25D366' }} />
-                          Avisarme cuando llegue un WhatsApp
-                        </label>
-                      )}
-                      {pushError && (
-                        <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 6, background: 'var(--danger-soft)', color: 'var(--danger)', fontSize: 11.5, fontWeight: 600, lineHeight: 1.4 }}>
-                          ⚠️ {pushError}
-                        </div>
-                      )}
-                    </div>
+                  <Link href="/recordatorios" className="notif-foot">
+                    {reminders.length > 8 ? `Ver los ${reminders.length} en la Agenda →` : 'Abrir la Agenda →'}
+                  </Link>
+                  {pushState === 'off' && (
+                    <Link href="/configuracion?tab=cuenta" className="notif-push-hint">
+                      <Icon.bellOff style={{ width: 14, height: 14, flexShrink: 0 }} />
+                      Activa los avisos en este dispositivo para no perderte ninguno
+                    </Link>
                   )}
                 </div>
               )}
             </div>
-
-            {/* CTA: solo en Contactos */}
-            {isContactos && (
-              <button className="btn btn-primary" onClick={() => window.dispatchEvent(new CustomEvent('crm:new-contact'))}>
-                <Icon.plus style={{ width: 14, height: 14 }} /> Nuevo Contacto
-              </button>
-            )}
           </div>
         </div>
 
@@ -722,26 +507,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="content">{children}</div>
       </main>
 
-      {/* ── Bottom nav (mobile) ── */}
+      {/* ── Bottom nav (celular) ── */}
       <nav className="bottom-nav" aria-label="Navegación principal">
         {navItems.filter(it => it.mobile).map(it => {
           const Ic = it.icon
+          const badge = badgeFor(it.id)
           return (
             <Link key={it.id} href={it.href} className={isActive(it.href) ? 'active' : ''} aria-current={isActive(it.href) ? 'page' : undefined}>
               <Ic />
-              <span>{it.short}</span>
-              {it.id === 'whatsapp' && waUnread > 0 && <span className="bn-badge">{waUnread > 99 ? '99+' : waUnread}</span>}
+              <span>{it.label}</span>
+              {badge && <span className={`bn-badge ${badge.cls}`}>{badge.n > 99 ? '99+' : badge.n}</span>}
             </Link>
           )
         })}
       </nav>
 
-      {/* ── FAB — solo en Contactos ── */}
-      {isContactos && (
-        <button className="fab" onClick={() => window.dispatchEvent(new CustomEvent('crm:new-contact'))} aria-label="Nuevo contacto">
-          <Icon.plus />
-        </button>
-      )}
+      {/* ── Crear (celular) y formularios de alta compartidos ── */}
+      {showFab && <QuickCreateFab kind={FAB_ROUTES[pathname]} />}
+      <QuickCreateHost />
 
       {/* ── Volver arriba ── */}
       {!fill && (

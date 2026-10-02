@@ -1,5 +1,5 @@
 import type { Schema } from './validation'
-import { REMINDER_PRIORITIES, REMINDER_TYPES } from './leads'
+import { REMINDER_PRIORITIES, REMINDER_TYPES } from './crm'
 
 /**
  * La app usa `fecha_recordatorio`; la columna real es `reminder_date`

@@ -1,10 +1,9 @@
 import type { Schema } from './validation'
 import { getServerSupabase, type StoreContext } from './supabase-server'
+import { LEAD_ESTADOS } from './crm'
 
-export const LEAD_ESTADOS = ['Nuevo', 'En seguimiento', 'Cotizado', 'Ganado / Venta realizada', 'Perdido'] as const
-export const ACTIVITY_TYPES = ['call', 'email', 'whatsapp', 'quote', 'meeting', 'visit', 'note'] as const
-export const REMINDER_TYPES = ['task', 'call', 'email', 'whatsapp', 'meeting'] as const
-export const REMINDER_PRIORITIES = ['low', 'medium', 'high'] as const
+// Las etapas y tipos viven en lib/crm.ts (también los usa el navegador)
+export { ACTIVITY_TYPES, LEAD_ESTADOS, REMINDER_PRIORITIES, REMINDER_TYPES } from './crm'
 
 /** Columnas editables de `leads` (lista blanca + validación). */
 export const LEAD_SCHEMA: Schema = {

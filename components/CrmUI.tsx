@@ -74,15 +74,15 @@ export function CanalChip({ value, small }: { value: string; small?: boolean }) 
   const smallStyle = small ? { fontSize: 11, padding: '3px 8px' } : undefined
   if (found) {
     return (
-      <span className={`chip ${found[1]}`} style={smallStyle}>
-        <span className="chip-dot"></span>{value}
+      <span className={`chip ${found[1]}`} style={smallStyle} title={value}>
+        <span className="chip-dot"></span><span className="chip-text">{value}</span>
       </span>
     )
   }
   const { bg, color } = hashChip(value)
   return (
-    <span className="chip" style={{ ...smallStyle, background: bg, color }}>
-      <span className="chip-dot"></span>{value}
+    <span className="chip" style={{ ...smallStyle, background: bg, color }} title={value}>
+      <span className="chip-dot"></span><span className="chip-text">{value}</span>
     </span>
   )
 }
@@ -101,15 +101,15 @@ export function EstadoChip({ value, small }: { value: string; small?: boolean })
   const smallStyle = small ? { fontSize: 11, padding: '3px 8px' } : undefined
   if (found) {
     return (
-      <span className={`chip ${found[1]}`} style={smallStyle}>
-        <span className="chip-dot"></span>{value}
+      <span className={`chip ${found[1]}`} style={smallStyle} title={value}>
+        <span className="chip-dot"></span><span className="chip-text">{value}</span>
       </span>
     )
   }
   const { bg, color } = hashChip(value)
   return (
-    <span className="chip" style={{ ...smallStyle, background: bg, color }}>
-      <span className="chip-dot"></span>{value}
+    <span className="chip" style={{ ...smallStyle, background: bg, color }} title={value}>
+      <span className="chip-dot"></span><span className="chip-text">{value}</span>
     </span>
   )
 }
@@ -127,15 +127,15 @@ export function SegmentoChip({ value, small }: { value: string; small?: boolean 
   const smallStyle = small ? { fontSize: 11, padding: '3px 8px' } : undefined
   if (found) {
     return (
-      <span className={`chip ${found[1]}`} style={smallStyle}>
-        <span className="chip-dot"></span>{value}
+      <span className={`chip ${found[1]}`} style={smallStyle} title={value}>
+        <span className="chip-dot"></span><span className="chip-text">{value}</span>
       </span>
     )
   }
   const { bg, color } = hashChip(value)
   return (
-    <span className="chip" style={{ ...smallStyle, background: bg, color }}>
-      <span className="chip-dot"></span>{value}
+    <span className="chip" style={{ ...smallStyle, background: bg, color }} title={value}>
+      <span className="chip-dot"></span><span className="chip-text">{value}</span>
     </span>
   )
 }
@@ -164,15 +164,15 @@ export function TipoChip({ value, small }: { value: string; small?: boolean }) {
   const smallStyle = small ? { fontSize: 11, padding: '3px 8px' } : undefined
   if (found) {
     return (
-      <span className={`chip ${found[1]}`} style={smallStyle}>
-        <span className="chip-dot"></span>{value}
+      <span className={`chip ${found[1]}`} style={smallStyle} title={value}>
+        <span className="chip-dot"></span><span className="chip-text">{value}</span>
       </span>
     )
   }
   const { bg, color } = hashChip(value)
   return (
-    <span className="chip" style={{ ...smallStyle, background: bg, color }}>
-      <span className="chip-dot"></span>{value}
+    <span className="chip" style={{ ...smallStyle, background: bg, color }} title={value}>
+      <span className="chip-dot"></span><span className="chip-text">{value}</span>
     </span>
   )
 }
@@ -287,11 +287,14 @@ export function FilterDropdown({
       <button
         ref={btnRef}
         onClick={() => setOpen(o => !o)}
-        className="filter-pill active"
+        // Oscuro solo cuando hay un filtro aplicado
+        className={`filter-pill ${value !== 'Todos' ? 'active' : ''}`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         style={{ display: 'flex', alignItems: 'center', gap: 8 }}
       >
         {triggerLabel(value)}
-        {countFor && <span className="count">{countFor(value)}</span>}
+        {countFor && value !== 'Todos' && <span className="count">{countFor(value)}</span>}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
           style={{ width: 12, height: 12, marginLeft: 2, transition: 'transform 0.15s ease', transform: open ? 'rotate(180deg)' : 'none' }}>
           <path d="m6 9 6 6 6-6"/>

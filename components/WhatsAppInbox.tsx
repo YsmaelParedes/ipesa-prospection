@@ -11,6 +11,9 @@ import {
 } from '@/components/WhatsAppUI'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
 import { isWindowOpen } from '@/lib/whatsappSafety'
+import { loadCatalogs, whatsappChannel, type Catalogs } from '@/lib/catalogs'
+import { isOpenLead } from '@/lib/crm'
+import { notifyDataChanged } from '@/lib/crmEvents'
 
 /* ══════════════════════════════════════════════════════════════════════════
    Tipos
@@ -677,26 +680,14 @@ function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onOpenTemplat
 /* ══════════════════════════════════════════════════════════════════════════
    Panel del CRM: contacto, leads, recordatorio, campañas
 ══════════════════════════════════════════════════════════════════════════ */
-type ConfigLists = { segments: string[]; canales: string[] }
-let configCache: Promise<ConfigLists> | null = null
-function loadConfigLists(): Promise<ConfigLists> {
-  configCache ??= fetch('/api/data/config').then(r => r.json()).then(d => ({
-    segments: (d.items ?? []).filter((i: any) => i.type === 'segment').map((i: any) => i.label),
-    canales:  (d.items ?? []).filter((i: any) => i.type === 'canal').map((i: any) => i.label),
-  })).catch(() => { configCache = null; return { segments: [], canales: [] } })
-  return configCache
-}
-
-function pickWhatsAppChannel(canales: string[]) {
-  return canales.find(c => c.toLowerCase().includes('whats')) ?? canales[0] ?? 'WhatsApp'
-}
+type ConfigLists = Catalogs
 
 function CrmPanel({ phone, thread, convo, onClose, onChanged, toast }: {
   phone: string; thread: Thread | null; convo: Conversation | null
   onClose: () => void; onChanged: () => void; toast: (m: string) => void
 }) {
   const [config, setConfig] = useState<ConfigLists>({ segments: [], canales: [] })
-  useEffect(() => { loadConfigLists().then(setConfig) }, [])
+  useEffect(() => { loadCatalogs().then(setConfig) }, [])
 
   const contact = thread?.contact ?? null
   const profileName = thread?.profileName ?? convo?.profileName ?? null
@@ -738,7 +729,7 @@ function CrmPanel({ phone, thread, convo, onClose, onChanged, toast }: {
           <OptOutSection phone={phone} optOut={contact.wa_opt_out} onChanged={onChanged} toast={toast} />
         </>
       ) : (
-        <SaveContactSection phone={phone} profileName={profileName} config={config} onSaved={() => { onChanged(); toast('Contacto guardado ✓') }} />
+        <SaveContactSection phone={phone} profileName={profileName} config={config} onSaved={() => { onChanged(); notifyDataChanged('contact'); toast('Contacto guardado ✓') }} />
       )}
     </div>
   )
@@ -755,7 +746,7 @@ function SaveContactSection({ phone, profileName, config, onSaved }: {
 
   useEffect(() => {
     if (!segment && config.segments.length) setSegment(config.segments[0])
-    if (!canal && config.canales.length) setCanal(pickWhatsAppChannel(config.canales))
+    if (!canal && config.canales.length) setCanal(whatsappChannel(config.canales))
   }, [config, segment, canal])
 
   const save = async () => {
@@ -782,7 +773,7 @@ function SaveContactSection({ phone, profileName, config, onSaved }: {
       <div className="field"><label>Nombre *</label><input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del cliente" /></div>
       <div className="field-row">
         <div className="field">
-          <label>Tipo</label>
+          <label>Segmento</label>
           <select value={segment} onChange={e => setSegment(e.target.value)}>{config.segments.map(s => <option key={s}>{s}</option>)}</select>
         </div>
         <div className="field">
@@ -809,7 +800,7 @@ function LeadsSection({ contact, phone, leads, config, onChanged, toast }: {
   const [error, setError]   = useState('')
 
   useEffect(() => {
-    if (!canal && config.canales.length) setCanal(pickWhatsAppChannel(config.canales))
+    if (!canal && config.canales.length) setCanal(whatsappChannel(config.canales))
   }, [config, canal])
 
   const create = async () => {
@@ -827,6 +818,7 @@ function LeadsSection({ contact, phone, leads, config, onChanged, toast }: {
       if (!r.ok) { setError(d.error || 'No se pudo crear el lead'); return }
       setOpen(false); setMonto(''); setNotas('')
       toast('Lead creado ✓')
+      notifyDataChanged('lead')
       onChanged()
     } finally { setSaving(false) }
   }
@@ -878,7 +870,7 @@ function ReminderSection({ contact, leads, toast }: { contact: Contact; leads: L
   const [nota, setNota]   = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const openLead = leads.find(l => !['Ganado / Venta realizada', 'Perdido'].includes(l.estado))
+  const openLead = leads.find(l => isOpenLead(l.estado))
 
   const target = () => {
     const d = new Date()
@@ -906,6 +898,7 @@ function ReminderSection({ contact, leads, toast }: { contact: Contact; leads: L
       if (!r.ok) { setError(d.error || 'No se pudo crear'); return }
       setNota('')
       toast('Recordatorio creado ✓')
+      notifyDataChanged('reminder')
     } finally { setSaving(false) }
   }
 
@@ -932,7 +925,7 @@ function OptOutSection({ phone, optOut, onChanged, toast }: { phone: string; opt
       const r = await fetch(`/api/whatsapp/conversations/${phone}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ optOut: !optOut }),
       })
-      if (r.ok) { toast(optOut ? 'Volverá a recibir campañas' : 'Ya no recibirá campañas'); onChanged() }
+      if (r.ok) { toast(optOut ? 'Volverá a recibir campañas' : 'Ya no recibirá campañas'); notifyDataChanged('contact'); onChanged() }
     } finally { setSaving(false) }
   }
   return (

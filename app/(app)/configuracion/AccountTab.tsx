@@ -7,6 +7,7 @@ import { invalidateSession, type Session } from '@/lib/profile'
 import { ROLE_LABELS } from '@/lib/stores'
 import { signOut } from '@/lib/signOut'
 import { Ico, Panel, api, cx, send, useToast } from './ui'
+import { NotificationsPanel } from './NotificationsPanel'
 import s from './configuracion.module.css'
 
 export function AccountTab({ session }: { session: Session }) {
@@ -78,6 +79,8 @@ export function AccountTab({ session }: { session: Session }) {
           </div>
         </form>
       </Panel>
+
+      <NotificationsPanel />
 
       <Panel icon={Ico.lock} tone="tInk" title="Contraseña" subtitle="Al cambiarla cerramos tu sesión en los demás dispositivos.">
         <form onSubmit={changePassword} className={s.accountForm}>
