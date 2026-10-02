@@ -23,9 +23,3 @@ export function rateLimit(key: string, max: number, windowMs: number): boolean {
 export function clientIp(req: Request): string {
   return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'unknown'
 }
-
-/** Solo rutas internas ("/algo"): evita redirecciones abiertas a otros sitios. */
-export function safeNext(next: string | null | undefined, fallback = '/'): string {
-  if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) return fallback
-  return next
-}

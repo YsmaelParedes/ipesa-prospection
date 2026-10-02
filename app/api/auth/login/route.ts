@@ -90,6 +90,13 @@ export async function POST(req: NextRequest) {
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
+    // Supabase solo lo reporta si la contraseña es correcta: no revela cuentas a terceros
+    if (error.code === 'email_not_confirmed') {
+      return NextResponse.json(
+        { error: 'Tu correo aún no está confirmado. Abre el enlace que te enviamos al registrarte.', code: 'EMAIL_NOT_CONFIRMED' },
+        { status: 403 }
+      )
+    }
     return NextResponse.json(
       { error: 'Credenciales incorrectas. Verifica tu correo y contraseña.' },
       { status: 401 }

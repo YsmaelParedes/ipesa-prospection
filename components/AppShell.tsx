@@ -147,6 +147,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const notifiedRef  = useRef<Set<string>>(new Set())  // IDs ya notificados esta sesión
 
   const bellRef = useRef<HTMLDivElement>(null)
+  const storeMenuRef = useRef<HTMLDivElement>(null)
+
+  /* Cerrar el menú de tiendas al hacer clic fuera o con Escape */
+  useEffect(() => {
+    if (!storeMenuOpen) return
+    const onDown = (e: MouseEvent) => { if (!storeMenuRef.current?.contains(e.target as Node)) setStoreMenuOpen(false) }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setStoreMenuOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
+  }, [storeMenuOpen])
 
   /* Notas de versión — se muestran solas la primera vez que hay una nueva */
   useEffect(() => {
@@ -188,9 +199,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  /* Sin tienda todavía (cuenta recién creada) → asistente de alta */
+  /* Sin tienda todavía, o el dueño no terminó de configurarla → asistente de alta */
   useEffect(() => {
-    if (session && !session.store) router.replace('/bienvenida')
+    if (session && (!session.store || (session.isOwner && !session.store.onboardingCompleted))) router.replace('/bienvenida')
   }, [session, router])
 
   /* Cambiar de tienda (solo si pertenece a varias) */
@@ -417,6 +428,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Menú según los módulos activos de la tienda (mientras carga, todo visible)
   const navItems     = NAV_ITEMS.filter(it => !it.module || !store || store.modules[it.module])
   const readonly     = store?.access === 'readonly'
+  // El dueño puede abrir otra sucursal; el menú aparece si hay a dónde cambiar o algo que agregar
+  const canAddStore  = !!session?.isOwner
+  const hasStoreMenu = !!session && (session.stores.length > 1 || canAddStore)
   const trialLeft    = store?.status === 'trial' && !readonly ? store.trialDaysLeft : null
 
   const now        = new Date()
@@ -437,16 +451,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="brand">
           <img src={store?.logoUrl || '/ipesa-logo.png'} alt={store?.name || 'IPESA Pinturas'} width={480} height={209} className="brand-logo" />
           {store && (
-            <div className="store-switch">
+            <div className="store-switch" ref={storeMenuRef}>
               <button
                 className="store-switch-btn"
-                onClick={() => session && session.stores.length > 1 && setStoreMenuOpen(o => !o)}
-                aria-expanded={storeMenuOpen}
-                title={session && session.stores.length > 1 ? 'Cambiar de tienda' : store.name}
+                onClick={() => hasStoreMenu && setStoreMenuOpen(o => !o)}
+                aria-expanded={hasStoreMenu ? storeMenuOpen : undefined}
+                aria-haspopup={hasStoreMenu ? 'menu' : undefined}
+                title={hasStoreMenu ? 'Cambiar o agregar sucursal' : store.name}
               >
                 <Icon.store className="store-switch-icon" />
                 <span className="store-switch-name">{store.name}</span>
-                {session && session.stores.length > 1 && <Icon.chevrons className="store-switch-chev" />}
+                {hasStoreMenu && <Icon.chevrons className="store-switch-chev" />}
               </button>
               {storeMenuOpen && session && (
                 <div className="store-menu" role="menu">
@@ -456,6 +471,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       <small>{ROLE_LABELS[s.role]}</small>
                     </button>
                   ))}
+                  {canAddStore && (
+                    <Link href="/bienvenida?nueva=1" role="menuitem" className="store-menu-item store-menu-add" onClick={() => setStoreMenuOpen(false)}>
+                      <span><Icon.plus />Agregar sucursal</span>
+                    </Link>
+                  )}
                 </div>
               )}
             </div>
