@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { Avatar, TipoChip } from '@/components/IpesaUI'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
 import { useWhatsAppCampaignQuota, CampaignQuotaNote } from '@/components/WhatsAppCampaignQuota'
@@ -12,7 +13,7 @@ import { TEMPLATE_REPEAT_DAYS } from '@/lib/whatsappSafety'
 type Contact = { id: string; name: string; phone: string; segment?: string | null; wa_opt_out?: boolean }
 
 type Health = {
-  config: Record<string, boolean>
+  config: { connected: boolean; source: 'store' | 'env'; businessAccount: boolean; appSecret: boolean }
   health: { displayPhoneNumber?: string; verifiedName?: string; qualityRating?: string; messagingLimitTier?: string } | null
 }
 
@@ -48,6 +49,14 @@ export function NumberHealthCard() {
   const [data, setData] = useState<Health | null | undefined>(undefined)
   useEffect(() => { loadHealth().then(setData) }, [])
   if (data === undefined) return <div className="wa-health"><span className="wa-spinner sm" /> Consultando el estado del número en Meta…</div>
+  if (data && !data.config.connected) {
+    return (
+      <div className="wa-health">
+        <WaIcon.alert /> Tu tienda aún no conecta su número de WhatsApp.
+        <Link href="/configuracion?tab=whatsapp" style={{ marginLeft: 6, fontWeight: 800, color: 'var(--brand-strong)' }}>Conectarlo ahora</Link>
+      </div>
+    )
+  }
   if (!data?.health) {
     return <div className="wa-health"><WaIcon.alert /> No se pudo consultar la calidad del número en Meta (revisa el token en Configuración → WhatsApp).</div>
   }

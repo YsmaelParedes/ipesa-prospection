@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState, useCallback, useRef } from 'rea
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Avatar, CanalChip, EstadoChip, SegmentoChip, OwnerChip, FilterDropdown, fmtDate, fmtDateLong, fmtPhone, normalizePhone } from '@/components/IpesaUI'
-import { getUserRole } from '@/lib/profile'
+import { getUserRole, useSession } from '@/lib/profile'
 
 /* ══════════════════════════════════════════════════════════
    CONSTANTES
@@ -72,9 +72,9 @@ function fmtRemDate(iso: string) {
 
 function getAType(key: string) { return ACTIVITY_TYPES.find(t => t.key === key) ?? ACTIVITY_TYPES[6] }
 
-function buildQuoteText(name: string, description: string, amount: number | null) {
+function buildQuoteText(name: string, description: string, amount: number | null, storeName: string) {
   return [
-    `Hola ${name}, te comparto la cotización de IPESA Pinturas:`,
+    `Hola ${name}, te comparto la cotización de ${storeName}:`,
     '',
     description || '(Descripción de la cotización)',
     ...(amount ? ['', `💰 Total: $${Number(amount).toLocaleString('es-MX')} MXN`] : []),
@@ -83,8 +83,8 @@ function buildQuoteText(name: string, description: string, amount: number | null
   ].join('\n')
 }
 
-function buildWhatsApp(phone: string, name: string, description: string, amount: number | null) {
-  return `https://wa.me/52${normalizePhone(phone)}?text=${encodeURIComponent(buildQuoteText(name, description, amount))}`
+function buildWhatsApp(phone: string, name: string, description: string, amount: number | null, storeName: string) {
+  return `https://wa.me/52${normalizePhone(phone)}?text=${encodeURIComponent(buildQuoteText(name, description, amount, storeName))}`
 }
 
 /** ¿Está abierta la ventana de 24 h con este número? (para enviar desde el número del negocio) */
@@ -406,6 +406,7 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
   lead: any
   onEstadoUpdate: (estado: string) => void
 }) {
+  const storeName = useSession()?.store?.name || 'IPESA Pinturas'
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading]       = useState(true)
   const [active, setActive]         = useState<AType | null>(null)
@@ -430,7 +431,7 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
       const d = await r.json().catch(() => ({}))
       if (!r.ok) { setSaveError(d.error || 'No se pudo enviar por WhatsApp'); return }
       setQuoteSent(true)
-      setQuoteLink(prev => prev ?? buildWhatsApp(lead.phone, lead.name, '', null))
+      setQuoteLink(prev => prev ?? buildWhatsApp(lead.phone, lead.name, '', null, storeName))
     } finally { setSendingQuote(false) }
   }
 
@@ -494,8 +495,8 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
       // Compartir la cotización por WhatsApp
       if (active === 'quote' && lead.phone) {
         const amount = form.amount ? Number(form.amount) : null
-        setQuoteLink(buildWhatsApp(lead.phone, lead.name, form.description, amount))
-        setQuoteText(buildQuoteText(lead.name, form.description, amount))
+        setQuoteLink(buildWhatsApp(lead.phone, lead.name, form.description, amount, storeName))
+        setQuoteText(buildQuoteText(lead.name, form.description, amount, storeName))
         setQuoteSent(false)
       }
 
@@ -695,12 +696,12 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
                       )}
                       {/* WhatsApp para cotizaciones pasadas */}
                       {a.type === 'quote' && lead.phone && (windowOpen ? (
-                        <button onClick={() => sendQuoteFromCrm(buildQuoteText(lead.name, a.description || '', a.amount))} disabled={sendingQuote}
+                        <button onClick={() => sendQuoteFromCrm(buildQuoteText(lead.name, a.description || '', a.amount, storeName))} disabled={sendingQuote}
                           style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 700, color: '#128C4A', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
                           <Ico.whatsapp /> {sendingQuote ? 'Enviando…' : 'Reenviar desde el CRM'}
                         </button>
                       ) : (
-                        <a href={buildWhatsApp(lead.phone, lead.name, a.description || '', a.amount)}
+                        <a href={buildWhatsApp(lead.phone, lead.name, a.description || '', a.amount, storeName)}
                           target="_blank" rel="noopener noreferrer"
                           style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 600, color: '#128C4A', textDecoration: 'none' }}>
                           <Ico.whatsapp /> Reenviar por WhatsApp

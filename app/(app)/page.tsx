@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Avatar, CanalChip, EstadoChip, TrendIcon, Donut, canalColor, fmtDate, segColor } from '@/components/IpesaUI'
-import { getDisplayName } from '@/lib/profile'
+import { getDisplayName, useSession } from '@/lib/profile'
 
 type Trend = { current: number; previous: number }
 
@@ -30,6 +30,7 @@ export default function DashboardPage() {
   const [data,        setData]        = useState<any>(null)
   const [loading,     setLoading]     = useState(true)
   const [displayName, setDisplayName] = useState('')
+  const storeName = useSession()?.store?.name
 
   useEffect(() => {
     fetch('/api/data/dashboard')
@@ -81,7 +82,7 @@ export default function DashboardPage() {
               {g.text}
             </div>
             <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 3 }}>
-              Aquí tienes el resumen de hoy en IPESA Pinturas
+              Aquí tienes el resumen de hoy en {storeName || 'tu tienda'}
             </div>
           </div>
         </div>
