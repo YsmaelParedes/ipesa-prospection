@@ -1,12 +1,42 @@
 # Seguridad — IPESA CRM
 
-**Última auditoría:** 2 de octubre de 2026
+**Última auditoría:** 2 de octubre de 2026 (multi-tienda / SaaS)
 **Alcance:** rutas de `app/api/*`, `proxy.ts`, páginas y componentes, configuración (Next.js
 y Vercel), dependencias, base de datos, Auth y Storage de Supabase, integración con WhatsApp
-Cloud API y Web Push.
+Cloud API y Web Push, y el aislamiento entre tiendas.
 **Riesgo antes:** crítico · **Riesgo después:** bajo (quedan acciones manuales, abajo).
 
 ## Modelo de seguridad
+
+### Aislamiento entre tiendas
+
+- **Una tienda nunca ve datos de otra.** Cada tabla de negocio tiene `store_id` y cada ruta
+  de la API obtiene la tienda con `requireStore()` (`lib/supabase-server.ts`): sesión válida
+  (`getUser()`), membresía **activa** en `store_members`, rol suficiente, módulo encendido y,
+  para escrituras, tienda con acceso completo. Todas las consultas filtran por ese
+  `store_id`; ningún id que mande el navegador se usa sin comprobar que sea de la tienda.
+- **La base también lo impide**: llaves foráneas compuestas `(store_id, id)` entre contactos,
+  leads, actividades, recordatorios y mensajes, así que un registro no puede apuntar a datos
+  de otra tienda aunque hubiera un error en el código.
+- **La tienda activa es solo una preferencia** (cookie `ipesa_store`, `httpOnly`): se valida
+  contra las membresías en cada petición; cambiarla a mano no da acceso a nada.
+- **Roles por tienda**: dueño > administrador > vendedor. Un administrador no puede tocar al
+  dueño ni a otros administradores; nadie puede cambiar su propio acceso.
+- **Invitaciones**: token aleatorio de 256 bits que solo se muestra una vez (en la base queda
+  su SHA-256), ligado a un correo, con vencimiento de 7 días, revocable y de un solo uso.
+- **Credenciales de WhatsApp por tienda** cifradas con AES-256-GCM
+  (`CREDENTIALS_ENCRYPTION_KEY`) usando el id de la tienda como dato autenticado: un valor
+  copiado de otra tienda no se puede descifrar. Nunca regresan al navegador.
+- **Webhooks por tienda** (`/api/webhooks/whatsapp/<clave>`): firma HMAC verificada con el
+  App Secret de esa tienda; los eventos se guardan solo si el `phone_number_id` coincide con
+  el número de esa tienda.
+- **Solo consulta** cuando vence la prueba o el pago: las escrituras responden `402`.
+- **Plataforma** (`/plataforma`, `/api/platform/*`): solo usuarios en `platform_admins`.
+- **Contraseñas**: cambiarla desde la app exige la actual; desde un enlace de recuperación se
+  permite durante 15 minutos con una cookie firmada (HMAC) ligada a ese usuario. Al cambiarla
+  se cierran las demás sesiones.
+
+### Base
 
 - **El navegador nunca toca las tablas.** Toda lectura y escritura pasa por `app/api/*` con
   la llave `service_role`. `anon` y `authenticated` no tienen ningún privilegio sobre
@@ -54,6 +84,11 @@ teléfonos que partía una misma conversación de WhatsApp en dos.
 
 ## Acciones manuales pendientes
 
+0. **Multi-tienda**: configurar `CREDENTIALS_ENCRYPTION_KEY` (`openssl rand -base64 32`) y
+   `NEXT_PUBLIC_SITE_URL` en Vercel; SMTP propio, *Site URL*, *Redirect URLs* y plantillas de
+   correo en Supabase Auth (ver README); y aplicar
+   `supabase/migrations/20261003120100_multi_store_finalize.sql` en cuanto se despliegue el
+   código nuevo.
 1. **Configurar `WHATSAPP_APP_SECRET` en Vercel** (Meta → tu app → Configuración → Básica →
    Clave secreta). Mientras falte, el webhook acepta mensajes sin firma y lo registra como
    advertencia en los logs.

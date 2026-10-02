@@ -1,9 +1,14 @@
 # IPESA CRM
 
-CRM de prospección de **IPESA Pinturas Lomas de Angelópolis**: contactos, pipeline de leads,
+CRM en la nube para las **tiendas IPESA Pinturas**: contactos, pipeline de leads,
 recordatorios con notificaciones push, fórmulas de igualación de color y una bandeja de
 **WhatsApp Business** integrada al CRM (chat, plantillas y campañas). Se instala como PWA
 en el celular.
+
+Es **multi-tienda (SaaS)**: cada sucursal se registra sola, prueba 14 días gratis y tiene
+su propio equipo, logo, herramientas, catálogos y número de WhatsApp. La información de
+cada tienda está aislada de las demás. La tienda original, **IPESA Lomas de Angelópolis**,
+conserva todos sus datos.
 
 ## Stack
 
@@ -33,29 +38,69 @@ npm run build     # compila para producción (lo mismo que corre Vercel)
 | Variable | Requerida | Para qué sirve |
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Sí | URL del proyecto de Supabase |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sí | Llave pública; el navegador solo la usa para iniciar sesión |
-| `SUPABASE_SERVICE_KEY` | Sí | Llave `service_role`; **solo servidor**. Sin ella la API no arranca (no hay respaldo a la anon key) |
-| `CRON_SECRET` | Sí | Protege `/api/cron/reminders`. Vercel la manda sola como `Authorization: Bearer …`. Sin ella el cron queda deshabilitado |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sí | Llave pública; el navegador solo la usa para la sesión |
+| `SUPABASE_SERVICE_KEY` | Sí | Llave `service_role`; **solo servidor**. Sin ella la API no arranca |
+| `NEXT_PUBLIC_SITE_URL` | Sí | Dominio público (`https://…`, sin `/` final). Se usa en los enlaces de los correos, invitaciones y webhooks |
+| `CREDENTIALS_ENCRYPTION_KEY` | Sí | Llave AES-256 para cifrar las credenciales de WhatsApp de cada tienda. Generar con `openssl rand -base64 32`. **No cambiarla** después: las credenciales guardadas dejarían de abrirse |
+| `CRON_SECRET` | Sí | Protege `/api/cron/reminders` (Vercel la manda sola). Sin ella el cron queda deshabilitado |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Para push | Generar con `npx web-push generate-vapid-keys` |
 | `VAPID_SUBJECT` | No | Contacto que se envía a los servicios de push (`mailto:…`) |
-| `WHATSAPP_ACCESS_TOKEN` | Para WhatsApp | Token permanente de un usuario del sistema en Meta Business |
-| `WHATSAPP_PHONE_NUMBER_ID` | Para WhatsApp | Id del número emisor |
-| `WHATSAPP_BUSINESS_ACCOUNT_ID` | Para WhatsApp | Id de la cuenta (WABA): plantillas en vivo y salud del número |
-| `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | Para WhatsApp | Texto libre que se captura también en Meta al registrar el webhook |
-| `WHATSAPP_APP_SECRET` | **Muy recomendada** | Secreto de la app de Meta; verifica la firma `X-Hub-Signature-256` del webhook. Sin ella cualquiera podría inyectar mensajes falsos |
+| `NEXT_PUBLIC_LEGAL_NAME` | Para vender | Razón social o nombre del responsable en Términos y Aviso de privacidad |
+| `NEXT_PUBLIC_LEGAL_ADDRESS` | Para vender | Domicilio del responsable |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | Para vender | Correo de contacto (derechos ARCO, activación de planes) |
+| `WHATSAPP_*` | Solo tienda original | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_ACCOUNT_ID`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN` y `WHATSAPP_APP_SECRET`: el número que ya usaba IPESA Lomas de Angelópolis. Las tiendas nuevas capturan sus credenciales en la app |
 | `WHATSAPP_GRAPH_VERSION` | No | Versión de Graph API (por defecto `v21.0`) |
 
-En **Configuración → WhatsApp** los administradores ven qué variables faltan, la
-calificación de calidad del número y su límite de mensajes.
+## Supabase Auth (registro, confirmación y recuperación)
+
+En Supabase → **Authentication**:
+
+1. **URL Configuration** → *Site URL* = `NEXT_PUBLIC_SITE_URL` y en *Redirect URLs* agrega
+   `https://<tu-dominio>/auth/confirm`.
+2. **Emails → SMTP Settings**: configura un SMTP propio (Resend, SendGrid, Amazon SES…).
+   El SMTP de prueba de Supabase solo envía a miembros del equipo y con un límite muy bajo.
+3. **Emails → Templates** (para que los enlaces funcionen en cualquier dispositivo):
+   - *Confirm signup*: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup&next=/bienvenida`
+   - *Reset password*: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery`
+4. **Sign In / Providers → Email**: deja *Confirm email* activo y activa
+   *Leaked password protection*.
+
+## Cómo funciona el SaaS
+
+| Paso | Dónde |
+|---|---|
+| La tienda descubre el producto | `/` (sin sesión) o `/inicio` |
+| Crea su cuenta y confirma su correo | `/registro` → correo → `/auth/confirm` |
+| Configura su sucursal (datos, logo, herramientas, equipo) | `/bienvenida` |
+| Invita a su equipo con un enlace personal (vence en 7 días) | Configuración → Equipo → `/invitacion/<token>` |
+| Conecta su número de WhatsApp Business | Configuración → WhatsApp |
+| Prueba 14 días; después queda en **solo consulta** hasta activar | Configuración → Plan |
+| Tú activas, extiendes o suspendes cada tienda | `/plataforma` (solo administradores de la plataforma) |
+
+- **Roles por tienda**: *dueño* (todo, incluido nombrar administradores y desconectar
+  WhatsApp), *administrador* (configura la tienda y ve el trabajo de todos) y *vendedor*.
+  Una misma cuenta puede pertenecer a varias tiendas y cambiar entre ellas desde el menú.
+- **Solo consulta**: con la prueba o el pago vencidos (3 días de gracia) el equipo puede ver
+  y exportar, pero no registrar ni enviar; la API responde `402 STORE_READONLY`.
+- **Administradores de la plataforma**: filas en la tabla `platform_admins`
+  (`insert into public.platform_admins (user_id) values ('<uuid>');`).
+- **Planes**: `lib/stores.ts` (`PLANS`, `TRIAL_DAYS`, `PAYMENT_GRACE_DAYS`). El cobro es
+  manual por ahora; el panel de la plataforma registra la vigencia del pago.
 
 ## WhatsApp
 
-1. En [developers.facebook.com](https://developers.facebook.com) → tu app → WhatsApp →
-   Configuración, registra el webhook:
-   - URL: `https://<tu-dominio>/api/webhooks/whatsapp`
-   - Token de verificación: el valor de `WHATSAPP_WEBHOOK_VERIFY_TOKEN`
-   - Suscríbete al campo **`messages`** (trae mensajes entrantes y estados de entrega).
-2. Configura `WHATSAPP_APP_SECRET` (Configuración de la app → Básica → Clave secreta).
+Cada tienda conecta **su propio número** desde Configuración → WhatsApp (token permanente
+de un usuario del sistema, *Phone number ID*, *WABA ID* y *App Secret*). La app verifica
+las credenciales con Meta antes de guardarlas y las cifra con `CREDENTIALS_ENCRYPTION_KEY`;
+nunca vuelven al navegador. Después se registra el webhook en Meta con los datos que muestra
+esa misma pantalla:
+
+- URL: `https://<tu-dominio>/api/webhooks/whatsapp/<clave-de-la-tienda>`
+- Token de verificación: el que genera la app para esa tienda.
+- Campo suscrito: **`messages`** (mensajes entrantes y estados de entrega).
+
+La tienda original sigue usando las variables `WHATSAPP_*` y el webhook de siempre
+(`/api/webhooks/whatsapp`), que reparte cada evento a su tienda por el `phone_number_id`.
 
 Qué hace la sección **WhatsApp** del CRM:
 
@@ -76,15 +121,20 @@ Qué hace la sección **WhatsApp** del CRM:
 
 ## Base de datos
 
-- `supabase/schema.sql`: foto del esquema actual (tablas, índices, vista, RLS y permisos).
-- `supabase/migrations/`: cambios con fecha; los de `2026-10-02` ya están aplicados en
-  producción.
+- `supabase/schema.sql`: foto del esquema multi-tienda (tablas, llaves, vista, funciones,
+  RLS y permisos).
+- `supabase/migrations/`: cambios con fecha. Las de `2026-10-02` y las de `2026-10-03`
+  ya están aplicadas en producción **excepto**
+  `20261003120100_multi_store_finalize.sql`, que se aplica justo después de desplegar esta
+  versión (quita los valores por omisión de `store_id` que mantenían compatible el código
+  anterior durante el cambio).
 
-Modelo de acceso: **toda** lectura y escritura pasa por las rutas de `app/api/*` con la
-llave `service_role`; `anon` y `authenticated` no tienen permisos sobre `public`. Cada
-ruta valida la sesión con `getUser()` y filtra por dueño (leads, actividades,
-recordatorios). El rol de administrador vive en `app_metadata.role` y solo un admin puede
-cambiarlo desde **Configuración → Usuarios**.
+Modelo de acceso: **toda** lectura y escritura pasa por `app/api/*` con la llave
+`service_role`; `anon` y `authenticated` no tienen permisos sobre `public`. Cada ruta
+resuelve la tienda activa con `requireStore()` (`lib/supabase-server.ts`): valida la
+sesión con `getUser()`, la membresía activa en `store_members`, el rol y el estado de la
+tienda, y **todas** las consultas filtran por `store_id`. Las llaves foráneas compuestas
+`(store_id, id)` impiden que un registro apunte a datos de otra tienda.
 
 Los teléfonos se guardan con **10 dígitos** (formato nacional); a WhatsApp se envían como
 `52` + 10 dígitos.
@@ -94,13 +144,17 @@ Los teléfonos se guardan con **10 dígitos** (formato nacional); a WhatsApp se 
 ```
 app/
   (app)/          páginas con sesión: dashboard, contactos, leads, recordatorios,
-                  whatsapp, fórmulas, configuración
-  api/            rutas del servidor (datos, WhatsApp, push, cron, webhooks, auth)
-  login/          inicio de sesión
-components/       AppShell (navegación), IpesaUI y componentes de WhatsApp
-lib/              validación, teléfonos, Supabase, WhatsApp, push y reglas de dominio
-proxy.ts          redirección a /login y límite de peticiones por IP en /api
-public/           service worker, manifest e íconos de la PWA
+                  whatsapp, fórmulas, configuración y plataforma
+  (auth)/         login, registro, recuperar, restablecer e invitación
+  (legal)/        términos y aviso de privacidad
+  inicio/         página de presentación (lo que ve quien entra sin sesión)
+  bienvenida/     asistente de alta de una tienda
+  auth/confirm/   destino de los enlaces de los correos
+  api/            rutas del servidor (datos, tiendas, equipo, WhatsApp, push, cron, webhooks, auth)
+components/       AppShell (navegación), AuthUI, IpesaUI y componentes de WhatsApp
+lib/              tiendas y planes, Supabase, cifrado, invitaciones, validación, WhatsApp y push
+proxy.ts          páginas públicas/privadas, CSRF y límite de peticiones por IP en /api
+public/           service worker, manifest, íconos de la PWA y logos
 supabase/         esquema y migraciones
 ```
 

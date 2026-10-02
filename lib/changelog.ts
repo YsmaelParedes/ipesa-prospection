@@ -13,6 +13,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026-10-02.2',
+    date: '2 de octubre, 2026',
+    title: 'Nueva imagen y tu tienda en la nube',
+    items: [
+      'Nuevo diseño con los colores de IPESA: el rojo de la marca y el remolino de colores del logo en toda la app.',
+      'Tu tienda ahora tiene su propio espacio: IPESA Lomas de Angelópolis conserva todos sus clientes, leads y conversaciones, con su logo en el menú.',
+      'Configuración renovada: datos y logo de la tienda, herramientas activas, catálogos, equipo, WhatsApp y plan, cada uno en su sección.',
+      'Invita a tu equipo con un enlace personal que se comparte por WhatsApp; puedes cambiar roles o desactivar accesos cuando quieras.',
+      'Nueva sección "Mi cuenta" para cambiar tu nombre y tu contraseña. Al cambiarla se cierra tu sesión en los demás dispositivos.',
+      'Si tienes acceso a varias sucursales, cámbiate entre ellas desde el nombre de la tienda en el menú.',
+      'Nuevas pantallas para entrar, crear cuenta y recuperar tu contraseña.',
+    ],
+  },
+  {
     version: '2026-10-02',
     date: '2 de octubre, 2026',
     title: 'WhatsApp dentro del CRM',
