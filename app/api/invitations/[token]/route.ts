@@ -3,7 +3,7 @@ import {
   getAuthClient, getServerSupabase, getSessionUser, invalidateStoreMembers,
 } from '@/lib/supabase-server'
 import { setActiveStoreCookie, storeLogoUrl } from '@/lib/storeServer'
-import { findInvitationByToken, invitationStatus, maskEmail, passwordProblem } from '@/lib/invitations'
+import { findInvitationByToken, invitationStatus, maskEmail, passwordProblem, siteOrigin } from '@/lib/invitations'
 import { jsonError, readJson, serverError } from '@/lib/validation'
 
 type Ctx = { params: Promise<{ token: string }> }
@@ -38,7 +38,10 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
 /**
  * POST /api/invitations/[token] — aceptar.
  *  · Con sesión: la cuenta debe ser la del correo invitado.
- *  · Sin sesión y sin cuenta: { name, password } crea la cuenta y entra.
+ *  · Sin sesión y sin cuenta: { name, password } crea la cuenta SIN
+ *    confirmar y Supabase manda el correo de confirmación; al abrirlo vuelve
+ *    a esta invitación ya con sesión y la acepta. Así solo entra quien de
+ *    verdad controla ese correo (el enlace pudo reenviarse por WhatsApp).
  *  · Sin sesión y con cuenta: pide iniciar sesión primero (LOGIN_REQUIRED).
  */
 export async function POST(req: NextRequest, { params }: Ctx) {
@@ -72,16 +75,24 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       const problem = passwordProblem(body.password)
       if (problem) return jsonError(problem)
 
-      // La invitación la emitió un administrador de la tienda para este correo:
-      // la cuenta se crea confirmada (el enlace se comparte por WhatsApp).
-      const { data: created, error: createError } = await db.auth.admin.createUser({
+      const auth = await getAuthClient()
+      const { data: signUp, error: signUpError } = await auth.auth.signUp({
         email: inv.email,
         password: body.password as string,
-        email_confirm: true,
-        user_metadata: { display_name: name },
+        options: {
+          data: { display_name: name },
+          emailRedirectTo: `${siteOrigin(req.nextUrl.origin)}/auth/confirm?next=${encodeURIComponent(`/invitacion/${token}`)}`,
+        },
       })
-      if (createError || !created.user) throw createError ?? new Error('No se creó el usuario')
-      userId = created.user.id
+      if (signUpError) {
+        const msg = signUpError.message.toLowerCase()
+        if (msg.includes('rate limit') || signUpError.status === 429) return jsonError('Se enviaron demasiados correos. Espera unos minutos e intenta de nuevo.', 429)
+        if (msg.includes('password')) return jsonError('Esa contraseña no cumple los requisitos de seguridad. Prueba con otra.')
+        throw signUpError
+      }
+      // Con la confirmación de correo activa (lo normal) aún no hay sesión
+      if (!signUp.session || !signUp.user) return NextResponse.json({ ok: true, needsConfirmation: true })
+      userId = signUp.user.id
     }
 
     // Marcar como usada de forma atómica (evita aceptar dos veces el mismo enlace)
@@ -98,12 +109,6 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 
     invalidateStoreMembers(inv.store_id)
     await setActiveStoreCookie(inv.store_id)
-
-    if (!sessionUser) {
-      const auth = await getAuthClient()
-      const { error: signInError } = await auth.auth.signInWithPassword({ email: inv.email, password: body.password as string })
-      if (signInError) return NextResponse.json({ ok: true, signedIn: false })
-    }
     return NextResponse.json({ ok: true, signedIn: true })
   } catch (error) {
     return serverError('POST /api/invitations/[token]', error, 'No se pudo aceptar la invitación')

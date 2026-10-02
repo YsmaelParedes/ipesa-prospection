@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { invalidateSession, useSession } from '@/lib/profile'
+import { signOut } from '@/lib/signOut'
 import { CHANGELOG, CURRENT_VERSION } from '@/lib/changelog'
 import { SYSTEM_NOTICE } from '@/lib/systemNotice'
 import { ROLE_LABELS, STATUS_LABELS, type StoreModule } from '@/lib/stores'
@@ -436,10 +437,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const now        = new Date()
   const badgeCount = reminders.length
 
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    window.location.href = '/login'
-  }
+  const handleLogout = () => signOut()
 
   return (
     <div className="app">

@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { verifyWebhookSignature } from '@/lib/whatsapp'
-import { findStoreByPhoneNumberId } from '@/lib/storeWhatsApp'
+import { findEnvStoreForPhone } from '@/lib/storeWhatsApp'
 import { notifyStoreTeam, processChange, verifyTokenMatches, type InboundNotification } from '@/lib/whatsappWebhook'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * Webhook ORIGINAL (app de Meta configurada en las variables de entorno del
- * servidor). Cada evento se enruta a la tienda dueña del número
- * (metadata.phone_number_id). Las tiendas que conectan su propia app de Meta
- * usan /api/webhooks/whatsapp/[key], verificado con SU app secret.
+ * servidor). Solo atiende eventos del número del servidor, que pertenece a la
+ * tienda original. Las tiendas que conectan su propia app de Meta usan
+ * /api/webhooks/whatsapp/[key], verificado con SU app secret.
  */
 
 // GET — verificación del webhook (Meta la llama al guardar la configuración)
@@ -24,24 +24,23 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ error: 'Verificación fallida' }, { status: 403 })
 }
 
-let warnedMissingSecret = false
-
 /**
  * POST — estados de mensajes salientes y mensajes entrantes. Responde 200
  * rápido (Meta reintenta si no); las notificaciones push van con after().
+ * Sin WHATSAPP_APP_SECRET no hay forma de saber que el evento viene de Meta,
+ * así que se rechaza (falla cerrado).
  */
 export async function POST(req: NextRequest) {
   const raw = await req.text()
 
   const appSecret = process.env.WHATSAPP_APP_SECRET
-  if (appSecret) {
-    if (!verifyWebhookSignature(raw, req.headers.get('x-hub-signature-256'), appSecret)) {
-      console.warn('[webhook/whatsapp] firma inválida — petición rechazada')
-      return NextResponse.json({ error: 'Firma inválida' }, { status: 401 })
-    }
-  } else if (!warnedMissingSecret) {
-    warnedMissingSecret = true
-    console.warn('[webhook/whatsapp] WHATSAPP_APP_SECRET no configurado: la firma del webhook NO se está verificando')
+  if (!appSecret) {
+    console.error('[webhook/whatsapp] WHATSAPP_APP_SECRET no está configurado: se rechazan los eventos hasta configurarlo')
+    return NextResponse.json({ error: 'Webhook sin configurar' }, { status: 503 })
+  }
+  if (!verifyWebhookSignature(raw, req.headers.get('x-hub-signature-256'), appSecret)) {
+    console.warn('[webhook/whatsapp] firma inválida — petición rechazada')
+    return NextResponse.json({ error: 'Firma inválida' }, { status: 401 })
   }
 
   let body: any
@@ -54,9 +53,9 @@ export async function POST(req: NextRequest) {
         const value = change?.value ?? {}
         const phoneNumberId = String(value?.metadata?.phone_number_id ?? '')
         if (!/^\d{5,30}$/.test(phoneNumberId)) continue
-        const store = await findStoreByPhoneNumberId(phoneNumberId)
+        const store = await findEnvStoreForPhone(phoneNumberId)
         if (!store) {
-          console.warn('[webhook/whatsapp] número sin tienda asignada:', phoneNumberId)
+          console.warn('[webhook/whatsapp] evento de un número que no es el del servidor:', phoneNumberId)
           continue
         }
         pending.push({ storeId: store.store_id, items: await processChange(store.store_id, value) })

@@ -4,6 +4,8 @@ import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AuthAlert, AuthField, AuthHeader, AuthIcon, PasswordField, SubmitButton } from '@/components/AuthUI'
 import { ROLE_LABELS } from '@/lib/stores'
+import { forgetPendingInvite, rememberPendingInvite } from '@/lib/pendingInvite'
+import { signOut } from '@/lib/signOut'
 
 type Info = {
   store: { name: string; logoUrl: string | null }
@@ -28,15 +30,17 @@ export default function InvitationPage({ params }: { params: Promise<{ token: st
   const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
+  const [confirmSent, setConfirmSent] = useState(false)
 
   useEffect(() => {
     fetch(`/api/invitations/${encodeURIComponent(token)}`)
       .then(async r => {
         const d = await r.json().catch(() => ({}))
         if (!r.ok) throw new Error(d.error || 'Esta invitación no existe')
+        if (d.status !== 'valid') forgetPendingInvite()
         setInfo(d)
       })
-      .catch(e => setLoadErr(e.message))
+      .catch(e => { forgetPendingInvite(); setLoadErr(e.message) })
   }, [token])
 
   const accept = async (e?: React.FormEvent) => {
@@ -50,7 +54,14 @@ export default function InvitationPage({ params }: { params: Promise<{ token: st
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setError(data.error || 'No se pudo aceptar la invitación.'); return }
-      window.location.href = data.signedIn === false ? '/login' : '/'
+      if (data.needsConfirmation) {
+        // Si confirma en este mismo dispositivo, /bienvenida lo regresa aquí
+        rememberPendingInvite(token)
+        setConfirmSent(true)
+        return
+      }
+      forgetPendingInvite()
+      window.location.href = '/'
     } catch {
       setError('Error de conexión. Intenta de nuevo.')
     } finally {
@@ -58,10 +69,6 @@ export default function InvitationPage({ params }: { params: Promise<{ token: st
     }
   }
 
-  const logout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    window.location.reload()
-  }
 
   if (loadError) {
     return (
@@ -72,6 +79,21 @@ export default function InvitationPage({ params }: { params: Promise<{ token: st
     )
   }
   if (!info) return <div className="auth-loading"><span className="auth-spinner dark" /></div>
+
+  if (confirmSent) {
+    return (
+      <div className="auth-done">
+        <div className="auth-done-icon"><AuthIcon.inbox /></div>
+        <h1 className="auth-title">Confirma tu correo</h1>
+        <p className="auth-sub">
+          Te enviamos un enlace a <strong>{info.email}</strong>. Ábrelo para activar tu cuenta y entrar a <strong>{info.store.name}</strong>.
+        </p>
+        <AuthAlert kind="info">
+          Si lo abres en otro dispositivo, después vuelve a abrir el enlace de tu invitación. ¿No te llegó? Revisa spam o promociones.
+        </AuthAlert>
+      </div>
+    )
+  }
 
   const roleLabel = ROLE_LABELS[info.role].toLowerCase()
   const head = (
@@ -113,7 +135,7 @@ export default function InvitationPage({ params }: { params: Promise<{ token: st
             <AuthAlert kind="info">
               Entraste como <strong>{info.signedInAs.email}</strong>, pero la invitación es para <strong>{info.email}</strong>.
             </AuthAlert>
-            <button className="auth-submit secondary" onClick={logout}>Cerrar sesión y cambiar de cuenta</button>
+            <button className="auth-submit secondary" onClick={() => signOut(null)}>Cerrar sesión y cambiar de cuenta</button>
           </>
         )}
       </>

@@ -199,6 +199,7 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
             {pending.map(inv => {
               const tone = avatarTone(inv.email)
               const expired = inv.status === 'expired'
+              const canTouch = isOwner || inv.role === 'employee'
               return (
                 <div key={inv.id} className={s.member}>
                   <span className={s.avatar} style={{ background: tone.bg, color: tone.fg }}>{initialsOf(inv.email)}</span>
@@ -208,14 +209,20 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
                   </div>
                   <div className={s.memberActions}>
                     {expired && <span className={cx(s.badge, s.bWarn)}>Vencida</span>}
-                    <button className="btn btn-ghost" style={{ padding: '6px 11px', fontSize: 12.5 }} disabled={busyId === inv.id}
-                      onClick={() => act(inv.id, () => createInvite(inv.email, inv.role), 'Enlace nuevo generado')}>
-                      Nuevo enlace
-                    </button>
-                    <button className="icon-btn icon-btn-delete" title="Cancelar invitación" aria-label={`Cancelar invitación de ${inv.email}`} disabled={busyId === inv.id}
-                      onClick={() => act(inv.id, () => api(`/api/store/invitations/${inv.id}`, { method: 'DELETE' }), 'Invitación cancelada')}>
-                      <Ico.trash />
-                    </button>
+                    {canTouch ? (
+                      <>
+                        <button className="btn btn-ghost" style={{ padding: '6px 11px', fontSize: 12.5 }} disabled={busyId === inv.id}
+                          onClick={() => act(inv.id, () => createInvite(inv.email, inv.role), 'Enlace nuevo generado')}>
+                          Nuevo enlace
+                        </button>
+                        <button className="icon-btn icon-btn-delete" title="Cancelar invitación" aria-label={`Cancelar invitación de ${inv.email}`} disabled={busyId === inv.id}
+                          onClick={() => act(inv.id, () => api(`/api/store/invitations/${inv.id}`, { method: 'DELETE' }), 'Invitación cancelada')}>
+                          <Ico.trash />
+                        </button>
+                      </>
+                    ) : (
+                      <span className={cx(s.badge, s.bMuted)}>La gestiona el dueño</span>
+                    )}
                   </div>
                 </div>
               )

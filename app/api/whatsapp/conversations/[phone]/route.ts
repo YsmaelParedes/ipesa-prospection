@@ -12,15 +12,19 @@ type Ctx = { params: Promise<{ phone: string }> }
 const MESSAGE_FIELDS = 'id, phone, direction, body, status, error_message, template_name, media_id, media_type, media_mime, profile_name, contact_id, user_id, created_at'
 
 async function phoneParam(params: Ctx['params']): Promise<string | null> {
-  const phone = normalizePhone(decodeURIComponent((await params).phone))
+  const raw = decodeURIComponent((await params).phone)
+  // Solo dígitos (con o sin "+" y lada): nada de sufijos como ".png"
+  if (!/^\+?\d{10,15}$/.test(raw)) return null
+  const phone = normalizePhone(raw)
   return /^\d{10}$/.test(phone) ? phone : null
 }
 
 /**
  * GET /api/whatsapp/conversations/[phone][?preview=1&limit=n]
  * Hilo completo + ficha del CRM (contacto, leads visibles para el usuario)
- * + estado de la ventana de 24 h. Sin `preview`, marca los entrantes como
- * leídos (también en el WhatsApp del cliente).
+ * + estado de la ventana de 24 h. Sin `preview` y con el encabezado
+ * `x-ipesa-read: 1`, marca los entrantes como leídos (también en el WhatsApp
+ * del cliente).
  */
 export async function GET(req: NextRequest, { params }: Ctx) {
   const ctx = await requireStore({ module: 'whatsapp' })
@@ -57,8 +61,10 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       leads = (data ?? []).filter(l => ctx.isAdmin || !l.user_id || l.user_id === ctx.uid)
     }
 
+    // Marcar como leído es un efecto secundario: solo si lo pide la bandeja con su
+    // encabezado (una navegación desde otro sitio no puede agregarlo)
     let markedRead = 0
-    if (!preview) {
+    if (!preview && req.headers.get('x-ipesa-read') === '1') {
       const { data: marked } = await supabase.from('whatsapp_messages')
         .update({ read_at: new Date().toISOString() })
         .eq('store_id', ctx.storeId).eq('phone', phone).eq('direction', 'inbound').is('read_at', null)

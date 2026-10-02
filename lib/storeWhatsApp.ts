@@ -64,15 +64,16 @@ export async function getStoreWhatsAppCreds(storeId: string): Promise<WhatsAppCr
 
 export const WHATSAPP_NOT_CONNECTED = 'WhatsApp no está conectado en esta tienda. Conéctalo en Configuración → WhatsApp.'
 
-/** Tienda dueña de un número (enrutamiento del webhook compartido). */
-export async function findStoreByPhoneNumberId(phoneNumberId: string): Promise<StoreWhatsAppRow | null> {
-  const db = getServerSupabase()
-  if (phoneNumberId === process.env.WHATSAPP_PHONE_NUMBER_ID) {
-    const { data } = await db.from('store_whatsapp').select(COLUMNS).eq('credentials_source', 'env').maybeSingle()
-    if (data) return data as StoreWhatsAppRow
-  }
-  const { data } = await db.from('store_whatsapp').select(COLUMNS)
-    .eq('phone_number_id', phoneNumberId).eq('credentials_source', 'store').maybeSingle()
+/**
+ * Tienda que usa el número del servidor (variables WHATSAPP_*). El webhook
+ * compartido solo atiende a esa tienda: las que conectan su propia app de
+ * Meta reciben sus eventos en /api/webhooks/whatsapp/<clave>, firmados con
+ * SU app secret, y nunca por aquí.
+ */
+export async function findEnvStoreForPhone(phoneNumberId: string): Promise<StoreWhatsAppRow | null> {
+  if (!process.env.WHATSAPP_PHONE_NUMBER_ID || phoneNumberId !== process.env.WHATSAPP_PHONE_NUMBER_ID) return null
+  const { data } = await getServerSupabase().from('store_whatsapp').select(COLUMNS)
+    .eq('credentials_source', 'env').maybeSingle()
   return (data as StoreWhatsAppRow | null) ?? null
 }
 

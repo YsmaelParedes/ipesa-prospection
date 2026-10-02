@@ -7,6 +7,8 @@ import { AuthAlert, AuthField, AuthIcon } from '@/components/AuthUI'
 import { invalidateSession, useSession, type ClientStore } from '@/lib/profile'
 import { MODULE_INFO, ROLE_LABELS, STORE_MODULES, planOf, type StoreModule, type StoreModules } from '@/lib/stores'
 import { MX_STATES } from '@/lib/mexico'
+import { pendingInvite } from '@/lib/pendingInvite'
+import { signOut } from '@/lib/signOut'
 import s from './bienvenida.module.css'
 
 /**
@@ -102,6 +104,9 @@ function Wizard() {
     if (session === undefined || step !== null) return
     if (session === null) { window.location.replace('/login?next=%2Fbienvenida'); return }
     const current = session.store
+    // Viene de confirmar su correo tras aceptar una invitación: de vuelta a ella
+    const invite = !current && pendingInvite()
+    if (invite) { window.location.replace(`/invitacion/${invite}`); return }
     if (current && !addingStore) {
       if (current.onboardingCompleted || !session.isAdmin) { window.location.replace('/'); return }
       setStore(current)
@@ -128,10 +133,6 @@ function Wizard() {
 
   if (!session || step === null) return <Loader />
 
-  const logout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    window.location.href = '/login'
-  }
   const isOwner = !store || session.store?.id !== store.id || !!session.isOwner
 
   return (
@@ -144,7 +145,7 @@ function Wizard() {
             <Link href="/" className={s.topLink}><Ic.back />Volver a {session.store.name}</Link>
           )}
           <span className={s.topUser} title={session.user.email}>{session.user.email}</span>
-          <button className={s.topLink} onClick={logout}>Salir</button>
+          <button className={s.topLink} onClick={() => signOut()}>Salir</button>
         </div>
       </header>
 
@@ -332,6 +333,9 @@ function StoreStep({ profile, setProfile, store, addingStore, onSaved }: {
           <NextButton busy={busy}>{store ? 'Guardar y continuar' : 'Crear mi tienda'}</NextButton>
         </Actions>
       </form>
+      {!addingStore && !store && (
+        <p className={s.tip}>¿Te invitaron a trabajar en una tienda que ya usa IPESA CRM? No crees otra: abre el enlace de tu invitación.</p>
+      )}
     </>
   )
 }

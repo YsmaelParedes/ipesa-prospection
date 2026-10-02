@@ -61,6 +61,25 @@ Cloud API y Web Push, y el aislamiento entre tiendas.
 - **Límites de peticiones** en memoria: 10 intentos de login por IP cada 15 min y 120
   peticiones por IP por minuto en `/api/*` (webhooks y cron exentos porque van firmados).
 
+## Revisión multi-tienda (2026-10-02)
+
+Revisión adversarial del aislamiento entre tiendas, roles, invitaciones, webhooks y flujos de
+acceso. Hallazgos y correcciones:
+
+| # | Severidad | Hallazgo | Corrección |
+|---|---|---|---|
+| 1 | **Alta** | El webhook compartido aceptaba eventos sin firma si faltaba `WHATSAPP_APP_SECRET`, y los repartía a cualquier tienda por `phone_number_id`: se podían inyectar mensajes falsos o dar de baja contactos de otra tienda. | Falla cerrado sin el secreto y solo atiende el número del servidor. Las demás tiendas solo reciben eventos en su webhook propio, firmado con su App Secret. |
+| 2 | Media | `safeNext` dejaba pasar `/\t/otro.com` (el navegador quita tabuladores) y rutas que al normalizarse quedan como `//otro.com`: redirección abierta tras iniciar sesión o abrir un enlace. | Se rechazan espacios, controles y `\`; la ruta se normaliza con `URL` y se vuelve a validar el origen. |
+| 3 | Baja/Media | Un administrador podía reemplazar las credenciales de WhatsApp de la tienda por las de su propia cuenta de Meta. | Conectar o cambiar el número es solo del dueño (API y pantalla). |
+| 4 | Baja | Rutas de `/api` terminadas en una extensión (`…/2221234567.png`) se saltaban el CSRF y el límite de peticiones del proxy. | El proxy siempre corre en `/api/:path*`; el parámetro de teléfono solo acepta dígitos. |
+| 5 | Baja | Una invitación creaba la cuenta ya confirmada sin probar que el invitado controla ese correo; las invitaciones de un administrador seguían vigentes después de quitarlo; un administrador podía cancelar o rebajar invitaciones de administrador del dueño. | La cuenta de un invitado nace sin confirmar y la invitación se acepta al volver con el correo confirmado; al quitar, desactivar o bajar de rol a alguien se revocan sus invitaciones; las invitaciones de administrador solo las toca el dueño. |
+| 6 | Baja | Con una sesión robada se podía llamar directo a Supabase Auth para cambiar la contraseña sin la actual. | Activar *Secure password change* en Supabase (acción manual). |
+| 7 | Baja | El cron de recordatorios avisaba a usuarios que ya no estaban en la tienda o de tiendas suspendidas; cerrar sesión no daba de baja las notificaciones del dispositivo. | El cron solo avisa a miembros activos de tiendas vigentes; cerrar sesión elimina la suscripción push del dispositivo. |
+| 8 | Baja | Borrar respuestas rápidas no respetaba el modo solo consulta; abrir un chat desde un enlace externo lo marcaba como leído. | `write` en esa ruta; marcar como leído requiere un encabezado que solo manda la bandeja. |
+
+Pendiente aceptado: las membresías se guardan en caché hasta 10 s por instancia del servidor,
+así que quitar a alguien puede tardar esos segundos en surtir efecto en todas las instancias.
+
 ## Hallazgos y correcciones (2026-10-02)
 
 | # | Severidad | Hallazgo | Corrección |
@@ -84,14 +103,15 @@ teléfonos que partía una misma conversación de WhatsApp en dos.
 
 ## Acciones manuales pendientes
 
-0. **Multi-tienda**: configurar `CREDENTIALS_ENCRYPTION_KEY` (`openssl rand -base64 32`) y
-   `NEXT_PUBLIC_SITE_URL` en Vercel; SMTP propio, *Site URL*, *Redirect URLs* y plantillas de
-   correo en Supabase Auth (ver README); y aplicar
+0. **Multi-tienda**: configurar `CREDENTIALS_ENCRYPTION_KEY` (`openssl rand -base64 32`),
+   `NEXT_PUBLIC_SITE_URL` y **`WHATSAPP_APP_SECRET`** (sin él, el webhook de la tienda
+   original ahora rechaza los mensajes) en Vercel; SMTP propio, *Site URL*, *Redirect URLs*,
+   plantillas de correo y *Secure password change* en Supabase Auth (ver README); y aplicar
    `supabase/migrations/20261003120100_multi_store_finalize.sql` en cuanto se despliegue el
    código nuevo.
 1. **Configurar `WHATSAPP_APP_SECRET` en Vercel** (Meta → tu app → Configuración → Básica →
-   Clave secreta). Mientras falte, el webhook acepta mensajes sin firma y lo registra como
-   advertencia en los logs.
+   Clave secreta). Desde la versión multi-tienda el webhook falla cerrado: mientras falte, los
+   mensajes entrantes de la tienda original se rechazan.
 2. **Confirmar `CRON_SECRET` en Vercel.** Sin ella, los recordatorios diarios no se envían.
 3. **Activar "Leaked password protection"** en Supabase → Authentication → Sign In / Providers
    → Email (bloquea contraseñas filtradas en HaveIBeenPwned).

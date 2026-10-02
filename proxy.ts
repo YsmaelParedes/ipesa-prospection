@@ -122,6 +122,11 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Todo excepto internos de Next y archivos estáticos de /public
-  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|sw\\.js|manifest\\.json|.*\\.(?:png|jpe?g|gif|svg|ico|webp|avif|woff2?|ttf|css|js|txt|mp4|webm)$).*)'],
+  // /api/* SIEMPRE (aunque la ruta termine en ".png": CSRF y límite de
+  // peticiones no se pueden saltar con una extensión) + todas las páginas
+  // excepto internos de Next y archivos estáticos de /public
+  matcher: [
+    '/api/:path*',
+    '/((?!api/|_next/static|_next/image|favicon\\.ico|sw\\.js|manifest\\.json|.*\\.(?:png|jpe?g|gif|svg|ico|webp|avif|woff2?|ttf|css|js|txt|mp4|webm)$).*)',
+  ],
 }

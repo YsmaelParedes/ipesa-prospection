@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { PasswordField } from '@/components/AuthUI'
 import { invalidateSession, type Session } from '@/lib/profile'
 import { ROLE_LABELS } from '@/lib/stores'
+import { signOut } from '@/lib/signOut'
 import { Ico, Panel, api, cx, send, useToast } from './ui'
 import s from './configuracion.module.css'
 
@@ -55,10 +56,6 @@ export function AccountTab({ session }: { session: Session }) {
     }
   }
 
-  const logout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    window.location.href = '/login'
-  }
 
   return (
     <>
@@ -96,7 +93,7 @@ export function AccountTab({ session }: { session: Session }) {
       </Panel>
 
       <Panel icon={Ico.store} tone="tCyan" title="Tus tiendas" subtitle="Tiendas a las que tienes acceso con esta cuenta."
-        actions={<button className="btn btn-ghost" onClick={logout}><Ico.logout style={{ width: 14, height: 14 }} />Cerrar sesión</button>}>
+        actions={<button className="btn btn-ghost" onClick={() => signOut()}><Ico.logout style={{ width: 14, height: 14 }} />Cerrar sesión</button>}>
         <div className={s.stores}>
           {session.stores.map(st => (
             <div key={st.id} className={s.storeRow}>

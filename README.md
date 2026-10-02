@@ -48,7 +48,7 @@ npm run build     # compila para producción (lo mismo que corre Vercel)
 | `NEXT_PUBLIC_LEGAL_NAME` | Para vender | Razón social o nombre del responsable en Términos y Aviso de privacidad |
 | `NEXT_PUBLIC_LEGAL_ADDRESS` | Para vender | Domicilio del responsable |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | Para vender | Correo de contacto (derechos ARCO, activación de planes) |
-| `WHATSAPP_*` | Solo tienda original | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_ACCOUNT_ID`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN` y `WHATSAPP_APP_SECRET`: el número que ya usaba IPESA Lomas de Angelópolis. Las tiendas nuevas capturan sus credenciales en la app |
+| `WHATSAPP_*` | Solo tienda original | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_ACCOUNT_ID`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN` y `WHATSAPP_APP_SECRET`: el número que ya usaba IPESA Lomas de Angelópolis. **Sin `WHATSAPP_APP_SECRET` el webhook rechaza los mensajes entrantes.** Las tiendas nuevas capturan sus credenciales en la app |
 | `WHATSAPP_GRAPH_VERSION` | No | Versión de Graph API (por defecto `v21.0`) |
 
 ## Supabase Auth (registro, confirmación y recuperación)
@@ -56,14 +56,15 @@ npm run build     # compila para producción (lo mismo que corre Vercel)
 En Supabase → **Authentication**:
 
 1. **URL Configuration** → *Site URL* = `NEXT_PUBLIC_SITE_URL` y en *Redirect URLs* agrega
-   `https://<tu-dominio>/auth/confirm`.
+   `https://<tu-dominio>/**`.
 2. **Emails → SMTP Settings**: configura un SMTP propio (Resend, SendGrid, Amazon SES…).
    El SMTP de prueba de Supabase solo envía a miembros del equipo y con un límite muy bajo.
 3. **Emails → Templates** (para que los enlaces funcionen en cualquier dispositivo):
    - *Confirm signup*: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup&next=/bienvenida`
    - *Reset password*: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery`
-4. **Sign In / Providers → Email**: deja *Confirm email* activo y activa
-   *Leaked password protection*.
+4. **Sign In / Providers → Email**: deja *Confirm email* activo (las cuentas nuevas,
+   también las de invitados, solo entran después de confirmar su correo) y activa
+   *Leaked password protection* y *Secure password change*.
 
 ## Cómo funciona el SaaS
 
@@ -100,7 +101,9 @@ esa misma pantalla:
 - Campo suscrito: **`messages`** (mensajes entrantes y estados de entrega).
 
 La tienda original sigue usando las variables `WHATSAPP_*` y el webhook de siempre
-(`/api/webhooks/whatsapp`), que reparte cada evento a su tienda por el `phone_number_id`.
+(`/api/webhooks/whatsapp`). Ese webhook solo acepta eventos firmados con
+`WHATSAPP_APP_SECRET` y solo del número del servidor; conectar o cambiar el número de una
+tienda lo puede hacer únicamente su dueño.
 
 Qué hace la sección **WhatsApp** del CRM:
 

@@ -167,7 +167,8 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
   const loadThread = useCallback(async (phone: string, { silent = false } = {}) => {
     if (!silent) setLoadingThread(true)
     try {
-      const r = await fetch(`/api/whatsapp/conversations/${phone}${silent ? '?limit=60' : ''}`)
+      // El encabezado pide marcar como leído (un enlace desde otro sitio no puede mandarlo)
+      const r = await fetch(`/api/whatsapp/conversations/${phone}${silent ? '?limit=60' : ''}`, { headers: { 'x-ipesa-read': '1' } })
       const d = await r.json()
       if (!r.ok) throw new Error(d.error)
       setThread(prev => {

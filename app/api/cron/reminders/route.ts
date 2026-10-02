@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
 
   const { data: reminders, error: remError } = await supabase
     .from('reminders')
-    .select('id, user_id, lead_name, nota, reminder_date')
+    .select('id, store_id, user_id, lead_name, nota, reminder_date')
     .eq('completado', false)
     .eq('push_sent', false)
     .not('user_id', 'is', null)
@@ -63,16 +63,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ sent: 0, note: 'Sin recordatorios para notificar' })
   }
 
-  const userIds = [...new Set(reminders.map(r => r.user_id as string))]
-  const { data: subs, error: subsError } = await supabase
-    .from('push_subscriptions')
-    .select('user_id, endpoint, p256dh, auth')
-    .in('user_id', userIds)
+  const userIds  = [...new Set(reminders.map(r => r.user_id as string))]
+  const storeIds = [...new Set(reminders.map(r => r.store_id as string))]
+  const [{ data: subs, error: subsError }, { data: members, error: membersError }, { data: stores, error: storesError }] = await Promise.all([
+    supabase.from('push_subscriptions').select('user_id, endpoint, p256dh, auth').in('user_id', userIds),
+    supabase.from('store_members').select('store_id, user_id').in('store_id', storeIds).in('user_id', userIds).eq('status', 'active'),
+    supabase.from('stores').select('id, status').in('id', storeIds),
+  ])
 
-  if (subsError) {
-    console.error('[cron/reminders] error subs:', subsError.message)
+  if (subsError || membersError || storesError) {
+    console.error('[cron/reminders] error:', (subsError ?? membersError ?? storesError)?.message)
     return NextResponse.json({ error: 'Error al consultar suscripciones' }, { status: 500 })
   }
+
+  // Solo quien sigue en el equipo de una tienda vigente recibe sus avisos
+  // (el texto lleva nombres y notas de clientes de esa tienda).
+  const liveStores = new Set((stores ?? []).filter(s => s.status === 'trial' || s.status === 'active').map(s => s.id))
+  const allowed = new Set((members ?? []).filter(m => liveStores.has(m.store_id)).map(m => `${m.store_id}:${m.user_id}`))
 
   const subsByUser = new Map<string, NonNullable<typeof subs>>()
   for (const sub of subs ?? []) {
@@ -86,6 +93,7 @@ export async function GET(req: NextRequest) {
   const notifiedIds: string[] = []
 
   for (const rem of reminders) {
+    if (!allowed.has(`${rem.store_id}:${rem.user_id}`)) { notifiedIds.push(rem.id); continue }
     const userSubs = subsByUser.get(rem.user_id as string)
     // Sin suscripción → marcar igual para no reintentar cada día
     if (!userSubs?.length) { notifiedIds.push(rem.id); continue }

@@ -52,6 +52,11 @@ export async function POST(req: NextRequest) {
     const { maxUsers, label } = planOf(ctx.store.plan)
     if (activeSeats >= maxUsers) return jsonError(`Tu plan ${label} permite hasta ${maxUsers} usuarios`, 403)
 
+    // Un administrador no puede pisar (ni rebajar) la invitación de administrador que hizo el dueño
+    if (!ctx.isOwner && pending.some(i => i.email === email && i.role === 'admin' && invitationStatus(i) === 'valid')) {
+      return jsonError('Ese correo ya tiene una invitación de administrador; solo el dueño puede cambiarla.', 403)
+    }
+
     const db = getServerSupabase()
     // Una sola invitación vigente por correo: las anteriores se revocan
     await db.from('store_invitations').update({ revoked_at: new Date().toISOString() })

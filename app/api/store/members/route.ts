@@ -16,6 +16,14 @@ function canManage(ctx: StoreContext, targetRole: StoreRole) {
   return ctx.isAdmin && targetRole === 'employee'
 }
 
+/** Las invitaciones pendientes que emitió alguien dejan de valer cuando pierde el acceso o el rol. */
+async function revokeInvitationsFrom(storeId: string, userId: string) {
+  const { error } = await getServerSupabase().from('store_invitations')
+    .update({ revoked_at: new Date().toISOString() })
+    .eq('store_id', storeId).eq('invited_by', userId).is('accepted_at', null).is('revoked_at', null)
+  if (error) console.error('[store/members] revocar invitaciones', error.message)
+}
+
 // GET /api/store/members — dueño/admin
 export async function GET() {
   const ctx = await requireStore({ admin: true })
@@ -64,6 +72,9 @@ export async function PATCH(req: NextRequest) {
   const { error } = await getServerSupabase().from('store_members').update(updates)
     .eq('store_id', ctx.storeId).eq('user_id', target.user_id)
   if (error) return serverError('PATCH /api/store/members', error, 'No se pudo actualizar el usuario')
+  if (updates.status === 'disabled' || (target.role === 'admin' && updates.role === 'employee')) {
+    await revokeInvitationsFrom(ctx.storeId, target.user_id)
+  }
   invalidateStoreMembers(ctx.storeId)
   return NextResponse.json({ ok: true })
 }
@@ -82,6 +93,7 @@ export async function DELETE(req: NextRequest) {
   const { error } = await getServerSupabase().from('store_members').delete()
     .eq('store_id', ctx.storeId).eq('user_id', target.user_id)
   if (error) return serverError('DELETE /api/store/members', error, 'No se pudo quitar al usuario')
+  await revokeInvitationsFrom(ctx.storeId, target.user_id)
   invalidateStoreMembers(ctx.storeId)
   return NextResponse.json({ ok: true })
 }

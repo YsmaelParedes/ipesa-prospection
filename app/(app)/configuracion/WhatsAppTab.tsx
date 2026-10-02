@@ -176,10 +176,18 @@ function ConnectionPanels({ isOwner, showToast, onStatus }: { isOwner: boolean; 
             <Note kind="warn">La calidad del número bajó. Pausa las campañas y revisa las plantillas antes de que Meta limite el número.</Note>
           </div>
         )}
-        {conn.connected && !envSource && (
+        {conn.connected && !conn.hasAppSecret && (
+          <div style={{ marginTop: 14 }}>
+            <Note kind="danger">
+              Falta la clave secreta de la app: los mensajes que te escriben los clientes se rechazan hasta configurarla
+              {envSource ? <> (variable <code>WHATSAPP_APP_SECRET</code> del servidor)</> : <> (actualiza las credenciales)</>}.
+            </Note>
+          </div>
+        )}
+        {conn.connected && !envSource && isOwner && (
           <div className={s.formFoot} style={{ marginTop: 18 }}>
             <small>¿Cambiaste el token o el número? Actualiza las credenciales.</small>
-            {isOwner && (confirmOff ? (
+            {(confirmOff ? (
               <>
                 <button className="btn btn-ghost" onClick={() => setConfirmOff(false)}>Cancelar</button>
                 <button className="btn btn-dark" onClick={disconnect} disabled={busy}>{busy ? 'Desconectando…' : 'Sí, desconectar'}</button>
@@ -190,7 +198,7 @@ function ConnectionPanels({ isOwner, showToast, onStatus }: { isOwner: boolean; 
             {!confirmOff && <button className="btn btn-primary" onClick={() => setEditing(e => !e)}>{editing ? 'Cerrar' : 'Actualizar credenciales'}</button>}
           </div>
         )}
-        {conn.connected && !envSource && editing && (
+        {conn.connected && !envSource && isOwner && editing && (
           <div style={{ marginTop: 18 }}>
             <ConnectForm encryptionReady={conn.encryptionReady} onCancel={() => setEditing(false)}
               onConnected={msg => { setEditing(false); showToast(msg); load() }} />
@@ -198,7 +206,10 @@ function ConnectionPanels({ isOwner, showToast, onStatus }: { isOwner: boolean; 
         )}
       </Panel>
 
-      {!conn.connected && !envSource && (
+      {!conn.connected && !envSource && !isOwner && (
+        <Note kind="info">Solo el dueño de la tienda puede conectar el número de WhatsApp. Pídele que lo haga desde aquí mismo.</Note>
+      )}
+      {!conn.connected && !envSource && isOwner && (
         <Panel icon={Ico.bolt} tone="tAmber" title="Conecta tu número en 5 pasos" subtitle="Necesitas una cuenta de Meta Business y el número de tu tienda registrado en WhatsApp Business Platform.">
           <ol className={s.steps}>
             <li>En <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener noreferrer">Meta for Developers</a> crea una app de tipo <strong>Empresa</strong> y agrega el producto <strong>WhatsApp</strong>.</li>

@@ -7,7 +7,8 @@ import { siteOrigin } from '@/lib/invitations'
 import { jsonError, readJson, serverError } from '@/lib/validation'
 
 /**
- * Conexión del número de WhatsApp de la tienda (dueño/admin).
+ * Conexión del número de WhatsApp de la tienda (consultar: dueño/admin;
+ * conectar o desconectar: solo el dueño).
  * Cada tienda usa su propia app de Meta: aquí guarda su token permanente,
  * el id del número, el id de la cuenta (WABA) y el app secret. Los secretos
  * se cifran antes de llegar a la base y nunca vuelven al navegador.
@@ -42,9 +43,10 @@ export async function GET(req: NextRequest) {
 
 const DIGITS = /^\d{5,30}$/
 
-// PUT — { accessToken, phoneNumberId, wabaId, appSecret } verifica con Meta y guarda cifrado
+// PUT — { accessToken, phoneNumberId, wabaId, appSecret } verifica con Meta y guarda cifrado.
+// Solo el dueño: quien conecta el número decide desde qué cuenta habla la tienda.
 export async function PUT(req: NextRequest) {
-  const ctx = await requireStore({ admin: true })
+  const ctx = await requireStore({ owner: true })
   if (ctx instanceof Response) return ctx
   if (!hasEncryptionKey()) {
     return jsonError('El servidor aún no tiene configurada la llave de cifrado (CREDENTIALS_ENCRYPTION_KEY). Avisa al administrador de la plataforma.', 503)
