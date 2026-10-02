@@ -326,9 +326,10 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
 
 /* ── Fila de la lista ──────────────────────────────────────────────────── */
 function ConversationRow({ c, active, onClick }: { c: Conversation; active: boolean; onClick: () => void }) {
+  // El texto de un multimedia ya viene como "📷 Imagen · pie" desde el webhook
   const preview = c.lastTemplate && c.lastDirection === 'outbound'
     ? `Plantilla · ${c.lastBody ?? c.lastTemplate}`
-    : `${c.lastMediaType ? `${MEDIA_ICONS[c.lastMediaType] ?? ''} ` : ''}${c.lastBody ?? ''}`
+    : c.lastBody || (c.lastMediaType ? MEDIA_ICONS[c.lastMediaType] ?? '' : '')
   return (
     <button className={`wa-conv ${active ? 'active' : ''}`} onClick={onClick} aria-current={active}>
       <span className="wa-avatar-wrap">
@@ -450,14 +451,14 @@ function ChatView({
   const discardFailed = (id: string) =>
     setThread(prev => prev ? { ...prev, messages: prev.messages.filter(m => m.id !== id) } : prev)
 
-  // Agrupa por día para los separadores
-  const items = useMemo(() => {
-    const out: ({ kind: 'day'; key: string; label: string } | { kind: 'msg'; m: Message })[] = []
-    let lastDay = ''
+  // Un bloque por día: el separador es sticky dentro de su bloque, así el de
+  // un día "empuja" al anterior en vez de encimarse con él al hacer scroll.
+  const days = useMemo(() => {
+    const out: { key: string; label: string; messages: Message[] }[] = []
     for (const m of messages) {
-      const day = new Date(m.created_at).toDateString()
-      if (day !== lastDay) { out.push({ kind: 'day', key: `d-${day}`, label: fmtDayLabel(m.created_at) }); lastDay = day }
-      out.push({ kind: 'msg', m })
+      const key = new Date(m.created_at).toDateString()
+      if (out[out.length - 1]?.key !== key) out.push({ key, label: fmtDayLabel(m.created_at), messages: [] })
+      out[out.length - 1].messages.push(m)
     }
     return out
   }, [messages])
@@ -493,9 +494,12 @@ function ChatView({
             <WaIcon.chat size={28} />
             <div>Aún no hay mensajes con {contact?.name || 'este número'}.<br />Para iniciar la conversación envía una plantilla aprobada.</div>
           </div>
-        ) : items.map(it => it.kind === 'day'
-          ? <div className="wa-day" key={it.key}><span>{it.label}</span></div>
-          : <Bubble key={it.m.id} m={it.m} onDiscard={() => discardFailed(it.m.id)} />)}
+        ) : days.map(d => (
+          <div className="wa-day-group" key={d.key}>
+            <div className="wa-day"><span>{d.label}</span></div>
+            {d.messages.map(m => <Bubble key={m.id} m={m} onDiscard={() => discardFailed(m.id)} />)}
+          </div>
+        ))}
       </div>
       {showJump && <button className="wa-jump" onClick={jumpToBottom}>Nuevos mensajes ↓</button>}
 

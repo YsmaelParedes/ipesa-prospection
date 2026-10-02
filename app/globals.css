@@ -1219,7 +1219,7 @@ a { color: inherit; text-decoration: none; }
 @keyframes sk { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
 
 /* ── Chat ── */
-.wa-thread-card { position: relative; }
+.wa-thread-card { position: relative; container: wa-thread / inline-size; }
 .wa-thread-head { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--line); min-height: 62px; flex-shrink: 0; background: var(--card); }
 .wa-thread-who { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; text-align: left; padding: 4px 6px; border-radius: 10px; }
 .wa-thread-who:hover { background: var(--paper); }
@@ -1229,6 +1229,12 @@ a { color: inherit; text-decoration: none; }
 .wa-tag-muted { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); color: var(--muted); }
 .wa-back { display: none !important; }
 .wa-window-mobile { display: none; }
+/* Chat angosto (p. ej. con la ficha abierta): la ventana de 24 h baja a su
+   propia fila para que el nombre del cliente no se corte. */
+@container wa-thread (max-width: 620px) {
+  .wa-head-window { display: none; }
+  .wa-window-mobile { display: flex; justify-content: center; padding: 6px 0; background: var(--card); border-bottom: 1px solid var(--line); flex-shrink: 0; }
+}
 .wa-icon-btn {
   width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0;
   color: var(--ink-2); transition: background .15s, color .15s;
@@ -1249,6 +1255,7 @@ a { color: inherit; text-decoration: none; }
   background-image: radial-gradient(rgba(26,20,16,0.045) 1px, transparent 1px);
   background-size: 18px 18px;
 }
+.wa-day-group { display: flex; flex-direction: column; gap: 3px; }
 .wa-day { align-self: center; margin: 12px 0 8px; position: sticky; top: 4px; z-index: 1; }
 .wa-day span {
   display: inline-block; font-size: 11px; font-weight: 700; color: var(--ink-2); background: rgba(255,255,255,.92);
@@ -1341,7 +1348,7 @@ a { color: inherit; text-decoration: none; }
 .wa-unknown { margin-bottom: 14px; }
 .wa-unknown p { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; line-height: 1.5; }
 .wa-profile-name { font-family: var(--font-display); font-weight: 700; font-size: 18px; margin-top: 6px; letter-spacing: -0.01em; }
-.wa-profile-phone { font-size: 13px; color: var(--muted); font-family: var(--font-mono); }
+.wa-profile-phone { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
 .wa-profile-alias { font-size: 12px; color: var(--muted); }
 .wa-profile-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
 .wa-profile-actions { display: flex; gap: 8px; margin-top: 12px; width: 100%; }
@@ -1368,6 +1375,8 @@ a { color: inherit; text-decoration: none; }
 .wa-seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); margin-bottom: 10px; max-width: 100%; overflow-x: auto; }
 .wa-seg button { padding: 6px 10px; border-radius: 7px; font-size: 12px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
 .wa-seg button.active { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(26,20,16,.12); }
+.wa-panel .wa-seg { display: flex; width: 100%; }
+.wa-panel .wa-seg button { flex: 1; padding: 7px 6px; }
 .wa-text-input { width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--card); font-size: 13px; outline: none; margin-bottom: 10px; }
 .wa-text-input:focus { border-color: var(--ipesa-orange); box-shadow: 0 0 0 3px var(--ipesa-orange-soft); }
 .wa-switch-row { display: flex; align-items: center; gap: 12px; justify-content: space-between; cursor: pointer; }
@@ -1406,7 +1415,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ── Campañas ── */
 .wa-campaign-wrap { gap: 12px; }
-.wa-campaign { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 12px; flex: 1; min-height: 520px; }
+.wa-campaign { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 12px; flex: 1; min-height: 440px; }
 .wa-picked { font-family: var(--font-body); font-size: 12px; font-weight: 700; color: var(--ipesa-orange-deep); background: var(--ipesa-orange-soft); padding: 3px 9px; border-radius: 999px; }
 .wa-select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--paper); font-size: 13px; outline: none; }
 .wa-check-row { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--ink-2); line-height: 1.4; cursor: pointer; }
@@ -1511,8 +1520,15 @@ a { color: inherit; text-decoration: none; }
 
 @media (max-width: 960px) {
   .main--fill > .content { padding: 10px 10px calc(84px + env(safe-area-inset-bottom)); }
-  body[data-wa-thread="1"] .main--fill > .content { padding-bottom: 10px; }
-  body[data-wa-thread="1"] .bottom-nav { display: none; }
+  /* Chat abierto: pantalla completa como en WhatsApp (el botón ← regresa a
+     la lista, donde vuelven el menú, las pestañas y la barra inferior). */
+  body[data-wa-thread="1"] .bottom-nav,
+  body[data-wa-thread="1"] .main--fill > .topbar,
+  body[data-wa-thread="1"] .wa-tabs { display: none; }
+  body[data-wa-thread="1"] .main--fill > .content { padding: 0; }
+  body[data-wa-thread="1"] .wa-thread-card { border: none; border-radius: 0; }
+  body[data-wa-thread="1"] .wa-thread-head { padding-top: max(6px, env(safe-area-inset-top)); }
+  body[data-wa-thread="1"] .wa-composer { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
 
   .wa-page { gap: 10px; }
   .wa-inbox, .wa-inbox.with-panel { grid-template-columns: minmax(0, 1fr); gap: 0; }
@@ -1530,17 +1546,23 @@ a { color: inherit; text-decoration: none; }
   .wa-input { font-size: 16px; } /* evita el zoom automático de iOS */
   .wa-jump { bottom: 84px; }
 
-  .wa-campaign { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  /* En una columna la página entera hace scroll: cada tarjeta toma su alto
+     natural (con flex:1 se aplastaban hasta dejar una sola fila visible). */
+  .wa-campaign { grid-template-columns: minmax(0, 1fr); min-height: 0; flex: none; }
   .wa-picker .wa-list { max-height: 46vh; }
+  .wa-campaign .wa-builder { overflow: visible; }
   .wa-builder-body { overflow: visible; padding: 16px; }
-  .wa-builder-foot { position: sticky; bottom: 0; background: var(--card); z-index: 2; }
+  .wa-builder-foot {
+    position: sticky; bottom: 0; background: var(--card); z-index: 2;
+    border-radius: 0 0 var(--radius) var(--radius); box-shadow: 0 -8px 16px -14px rgba(26,20,16,.35);
+  }
   .wa-builder-foot .btn { flex: 1; justify-content: center; }
   .wa-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .wa-kpis .wa-kpi:first-child { grid-column: 1 / -1; }
-  .wa-panel, .wa-panel.open { width: 100%; }
 }
 
 @media (max-width: 640px) {
+  .wa-panel, .wa-panel.open { width: 100%; }
   .wa-summary { grid-template-columns: 1fr; }
   .wa-result-grid strong { font-size: 22px; }
   .wa-template-stats { grid-template-columns: minmax(0, 1fr); }

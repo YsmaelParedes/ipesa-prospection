@@ -31,12 +31,14 @@ function norm(s: string) {
 }
 
 export function initials(name: string) {
-  return (name || '?')
+  // Primera letra/dígito de cada palabra: ignora emojis y símbolos (los
+  // nombres de perfil de WhatsApp suelen traerlos) y no corta pares sustitutos.
+  return (name || '')
     .replace(/^(Arq\.|Ing\.|Mtro\.|Mtra\.|Dr[a]?\.|Lic\.|Sr[a]?\.)\s*/i, '')
     .split(/\s+/)
+    .map(w => w.match(/[\p{L}\p{N}]/u)?.[0] ?? '')
     .filter(Boolean)
     .slice(0, 2)
-    .map(w => w[0])
     .join('')
     .toUpperCase() || '?'
 }

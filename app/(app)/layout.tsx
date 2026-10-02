@@ -1,8 +1,8 @@
 import AppShell from '@/components/AppShell'
 
 /**
- * Auth protection is handled by middleware.ts (getSession — no network call).
- * This layout just wraps authenticated pages with the app shell.
+ * La redirección a /login la hace proxy.ts (getSession, sin llamada de red);
+ * los datos los protege cada ruta de /api. Este layout solo monta el shell.
  */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return <AppShell>{children}</AppShell>
