@@ -412,7 +412,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* ── Sidebar ── */}
       <aside className={`sidebar ${drawerOpen ? 'open' : ''}`}>
         <div className="brand">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/ipesa-logo.png"
             alt="IPESA Pinturas"
@@ -463,7 +462,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className="topbar-brand-mini">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/ipesa-logo.png" alt="IPESA Pinturas" width={480} height={209} style={{ height: 44, width: 'auto', objectFit: 'contain', display: 'block' }} />
           </div>
 

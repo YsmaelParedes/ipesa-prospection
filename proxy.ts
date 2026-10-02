@@ -3,8 +3,9 @@ import { createServerClient } from '@supabase/ssr'
 
 /**
  * Proxy (antes "middleware", renombrado en Next.js 16).
- *  - /api/*: límite de peticiones por IP. Cada route valida su propia sesión
- *    con getUser() (validación real contra Supabase Auth).
+ *  - /api/*: bloqueo de escrituras desde otros sitios (CSRF) y límite de
+ *    peticiones por IP. Cada route valida su propia sesión con getUser()
+ *    (validación real contra Supabase Auth).
  *  - Páginas: redirige a /login si no hay sesión. Usa getSession() porque
  *    solo lee el JWT de la cookie (sin llamada de red mientras no expire):
  *    basta para decidir redirect vs render; los datos los protege la API.
@@ -20,6 +21,22 @@ const API_RATE_LIMIT_WINDOW = 60 * 1000
 // Webhooks/cron: los manda Meta o Vercel (pocas IPs, ráfagas legítimas) y
 // se autentican por firma/secreto, así que no pasan por el límite por IP.
 const RATE_LIMIT_EXEMPT = ['/api/webhooks/', '/api/cron/']
+
+// ── CSRF ─────────────────────────────────────────────────────────────────────
+// Las cookies de sesión ya son SameSite=Lax; además se rechaza cualquier
+// escritura que el navegador marque como enviada desde otro sitio. Las
+// peticiones servidor-a-servidor (Meta, Vercel) no mandan Origin.
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+
+function isCrossSiteWrite(request: NextRequest): boolean {
+  if (SAFE_METHODS.has(request.method)) return false
+  const origin = request.headers.get('origin')
+  if (!origin) return false
+  let originHost: string
+  try { originHost = new URL(origin).host } catch { return true } // "null", basura
+  const hosts = [request.headers.get('x-forwarded-host'), request.headers.get('host'), request.nextUrl.host]
+  return !hosts.some(h => h?.split(',')[0].trim() === originHost)
+}
 
 function checkApiRateLimit(ip: string): boolean {
   const now = Date.now()
@@ -41,6 +58,9 @@ export async function proxy(request: NextRequest) {
 
   if (pathname.startsWith('/api/')) {
     if (RATE_LIMIT_EXEMPT.some(p => pathname.startsWith(p))) return NextResponse.next()
+    if (isCrossSiteWrite(request)) {
+      return NextResponse.json({ error: 'Origen no permitido' }, { status: 403 })
+    }
     // Vercel sobrescribe x-forwarded-for con la IP real del cliente
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
              ?? request.headers.get('x-real-ip')

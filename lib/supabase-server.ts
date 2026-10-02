@@ -63,10 +63,6 @@ export async function getUserContext(): Promise<UserContext | null> {
   }
 }
 
-export async function getUserId(): Promise<string | null> {
-  return (await getUserContext())?.uid ?? null
-}
-
 // ─── Respuestas estándar ─────────────────────────────────────────────────────
 export function unauthorizedResponse() {
   return Response.json({ error: 'No autorizado — sesión no válida' }, { status: 401 })

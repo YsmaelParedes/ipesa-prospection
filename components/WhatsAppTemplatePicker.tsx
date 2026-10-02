@@ -164,7 +164,6 @@ export function WhatsAppTemplatePicker({
               <div className="wa-preview-bubble">
                 {template.hasImageHeader && (
                   <div className="wa-preview-img">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     {imageToShow ? <img src={imageToShow} alt="Encabezado" /> : <ImageIcon />}
                   </div>
                 )}

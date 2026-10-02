@@ -29,8 +29,6 @@ export function phoneVariants(raw: string): string[] {
   return [d, `52${d}`, `521${d}`]
 }
 
-export const isValidPhone10 = (raw: string) => /^\d{10}$/.test(normalizePhone(raw))
-
 /**
  * Detecta si un teléfono mexicano (10 dígitos normalizados) es celular — apto para SMS/WhatsApp.
  * Usa rangos conservadores: solo marca como fijo los rangos claramente TELMEX/fijo.

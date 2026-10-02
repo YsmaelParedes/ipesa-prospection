@@ -37,7 +37,6 @@ export default function LoginPage() {
       <div className="login-form-wrap">
         <form className="login-form" onSubmit={handleSubmit}>
           <div className="login-form-brand">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/ipesa-logo.png"
               alt="IPESA Pinturas"

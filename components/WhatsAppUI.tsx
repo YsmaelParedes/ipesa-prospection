@@ -123,12 +123,10 @@ export function MediaContent({ mediaId, mediaType, mime }: { mediaId: string; me
     case 'image':
       return (
         <a href={src} target="_blank" rel="noopener noreferrer">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={src} alt="Imagen recibida" className="wa-media-img" loading="lazy" onError={() => setFailed(true)} />
         </a>
       )
     case 'sticker':
-      // eslint-disable-next-line @next/next/no-img-element
       return <img src={src} alt="Sticker" className="wa-media-sticker" loading="lazy" onError={() => setFailed(true)} />
     case 'audio':
       return <audio controls preload="none" src={src} className="wa-media-audio" onError={() => setFailed(true)} />

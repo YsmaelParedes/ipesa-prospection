@@ -13,6 +13,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026-10-02',
+    date: '2 de octubre, 2026',
+    title: 'WhatsApp dentro del CRM',
+    items: [
+      'Nueva bandeja de WhatsApp: lee y responde a tus clientes desde el CRM, con búsqueda, filtros (no leídas, sin contacto) y contador de mensajes sin leer en el menú.',
+      'Fotos, audios, videos y documentos se ven directo en el chat, con palomitas de enviado, entregado y leído.',
+      'Junto al chat está la ficha del cliente: guarda el número como contacto, crea un lead o programa un recordatorio de seguimiento sin salir de la conversación.',
+      'Respuestas rápidas para el equipo (las crea un administrador en Configuración); {nombre} se cambia solo por el nombre del cliente.',
+      'Aviso en tu celular cuando un cliente te escribe. Se puede apagar en la campana de notificaciones → "Avisarme cuando llegue un WhatsApp".',
+      'Si un cliente escribe BAJA o STOP deja de recibir campañas automáticamente (también se puede marcar a mano en su ficha).',
+      'Nueva pestaña "Resultados" en Campañas (administradores): entregados, leídos, respuestas y fallidos por plantilla.',
+      'La sección de WhatsApp se rediseñó para verse bien en celular, tablet y computadora.',
+      'Mejoras de seguridad y velocidad en toda la app.',
+    ],
+  },
+  {
     version: '2026-09-28',
     date: '28 de septiembre, 2026',
     title: 'Panel de campañas en WhatsApp',

@@ -22,7 +22,8 @@ function authorized(req: NextRequest): boolean {
   return header.length === expected.length && timingSafeEqual(Buffer.from(header), Buffer.from(expected))
 }
 
-// Corre una vez al día a las 9am México / 14:00 UTC  (0 14 * * *)
+// Corre una vez al día a las 14:00 UTC (0 14 * * *) = 8:00 a.m. en México
+// (UTC-6 todo el año desde que se eliminó el horario de verano en 2022).
 // Envía una notificación INDIVIDUAL por cada recordatorio pendiente:
 //   · vencidos (overdue)
 //   · programados para las próximas 25 h
