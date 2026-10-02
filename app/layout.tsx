@@ -1,14 +1,14 @@
 import type { Metadata, Viewport } from 'next'
-import { Bricolage_Grotesque, Manrope } from 'next/font/google'
+import { Manrope, Outfit } from 'next/font/google'
 import './globals.css'
 
 // Fuentes auto-hospedadas por Next (sin @import a Google Fonts que bloqueaba
 // el primer render ni peticiones a terceros). Variables usadas en globals.css.
-const display = Bricolage_Grotesque({
+// Outfit: geométrica como el logotipo de IPESA (títulos y cifras)
+const display = Outfit({
   subsets: ['latin'],
   weight: 'variable',
-  axes: ['opsz'],
-  variable: '--font-bricolage',
+  variable: '--font-outfit',
   display: 'swap',
 })
 const body = Manrope({
@@ -19,8 +19,8 @@ const body = Manrope({
 })
 
 export const metadata: Metadata = {
-  title: 'IPESA — CRM Pinturas',
-  description: 'Sistema de gestión de contactos y leads — IPESA Pinturas Lomas de Angelópolis',
+  title: 'IPESA CRM',
+  description: 'CRM para tiendas IPESA Pinturas: contactos, leads, WhatsApp y fórmulas de color.',
   manifest: '/manifest.json',
   icons: { apple: { url: '/apple-touch-icon.png', sizes: '180x180' } },
   appleWebApp: {
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#EE5A24',
+  themeColor: '#E50A26',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

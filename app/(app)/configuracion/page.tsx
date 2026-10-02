@@ -21,10 +21,10 @@ function norm(s: string) {
 type ConfigItem = { id: string; type: string; label: string; created_at: string }
 
 const CHIP_PALETTES = [
-  { bg: '#FBE6DA', color: '#8A2F0A' }, { bg: '#DBEADF', color: '#1F5536' },
-  { bg: '#DCE3EE', color: '#1F3A5F' }, { bg: '#FBEED2', color: '#8A6308' },
-  { bg: '#F2DAEB', color: '#7B2A5D' }, { bg: '#DAEEDF', color: '#1B6634' },
-  { bg: '#E0D8F0', color: '#4A2D8A' },
+  { bg: '#FFE9EC', color: '#C2071E' }, { bg: '#FCE6F2', color: '#A80F60' },
+  { bg: '#DFF6FB', color: '#006E87' }, { bg: '#E0F6F1', color: '#0F7462' },
+  { bg: '#E5F6E9', color: '#1E7A3C' }, { bg: '#FFF4D4', color: '#8A5F00' },
+  { bg: '#F6E4EE', color: '#861456' },
 ]
 function chipColor(label: string) {
   let h = 5381
@@ -354,7 +354,7 @@ function WhatsAppStatusSection() {
             {STATUS_ITEMS.map(it => {
               const ok = !!data.config[it.key]
               return (
-                <div key={it.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--card)', border: `1px solid ${!ok && it.critical ? '#F5C2C2' : 'var(--line)'}`, borderRadius: 10 }}>
+                <div key={it.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--card)', border: `1px solid ${!ok && it.critical ? '#F7C1C9' : 'var(--line)'}`, borderRadius: 10 }}>
                   <span style={{ width: 22, height: 22, borderRadius: '50%', display: 'grid', placeItems: 'center', flexShrink: 0, fontSize: 12, fontWeight: 800, background: ok ? 'var(--ipesa-green-soft)' : it.critical ? 'var(--ipesa-rose-soft)' : 'var(--paper)', color: ok ? 'var(--ipesa-green)' : it.critical ? 'var(--ipesa-rose)' : 'var(--muted)' }}>
                     {ok ? '✓' : '!'}
                   </span>

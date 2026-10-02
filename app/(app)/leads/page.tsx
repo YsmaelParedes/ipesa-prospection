@@ -14,13 +14,13 @@ const CANALES_DEFAULT  = ['Referido', 'Visita a Tienda', 'WhatsApp', 'Redes Soci
 const SEGMENTOS_DEFAULT= ['Constructor', 'Arquitecto', 'Hogar', 'Empresa']
 
 const ACTIVITY_TYPES = [
-  { key: 'call',     label: 'Llamada',    emoji: '📞', color: '#1F3A5F', bg: '#DCE3EE' },
-  { key: 'email',    label: 'Correo',     emoji: '📧', color: '#8A2F0A', bg: '#FBE6DA' },
-  { key: 'whatsapp', label: 'WhatsApp',   emoji: '💬', color: '#1F5536', bg: '#DBEADF' },
-  { key: 'quote',    label: 'Cotización', emoji: '📋', color: '#8A6308', bg: '#FBEED2' },
-  { key: 'meeting',  label: 'Reunión',    emoji: '🤝', color: '#4A2D8A', bg: '#E0D8F0' },
-  { key: 'visit',    label: 'Visita',     emoji: '🏪', color: '#065F5F', bg: '#CCFBF1' },
-  { key: 'note',     label: 'Nota',       emoji: '📝', color: '#80766B', bg: 'var(--paper)' },
+  { key: 'call',     label: 'Llamada',    emoji: '📞', color: 'var(--c-cyan-ink)',    bg: 'var(--c-cyan-soft)' },
+  { key: 'email',    label: 'Correo',     emoji: '📧', color: 'var(--c-magenta-ink)', bg: 'var(--c-magenta-soft)' },
+  { key: 'whatsapp', label: 'WhatsApp',   emoji: '💬', color: '#128C4A',              bg: '#E3F7EA' },
+  { key: 'quote',    label: 'Cotización', emoji: '📋', color: 'var(--warning)',       bg: 'var(--warning-soft)' },
+  { key: 'meeting',  label: 'Reunión',    emoji: '🤝', color: 'var(--c-purple-ink)',  bg: 'var(--c-purple-soft)' },
+  { key: 'visit',    label: 'Visita',     emoji: '🏪', color: 'var(--c-teal-ink)',    bg: 'var(--c-teal-soft)' },
+  { key: 'note',     label: 'Nota',       emoji: '📝', color: 'var(--muted)',         bg: 'var(--paper-2)' },
 ] as const
 type AType = typeof ACTIVITY_TYPES[number]['key']
 
@@ -618,11 +618,11 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
 
       {/* ── Compartir la cotización por WhatsApp ── */}
       {quoteLink && (
-        <div style={{ background: '#DBEADF', border: '1px solid #86EFAC', borderRadius: 10, padding: '12px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ background: 'var(--success-soft)', border: '1px solid #BDE7C9', borderRadius: 10, padding: '12px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 20 }}>💬</span>
           <div style={{ flex: '1 1 180px' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#1F5536', marginBottom: 2 }}>{quoteSent ? 'Cotización enviada por WhatsApp ✓' : 'Cotización registrada'}</div>
-            <div style={{ fontSize: 12, color: '#166534' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--success)', marginBottom: 2 }}>{quoteSent ? 'Cotización enviada por WhatsApp ✓' : 'Cotización registrada'}</div>
+            <div style={{ fontSize: 12, color: 'var(--success)' }}>
               {quoteSent ? 'Quedó en la bandeja de WhatsApp del CRM.'
                 : windowOpen ? 'El cliente escribió en las últimas 24 h: puedes enviarla desde el número del negocio.'
                 : 'Compártela por WhatsApp.'}
@@ -641,7 +641,7 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
             </a>
           )}
           <button onClick={() => setQuoteLink(null)} aria-label="Cerrar"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#166534', fontSize: 18, lineHeight: 1 }}>×</button>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--success)', fontSize: 18, lineHeight: 1 }}>×</button>
         </div>
       )}
 
@@ -696,13 +696,13 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
                       {/* WhatsApp para cotizaciones pasadas */}
                       {a.type === 'quote' && lead.phone && (windowOpen ? (
                         <button onClick={() => sendQuoteFromCrm(buildQuoteText(lead.name, a.description || '', a.amount))} disabled={sendingQuote}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 700, color: '#1F5536', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 700, color: '#128C4A', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
                           <Ico.whatsapp /> {sendingQuote ? 'Enviando…' : 'Reenviar desde el CRM'}
                         </button>
                       ) : (
                         <a href={buildWhatsApp(lead.phone, lead.name, a.description || '', a.amount)}
                           target="_blank" rel="noopener noreferrer"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 600, color: '#1F5536', textDecoration: 'none' }}>
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 600, color: '#128C4A', textDecoration: 'none' }}>
                           <Ico.whatsapp /> Reenviar por WhatsApp
                         </a>
                       ))}
@@ -834,7 +834,7 @@ function RemindersTab({ lead }: { lead: any }) {
               {REM_TYPE_OPTS.find(t => t.key === r.type)?.emoji ?? '📋'}
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: overdue ? '#8A2F0A' : 'var(--ink-2)' }}>{fmtRemDate(r.fecha_recordatorio)}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: overdue ? 'var(--brand-strong)' : 'var(--ink-2)' }}>{fmtRemDate(r.fecha_recordatorio)}</div>
               {r.nota && <div style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{r.nota}</div>}
             </div>
             <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
@@ -900,8 +900,8 @@ function LeadDetail({
   const selectStyle = { width: '100%', padding: '10px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none' }
 
   const ESTADO_COLORS: Record<string, string> = {
-    'Nuevo': '#1F3A5F', 'En seguimiento': '#F2B544',
-    'Cotizado': '#EE5A24', 'Ganado / Venta realizada': '#3D8B5C', 'Perdido': '#80766B',
+    'Nuevo': 'var(--c-cyan)', 'En seguimiento': 'var(--warning-fill)',
+    'Cotizado': 'var(--c-magenta)', 'Ganado / Venta realizada': 'var(--success-fill)', 'Perdido': 'var(--muted-2)',
   }
 
   const [saveError, setSaveError] = useState('')
@@ -1058,13 +1058,13 @@ function LeadDetail({
                 </div>
                 {/* Zona peligrosa */}
                 {confirmDel && (
-                  <div className="detail-section" style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: '#DC2626', marginBottom: 6 }}>¿Eliminar este lead?</div>
-                    <div style={{ fontSize: 12.5, color: '#7F1D1D', marginBottom: 12 }}>Se eliminará junto con sus recordatorios y actividades.</div>
+                  <div className="detail-section" style={{ background: 'var(--danger-soft)', border: '1px solid #F7C1C9', borderRadius: 10, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--danger)', marginBottom: 6 }}>¿Eliminar este lead?</div>
+                    <div style={{ fontSize: 12.5, color: '#7A0A18', marginBottom: 12 }}>Se eliminará junto con sus recordatorios y actividades.</div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button className="btn btn-ghost" onClick={() => setConfirmDel(false)} style={{ flex: 1 }}>Cancelar</button>
                       <button onClick={handleDeleteLead} disabled={deleting}
-                        style={{ flex: 1, padding: '9px 0', background: '#DC2626', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 13.5, cursor: 'pointer' }}>
+                        style={{ flex: 1, padding: '9px 0', background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 13.5, cursor: 'pointer' }}>
                         {deleting ? 'Eliminando…' : 'Sí, eliminar'}
                       </button>
                     </div>
@@ -1189,10 +1189,10 @@ function ContactPickerModal({ onClose, onSelect }: {
                   {/* Avatar */}
                   <div style={{
                     width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-                    background: c.segment === 'Constructor' ? '#F2B544'
-                              : c.segment === 'Arquitecto'  ? '#3D8B5C'
-                              : c.segment === 'Empresa'     ? '#1F3A5F'
-                              : '#EE5A24',
+                    background: c.segment === 'Constructor' ? '#9A6B00'
+                              : c.segment === 'Arquitecto'  ? '#00839C'
+                              : c.segment === 'Empresa'     ? '#861456'
+                              : '#E50A26',
                     color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 14, fontWeight: 700,
                   }}>

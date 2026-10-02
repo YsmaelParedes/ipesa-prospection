@@ -407,18 +407,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app">
+      <div className="brand-line" aria-hidden="true" />
       <div className={`sidebar-scrim ${drawerOpen ? 'open' : ''}`} onClick={() => setDrawerOpen(false)} />
 
       {/* ── Sidebar ── */}
       <aside className={`sidebar ${drawerOpen ? 'open' : ''}`}>
         <div className="brand">
-          <img
-            src="/ipesa-logo.png"
-            alt="IPESA Pinturas"
-            width={480}
-            height={209}
-            style={{ height: 72, width: 'auto', objectFit: 'contain', background: '#fff', borderRadius: 12, padding: '8px 16px', display: 'block' }}
-          />
+          <img src="/ipesa-logo.png" alt="IPESA Pinturas" width={480} height={209} className="brand-logo" />
         </div>
 
         <div className="nav-label">Menú</div>
@@ -436,7 +431,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="user-card">
-          <div className="avatar" style={{ background: '#F2B544', color: '#1A1410' }}>{initials(displayName)}</div>
+          <div className="avatar-ring"><div className="avatar">{initials(displayName)}</div></div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="user-name">{displayName}</div>
             <div className="user-role">Sesión activa</div>
@@ -445,11 +440,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <Icon.logout style={{ width: 16, height: 16 }} />
           </button>
         </div>
-        <button
-          onClick={() => setWhatsNewOpen(true)}
-          title="Ver novedades de esta versión"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 4px 2px', fontSize: 10.5, color: 'rgba(245,239,228,0.35)', textAlign: 'center' }}
-        >
+        <button className="version-btn" onClick={() => setWhatsNewOpen(true)} title="Ver novedades de esta versión">
           v{CURRENT_VERSION}
         </button>
       </aside>
@@ -466,12 +457,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="topbar-title-block">
-            <div className="paint-stripe" style={{ marginBottom: 6 }}>
-              <div style={{ background: '#EE5A24' }}></div>
-              <div style={{ background: '#F2B544' }}></div>
-              <div style={{ background: '#3D8B5C' }}></div>
-              <div style={{ background: '#1F3A5F' }}></div>
-            </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 0 }}>
               <div className="topbar-title">{currentTitle.t}</div>
               <div className="topbar-sub">{currentTitle.s}</div>

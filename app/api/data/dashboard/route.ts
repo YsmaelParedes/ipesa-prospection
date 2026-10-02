@@ -108,8 +108,8 @@ export async function GET() {
     }))
     const todayLeads = leads.filter(l => new Date(l.created_at).toISOString() >= startOfToday)
     const activity = [
-      ...todayLeads.filter(l => l.estado === WON).map(l => ({ id: l.id, type: 'close', who: l.name, what: 'cerró como cliente', time: 'hoy', color: '#3D8B5C' })),
-      ...todayLeads.filter(l => l.estado !== WON).map(l => ({ id: l.id, type: 'lead', who: l.name, what: `nuevo lead · ${l.canal}`, time: 'hoy', color: '#EE5A24' })),
+      ...todayLeads.filter(l => l.estado === WON).map(l => ({ id: l.id, type: 'close', who: l.name, what: 'cerró como cliente', time: 'hoy' })),
+      ...todayLeads.filter(l => l.estado !== WON).map(l => ({ id: l.id, type: 'lead', who: l.name, what: `nuevo lead · ${l.canal}`, time: 'hoy' })),
     ].slice(0, 8)
 
     return NextResponse.json({

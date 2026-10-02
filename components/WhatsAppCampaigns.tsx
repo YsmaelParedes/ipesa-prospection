@@ -317,9 +317,9 @@ export function WhatsAppCampaignResults() {
                   </div>
                   <div className="wa-tstat-total"><strong>{t.sent}</strong><span>enviadas</span></div>
                 </div>
-                <Funnel label="Entregadas" value={t.delivered} total={t.sent} color="#3D8B5C" />
+                <Funnel label="Entregadas" value={t.delivered} total={t.sent} color="var(--success-fill)" />
                 <Funnel label="Leídas" value={t.read} total={t.sent} color="#34B7F1" />
-                <Funnel label="Respondieron (72 h)" value={t.replied} total={t.sent} color="#EE5A24" />
+                <Funnel label="Respondieron (72 h)" value={t.replied} total={t.sent} color="var(--brand)" />
                 {t.failed > 0 && (
                   <div className="wa-tstat-errors">
                     <div><WaIcon.alert size={13} /> {t.failed} no se entregaron</div>

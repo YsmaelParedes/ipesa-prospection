@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Avatar, CanalChip, EstadoChip, TrendIcon, Donut, fmtDate, segColor } from '@/components/IpesaUI'
+import { Avatar, CanalChip, EstadoChip, TrendIcon, Donut, canalColor, fmtDate, segColor } from '@/components/IpesaUI'
 import { getDisplayName } from '@/lib/profile'
 
 type Trend = { current: number; previous: number }
@@ -61,11 +61,6 @@ export default function DashboardPage() {
   const maxCh = Math.max(...byChannel.map((c: any) => c.count), 1)
   const segTotal = bySegment.reduce((s: number, d: any) => s + d.count, 0) || 1
 
-  const CANAL_COLORS: Record<string, string> = {
-    'Referido': '#3D8B5C', 'Visita a Tienda': '#EE5A24', 'WhatsApp': '#25D366',
-    'Redes Sociales': '#B6589C', 'Campaña Pagada': '#1F3A5F', 'Otro': '#80766B',
-  }
-
   const g = displayName ? greeting(displayName) : null
   const t = data?.trends ?? {}
   const wa = data?.whatsapp
@@ -94,10 +89,10 @@ export default function DashboardPage() {
 
       {/* KPIs */}
       <div className="kpi-grid">
-        <KpiCard label="Contactos totales"  value={m.totalContacts ?? 0}    trend={trendOf(t.contacts)}          hint="nuevos contactos" color="#1F3A5F" />
-        <KpiCard label="Leads activos"      value={m.leadsActivos  ?? 0}    trend={trendOf(t.leads)}             hint="leads nuevos"     color="#EE5A24" />
-        <KpiCard label="Cierres del mes"    value={m.cierresMes    ?? 0}    trend={trendOf(t.wins)}              hint="ventas ganadas"   color="#3D8B5C" />
-        <KpiCard label="Tasa de conversión" value={`${m.conversion ?? 0}%`} trend={trendOf(t.conversion, 'pts')} hint="del mes"          color="#F2B544" />
+        <KpiCard label="Contactos totales"  value={m.totalContacts ?? 0}    trend={trendOf(t.contacts)}          hint="nuevos contactos" color="var(--c-cyan)" />
+        <KpiCard label="Leads activos"      value={m.leadsActivos  ?? 0}    trend={trendOf(t.leads)}             hint="leads nuevos"     color="var(--brand)" />
+        <KpiCard label="Cierres del mes"    value={m.cierresMes    ?? 0}    trend={trendOf(t.wins)}              hint="ventas ganadas"   color="var(--success-fill)" />
+        <KpiCard label="Tasa de conversión" value={`${m.conversion ?? 0}%`} trend={trendOf(t.conversion, 'pts')} hint="del mes"          color="var(--c-magenta)" />
       </div>
 
       {/* WhatsApp */}
@@ -127,7 +122,7 @@ export default function DashboardPage() {
           ) : (
             <div className="barchart">
               {byChannel.map((ch: any) => {
-                const color = CANAL_COLORS[ch.name] || '#80766B'
+                const color = canalColor(ch.name)
                 return (
                   <div className="bar-row" key={ch.name}>
                     <div className="bar-label"><span className="dot" style={{ background: color }}></span>{ch.name}</div>
@@ -176,8 +171,8 @@ export default function DashboardPage() {
             <div className="barchart">
               {byOwner.map((o: any) => (
                 <div className="bar-row" key={o.name}>
-                  <div className="bar-label"><span className="dot" style={{ background: '#1F3A5F' }}></span>{o.name}</div>
-                  <div className="bar-track"><div className="bar-fill" style={{ width: `${(o.count / maxOwner) * 100}%`, background: '#1F3A5F' }}></div></div>
+                  <div className="bar-label"><span className="dot" style={{ background: 'var(--ink-2)' }}></span>{o.name}</div>
+                  <div className="bar-track"><div className="bar-fill" style={{ width: `${(o.count / maxOwner) * 100}%`, background: 'var(--ink-2)' }}></div></div>
                   <div className="bar-value">{o.count}</div>
                 </div>
               ))}
@@ -236,7 +231,9 @@ export default function DashboardPage() {
             <div>
               {activity.map((a: any, i: number) => (
                 <div className="activity-row" key={a.id ?? i}>
-                  <div className="activity-icon" style={{ background: (a.color || '#EE5A24') + '22', color: a.color || '#EE5A24' }}>
+                  <div className="activity-icon" style={a.type === 'close'
+                    ? { background: 'var(--success-soft)', color: 'var(--success)' }
+                    : { background: 'var(--brand-soft)', color: 'var(--brand)' }}>
                     <ActivityIcon type={a.type} />
                   </div>
                   <div className="activity-text">

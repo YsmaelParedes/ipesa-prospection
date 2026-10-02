@@ -28,11 +28,11 @@ function buildWhatsAppHref(phone: string) { return `/whatsapp?phone=${normalizeP
 function buildMailHref(email: string) { return `mailto:${email}` }
 
 const REM_TYPES = [
-  { key: 'task',     label: 'Tarea',    emoji: '📋', color: '#4A2D8A', bg: '#E0D8F0' },
-  { key: 'call',     label: 'Llamada',  emoji: '📞', color: '#1F3A5F', bg: '#DCE3EE' },
-  { key: 'email',    label: 'Correo',   emoji: '📧', color: '#8A2F0A', bg: '#FBE6DA' },
-  { key: 'whatsapp', label: 'WhatsApp', emoji: '💬', color: '#1F5536', bg: '#DBEADF' },
-  { key: 'meeting',  label: 'Reunión',  emoji: '🤝', color: '#8A6308', bg: '#FBEED2' },
+  { key: 'task',     label: 'Tarea',    emoji: '📋', color: 'var(--c-purple-ink)',  bg: 'var(--c-purple-soft)' },
+  { key: 'call',     label: 'Llamada',  emoji: '📞', color: 'var(--c-cyan-ink)',    bg: 'var(--c-cyan-soft)' },
+  { key: 'email',    label: 'Correo',   emoji: '📧', color: 'var(--c-magenta-ink)', bg: 'var(--c-magenta-soft)' },
+  { key: 'whatsapp', label: 'WhatsApp', emoji: '💬', color: '#128C4A',              bg: '#E3F7EA' },
+  { key: 'meeting',  label: 'Reunión',  emoji: '🤝', color: 'var(--warning)',       bg: 'var(--warning-soft)' },
 ] as const
 
 const PRIORITIES = [
@@ -403,7 +403,7 @@ function RemCard({
   return (
     <div style={{
       display: 'flex', gap: 0, background: 'var(--card)',
-      border: `1px solid ${isHigh ? '#FECACA' : 'var(--line)'}`,
+      border: `1px solid ${isHigh ? '#F7C1C9' : 'var(--line)'}`,
       borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--shadow-sm)',
     }}>
       {/* Barra lateral de color */}
@@ -489,7 +489,7 @@ function RemCard({
             {onComplete && (
               <button onClick={onComplete}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 10px', fontSize: 12, fontWeight: 700, color: '#fff', background: 'var(--ipesa-green)', border: 'none', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap', flexBasis: '100%', transition: 'transform 0.12s ease, background 0.12s ease' }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#2E6E46')}
+                onMouseEnter={e => (e.currentTarget.style.background = '#17602F')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'var(--ipesa-green)')}>
                 <Ico.check /> Listo
               </button>

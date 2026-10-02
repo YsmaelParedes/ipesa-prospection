@@ -28,7 +28,7 @@ const Ico = {
 }
 
 const TIPO_COLORS: Record<string, string> = {
-  'Constructor': '#F2B544', 'Arquitecto': '#3D8B5C', 'Hogar': '#EE5A24', 'Empresa': '#1F3A5F',
+  'Constructor': '#9A6B00', 'Arquitecto': '#00839C', 'Hogar': '#E50A26', 'Empresa': '#861456',
 }
 const TIPOS_DEFAULT  = ['Constructor', 'Arquitecto', 'Hogar', 'Empresa']
 const CANALES_DEFAULT = ['Referido', 'Visita a Tienda', 'WhatsApp', 'Redes Sociales', 'Campaña Pagada', 'Otro']
@@ -281,7 +281,7 @@ function ContactosContent() {
                 )}
                 <button
                   className="btn"
-                  style={{ background: '#DC2626', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: 5 }}
+                  style={{ background: 'var(--danger)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', gap: 5 }}
                   onClick={() => setConfirmBulkDel(true)}
                 >
                   <Ico.trash /> Eliminar {checkedIds.size}
@@ -289,13 +289,13 @@ function ContactosContent() {
               </div>
             ) : (
               <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 13, color: '#DC2626', fontWeight: 500 }}>
+                <span style={{ fontSize: 13, color: 'var(--danger)', fontWeight: 600 }}>
                   ¿Eliminar {checkedIds.size} contacto{checkedIds.size !== 1 ? 's' : ''}? No se puede deshacer.
                 </span>
                 <button className="btn btn-ghost" onClick={() => setConfirmBulkDel(false)} disabled={bulkDeleting}>No</button>
                 <button
                   className="btn"
-                  style={{ background: '#DC2626', color: '#fff', border: 'none', minWidth: 100 }}
+                  style={{ background: 'var(--danger)', color: '#fff', border: 'none', minWidth: 100 }}
                   onClick={handleBulkDelete}
                   disabled={bulkDeleting}
                 >
@@ -351,10 +351,10 @@ function ContactosContent() {
           <button
             className={`filter-pill ${showOnlyLandlines ? 'active' : ''}`}
             onClick={() => setShowOnlyLandlines(v => !v)}
-            style={showOnlyLandlines ? { borderColor: '#DC2626', background: '#FEF2F2', color: '#DC2626' } : { borderColor: 'var(--ipesa-rose)', color: 'var(--ipesa-rose)' }}
+            style={showOnlyLandlines ? { borderColor: 'var(--danger)', background: 'var(--danger-soft)', color: 'var(--danger)' } : { borderColor: 'var(--ipesa-rose)', color: 'var(--ipesa-rose)' }}
           >
             📞 Fijos detectados
-            <span className="count" style={showOnlyLandlines ? { background: '#FEF2F2', color: '#DC2626' } : undefined}>{landlineCount}</span>
+            <span className="count" style={showOnlyLandlines ? { background: 'var(--danger-soft)', color: 'var(--danger)' } : undefined}>{landlineCount}</span>
           </button>
         )}
         <div style={{ marginLeft: 'auto' }} className="search-input">
@@ -425,7 +425,7 @@ function ContactosContent() {
                     <td data-label="Teléfono" className="cell-mono">
                       {fmtPhone(c.phone)}
                       {!isMobilePhone(c.phone) && (
-                        <span style={{ marginLeft: 6, fontSize: 10, background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-sans)', fontWeight: 600, verticalAlign: 'middle' }}>Fijo</span>
+                        <span style={{ marginLeft: 6, fontSize: 10, background: 'var(--danger-soft)', color: 'var(--danger)', border: '1px solid #F7C1C9', borderRadius: 4, padding: '1px 5px', fontFamily: 'var(--font-sans)', fontWeight: 600, verticalAlign: 'middle' }}>Fijo</span>
                       )}
                     </td>
                     <td data-label="Canal">
@@ -680,13 +680,13 @@ function ContactDetail({
 
               {/* Zona peligrosa */}
               {confirmDel && (
-                <div className="detail-section" style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '14px 16px' }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 600, color: '#DC2626', marginBottom: 6 }}>¿Eliminar este contacto?</div>
-                  <div style={{ fontSize: 12.5, color: '#7F1D1D', marginBottom: 12 }}>Esta acción no se puede deshacer. Se eliminará permanentemente.</div>
+                <div className="detail-section" style={{ background: 'var(--danger-soft)', border: '1px solid #F7C1C9', borderRadius: 10, padding: '14px 16px' }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--danger)', marginBottom: 6 }}>¿Eliminar este contacto?</div>
+                  <div style={{ fontSize: 12.5, color: '#7A0A18', marginBottom: 12 }}>Esta acción no se puede deshacer. Se eliminará permanentemente.</div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button className="btn btn-ghost" onClick={() => setConfirmDel(false)} style={{ flex: 1 }}>Cancelar</button>
                     <button onClick={handleDelete} disabled={deleting}
-                      style={{ flex: 1, padding: '9px 0', background: '#DC2626', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 13.5, cursor: 'pointer' }}>
+                      style={{ flex: 1, padding: '9px 0', background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: 9, fontWeight: 600, fontSize: 13.5, cursor: 'pointer' }}>
                       {deleting ? 'Eliminando…' : 'Sí, eliminar'}
                     </button>
                   </div>
@@ -1136,15 +1136,15 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
           {step === 'preview' && preview && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div style={{ padding: '14px 16px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, textAlign: 'center' }}>
-                  <div style={{ fontSize: 30, fontWeight: 700, color: '#16A34A', lineHeight: 1 }}>{preview.valid.length}</div>
-                  <div style={{ fontSize: 12, color: '#166534', marginTop: 4, fontWeight: 600 }}>Celulares válidos</div>
-                  <div style={{ fontSize: 11, color: '#4ADE80', marginTop: 2 }}>Se importarán ✓</div>
+                <div style={{ padding: '14px 16px', background: 'var(--success-soft)', border: '1px solid #BDE7C9', borderRadius: 10, textAlign: 'center' }}>
+                  <div style={{ fontSize: 30, fontWeight: 700, color: 'var(--success-fill)', lineHeight: 1 }}>{preview.valid.length}</div>
+                  <div style={{ fontSize: 12, color: 'var(--success)', marginTop: 4, fontWeight: 600 }}>Celulares válidos</div>
+                  <div style={{ fontSize: 11, color: 'var(--success-fill)', marginTop: 2 }}>Se importarán ✓</div>
                 </div>
-                <div style={{ padding: '14px 16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, textAlign: 'center' }}>
-                  <div style={{ fontSize: 30, fontWeight: 700, color: '#DC2626', lineHeight: 1 }}>{preview.landlines + preview.invalid + preview.noName}</div>
-                  <div style={{ fontSize: 12, color: '#7F1D1D', marginTop: 4, fontWeight: 600 }}>Se omitirán</div>
-                  <div style={{ fontSize: 11, color: '#FCA5A5', marginTop: 2 }}>No aptos para SMS</div>
+                <div style={{ padding: '14px 16px', background: 'var(--danger-soft)', border: '1px solid #F7C1C9', borderRadius: 10, textAlign: 'center' }}>
+                  <div style={{ fontSize: 30, fontWeight: 700, color: 'var(--danger)', lineHeight: 1 }}>{preview.landlines + preview.invalid + preview.noName}</div>
+                  <div style={{ fontSize: 12, color: '#7A0A18', marginTop: 4, fontWeight: 600 }}>Se omitirán</div>
+                  <div style={{ fontSize: 11, color: '#E8798A', marginTop: 2 }}>No aptos para SMS</div>
                 </div>
               </div>
               {(preview.landlines > 0 || preview.invalid > 0 || preview.noName > 0) && (
@@ -1155,7 +1155,7 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
                 </div>
               )}
               {preview.valid.length === 0 && (
-                <div style={{ padding: '12px', background: '#FEF2F2', borderRadius: 9, fontSize: 13, color: '#DC2626', textAlign: 'center', fontWeight: 500 }}>
+                <div style={{ padding: '12px', background: 'var(--danger-soft)', borderRadius: 9, fontSize: 13, color: 'var(--danger)', textAlign: 'center', fontWeight: 500 }}>
                   No hay contactos válidos para importar en este archivo.
                 </div>
               )}

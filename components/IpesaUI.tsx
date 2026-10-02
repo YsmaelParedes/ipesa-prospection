@@ -5,17 +5,21 @@ import { createPortal } from 'react-dom'
 
 /* ── Helpers visuales compartidos entre todas las páginas V2 ── */
 
-const PALETTE = ['#EE5A24', '#1F3A5F', '#3D8B5C', '#F2B544', '#B6589C', '#C44D4D']
+// Avatares: tonos del remolino del logo, oscurecidos para que las iniciales
+// blancas se lean bien
+const PALETTE = ['#E50A26', '#C9116F', '#00839C', '#1E7A3C', '#273DC5', '#861456', '#0F7462', '#2D2D2C']
 
 /* Paleta para chips dinámicos: fondo suave + texto oscuro legible */
 const CHIP_PALETTES = [
-  { bg: '#FBE6DA', color: '#8A2F0A' },
-  { bg: '#DBEADF', color: '#1F5536' },
-  { bg: '#DCE3EE', color: '#1F3A5F' },
-  { bg: '#FBEED2', color: '#8A6308' },
-  { bg: '#F2DAEB', color: '#7B2A5D' },
-  { bg: '#DAEEDF', color: '#1B6634' },
-  { bg: '#E0D8F0', color: '#4A2D8A' },
+  { bg: '#FFE9EC', color: '#C2071E' },  // rojo IPESA
+  { bg: '#FCE6F2', color: '#A80F60' },  // magenta
+  { bg: '#DFF6FB', color: '#006E87' },  // cian
+  { bg: '#E0F6F1', color: '#0F7462' },  // turquesa
+  { bg: '#E5F6E9', color: '#1E7A3C' },  // verde
+  { bg: '#F0F8E6', color: '#4A7417' },  // lima
+  { bg: '#FFF4D4', color: '#8A5F00' },  // amarillo
+  { bg: '#E7EAFA', color: '#24389F' },  // azul
+  { bg: '#F6E4EE', color: '#861456' },  // morado
 ]
 
 /** Color determinístico a partir del string del valor */
@@ -174,7 +178,27 @@ export function TipoChip({ value, small }: { value: string; small?: boolean }) {
 }
 
 /* Color determinístico para segmentos dinámicos en gráficas */
-const SEG_COLORS = ['#EE5A24', '#1F3A5F', '#3D8B5C', '#F2B544', '#B6589C', '#C44D4D', '#80766B']
+// Hex (no variables CSS): se usan como atributos de SVG en la dona
+const SEG_COLORS = ['#E50A26', '#00BBD9', '#2FA855', '#F2B300', '#E51585', '#273DC5', '#34C0A6', '#8F8F8E']
+/** Color de un canal de adquisición para gráficas (por palabra clave, si no por hash) */
+const CANAL_COLOR_KEYS: Array<[string[], string]> = [
+  [['whatsapp', 'whats app', 'wsp'], '#25D366'],
+  [['facebook', 'instagram', 'tiktok', 'redes'], '#E51585'],
+  [['referido', 'recomend'], '#2FA855'],
+  [['tienda', 'visita', 'mostrador'], '#E50A26'],
+  [['campaña', 'campana', 'publicidad', 'anuncio', 'ads'], '#273DC5'],
+  [['google', 'web', 'internet'], '#00BBD9'],
+  [['otro'], '#8F8F8E'],
+]
+export function canalColor(name: string) {
+  const n = norm(name)
+  const found = CANAL_COLOR_KEYS.find(([keys]) => keys.some(k => n.includes(k)))
+  if (found) return found[1]
+  let h = 5381
+  for (let i = 0; i < n.length; i++) h = ((h << 5) + h) ^ n.charCodeAt(i)
+  return SEG_COLORS[Math.abs(h) % SEG_COLORS.length]
+}
+
 export function segColor(index: number) {
   return SEG_COLORS[index % SEG_COLORS.length]
 }
@@ -357,7 +381,7 @@ export function Donut({ data, size = 140 }: { data: { label: string; value: numb
   let acc = 0
   return (
     <svg viewBox="0 0 140 140" className="donut" style={{ width: size, height: size }}>
-      <circle cx="70" cy="70" r={r} fill="none" stroke="#F4EFE4" strokeWidth="18" />
+      <circle cx="70" cy="70" r={r} fill="none" stroke="#EFEFF1" strokeWidth="18" />
       {data.map((d, i) => {
         const frac = d.value / total
         const len = c * frac
@@ -373,8 +397,8 @@ export function Donut({ data, size = 140 }: { data: { label: string; value: numb
           />
         )
       })}
-      <text x="70" y="68" textAnchor="middle" fontFamily="var(--font-display)" fontWeight="700" fontSize="26" fill="#1A1410">{total}</text>
-      <text x="70" y="86" textAnchor="middle" fontSize="10" fill="#80766B" letterSpacing="0.08em">TOTAL</text>
+      <text x="70" y="68" textAnchor="middle" fontFamily="var(--font-display)" fontWeight="700" fontSize="26" fill="#131313">{total}</text>
+      <text x="70" y="86" textAnchor="middle" fontSize="10" fill="#6B6B6A" letterSpacing="0.08em">TOTAL</text>
     </svg>
   )
 }
