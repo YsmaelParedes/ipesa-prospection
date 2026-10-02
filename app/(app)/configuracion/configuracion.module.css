@@ -89,6 +89,7 @@
   background: conic-gradient(var(--paper) 25%, #fff 0 50%, var(--paper) 0 75%, #fff 0) 0 0 / 16px 16px;
 }
 .logoPreview img { max-width: 100%; max-height: 78px; object-fit: contain; }
+.logoPreviewBrand { font-size: 22px; }
 .logoSide { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 10px; }
 .logoSide p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

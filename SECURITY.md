@@ -1,4 +1,4 @@
-# Seguridad — IPESA CRM
+# Seguridad — CRM Pinturas
 
 **Última auditoría:** 2 de octubre de 2026 (multi-tienda / SaaS)
 **Alcance:** rutas de `app/api/*`, `proxy.ts`, páginas y componentes, configuración (Next.js
@@ -18,7 +18,7 @@ Cloud API y Web Push, y el aislamiento entre tiendas.
 - **La base también lo impide**: llaves foráneas compuestas `(store_id, id)` entre contactos,
   leads, actividades, recordatorios y mensajes, así que un registro no puede apuntar a datos
   de otra tienda aunque hubiera un error en el código.
-- **La tienda activa es solo una preferencia** (cookie `ipesa_store`, `httpOnly`): se valida
+- **La tienda activa es solo una preferencia** (cookie `crm_store`, `httpOnly`): se valida
   contra las membresías en cada petición; cambiarla a mano no da acceso a nada.
 - **Roles por tienda**: dueño > administrador > vendedor. Un administrador no puede tocar al
   dueño ni a otros administradores; nadie puede cambiar su propio acceso.

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { APP_NAME } from '@/lib/brand'
 import type { ClientStore } from '@/lib/profile'
 import { ROLE_LABELS, type StoreRole } from '@/lib/stores'
 import { Ico, Note, Panel, Spinner, WhatsAppGlyph, api, avatarTone, copyText, cx, fmtDate, initialsOf, send, useToast } from './ui'
@@ -96,7 +97,7 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
     if (newLink && await copyText(newLink.link)) showToast('Enlace copiado')
   }
   const waShare = (link: string) => `https://wa.me/?text=${encodeURIComponent(
-    `Hola, te invito a unirte al equipo de ${store.name} en IPESA CRM. Crea tu acceso aquí: ${link}`,
+    `Hola, te invito a unirte al equipo de ${store.name} en ${APP_NAME}. Crea tu acceso aquí: ${link}`,
   )}`
 
   const pending = invites.filter(i => i.status === 'valid' || i.status === 'expired')

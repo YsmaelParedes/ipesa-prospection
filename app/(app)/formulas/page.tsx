@@ -154,8 +154,8 @@ export default function FormulasPage() {
                   onClick={() => setSelected(c)}
                   style={{
                     textAlign: 'left', padding: '10px 12px', borderRadius: 9, cursor: 'pointer',
-                    border: `1px solid ${isActive ? 'var(--ipesa-orange)' : 'var(--line)'}`,
-                    background: isActive ? 'var(--ipesa-orange-soft)' : 'var(--card)',
+                    border: `1px solid ${isActive ? 'var(--brand)' : 'var(--line)'}`,
+                    background: isActive ? 'var(--brand-soft)' : 'var(--card)',
                     display: 'flex', alignItems: 'center', gap: 8,
                   }}
                 >
@@ -166,7 +166,7 @@ export default function FormulasPage() {
                   </div>
                   <span style={{ fontSize: 11, color: 'var(--muted-2)' }}>Base {c.base}</span>
                   {hasWarning && (
-                    <span title="Alguna cantidad de este color necesita verificarse contra el PDF original" style={{ color: 'var(--ipesa-rose)', fontSize: 14 }}>⚠</span>
+                    <span title="Alguna cantidad de este color necesita verificarse contra el PDF original" style={{ color: 'var(--danger)', fontSize: 14 }}>⚠</span>
                   )}
                 </button>
               )
@@ -255,7 +255,7 @@ export default function FormulasPage() {
                           <td data-label="Colorante" style={{ fontWeight: 600 }}>{cn.code}</td>
                           <td data-label="Cantidad">
                             {cn.needsReview || ml == null ? (
-                              <span style={{ color: 'var(--ipesa-rose)', fontWeight: 600 }} title="Este valor no cuadra en el documento fuente — verifica la fórmula original antes de usarla">
+                              <span style={{ color: 'var(--danger)', fontWeight: 600 }} title="Este valor no cuadra en el documento fuente — verifica la fórmula original antes de usarla">
                                 ⚠ Verificar fórmula original
                               </span>
                             ) : (

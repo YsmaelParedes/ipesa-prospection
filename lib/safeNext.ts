@@ -1,4 +1,4 @@
-const BASE = 'http://ipesa.invalid'
+const BASE = 'http://app.invalid'
 
 /**
  * Solo rutas internas ("/algo"): evita redirecciones abiertas a otros sitios.

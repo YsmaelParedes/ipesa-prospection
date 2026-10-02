@@ -1,6 +1,8 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { BrandLogo } from '@/components/Brand'
+import { APP_NAME } from '@/lib/brand'
 import { invalidateSession, type ClientStore } from '@/lib/profile'
 import { MX_STATES } from '@/lib/mexico'
 import { Ico, Note, Panel, api, cx, send, useToast } from './ui'
@@ -81,7 +83,7 @@ export function StoreTab({ store }: { store: ClientStore }) {
       await api('/api/store/logo', { method: 'DELETE' })
       setLogoUrl(null)
       invalidateSession()
-      showToast('Volviste al logo de IPESA')
+      showToast(`Volviste al logo de ${APP_NAME}`)
     } catch (err) {
       setLogoError((err as Error).message)
     } finally {
@@ -96,7 +98,7 @@ export function StoreTab({ store }: { store: ClientStore }) {
           <div className={s.formGrid}>
             <div className={cx('field', s.span2)}>
               <label htmlFor="st-name">Nombre de la sucursal</label>
-              <input id="st-name" value={form.name} onChange={set('name')} maxLength={80} required placeholder="IPESA Cholula Centro" />
+              <input id="st-name" value={form.name} onChange={set('name')} maxLength={80} required placeholder="Pinturas La Paleta" />
             </div>
             <div className="field">
               <label htmlFor="st-phone">Teléfono</label>
@@ -131,18 +133,20 @@ export function StoreTab({ store }: { store: ClientStore }) {
         </form>
       </Panel>
 
-      <Panel icon={Ico.image} tone="tCyan" title="Logo de la sucursal" subtitle="Reemplaza al logo de IPESA en el menú de tu equipo y en las invitaciones.">
+      <Panel icon={Ico.image} tone="tCyan" title="Logo de la sucursal" subtitle={`Reemplaza al logo de ${APP_NAME} en el menú de tu equipo y en las invitaciones.`}>
         <div className={s.logoRow}>
           <div className={s.logoPreview}>
-            <img src={logoUrl || '/ipesa-logo.png'} alt={logoUrl ? `Logo de ${store.name}` : 'Logo de IPESA Pinturas'} />
+            {logoUrl
+              ? <img src={logoUrl} alt={`Logo de ${store.name}`} />
+              : <BrandLogo className={s.logoPreviewBrand} />}
           </div>
           <div className={s.logoSide}>
-            <p>{logoUrl ? 'Este es el logo que ve tu equipo.' : 'Estás usando el logo de IPESA.'} Funciona mejor horizontal, con fondo blanco o transparente. PNG, JPG o WebP de hasta 2 MB.</p>
+            <p>{logoUrl ? 'Este es el logo que ve tu equipo.' : `Estás usando el logo de ${APP_NAME}.`} Funciona mejor horizontal, con fondo blanco o transparente. PNG, JPG o WebP de hasta 2 MB.</p>
             <div className={s.row}>
               <button type="button" className="btn btn-dark" onClick={() => fileRef.current?.click()} disabled={logoBusy}>
                 <Ico.upload style={{ width: 15, height: 15 }} />{logoBusy ? 'Subiendo…' : logoUrl ? 'Cambiar logo' : 'Subir logo'}
               </button>
-              {logoUrl && <button type="button" className="btn btn-ghost" onClick={removeLogo} disabled={logoBusy}>Usar el de IPESA</button>}
+              {logoUrl && <button type="button" className="btn btn-ghost" onClick={removeLogo} disabled={logoBusy}>Quitar logo</button>}
             </div>
             {logoError && <div className={s.error}>{logoError}</div>}
             <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={e => upload(e.target.files?.[0])} />

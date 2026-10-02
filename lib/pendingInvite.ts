@@ -4,7 +4,7 @@
  * de ofrecerle crear una tienda nueva. Solo es una comodidad del navegador;
  * aceptar sigue exigiendo el enlace y una sesión con ese correo.
  */
-const KEY = 'ipesa:pendingInvite'
+const KEY = 'crm:pendingInvite'
 
 export function rememberPendingInvite(token: string) {
   try { localStorage.setItem(KEY, token) } catch {}

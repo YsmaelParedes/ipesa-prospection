@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { BrandLogo } from '@/components/Brand'
 
 /* Piezas compartidas de las pantallas de acceso (login, registro, recuperar…) */
 
@@ -20,7 +21,7 @@ export const AuthIcon = {
 export function AuthHeader({ title, subtitle }: { title: string; subtitle?: React.ReactNode }) {
   return (
     <div className="auth-head">
-      <img src="/ipesa-logo.png" alt="IPESA Pinturas" width={480} height={209} className="auth-logo-mobile" />
+      <BrandLogo className="auth-logo-mobile" />
       <h1 className="auth-title">{title}</h1>
       {subtitle && <p className="auth-sub">{subtitle}</p>}
     </div>

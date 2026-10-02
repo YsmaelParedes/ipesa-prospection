@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { WHATSAPP_TEMPLATES, type WhatsAppTemplateDef } from '@/lib/whatsappTemplates'
+import type { WhatsAppTemplateDef } from '@/lib/whatsappTemplates'
 
 const ImageIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22, color: 'var(--muted-2)' }}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
@@ -25,8 +25,8 @@ let templatesPromise: Promise<{ templates: WhatsAppTemplateDef[]; error: string 
 function loadTemplates() {
   templatesPromise ??= fetch('/api/whatsapp/templates')
     .then(r => r.json())
-    .then(d => ({ templates: d.templates?.length ? d.templates : WHATSAPP_TEMPLATES, error: d.error ?? '' }))
-    .catch(() => { templatesPromise = null; return { templates: WHATSAPP_TEMPLATES, error: 'No se pudo consultar Meta, usando catálogo local' } })
+    .then(d => ({ templates: d.templates ?? [], error: d.error ?? '' }))
+    .catch(() => { templatesPromise = null; return { templates: [], error: 'No se pudieron consultar las plantillas en Meta' } })
   return templatesPromise
 }
 
@@ -68,7 +68,7 @@ export function WhatsAppTemplatePicker({
   const hasImageReady = !template?.hasImageHeader || !!savedImageUrl
   const ready = !!template && !template.unsupported && hasImageReady && !uploadingImage && !checkingImage && !missingValue
 
-  // Plantillas aprobadas en vivo desde Meta; si falla cae al catálogo local.
+  // Plantillas aprobadas en vivo desde Meta; si falla se muestra el motivo.
   useEffect(() => {
     loadTemplates().then(({ templates: list, error }) => {
       setTemplates(list)
@@ -138,7 +138,7 @@ export function WhatsAppTemplatePicker({
         {loadingTemplates ? (
           <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Consultando plantillas aprobadas en Meta…</div>
         ) : templates.length === 0 ? (
-          <div style={{ fontSize: 12.5, color: 'var(--ipesa-rose)' }}>No hay plantillas aprobadas disponibles.</div>
+          <div style={{ fontSize: 12.5, color: 'var(--danger)' }}>No hay plantillas aprobadas disponibles.</div>
         ) : (
           <select value={templateKey} onChange={e => setTemplateKey(e.target.value)}>
             {templates.map(t => (
@@ -185,7 +185,7 @@ export function WhatsAppTemplatePicker({
                   <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Revisando…</div>
                 ) : savedImageUrl && !replacingImage ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12.5, color: 'var(--ipesa-green)', fontWeight: 600 }}>✓ Ya guardada, se reutiliza automáticamente</span>
+                    <span style={{ fontSize: 12.5, color: 'var(--success)', fontWeight: 600 }}>✓ Ya guardada, se reutiliza automáticamente</span>
                     <button type="button" onClick={() => setReplacingImage(true)} className="wa-link-btn">Cambiar</button>
                   </div>
                 ) : (
@@ -223,7 +223,7 @@ export function WhatsAppTemplatePicker({
         </div>
       )}
 
-      {uploadError && <div style={{ color: 'var(--ipesa-rose)', fontSize: 12.5, marginTop: 12 }}>{uploadError}</div>}
+      {uploadError && <div style={{ color: 'var(--danger)', fontSize: 12.5, marginTop: 12 }}>{uploadError}</div>}
     </div>
   )
 }

@@ -39,7 +39,7 @@ export type Session = {
   platformAdmin: boolean
 }
 
-const EVENT = 'ipesa:session-changed'
+const EVENT = 'crm:session-changed'
 let sessionPromise: Promise<Session | null> | null = null
 
 export function loadSession(): Promise<Session | null> {

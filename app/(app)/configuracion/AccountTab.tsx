@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { PasswordField } from '@/components/AuthUI'
+import { BRAND_MARK } from '@/lib/brand'
 import { invalidateSession, type Session } from '@/lib/profile'
 import { ROLE_LABELS } from '@/lib/stores'
 import { signOut } from '@/lib/signOut'
@@ -97,7 +98,7 @@ export function AccountTab({ session }: { session: Session }) {
         <div className={s.stores}>
           {session.stores.map(st => (
             <div key={st.id} className={s.storeRow}>
-              <img src={st.logoUrl || '/ipesa-logo.png'} alt="" />
+              <img src={st.logoUrl || BRAND_MARK} alt="" />
               <strong>{st.name}</strong>
               <span className={cx(s.badge, st.role === 'owner' ? s.bBrand : st.role === 'admin' ? s.bTrial : s.bMuted)}>{ROLE_LABELS[st.role]}</span>
               {st.id === session.store?.id && <span className={cx(s.badge, s.bActive)}>Activa</span>}

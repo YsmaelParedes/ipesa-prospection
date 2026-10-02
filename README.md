@@ -1,14 +1,24 @@
-# IPESA CRM
+# CRM Pinturas
 
-CRM en la nube para las **tiendas IPESA Pinturas**: contactos, pipeline de leads,
+CRM en la nube para **tiendas de pintura**: contactos, pipeline de leads,
 recordatorios con notificaciones push, fórmulas de igualación de color y una bandeja de
 **WhatsApp Business** integrada al CRM (chat, plantillas y campañas). Se instala como PWA
 en el celular.
 
-Es **multi-tienda (SaaS)**: cada sucursal se registra sola, prueba 14 días gratis y tiene
+Es **multi-tienda (SaaS)**: cada tienda se registra sola, prueba 14 días gratis y tiene
 su propio equipo, logo, herramientas, catálogos y número de WhatsApp. La información de
-cada tienda está aislada de las demás. La tienda original, **IPESA Lomas de Angelópolis**,
-conserva todos sus datos.
+cada tienda está aislada de las demás. La tienda original (la que existía antes de la
+versión multi-tienda) conserva todos sus datos.
+
+## Marca
+
+- Nombre y frase: `lib/brand.ts` (`APP_NAME`, `APP_TAGLINE`). También están escritos a mano
+  en `public/manifest.json` y `public/sw.js`, que son estáticos.
+- Logo: `public/brand-mark.svg` (gota de pintura con la paleta de la app) y
+  `components/Brand.tsx` (gota + nombre).
+- Íconos de la PWA y favicon: se generan desde la gota con
+  `node scripts/generate-brand-icons.mjs`; después sube `CACHE_NAME` en `public/sw.js`.
+- Paleta: variables de `:root` en `app/globals.css` (`--brand`, `--spectrum`, `--c-*`).
 
 ## Stack
 
@@ -48,7 +58,7 @@ npm run build     # compila para producción (lo mismo que corre Vercel)
 | `NEXT_PUBLIC_LEGAL_NAME` | Para vender | Razón social o nombre del responsable en Términos y Aviso de privacidad |
 | `NEXT_PUBLIC_LEGAL_ADDRESS` | Para vender | Domicilio del responsable |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | Para vender | Correo de contacto (derechos ARCO, activación de planes) |
-| `WHATSAPP_*` | Solo tienda original | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_ACCOUNT_ID`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN` y `WHATSAPP_APP_SECRET`: el número que ya usaba IPESA Lomas de Angelópolis. **Sin `WHATSAPP_APP_SECRET` el webhook rechaza los mensajes entrantes.** Las tiendas nuevas capturan sus credenciales en la app |
+| `WHATSAPP_*` | Solo tienda original | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_ACCOUNT_ID`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN` y `WHATSAPP_APP_SECRET`: el número que ya usaba la tienda original. **Sin `WHATSAPP_APP_SECRET` el webhook rechaza los mensajes entrantes.** Las tiendas nuevas capturan sus credenciales en la app |
 | `WHATSAPP_GRAPH_VERSION` | No | Versión de Graph API (por defecto `v21.0`) |
 
 ## Supabase Auth (registro, confirmación y recuperación)
@@ -154,10 +164,10 @@ app/
   bienvenida/     asistente de alta de una tienda
   auth/confirm/   destino de los enlaces de los correos
   api/            rutas del servidor (datos, tiendas, equipo, WhatsApp, push, cron, webhooks, auth)
-components/       AppShell (navegación), AuthUI, IpesaUI y componentes de WhatsApp
+components/       AppShell (navegación), AuthUI, Brand (logo), CrmUI y componentes de WhatsApp
 lib/              tiendas y planes, Supabase, cifrado, invitaciones, validación, WhatsApp y push
 proxy.ts          páginas públicas/privadas, CSRF y límite de peticiones por IP en /api
-public/           service worker, manifest, íconos de la PWA y logos
+public/           service worker, manifest, íconos de la PWA, la gota de la marca y logos de tiendas
 supabase/         esquema y migraciones
 ```
 

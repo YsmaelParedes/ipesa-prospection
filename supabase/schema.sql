@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- IPESA CRM — esquema de Supabase (multi-tienda), foto al 2026-10-03
+-- CRM Pinturas — esquema de Supabase (multi-tienda), foto al 2026-10-03
 --
 -- Generado con pg_dump (solo esquema "public") a partir de una base que corre
 -- el esquema anterior + las migraciones 20261003120000 … 20261003120400, es

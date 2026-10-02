@@ -4,9 +4,7 @@
 
 .top { position: sticky; top: 0; z-index: 40; background: rgba(255, 255, 255, .88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
 .topInner { max-width: 1160px; margin: 0 auto; padding: 0 28px; height: 66px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.brand { display: flex; align-items: center; gap: 9px; }
-.brand img { height: 36px; width: auto; display: block; }
-.brand span { font-family: var(--font-display); font-size: 11px; font-weight: 800; letter-spacing: .14em; padding: 3px 7px; border-radius: 6px; background: var(--ink); color: #fff; }
+.brand { display: flex; align-items: center; font-size: 21px; }
 .topNav { display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; }
 .topNav a { padding: 8px 12px; border-radius: 9px; color: var(--ink-3); transition: background .14s, color .14s; }
 .topNav a:hover { background: var(--paper); color: var(--ink); }
@@ -57,7 +55,7 @@
 }
 @media (max-width: 600px) {
   .topInner { padding: 0 16px; height: 58px; }
-  .brand img { height: 30px; }
+  .brand { font-size: 18px; }
   .topNav a:not(.topCta) { display: none; }
   .main { padding: 0 18px 56px; }
   .hero { padding: 40px 0 28px; margin-bottom: 28px; }

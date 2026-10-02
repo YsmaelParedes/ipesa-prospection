@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { APP_NAME } from '@/lib/brand'
 import { getServerSupabase, requireUser } from '@/lib/supabase-server'
 import { configureWebPush, sendPushToSubscriptions } from '@/lib/push'
 import { serverError } from '@/lib/validation'
@@ -26,10 +27,10 @@ export async function POST() {
   }
 
   const result = await sendPushToSubscriptions(subs, {
-    title: '🔔 IPESA — Prueba exitosa',
+    title: `🔔 ${APP_NAME} — Prueba exitosa`,
     body:  'Las notificaciones push están funcionando correctamente.',
     url:   '/recordatorios',
-    tag:   'ipesa-test',
+    tag:   'crm-test',
   })
   return NextResponse.json({ sent: result.sent, total: subs.length, expired: result.expired.length })
 }

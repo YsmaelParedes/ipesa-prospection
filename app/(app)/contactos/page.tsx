@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Avatar, TipoChip, CanalChip, FilterDropdown, EstadoChip, fmtDateLong, fmtPhone, normalizePhone, isMobilePhone } from '@/components/IpesaUI'
+import { Avatar, TipoChip, CanalChip, FilterDropdown, EstadoChip, fmtDateLong, fmtPhone, normalizePhone, isMobilePhone } from '@/components/CrmUI'
 import { getUserRole } from '@/lib/profile'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
 import { useWhatsAppCampaignQuota, CampaignQuotaNote } from '@/components/WhatsAppCampaignQuota'
@@ -19,7 +19,7 @@ const Ico = {
   upload:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>,
   download:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>,
   chevron: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--muted-2)' }}><path d="m9 18 6-6-6-6"/></svg>,
-  check:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--ipesa-yellow)' }}><path d="m5 13 4 4L19 7"/></svg>,
+  check:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--warning-fill)' }}><path d="m5 13 4 4L19 7"/></svg>,
   edit:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
   trash:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>,
   xmark:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><path d="M18 6 6 18M6 6l12 12"/></svg>,
@@ -59,7 +59,7 @@ function SelectField({ label, value, options, onChange, required, placeholder }:
         onChange={e => onChange(e.target.value)}
         style={{
           width: '100%', padding: '10px 12px', borderRadius: 9,
-          border: `1px solid ${isEmpty ? 'var(--ipesa-rose)' : 'var(--line)'}`,
+          border: `1px solid ${isEmpty ? 'var(--danger)' : 'var(--line)'}`,
           background: 'var(--card)', fontSize: 13.5, outline: 'none',
           color: value ? 'var(--ink)' : 'var(--muted)',
         }}>
@@ -67,7 +67,7 @@ function SelectField({ label, value, options, onChange, required, placeholder }:
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
       {isEmpty && (
-        <div style={{ color: 'var(--ipesa-rose)', fontSize: 11.5, marginTop: 4 }}>
+        <div style={{ color: 'var(--danger)', fontSize: 11.5, marginTop: 4 }}>
           Este campo es obligatorio
         </div>
       )}
@@ -146,14 +146,14 @@ function ContactosContent() {
   /* Escuchar búsqueda global del topbar */
   useEffect(() => {
     const h = (e: Event) => setSearch((e as CustomEvent).detail ?? '')
-    window.addEventListener('ipesa:search', h)
-    return () => window.removeEventListener('ipesa:search', h)
+    window.addEventListener('crm:search', h)
+    return () => window.removeEventListener('crm:search', h)
   }, [])
 
   useEffect(() => {
     const h = () => setShowNew(true)
-    window.addEventListener('ipesa:new-contact', h)
-    return () => window.removeEventListener('ipesa:new-contact', h)
+    window.addEventListener('crm:new-contact', h)
+    return () => window.removeEventListener('crm:new-contact', h)
   }, [])
 
   // Cálculos derivados memoizados: con cientos de contactos, recalcularlos en
@@ -351,7 +351,7 @@ function ContactosContent() {
           <button
             className={`filter-pill ${showOnlyLandlines ? 'active' : ''}`}
             onClick={() => setShowOnlyLandlines(v => !v)}
-            style={showOnlyLandlines ? { borderColor: 'var(--danger)', background: 'var(--danger-soft)', color: 'var(--danger)' } : { borderColor: 'var(--ipesa-rose)', color: 'var(--ipesa-rose)' }}
+            style={showOnlyLandlines ? { borderColor: 'var(--danger)', background: 'var(--danger-soft)', color: 'var(--danger)' } : { borderColor: 'var(--danger)', color: 'var(--danger)' }}
           >
             📞 Fijos detectados
             <span className="count" style={showOnlyLandlines ? { background: 'var(--danger-soft)', color: 'var(--danger)' } : undefined}>{landlineCount}</span>
@@ -365,7 +365,7 @@ function ContactosContent() {
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
-          <div style={{ width: 32, height: 32, border: '3px solid var(--line)', borderTopColor: 'var(--ipesa-orange)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+          <div style={{ width: 32, height: 32, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--muted)', fontSize: 13 }}>
@@ -382,7 +382,7 @@ function ContactosContent() {
                     checked={allFilteredChecked}
                     onChange={toggleAll}
                     title="Seleccionar todos"
-                    style={{ width: 15, height: 15, accentColor: 'var(--ipesa-orange)', cursor: 'pointer', display: 'block', margin: '0 auto' }}
+                    style={{ width: 15, height: 15, accentColor: 'var(--brand)', cursor: 'pointer', display: 'block', margin: '0 auto' }}
                   />
                 </th>
                 <th>Nombre</th>
@@ -410,7 +410,7 @@ function ContactosContent() {
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => {}}
-                        style={{ width: 15, height: 15, accentColor: 'var(--ipesa-orange)', cursor: 'pointer', display: 'block', margin: '0 auto', pointerEvents: 'none' }}
+                        style={{ width: 15, height: 15, accentColor: 'var(--brand)', cursor: 'pointer', display: 'block', margin: '0 auto', pointerEvents: 'none' }}
                       />
                     </td>
                     <td>
@@ -608,8 +608,8 @@ function ContactDetail({
                 <div className="field">
                   <label>Teléfono * <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(10 dígitos)</span></label>
                   <input value={editForm.phone} onChange={e => onPhoneChange(e.target.value)} maxLength={10} inputMode="numeric"
-                    style={phoneErr ? { borderColor: 'var(--ipesa-rose)' } : undefined} />
-                  {phoneErr && <div style={{ color: 'var(--ipesa-rose)', fontSize: 11.5, marginTop: 4 }}>{phoneErr}</div>}
+                    style={phoneErr ? { borderColor: 'var(--danger)' } : undefined} />
+                  {phoneErr && <div style={{ color: 'var(--danger)', fontSize: 11.5, marginTop: 4 }}>{phoneErr}</div>}
                 </div>
                 <div className="field">
                   <label>Correo</label>
@@ -632,7 +632,7 @@ function ContactDetail({
               </div>
               <SelectField label="Canal de adquisición" value={editForm.acquisition_channel} options={canales} onChange={v => upd('acquisition_channel', v)} required placeholder="— Seleccionar canal —" />
               <SelectField label="Tipo de cliente" value={editForm.segment} options={tipos} onChange={v => upd('segment', v)} required placeholder="— Seleccionar tipo —" />
-              {saveError && <div style={{ color: 'var(--ipesa-rose)', fontSize: 12.5, marginTop: 4 }}>{saveError}</div>}
+              {saveError && <div style={{ color: 'var(--danger)', fontSize: 12.5, marginTop: 4 }}>{saveError}</div>}
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                 <button className="btn btn-ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>Cancelar</button>
                 <button className="btn btn-primary" disabled={!canSaveEdit || saving} onClick={handleSave} style={{ flex: 1 }}>
@@ -706,7 +706,7 @@ function ContactDetail({
             <button className="btn btn-ghost btn-ghost-call" onClick={() => { setEditing(true); setConfirmDel(false) }} style={{ color: 'var(--ink-2)' }}>
               <Ico.edit /> Editar
             </button>
-            <button className="btn btn-ghost btn-ghost-danger" onClick={() => { setConfirmDel(true); setEditing(false) }} style={{ color: 'var(--ipesa-rose)' }}>
+            <button className="btn btn-ghost btn-ghost-danger" onClick={() => { setConfirmDel(true); setEditing(false) }} style={{ color: 'var(--danger)' }}>
               <Ico.trash /> Eliminar
             </button>
           </>}
@@ -820,15 +820,15 @@ function ContactModal({
             <div className="field">
               <label>Teléfono * <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(10 dígitos)</span></label>
               <input value={form.phone} onChange={e => onPhoneChange(e.target.value)} placeholder="222 000 0000"
-                maxLength={10} inputMode="numeric" style={phoneErr ? { borderColor: 'var(--ipesa-rose)' } : undefined} />
-              {phoneErr && <div style={{ color: 'var(--ipesa-rose)', fontSize: 11.5, marginTop: 4 }}>{phoneErr}</div>}
+                maxLength={10} inputMode="numeric" style={phoneErr ? { borderColor: 'var(--danger)' } : undefined} />
+              {phoneErr && <div style={{ color: 'var(--danger)', fontSize: 11.5, marginTop: 4 }}>{phoneErr}</div>}
             </div>
             <div className="field"><label>Correo</label><input value={form.email} onChange={e => upd('email', e.target.value)} placeholder="cliente@correo.com" /></div>
           </div>
           <div className="field"><label>Empresa</label><input value={form.company} onChange={e => upd('company', e.target.value)} placeholder="Nombre de la empresa (opcional)" /></div>
           <SelectField label="Canal de adquisición" value={form.acquisition_channel} options={canales} onChange={v => upd('acquisition_channel', v)} required placeholder="— Seleccionar canal —" />
           <SelectField label="Tipo de cliente" value={form.segment} options={tipos} onChange={v => upd('segment', v)} required placeholder="— Seleccionar tipo —" />
-          {saveError && <div style={{ color: 'var(--ipesa-rose)', fontSize: 12.5, marginTop: 4 }}>{saveError}</div>}
+          {saveError && <div style={{ color: 'var(--danger)', fontSize: 12.5, marginTop: 4 }}>{saveError}</div>}
         </div>
         <div className="modal-foot">
           <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
@@ -866,7 +866,7 @@ function ExportModal({ contacts, tipos, onClose }: { contacts: any[]; tipos: str
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Contactos')
     const suffix = mode === 'segment' ? `-${segment.toLowerCase().replace(/\s+/g, '-')}` : ''
-    XLSX.writeFile(wb, `contactos-ipesa${suffix}-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    XLSX.writeFile(wb, `contactos${suffix}-${new Date().toISOString().slice(0, 10)}.xlsx`)
     onClose()
   }
 
@@ -879,15 +879,15 @@ function ExportModal({ contacts, tipos, onClose }: { contacts: any[]; tipos: str
         </div>
         <div className="modal-body">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '12px 14px', borderRadius: 9, border: `2px solid ${mode === 'all' ? 'var(--ipesa-orange)' : 'var(--line)'}`, background: mode === 'all' ? 'rgba(238,90,36,0.05)' : 'var(--card)' }}>
-              <input type="radio" checked={mode === 'all'} onChange={() => setMode('all')} style={{ accentColor: 'var(--ipesa-orange)', flexShrink: 0 }} />
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '12px 14px', borderRadius: 9, border: `2px solid ${mode === 'all' ? 'var(--brand)' : 'var(--line)'}`, background: mode === 'all' ? 'rgba(238,90,36,0.05)' : 'var(--card)' }}>
+              <input type="radio" checked={mode === 'all'} onChange={() => setMode('all')} style={{ accentColor: 'var(--brand)', flexShrink: 0 }} />
               <div>
                 <div style={{ fontWeight: 600, fontSize: 13.5 }}>Todos los contactos</div>
                 <div style={{ fontSize: 12, color: 'var(--muted)' }}>{contacts.length} contactos en total</div>
               </div>
             </label>
-            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '12px 14px', borderRadius: 9, border: `2px solid ${mode === 'segment' ? 'var(--ipesa-orange)' : 'var(--line)'}`, background: mode === 'segment' ? 'rgba(238,90,36,0.05)' : 'var(--card)' }}>
-              <input type="radio" checked={mode === 'segment'} onChange={() => setMode('segment')} style={{ accentColor: 'var(--ipesa-orange)', flexShrink: 0, marginTop: 3 }} />
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', padding: '12px 14px', borderRadius: 9, border: `2px solid ${mode === 'segment' ? 'var(--brand)' : 'var(--line)'}`, background: mode === 'segment' ? 'rgba(238,90,36,0.05)' : 'var(--card)' }}>
+              <input type="radio" checked={mode === 'segment'} onChange={() => setMode('segment')} style={{ accentColor: 'var(--brand)', flexShrink: 0, marginTop: 3 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 600, fontSize: 13.5 }}>Por segmento</div>
                 {mode === 'segment' ? (
@@ -1112,13 +1112,13 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
               <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--paper)', borderRadius: 8, fontSize: 12, color: 'var(--muted)' }}>
                 ℹ️ Solo se importarán números <strong>celulares</strong>. Los fijos y los inválidos se omiten automáticamente.
               </div>
-              {error && <div style={{ color: 'var(--ipesa-rose)', fontSize: 13, marginTop: 10 }}>{error}</div>}
+              {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginTop: 10 }}>{error}</div>}
             </>
           )}
           {step === 'map' && (
             <>
               <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14 }}>
-                Asocia las columnas del archivo <strong>({rows.length} filas)</strong> con los campos de IPESA.
+                Asocia las columnas del archivo <strong>({rows.length} filas)</strong> con los campos del CRM.
               </p>
               <div>
                 {CAMPOS_DESTINO.map(dest => (

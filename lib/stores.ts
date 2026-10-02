@@ -21,7 +21,7 @@ export const DEFAULT_MODULES: StoreModules = { whatsapp: true, campaigns: true, 
 export const MODULE_INFO: Record<StoreModule, { label: string; description: string }> = {
   whatsapp:  { label: 'WhatsApp',  description: 'Bandeja de conversaciones ligada a contactos y leads.' },
   campaigns: { label: 'Campañas',  description: 'Envío de plantillas aprobadas a varios contactos con reglas anti-bloqueo.' },
-  formulas:  { label: 'Fórmulas',  description: 'Igualación de colores Vinipesa con cantidades en mL.' },
+  formulas:  { label: 'Fórmulas',  description: 'Igualación de colores con cantidades en mL.' },
 }
 
 export const STATUS_LABELS: Record<StoreStatus, string> = {
@@ -69,7 +69,7 @@ export function trialEndsAt(from = Date.now()): string {
   return new Date(from + TRIAL_DAYS * DAY).toISOString()
 }
 
-/** "IPESA Cholula Centro" → "ipesa-cholula-centro" */
+/** "Pinturas La Paleta" → "pinturas-la-paleta" */
 export function slugify(text: string): string {
   return text
     .toLowerCase()

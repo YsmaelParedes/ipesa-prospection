@@ -23,7 +23,7 @@ async function phoneParam(params: Ctx['params']): Promise<string | null> {
  * GET /api/whatsapp/conversations/[phone][?preview=1&limit=n]
  * Hilo completo + ficha del CRM (contacto, leads visibles para el usuario)
  * + estado de la ventana de 24 h. Sin `preview` y con el encabezado
- * `x-ipesa-read: 1`, marca los entrantes como leídos (también en el WhatsApp
+ * `x-crm-read: 1`, marca los entrantes como leídos (también en el WhatsApp
  * del cliente).
  */
 export async function GET(req: NextRequest, { params }: Ctx) {
@@ -64,7 +64,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
     // Marcar como leído es un efecto secundario: solo si lo pide la bandeja con su
     // encabezado (una navegación desde otro sitio no puede agregarlo)
     let markedRead = 0
-    if (!preview && req.headers.get('x-ipesa-read') === '1') {
+    if (!preview && req.headers.get('x-crm-read') === '1') {
       const { data: marked } = await supabase.from('whatsapp_messages')
         .update({ read_at: new Date().toISOString() })
         .eq('store_id', ctx.storeId).eq('phone', phone).eq('direction', 'inbound').is('read_at', null)

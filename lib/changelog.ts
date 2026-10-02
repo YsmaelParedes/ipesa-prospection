@@ -1,3 +1,5 @@
+import { APP_NAME } from './brand'
+
 /**
  * Notas de versión — un usuario ve el modal automáticamente la primera vez
  * que entra después de que se agrega una entrada nueva (comparado contra
@@ -17,8 +19,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: '2 de octubre, 2026',
     title: 'Nueva imagen y tu tienda en la nube',
     items: [
-      'Nuevo diseño con los colores de IPESA: el rojo de la marca y el remolino de colores del logo en toda la app.',
-      'Tu tienda ahora tiene su propio espacio: IPESA Lomas de Angelópolis conserva todos sus clientes, leads y conversaciones, con su logo en el menú.',
+      `Nueva imagen: la app ahora se llama ${APP_NAME}, el CRM para tiendas de pintura, con una gota de pintura como logo y un diseño en rojo y arcoíris de colores.`,
+      'Tu tienda ahora tiene su propio espacio: conserva todos sus clientes, leads y conversaciones, separados de las demás tiendas, con su logo en el menú.',
       'Configuración renovada: datos y logo de la tienda, herramientas activas, catálogos, equipo, WhatsApp y plan, cada uno en su sección.',
       'Invita a tu equipo con un enlace personal que se comparte por WhatsApp; puedes cambiar roles o desactivar accesos cuando quieras.',
       'Nueva sección "Mi cuenta" para cambiar tu nombre y tu contraseña. Al cambiarla se cierra tu sesión en los demás dispositivos.',

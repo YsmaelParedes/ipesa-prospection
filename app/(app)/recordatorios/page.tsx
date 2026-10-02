@@ -37,8 +37,8 @@ const REM_TYPES = [
 
 const PRIORITIES = [
   { key: 'low',    label: 'Baja',    color: 'var(--muted)',         bg: 'var(--paper)' },
-  { key: 'medium', label: 'Media',   color: 'var(--ipesa-orange)',  bg: 'var(--ipesa-orange-soft)' },
-  { key: 'high',   label: 'Alta',    color: 'var(--ipesa-rose)',    bg: 'var(--ipesa-rose-soft)' },
+  { key: 'medium', label: 'Media',   color: 'var(--brand)',  bg: 'var(--brand-soft)' },
+  { key: 'high',   label: 'Alta',    color: 'var(--danger)',    bg: 'var(--danger-soft)' },
 ] as const
 
 type RType    = typeof REM_TYPES[number]['key']
@@ -269,8 +269,8 @@ function ReminderModal({
               <button key={s.label} onClick={() => setFecha(s.fn())}
                 style={{
                   padding: '6px 12px', border: '1px solid var(--line)', borderRadius: 20,
-                  fontSize: 12, fontWeight: 600, color: 'var(--ipesa-orange)',
-                  background: 'var(--ipesa-orange-soft)', cursor: 'pointer',
+                  fontSize: 12, fontWeight: 600, color: 'var(--brand)',
+                  background: 'var(--brand-soft)', cursor: 'pointer',
                 }}>
                 ⚡ {s.label}
               </button>
@@ -311,9 +311,9 @@ function ReminderModal({
         <div style={S.section}>
           <span style={S.label}>Lead asociado <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(opcional)</span></span>
           {leadId ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', border: '1px solid var(--ipesa-blue)', borderRadius: 9, background: 'var(--ipesa-blue-soft)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', border: '1px solid var(--c-cyan-ink)', borderRadius: 9, background: 'var(--c-cyan-soft)' }}>
               <Ico.lead />
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--ipesa-blue)' }}>{leadName}</span>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--c-cyan-ink)' }}>{leadName}</span>
               <button onClick={() => { setLeadId(null); setLeadName(''); setLeadQ('') }}
                 style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 16, lineHeight: 1 }}>
                 ×
@@ -417,7 +417,7 @@ function RemCard({
             {typeInfo.label}
           </span>
           {isHigh && (
-            <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--ipesa-rose)', background: 'var(--ipesa-rose-soft)', padding: '1px 7px', borderRadius: 20, marginLeft: 2 }}>
+            <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--danger)', background: 'var(--danger-soft)', padding: '1px 7px', borderRadius: 20, marginLeft: 2 }}>
               🔴 Alta
             </span>
           )}
@@ -428,7 +428,7 @@ function RemCard({
         </div>
 
         {r.lead_id && (
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--ipesa-blue)', fontWeight: 600, background: 'var(--ipesa-blue-soft)', borderRadius: 20, padding: '2px 8px', marginBottom: 4 }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--c-cyan-ink)', fontWeight: 600, background: 'var(--c-cyan-soft)', borderRadius: 20, padding: '2px 8px', marginBottom: 4 }}>
             <Ico.lead /> {r.lead_name}
           </div>
         )}
@@ -453,7 +453,7 @@ function RemCard({
         {confirmDel ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexBasis: '100%' }}>
             <button onClick={() => { onDelete(); setConfirmDel(false) }}
-              style={{ padding: '6px 10px', fontSize: 11.5, fontWeight: 700, color: '#fff', background: 'var(--ipesa-rose)', border: 'none', borderRadius: 7, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              style={{ padding: '6px 10px', fontSize: 11.5, fontWeight: 700, color: '#fff', background: 'var(--danger)', border: 'none', borderRadius: 7, cursor: 'pointer', whiteSpace: 'nowrap' }}>
               Sí, borrar
             </button>
             <button onClick={() => setConfirmDel(false)}
@@ -488,9 +488,9 @@ function RemCard({
             </button>
             {onComplete && (
               <button onClick={onComplete}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 10px', fontSize: 12, fontWeight: 700, color: '#fff', background: 'var(--ipesa-green)', border: 'none', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap', flexBasis: '100%', transition: 'transform 0.12s ease, background 0.12s ease' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 10px', fontSize: 12, fontWeight: 700, color: '#fff', background: 'var(--success)', border: 'none', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap', flexBasis: '100%', transition: 'transform 0.12s ease, background 0.12s ease' }}
                 onMouseEnter={e => (e.currentTarget.style.background = '#17602F')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'var(--ipesa-green)')}>
+                onMouseLeave={e => (e.currentTarget.style.background = 'var(--success)')}>
                 <Ico.check /> Listo
               </button>
             )}
@@ -612,7 +612,7 @@ export default function RecordatoriosPage() {
       <div className="section-head">
         <h2>Recordatorios</h2>
         {pending.length > 0 && (
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ipesa-orange)', background: 'var(--ipesa-orange-soft)', borderRadius: 20, padding: '3px 10px' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand)', background: 'var(--brand-soft)', borderRadius: 20, padding: '3px 10px' }}>
             {pending.length} pendiente{pending.length !== 1 ? 's' : ''}
           </span>
         )}
@@ -656,7 +656,7 @@ export default function RecordatoriosPage() {
       {/* Contenido */}
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
-          <div style={{ width: 28, height: 28, border: '3px solid var(--line)', borderTopColor: 'var(--ipesa-orange)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+          <div style={{ width: 28, height: 28, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         </div>
 
       ) : tab === 'pending' ? (
@@ -670,9 +670,9 @@ export default function RecordatoriosPage() {
           </div>
         ) : (
           <>
-            <RemGroup label="Vencidos"  color="var(--ipesa-rose)"   icon="🔴" items={overdue}  contactsById={contactsById} onComplete={handleComplete} onDelete={handleDelete} onEdit={r => { setEditRem(r); setShowModal(true) }} />
-            <RemGroup label="Hoy"       color="var(--ipesa-orange)" icon="🟡" items={todayRem} contactsById={contactsById} onComplete={handleComplete} onDelete={handleDelete} onEdit={r => { setEditRem(r); setShowModal(true) }} />
-            <RemGroup label="Próximos"  color="var(--ipesa-blue)"   icon="🔵" items={upcoming} contactsById={contactsById} onComplete={handleComplete} onDelete={handleDelete} onEdit={r => { setEditRem(r); setShowModal(true) }} />
+            <RemGroup label="Vencidos"  color="var(--danger)"   icon="🔴" items={overdue}  contactsById={contactsById} onComplete={handleComplete} onDelete={handleDelete} onEdit={r => { setEditRem(r); setShowModal(true) }} />
+            <RemGroup label="Hoy"       color="var(--brand)" icon="🟡" items={todayRem} contactsById={contactsById} onComplete={handleComplete} onDelete={handleDelete} onEdit={r => { setEditRem(r); setShowModal(true) }} />
+            <RemGroup label="Próximos"  color="var(--c-cyan-ink)"   icon="🔵" items={upcoming} contactsById={contactsById} onComplete={handleComplete} onDelete={handleDelete} onEdit={r => { setEditRem(r); setShowModal(true) }} />
           </>
         )
 
@@ -701,7 +701,7 @@ export default function RecordatoriosPage() {
 
       {toast && (
         <div className="toast-fixed">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--ipesa-yellow)' }}><path d="m5 13 4 4L19 7"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--warning-fill)' }}><path d="m5 13 4 4L19 7"/></svg>
           {toast}
         </div>
       )}

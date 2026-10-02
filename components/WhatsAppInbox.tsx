@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Avatar, EstadoChip, TipoChip } from '@/components/IpesaUI'
+import { Avatar, EstadoChip, TipoChip } from '@/components/CrmUI'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
 import {
   Linkified, MediaContent, StatusTicks, WaIcon, WindowBadge,
@@ -99,7 +99,7 @@ function displayName(c: { name: string | null; profileName: string | null; phone
   return c.name || (c.profileName ? `~ ${c.profileName}` : fmtPhone(c.phone))
 }
 
-const notifyUnreadChanged = () => window.dispatchEvent(new CustomEvent('ipesa:wa-unread-changed'))
+const notifyUnreadChanged = () => window.dispatchEvent(new CustomEvent('crm:wa-unread-changed'))
 
 /* ══════════════════════════════════════════════════════════════════════════
    Bandeja
@@ -168,7 +168,7 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
     if (!silent) setLoadingThread(true)
     try {
       // El encabezado pide marcar como leído (un enlace desde otro sitio no puede mandarlo)
-      const r = await fetch(`/api/whatsapp/conversations/${phone}${silent ? '?limit=60' : ''}`, { headers: { 'x-ipesa-read': '1' } })
+      const r = await fetch(`/api/whatsapp/conversations/${phone}${silent ? '?limit=60' : ''}`, { headers: { 'x-crm-read': '1' } })
       const d = await r.json()
       if (!r.ok) throw new Error(d.error)
       setThread(prev => {
@@ -553,7 +553,7 @@ function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onOpenTemplat
   const quickRef = useRef<HTMLDivElement>(null)
 
   // Borrador por conversación (se conserva al cambiar de chat)
-  const draftKey = `ipesa:wa-draft:${phone}`
+  const draftKey = `crm:wa-draft:${phone}`
   useEffect(() => {
     try { setDraft(sessionStorage.getItem(draftKey) ?? '') } catch {}
   }, [draftKey])

@@ -3,8 +3,8 @@ import { LEGAL } from '@/lib/legal'
 import { ContactEmail, LegalDoc, type LegalSection } from '../LegalDoc'
 
 export const metadata: Metadata = {
-  title: 'Aviso de privacidad · IPESA CRM',
-  description: 'Cómo IPESA CRM trata los datos personales de los usuarios y de la información que registran las tiendas.',
+  title: `Aviso de privacidad · ${LEGAL.product}`,
+  description: `Cómo ${LEGAL.product} trata los datos personales de los usuarios y de la información que registran las tiendas.`,
 }
 
 const sections: LegalSection[] = [

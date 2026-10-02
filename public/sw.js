@@ -1,14 +1,14 @@
-// ── IPESA CRM — Service Worker ────────────────────────────────────────────
-// Versión: v6 — actualizar al hacer cambios importantes (v6: íconos y colores de marca)
+// ── CRM Pinturas — Service Worker ─────────────────────────────────────────
+// Versión: v7 — actualizar al hacer cambios importantes (v7: nueva marca e íconos)
 // Estrategia: cache mínimo (solo recursos PWA esenciales + página offline).
 // Next.js ya versiona sus bundles JS/CSS con content-hash en los URLs,
 // así que no es necesario cachearlos aquí — hacerlo solo acumula basura.
-const CACHE_NAME = 'ipesa-v6'
+const CACHE_NAME = 'crm-v7'
 
 const PRECACHE = ['/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png']
 
 const OFFLINE_HTML = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sin conexión · IPESA CRM</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,sans-serif;background:#F4F4F5;color:#131313;text-align:center;padding:24px}
+<title>Sin conexión · CRM Pinturas</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,sans-serif;background:#F4F4F5;color:#131313;text-align:center;padding:24px}
 body:before{content:"";position:fixed;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#E2E415,#4EC39C,#00BBD9,#E51585,#FD0B2B)}
 h1{font-size:20px;margin:0 0 8px}p{color:#6B6B6A;margin:0 0 18px}button{background:#E50A26;color:#fff;border:0;border-radius:10px;padding:11px 18px;font-weight:700;font-size:14px}</style></head>
 <body><div><h1>Sin conexión</h1><p>Revisa tu internet e intenta de nuevo.</p><button onclick="location.reload()">Reintentar</button></div></body></html>`
@@ -59,7 +59,7 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', e => {
   if (!e.data) return
 
-  let payload = { title: 'IPESA CRM', body: 'Tienes un aviso pendiente', url: '/recordatorios', tag: '' }
+  let payload = { title: 'CRM Pinturas', body: 'Tienes un aviso pendiente', url: '/recordatorios', tag: '' }
   try { payload = { ...payload, ...e.data.json() } } catch {}
 
   e.waitUntil(
@@ -69,7 +69,7 @@ self.addEventListener('push', e => {
       badge:    '/icon-192.png',
       // Etiqueta por recordatorio/conversación: antes todas compartían la misma
       // y cada aviso nuevo reemplazaba al anterior.
-      tag:      payload.tag || `ipesa-${Date.now()}`,
+      tag:      payload.tag || `crm-${Date.now()}`,
       renotify: !!payload.tag,
       requireInteraction: payload.url === '/recordatorios',
       vibrate:  [200, 100, 200],

@@ -11,7 +11,7 @@ const PALETTE = ['#E50A26', '#C9116F', '#00839C', '#1E7A3C', '#273DC5', '#861456
 
 /* Paleta para chips dinámicos: fondo suave + texto oscuro legible */
 const CHIP_PALETTES = [
-  { bg: '#FFE9EC', color: '#C2071E' },  // rojo IPESA
+  { bg: '#FFE9EC', color: '#C2071E' },  // rojo de marca
   { bg: '#FCE6F2', color: '#A80F60' },  // magenta
   { bg: '#DFF6FB', color: '#006E87' },  // cian
   { bg: '#E0F6F1', color: '#0F7462' },  // turquesa
@@ -336,8 +336,8 @@ export function FilterDropdown({
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
                     width: '100%', padding: '8px 10px', borderRadius: 9, border: 'none', cursor: 'pointer',
-                    background: active ? 'var(--ipesa-orange-soft)' : 'transparent',
-                    color: active ? 'var(--ipesa-orange-deep)' : 'var(--ink)',
+                    background: active ? 'var(--brand-soft)' : 'transparent',
+                    color: active ? 'var(--brand-strong)' : 'var(--ink)',
                     fontSize: 13, fontWeight: active ? 700 : 500, textAlign: 'left',
                   }}
                   onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--paper)' }}
@@ -345,7 +345,7 @@ export function FilterDropdown({
                 >
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label(t)}</span>
                   {countFor && (
-                    <span style={{ fontSize: 11.5, fontWeight: 700, color: active ? 'var(--ipesa-orange-deep)' : 'var(--muted)', flexShrink: 0 }}>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: active ? 'var(--brand-strong)' : 'var(--muted)', flexShrink: 0 }}>
                       {countFor(t)}
                     </span>
                   )}
@@ -363,12 +363,12 @@ export function FilterDropdown({
 /* Icono de tendencia */
 export function TrendIcon({ up }: { up: boolean }) {
   if (up) return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13, color: 'var(--ipesa-green)' }}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13, color: 'var(--success)' }}>
       <path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/>
     </svg>
   )
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13, color: 'var(--ipesa-rose)' }}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13, color: 'var(--danger)' }}>
       <path d="m3 7 6 6 4-4 8 8"/><path d="M21 17h-7v-7"/>
     </svg>
   )

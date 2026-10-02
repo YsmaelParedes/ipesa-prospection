@@ -4,6 +4,8 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { AuthAlert, AuthField, AuthIcon } from '@/components/AuthUI'
+import { BrandLogo } from '@/components/Brand'
+import { APP_NAME } from '@/lib/brand'
 import { invalidateSession, useSession, type ClientStore } from '@/lib/profile'
 import { MODULE_INFO, ROLE_LABELS, STORE_MODULES, planOf, type StoreModule, type StoreModules } from '@/lib/stores'
 import { MX_STATES } from '@/lib/mexico'
@@ -95,7 +97,7 @@ function Wizard() {
 
   const [step, setStep]       = useState<number | null>(null)   // null = decidiendo
   const [store, setStore]     = useState<ClientStore | null>(null)
-  const [profile, setProfile] = useState<Profile>({ name: 'IPESA ', city: '', state: '', phone: '', address: '' })
+  const [profile, setProfile] = useState<Profile>({ name: '', city: '', state: '', phone: '', address: '' })
   const [modules, setModules] = useState<StoreModules>({ whatsapp: true, campaigns: true, formulas: true })
   const [invites, setInvites] = useState<Invite[]>([])
 
@@ -139,7 +141,7 @@ function Wizard() {
     <div className={s.page}>
       <div className="brand-line" aria-hidden="true" />
       <header className={s.top}>
-        <img src="/ipesa-logo.png" alt="IPESA Pinturas" width={480} height={209} className={s.logo} />
+        <BrandLogo className={s.logo} />
         <div className={s.topRight}>
           {addingStore && session.store && step === 0 && (
             <Link href="/" className={s.topLink}><Ic.back />Volver a {session.store.name}</Link>
@@ -296,13 +298,13 @@ function StoreStep({ profile, setProfile, store, addingStore, onSaved }: {
   return (
     <>
       <StepHead n={1} title={addingStore ? 'Agrega una sucursal' : 'Empecemos por tu tienda'}>
-        Así la identificará tu equipo dentro de IPESA CRM. Puedes cambiarlo después en Configuración.
+        Así la identificará tu equipo dentro de {APP_NAME}. Puedes cambiarlo después en Configuración.
       </StepHead>
       {error && <AuthAlert>{error}</AuthAlert>}
       <form onSubmit={submit} className="auth-form">
         <AuthField
           label="Nombre de la sucursal" icon={AuthIcon.store} value={profile.name} onChange={set('name')}
-          required minLength={3} maxLength={80} placeholder="IPESA Cholula Centro" autoFocus autoComplete="organization"
+          required minLength={3} maxLength={80} placeholder="Pinturas La Paleta" autoFocus autoComplete="organization"
           hint="Usa el nombre con el que te conocen tus clientes."
         />
         <div className={s.grid2}>
@@ -334,7 +336,7 @@ function StoreStep({ profile, setProfile, store, addingStore, onSaved }: {
         </Actions>
       </form>
       {!addingStore && !store && (
-        <p className={s.tip}>¿Te invitaron a trabajar en una tienda que ya usa IPESA CRM? No crees otra: abre el enlace de tu invitación.</p>
+        <p className={s.tip}>¿Te invitaron a trabajar en una tienda que ya usa {APP_NAME}? No crees otra: abre el enlace de tu invitación.</p>
       )}
     </>
   )
@@ -386,7 +388,7 @@ function LogoStep({ store, onLogo, onBack, onNext }: {
   return (
     <>
       <StepHead n={2} title="Sube el logo de tu sucursal">
-        Aparece en el menú y en las invitaciones a tu equipo. Si aún no tienes uno, usamos el de IPESA.
+        Aparece en el menú y en las invitaciones a tu equipo. Si aún no tienes uno, usamos el de {APP_NAME}.
       </StepHead>
       {error && <AuthAlert>{error}</AuthAlert>}
       <div
@@ -518,7 +520,7 @@ function TeamStep({ store, canInviteAdmins, invites, onInvite, onBack, onNext }:
     setTimeout(() => setCopied(c => (c === inv.id ? '' : c)), 2000)
   }
   const waLink = (inv: Invite) => `https://wa.me/?text=${encodeURIComponent(
-    `Hola, te invito a unirte al equipo de ${store.name} en IPESA CRM. Crea tu acceso aquí: ${inv.link}`,
+    `Hola, te invito a unirte al equipo de ${store.name} en ${APP_NAME}. Crea tu acceso aquí: ${inv.link}`,
   )}`
 
   return (
@@ -642,7 +644,9 @@ function BrandPreview({ name, logoUrl, modules, focus }: {
         <div className={s.mockBar}><i /><i /><i /></div>
         <div className={s.mockBody}>
           <div className={s.mockSide}>
-            <img src={logoUrl || '/ipesa-logo.png'} alt="" className={cx(s.mockLogo, focus === 'logo' && s.hl)} />
+            {logoUrl
+              ? <img src={logoUrl} alt="" className={cx(s.mockLogo, focus === 'logo' && s.hl)} />
+              : <BrandLogo className={cx(s.mockBrand, focus === 'logo' && s.hl)} />}
             <div className={cx(s.mockStore, focus === 'name' && s.hl)}>
               <Ic.store /><span>{name.trim() || 'Tu sucursal'}</span>
             </div>
@@ -666,7 +670,7 @@ function BrandPreview({ name, logoUrl, modules, focus }: {
       </div>
       <p className={s.previewNote}>
         {focus === 'name' && 'El nombre de tu sucursal aparece junto al logo, en el menú de toda la app.'}
-        {focus === 'logo' && 'Tu logo reemplaza al de IPESA en el menú de tu equipo.'}
+        {focus === 'logo' && `Tu logo reemplaza al de ${APP_NAME} en el menú de tu equipo.`}
         {focus === 'nav' && 'El menú muestra solo las herramientas que actives.'}
       </p>
     </div>

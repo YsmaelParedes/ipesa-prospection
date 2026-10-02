@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { BrandLogo } from '@/components/Brand'
+import { APP_NAME } from '@/lib/brand'
 import s from './legal.module.css'
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
@@ -7,9 +9,8 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
       <div className="brand-line" aria-hidden="true" />
       <header className={s.top}>
         <div className={s.topInner}>
-          <Link href="/inicio" className={s.brand} aria-label="IPESA CRM, inicio">
-            <img src="/ipesa-logo.png" alt="IPESA Pinturas" width={480} height={209} />
-            <span>CRM</span>
+          <Link href="/inicio" className={s.brand} aria-label={`${APP_NAME}, inicio`}>
+            <BrandLogo />
           </Link>
           <nav className={s.topNav} aria-label="Documentos legales">
             <Link href="/terminos">Términos</Link>
@@ -20,7 +21,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
       </header>
       {children}
       <footer className={s.footer}>
-        <span>© {new Date().getFullYear()} IPESA CRM</span>
+        <span>© {new Date().getFullYear()} {APP_NAME}</span>
         <nav aria-label="Enlaces">
           <Link href="/inicio">Inicio</Link>
           <Link href="/terminos">Términos de uso</Link>

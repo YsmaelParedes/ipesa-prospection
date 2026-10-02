@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { BrandLogo } from '@/components/Brand'
+import { APP_NAME } from '@/lib/brand'
 import { invalidateSession, useSession } from '@/lib/profile'
 import { signOut } from '@/lib/signOut'
 import { CHANGELOG, CURRENT_VERSION } from '@/lib/changelog'
@@ -163,7 +165,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   /* Notas de versión — se muestran solas la primera vez que hay una nueva */
   useEffect(() => {
     try {
-      const lastSeen = window.localStorage.getItem('ipesa:whatsnew:lastSeen')
+      const lastSeen = window.localStorage.getItem('crm:whatsnew:lastSeen')
       if (lastSeen !== CURRENT_VERSION) setWhatsNewOpen(true)
     } catch {}
   }, [])
@@ -172,7 +174,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!SYSTEM_NOTICE.active) return
     try {
-      const dismissed = window.localStorage.getItem('ipesa:notice:dismissed')
+      const dismissed = window.localStorage.getItem('crm:notice:dismissed')
       if (dismissed !== SYSTEM_NOTICE.id) setNoticeVisible(true)
     } catch {
       setNoticeVisible(true)
@@ -181,12 +183,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const dismissNotice = () => {
     setNoticeVisible(false)
-    try { window.localStorage.setItem('ipesa:notice:dismissed', SYSTEM_NOTICE.id) } catch {}
+    try { window.localStorage.setItem('crm:notice:dismissed', SYSTEM_NOTICE.id) } catch {}
   }
 
   const closeWhatsNew = () => {
     setWhatsNewOpen(false)
-    try { window.localStorage.setItem('ipesa:whatsnew:lastSeen', CURRENT_VERSION) } catch {}
+    try { window.localStorage.setItem('crm:whatsnew:lastSeen', CURRENT_VERSION) } catch {}
   }
 
   /* Cerrar el menú lateral al navegar */
@@ -224,8 +226,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [])
   useVisibleInterval(loadWaUnread, 30_000)
   useEffect(() => {
-    window.addEventListener('ipesa:wa-unread-changed', loadWaUnread)
-    return () => window.removeEventListener('ipesa:wa-unread-changed', loadWaUnread)
+    window.addEventListener('crm:wa-unread-changed', loadWaUnread)
+    return () => window.removeEventListener('crm:wa-unread-changed', loadWaUnread)
   }, [loadWaUnread])
   useEffect(() => {
     const base = document.title.replace(/^\(\d+\+?\)\s*/, '')
@@ -388,9 +390,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener('mousedown', h)
   }, [])
 
-  /* Búsqueda global → cada página escucha ipesa:search */
+  /* Búsqueda global → cada página escucha crm:search */
   const dispatchSearch = (q: string) => {
-    window.dispatchEvent(new CustomEvent('ipesa:search', { detail: q }))
+    window.dispatchEvent(new CustomEvent('crm:search', { detail: q }))
   }
   useEffect(() => { setSearch('') }, [pathname])
 
@@ -422,7 +424,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     } finally { setRemSaving(false) }
   }
 
-  const currentTitle = TITLE_MAP[pathname] ?? { t: 'IPESA', s: '' }
+  const currentTitle = TITLE_MAP[pathname] ?? { t: APP_NAME, s: '' }
   const isActive     = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   const isContactos  = isActive('/contactos')
   const fill         = FILL_ROUTES.some(r => pathname.startsWith(r))
@@ -447,7 +449,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* ── Sidebar ── */}
       <aside className={`sidebar ${drawerOpen ? 'open' : ''}`}>
         <div className="brand">
-          <img src={store?.logoUrl || '/ipesa-logo.png'} alt={store?.name || 'IPESA Pinturas'} width={480} height={209} className="brand-logo" />
+          {store?.logoUrl
+            ? <img src={store.logoUrl} alt={store.name} width={480} height={209} className="brand-logo" />
+            : <BrandLogo />}
           {store && (
             <div className="store-switch" ref={storeMenuRef}>
               <button
@@ -523,7 +527,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </button>
 
           <div className="topbar-brand-mini">
-            <img src="/ipesa-logo.png" alt="IPESA Pinturas" width={480} height={209} style={{ height: 44, width: 'auto', objectFit: 'contain', display: 'block' }} />
+            <BrandLogo />
           </div>
 
           <div className="topbar-title-block">
@@ -560,14 +564,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {/* Bell + panel de recordatorios */}
             <div className="bell-wrap" ref={bellRef}>
               <button className="btn-icon" title="Recordatorios" aria-label="Recordatorios" onClick={() => { setBellOpen(o => !o); setRemForm(false) }}>
-                <Icon.bell style={{ width: 16, height: 16, color: badgeCount > 0 ? 'var(--ipesa-orange)' : 'var(--ink-2)' }} />
+                <Icon.bell style={{ width: 16, height: 16, color: badgeCount > 0 ? 'var(--brand)' : 'var(--ink-2)' }} />
                 {badgeCount > 0 && <span className="bell-badge">{badgeCount > 9 ? '9+' : badgeCount}</span>}
               </button>
 
               {bellOpen && (
                 <div className="notif-panel">
                   <div className="notif-head">
-                    <Icon.clock style={{ width: 15, height: 15, color: 'var(--ipesa-orange)' }} />
+                    <Icon.clock style={{ width: 15, height: 15, color: 'var(--brand)' }} />
                     Recordatorios
                     {badgeCount > 0 && (
                       <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--font-body)', fontWeight: 500 }}>
@@ -575,13 +579,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       </span>
                     )}
                     <button onClick={() => setRemForm(f => !f)}
-                      style={{ marginLeft: 'auto', background: remForm ? 'var(--ipesa-orange)' : 'var(--paper)', color: remForm ? '#fff' : 'var(--ipesa-orange)', border: '1px solid var(--ipesa-orange)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                      style={{ marginLeft: 'auto', background: remForm ? 'var(--brand)' : 'var(--paper)', color: remForm ? '#fff' : 'var(--brand)', border: '1px solid var(--brand)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
                       {remForm ? '× Cancelar' : '+ Nuevo'}
                     </button>
                   </div>
 
                   {remForm && (
-                    <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)', background: 'var(--ipesa-orange-soft)' }}>
+                    <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)', background: 'var(--brand-soft)' }}>
                       <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>Nuevo recordatorio</div>
                       <input
                         type="text"
@@ -601,7 +605,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       <button
                         onClick={saveGeneralReminder}
                         disabled={!remFecha || remSaving}
-                        style={{ width: '100%', padding: '7px', background: 'var(--ipesa-orange)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', opacity: (!remFecha || remSaving) ? 0.5 : 1 }}>
+                        style={{ width: '100%', padding: '7px', background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', opacity: (!remFecha || remSaving) ? 0.5 : 1 }}>
                         {remSaving ? 'Guardando…' : '✓ Crear recordatorio'}
                       </button>
                     </div>
@@ -609,20 +613,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
                   {reminders.length === 0 ? (
                     <div className="notif-empty">
-                      <Icon.check style={{ width: 28, height: 28, color: 'var(--ipesa-green)', opacity: 0.5, display: 'block', margin: '0 auto 10px' }} />
+                      <Icon.check style={{ width: 28, height: 28, color: 'var(--success)', opacity: 0.5, display: 'block', margin: '0 auto 10px' }} />
                       Sin recordatorios pendientes
                     </div>
                   ) : (
                     reminders.map(r => {
                       const overdue  = new Date(r.fecha_recordatorio) < now
-                      const dotColor = overdue ? 'var(--ipesa-orange)' : 'var(--ipesa-yellow)'
+                      const dotColor = overdue ? 'var(--brand)' : 'var(--warning-fill)'
                       return (
                         <div className="notif-row" key={r.id}>
                           <span className="notif-dot" style={{ background: dotColor }}></span>
                           <div className="notif-info">
                             <div className="notif-lead">{r.lead_name || r.nota || 'Recordatorio'}</div>
                             {r.nota && r.nota !== r.lead_name && <div className="notif-nota">{r.nota}</div>}
-                            <div className="notif-time" style={{ color: overdue ? 'var(--ipesa-orange)' : 'var(--muted-2)' }}>
+                            <div className="notif-time" style={{ color: overdue ? 'var(--brand)' : 'var(--muted-2)' }}>
                               {fmtRem(r.fecha_recordatorio)}
                             </div>
                           </div>
@@ -651,8 +655,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                           style={{
                             padding: '4px 10px', fontSize: 11.5, fontWeight: 700, borderRadius: 6,
                             cursor: pushLoading ? 'default' : 'pointer', border: 'none',
-                            background: pushSubscribed ? 'var(--ipesa-rose-soft)' : 'var(--ipesa-orange-soft)',
-                            color:      pushSubscribed ? 'var(--ipesa-rose)'     : 'var(--ipesa-orange)',
+                            background: pushSubscribed ? 'var(--danger-soft)' : 'var(--brand-soft)',
+                            color:      pushSubscribed ? 'var(--danger)'     : 'var(--brand)',
                             opacity: pushLoading ? 0.6 : 1,
                           }}>
                           {pushLoading ? '…' : pushSubscribed ? 'Desactivar' : 'Activar'}
@@ -665,7 +669,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         </label>
                       )}
                       {pushError && (
-                        <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 6, background: 'var(--ipesa-rose-soft)', color: 'var(--ipesa-rose)', fontSize: 11.5, fontWeight: 600, lineHeight: 1.4 }}>
+                        <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 6, background: 'var(--danger-soft)', color: 'var(--danger)', fontSize: 11.5, fontWeight: 600, lineHeight: 1.4 }}>
                           ⚠️ {pushError}
                         </div>
                       )}
@@ -677,7 +681,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
             {/* CTA: solo en Contactos */}
             {isContactos && (
-              <button className="btn btn-primary" onClick={() => window.dispatchEvent(new CustomEvent('ipesa:new-contact'))}>
+              <button className="btn btn-primary" onClick={() => window.dispatchEvent(new CustomEvent('crm:new-contact'))}>
                 <Icon.plus style={{ width: 14, height: 14 }} /> Nuevo Contacto
               </button>
             )}
@@ -734,7 +738,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* ── FAB — solo en Contactos ── */}
       {isContactos && (
-        <button className="fab" onClick={() => window.dispatchEvent(new CustomEvent('ipesa:new-contact'))} aria-label="Nuevo contacto">
+        <button className="fab" onClick={() => window.dispatchEvent(new CustomEvent('crm:new-contact'))} aria-label="Nuevo contacto">
           <Icon.plus />
         </button>
       )}

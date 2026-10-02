@@ -1,12 +1,16 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { BrandLogo } from '@/components/Brand'
+import { APP_NAME, APP_TAGLINE } from '@/lib/brand'
 import { TRIAL_DAYS, planOf, DEFAULT_PLAN } from '@/lib/stores'
 import s from './inicio.module.css'
 
 export const metadata: Metadata = {
-  title: 'IPESA CRM · El CRM para tiendas IPESA',
-  description: 'Contactos, cotizaciones, WhatsApp y fórmulas de color en un solo lugar para las sucursales IPESA Pinturas. Prueba 14 días gratis.',
+  title: `${APP_NAME} · ${APP_TAGLINE}`,
+  description: `Contactos, cotizaciones, WhatsApp y fórmulas de color en un solo lugar para tu tienda de pinturas. Prueba ${TRIAL_DAYS} días gratis.`,
 }
+
+const DEMO_STORE = 'Pinturas La Paleta'
 
 /* Página de presentación: la ve quien entra a "/" sin sesión (ver proxy.ts). */
 
@@ -46,7 +50,7 @@ const FEATURES = [
   { icon: Ic.leads,     tone: s.tBrand,   title: 'Pipeline de ventas', text: 'De nuevo a cotizado y cerrado. Cada oportunidad con su monto, su historial y el siguiente paso.' },
   { icon: WhatsAppGlyph, tone: s.tWa,     title: 'WhatsApp dentro del CRM', text: 'Atiende desde el número de tu tienda. Cada conversación queda ligada a su contacto y a su lead.' },
   { icon: Ic.megaphone, tone: s.tMagenta, title: 'Campañas que cuidan tu número', text: 'Envía plantillas aprobadas por Meta con límites y pausas automáticas para evitar bloqueos.' },
-  { icon: Ic.flask,     tone: s.tTeal,    title: 'Fórmulas de color', text: 'Consulta fórmulas Vinipesa convertidas a mililitros para igualar colores sin errores.' },
+  { icon: Ic.flask,     tone: s.tTeal,    title: 'Fórmulas de color', text: 'Consulta fórmulas de color convertidas a mililitros para igualar colores sin errores.' },
   { icon: Ic.bell,      tone: s.tAmber,   title: 'Recordatorios y avisos', text: 'Notificaciones en tu celular para que ningún seguimiento se quede pendiente.' },
 ]
 
@@ -68,7 +72,7 @@ const FAQ = [
   { q: '¿Qué pasa cuando termina la prueba?', a: 'Tu información se conserva y tu equipo puede consultarla, pero para registrar clientes y enviar mensajes necesitas activar tu plan. La activación la hacemos contigo.' },
   { q: '¿Puedo usar el WhatsApp de mi tienda?', a: 'Sí. Se conecta con WhatsApp Business Platform, la API oficial de Meta, usando el número de tu sucursal. Desde Configuración te guiamos paso a paso.' },
   { q: '¿Cuántas personas pueden usarlo?', a: `El plan Profesional incluye hasta ${MAX_USERS} usuarios por tienda, con roles de dueño, administrador y vendedor.` },
-  { q: '¿Otras tiendas pueden ver mis clientes?', a: 'No. Cada tienda tiene su propia información y solo la ve su equipo. Ni siquiera otras sucursales IPESA pueden acceder a ella.' },
+  { q: '¿Otras tiendas pueden ver mis clientes?', a: 'No. Cada tienda tiene su propia información y solo la ve su equipo. Ninguna otra tienda puede acceder a ella.' },
   { q: 'Tengo varias sucursales, ¿cómo funciona?', a: 'Puedes dar de alta varias sucursales con la misma cuenta y cambiar entre ellas con un clic. Cada una tiene su equipo, su WhatsApp y sus datos.' },
   { q: '¿Funciona en el celular?', a: 'Sí. Funciona en cualquier navegador y puedes instalarlo como app en tu celular para recibir avisos de recordatorios y mensajes.' },
 ]
@@ -81,9 +85,8 @@ export default function LandingPage() {
       {/* ── Navegación ── */}
       <header className={s.nav}>
         <div className={`${s.wrap} ${s.navInner}`}>
-          <Link href="/inicio" className={s.navBrand} aria-label="IPESA CRM, inicio">
-            <img src="/ipesa-logo.png" alt="IPESA Pinturas" width={480} height={209} />
-            <span className={s.crmTag}>CRM</span>
+          <Link href="/inicio" className={s.navBrand} aria-label={`${APP_NAME}, inicio`}>
+            <BrandLogo />
           </Link>
           <nav className={s.navLinks} aria-label="Secciones">
             <a href="#funciones">Funciones</a>
@@ -105,8 +108,8 @@ export default function LandingPage() {
         <section className={s.hero}>
           <div className={`${s.wrap} ${s.heroGrid}`}>
             <div className={s.heroCopy}>
-              <span className={s.eyebrow}><span className={s.eyebrowDot} />Para sucursales IPESA Pinturas</span>
-              <h1 className={s.h1}>El CRM hecho para las tiendas <span className={s.spectrumText}>IPESA</span></h1>
+              <span className={s.eyebrow}><span className={s.eyebrowDot} />Para tiendas de pintura</span>
+              <h1 className={s.h1}>El CRM hecho para tiendas <span className={s.spectrumText}>de pintura</span></h1>
               <p className={s.lead}>
                 Contactos, cotizaciones, WhatsApp y fórmulas de color en un solo lugar. Tu equipo sabe a quién darle
                 seguimiento hoy y tú ves cómo va la venta de tu sucursal.
@@ -128,11 +131,11 @@ export default function LandingPage() {
               <div className={s.swirl}><i className={s.b1} /><i className={s.b2} /><i className={s.b3} /><i className={s.b4} /><i className={s.b5} /></div>
 
               <div className={s.window}>
-                <div className={s.winBar}><i /><i /><i /><span>IPESA CRM</span></div>
+                <div className={s.winBar}><i /><i /><i /><span>{APP_NAME}</span></div>
                 <div className={s.winBody}>
                   <div className={s.winSide}>
-                    <img src="/ipesa-logo.png" alt="" width={480} height={209} className={s.winLogo} />
-                    <span className={s.winStore}><Ic.store />IPESA Cholula Centro</span>
+                    <BrandLogo className={s.winLogo} />
+                    <span className={s.winStore}><Ic.store />{DEMO_STORE}</span>
                     <span className={`${s.winNav} ${s.winNavOn}`}><Ic.grid />Dashboard</span>
                     <span className={s.winNav}><Ic.contacts />Contactos</span>
                     <span className={s.winNav}><Ic.leads />Leads</span>
@@ -172,7 +175,7 @@ export default function LandingPage() {
                   <span className={s.waBadge}><WhatsAppGlyph /></span>
                   <div><strong>Karen López</strong><small>en línea</small></div>
                 </div>
-                <p className={s.msgIn}>Hola, ¿tienen Vinipesa en color arena? Necesito 2 cubetas</p>
+                <p className={s.msgIn}>Hola, ¿tienen vinílica en color arena? Necesito 2 cubetas</p>
                 <p className={s.msgOut}>¡Claro! Ya tengo tu fórmula, te paso el precio y te aparto el material <span className={s.ticks}>✓✓</span></p>
                 <div className={s.chatLinked}><Ic.link />Ligado a su lead · $4,850</div>
               </div>
@@ -232,8 +235,7 @@ export default function LandingPage() {
               <span className={s.kicker}>Tu sucursal, a tu manera</span>
               <h2 className={s.h2}>Cada tienda configura lo suyo</h2>
               <p className={s.sub}>
-                La marca IPESA con el nombre y logo de tu sucursal, solo las herramientas que tu equipo usa y tus
-                propios catálogos.
+                El nombre y logo de tu tienda, solo las herramientas que tu equipo usa y tus propios catálogos.
               </p>
               <ul className={s.bullets}>
                 {[
@@ -247,7 +249,7 @@ export default function LandingPage() {
             </div>
             <div className={s.panels} aria-hidden="true">
               <div className={s.panel}>
-                <div className={s.panelHead}><strong>Herramientas</strong><small>IPESA Cholula Centro</small></div>
+                <div className={s.panelHead}><strong>Herramientas</strong><small>{DEMO_STORE}</small></div>
                 <div className={s.toggleRow}><span className={`${s.tIcon} ${s.tWa}`}><WhatsAppGlyph /></span><span>WhatsApp<small>Bandeja ligada a contactos</small></span><i className={`${s.toggle} ${s.on}`} /></div>
                 <div className={s.toggleRow}><span className={`${s.tIcon} ${s.tMagenta}`}><Ic.megaphone /></span><span>Campañas<small>Plantillas con reglas anti-bloqueo</small></span><i className={`${s.toggle} ${s.on}`} /></div>
                 <div className={s.toggleRow}><span className={`${s.tIcon} ${s.tTeal}`}><Ic.flask /></span><span>Fórmulas<small>Igualación de colores en mL</small></span><i className={s.toggle} /></div>
@@ -344,8 +346,8 @@ export default function LandingPage() {
       <footer className={s.footer}>
         <div className={`${s.wrap} ${s.footInner}`}>
           <div className={s.footBrand}>
-            <img src="/ipesa-logo.png" alt="IPESA Pinturas" width={480} height={209} />
-            <span>El CRM para las sucursales IPESA Pinturas.</span>
+            <BrandLogo className={s.footLogo} />
+            <span>{APP_TAGLINE}.</span>
           </div>
           <nav className={s.footLinks} aria-label="Enlaces">
             <Link href="/login">Iniciar sesión</Link>
@@ -353,7 +355,7 @@ export default function LandingPage() {
             <Link href="/terminos">Términos</Link>
             <Link href="/privacidad">Aviso de privacidad</Link>
           </nav>
-          <small className={s.copy}>© {new Date().getFullYear()} IPESA CRM</small>
+          <small className={s.copy}>© {new Date().getFullYear()} {APP_NAME}</small>
         </div>
       </footer>
     </div>

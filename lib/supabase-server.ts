@@ -10,7 +10,7 @@ const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 /** Cookie con la tienda activa (solo una preferencia: se valida contra la membresía). */
-export const ACTIVE_STORE_COOKIE = 'ipesa_store'
+export const ACTIVE_STORE_COOKIE = 'crm_store'
 
 // ─── Cliente admin (service key) — para operaciones de datos en API routes ───
 // Bypasses RLS: el aislamiento entre tiendas y los permisos se aplican aquí,

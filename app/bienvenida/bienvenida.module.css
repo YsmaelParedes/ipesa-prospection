@@ -20,7 +20,7 @@
   max-width: 1180px; margin: 0 auto; padding: 22px 28px 6px;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
 }
-.logo { height: 44px; width: auto; display: block; }
+.logo { font-size: 21px; }
 .topRight { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 13px; }
 .topUser { color: var(--muted); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topLink {
@@ -236,6 +236,7 @@
 .mockBody { display: grid; grid-template-columns: 136px minmax(0, 1fr); min-height: 292px; }
 .mockSide { display: flex; flex-direction: column; gap: 8px; padding: 12px 8px; background: var(--card); border-right: 1px solid var(--line); min-width: 0; }
 .mockLogo { align-self: center; height: 34px; width: auto; max-width: 100%; object-fit: contain; border-radius: 6px; }
+.mockBrand { align-self: center; font-size: 11px; padding: 4px 5px; border-radius: 6px; }
 .mockStore {
   display: flex; align-items: center; gap: 5px; min-width: 0; padding: 5px 7px; border-radius: 8px;
   background: var(--paper); border: 1px solid var(--line); font-size: 9.5px; font-weight: 800; color: var(--ink);
@@ -340,7 +341,7 @@
 }
 @media (max-width: 640px) {
   .top { padding: 14px 16px 4px; }
-  .logo { height: 34px; }
+  .logo { font-size: 18px; }
   .topUser { display: none; }
   .topLink { max-width: 190px; }
   .stepperWrap { padding: 0 14px; }

@@ -5,8 +5,8 @@ import { PAYMENT_GRACE_DAYS, TRIAL_DAYS } from '@/lib/stores'
 import { ContactEmail, LegalDoc, type LegalSection } from '../LegalDoc'
 
 export const metadata: Metadata = {
-  title: 'Términos de uso · IPESA CRM',
-  description: 'Condiciones para usar IPESA CRM: cuentas, prueba gratis, planes, información de la tienda y uso de WhatsApp.',
+  title: `Términos de uso · ${LEGAL.product}`,
+  description: `Condiciones para usar ${LEGAL.product}: cuentas, prueba gratis, planes, información de la tienda y uso de WhatsApp.`,
 }
 
 const sections: LegalSection[] = [
@@ -128,8 +128,8 @@ const sections: LegalSection[] = [
     body: (
       <p>
         El software, el diseño y los contenidos de {LEGAL.product} están protegidos por la ley. El uso del servicio no
-        te transfiere ningún derecho sobre ellos. Las marcas IPESA e IPESA Pinturas, así como los nombres de producto,
-        pertenecen a sus respectivos titulares.
+        te transfiere ningún derecho sobre ellos. Las marcas y nombres de productos de pintura que aparecen en el
+        servicio o que registre cada tienda pertenecen a sus respectivos titulares.
       </p>
     ),
   },

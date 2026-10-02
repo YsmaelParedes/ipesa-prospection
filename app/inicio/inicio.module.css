@@ -33,12 +33,7 @@
   border-bottom: 1px solid var(--line);
 }
 .navInner { height: 72px; display: flex; align-items: center; gap: 28px; }
-.navBrand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.navBrand img { height: 40px; width: auto; display: block; }
-.crmTag {
-  font-family: var(--font-display); font-size: 11.5px; font-weight: 800; letter-spacing: .14em;
-  padding: 4px 8px; border-radius: 7px; background: var(--ink); color: #fff;
-}
+.navBrand { display: flex; align-items: center; flex-shrink: 0; font-size: 23px; }
 .navLinks { display: flex; gap: 2px; }
 .navLinks a { padding: 8px 12px; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--ink-3); transition: background .14s, color .14s; }
 .navLinks a:hover { background: var(--paper); color: var(--ink); }
@@ -101,7 +96,7 @@
 .winBar span { margin: 0 auto; padding: 3px 14px; border-radius: 7px; background: var(--card); border: 1px solid var(--line); font-size: 11px; font-weight: 700; color: var(--muted); transform: translateX(-20px); }
 .winBody { display: grid; grid-template-columns: 138px minmax(0, 1fr); background: var(--bg); }
 .winSide { display: flex; flex-direction: column; gap: 3px; padding: 14px 10px; background: var(--card); border-right: 1px solid var(--line); min-width: 0; }
-.winLogo { width: 100%; max-width: 104px; height: auto; margin: 0 auto 8px; display: block; }
+.winLogo { align-self: center; font-size: 11.5px; margin-bottom: 8px; }
 .winStore {
   display: flex; align-items: center; gap: 5px; margin-bottom: 8px; padding: 6px 7px; border-radius: 8px; min-width: 0;
   background: var(--paper); border: 1px solid var(--line); font-size: 10px; font-weight: 800; line-height: 1.25;
@@ -322,7 +317,7 @@
 .footer { padding: 36px 0 44px; border-top: 1px solid var(--line); background: var(--card); }
 .footInner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px 28px; }
 .footBrand { display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--muted); }
-.footBrand img { height: 34px; width: auto; }
+.footLogo { font-size: 19px; }
 .footLinks { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 14px; font-weight: 600; color: var(--ink-3); }
 .footLinks a:hover { color: var(--brand-strong); }
 .copy { font-size: 13px; color: var(--muted); }
@@ -350,8 +345,7 @@
 @media (max-width: 680px) {
   .wrap { padding: 0 18px; }
   .navInner { height: 62px; gap: 12px; }
-  .navBrand img { height: 32px; }
-  .crmTag { font-size: 10px; padding: 3px 6px; }
+  .navBrand { font-size: 20px; }
   .navCta .btn { padding: 9px 12px; font-size: 13.5px; }
   .hero { padding: 44px 0 64px; }
   .btnLg { width: 100%; }

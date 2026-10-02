@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ logoUrl: storeLogoUrl(path) })
 }
 
-// DELETE /api/store/logo — volver al logo genérico de IPESA
+// DELETE /api/store/logo — quitar el logo de la tienda (vuelve el logo del producto)
 export async function DELETE() {
   const ctx = await requireStore({ admin: true })
   if (ctx instanceof Response) return ctx

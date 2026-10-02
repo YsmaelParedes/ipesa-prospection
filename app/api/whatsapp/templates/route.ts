@@ -42,7 +42,7 @@ function toDef(t: any): WhatsAppTemplateDef {
 /**
  * GET /api/whatsapp/templates — plantillas APROBADAS consultadas en vivo a
  * Meta. Responde 200 con `error` (y templates: []) si falla, para que el
- * cliente caiga al catálogo local sin romper la UI.
+ * selector muestre el motivo sin romper la UI.
  */
 export async function GET() {
   const ctx = await requireStore({ module: 'whatsapp' })

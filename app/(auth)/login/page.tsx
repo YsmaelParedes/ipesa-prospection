@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { AuthAlert, AuthField, AuthHeader, AuthIcon, PasswordField, ResendConfirmation, SubmitButton } from '@/components/AuthUI'
+import { APP_NAME } from '@/lib/brand'
 import { safeNext } from '@/lib/safeNext'
 
 export default function LoginPage() {
@@ -66,7 +67,7 @@ function LoginForm() {
         </div>
         <SubmitButton loading={loading}>Entrar</SubmitButton>
       </form>
-      <p className="auth-alt">¿Tu tienda aún no usa IPESA CRM? <Link href="/registro" className="auth-link strong">Pruébalo gratis</Link></p>
+      <p className="auth-alt">¿Tu tienda aún no usa {APP_NAME}? <Link href="/registro" className="auth-link strong">Pruébalo gratis</Link></p>
     </>
   )
 }

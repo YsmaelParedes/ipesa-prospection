@@ -1,9 +1,8 @@
 /**
- * Forma común de una plantilla aprobada. Las plantillas se consultan en vivo
- * a Meta (/api/whatsapp/templates); este catálogo local solo es el respaldo
- * si la consulta falla o falta WHATSAPP_BUSINESS_ACCOUNT_ID. El envío real
- * usa el `name` exacto y Meta manda el contenido aprobado, así que un texto
- * desactualizado aquí no rompe el envío, solo se ve distinto en la vista previa.
+ * Forma común de una plantilla aprobada. Las plantillas de cada tienda se
+ * consultan en vivo a Meta (/api/whatsapp/templates). El envío real usa el
+ * `name` exacto y Meta manda el contenido aprobado; el texto solo se usa
+ * para la vista previa y para guardar el mensaje en la bandeja.
  */
 export type WhatsAppTemplateDef = {
   name: string
@@ -17,17 +16,3 @@ export type WhatsAppTemplateDef = {
   buttonLabel?: string
   unsupported?: string         // motivo si la app no puede llenarla (p. ej. variables en encabezado/botón)
 }
-
-export const WHATSAPP_TEMPLATES: WhatsAppTemplateDef[] = [
-  {
-    name: 'promo_aplazo_pinturas',
-    language: 'es_MX',
-    label: 'Promo Aplazo · Pinturas en plazos',
-    category: 'MARKETING',
-    hasImageHeader: true,
-    bodyPreview: '¡Hola {{1}}! 🎉 Ahora puedes pagar pinturas IPESA en plazos quincenales, sin tarjeta, con Aplazo. ¡No te lo pierdas! Te esperamos en Hidalgo 31 Local 2, Santa Clara Ocoyucan, Puebla.',
-    variableCount: 1,
-    footer: 'Sujeto a aprobación y condiciones de Aplazo',
-    buttonLabel: 'Dame Información !',
-  },
-]

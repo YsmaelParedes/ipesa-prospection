@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Avatar, CanalChip, EstadoChip, SegmentoChip, OwnerChip, FilterDropdown, fmtDate, fmtDateLong, fmtPhone, normalizePhone } from '@/components/IpesaUI'
+import { Avatar, CanalChip, EstadoChip, SegmentoChip, OwnerChip, FilterDropdown, fmtDate, fmtDateLong, fmtPhone, normalizePhone } from '@/components/CrmUI'
 import { getUserRole, useSession } from '@/lib/profile'
 
 /* ══════════════════════════════════════════════════════════
@@ -112,7 +112,7 @@ const Ico = {
   table:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>,
   kanban:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="11" rx="1"/><rect x="17" y="3" width="4" height="7" rx="1"/></svg>,
   chevron:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--muted-2)' }}><path d="m9 18 6-6-6-6"/></svg>,
-  check:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--ipesa-yellow)' }}><path d="m5 13 4 4L19 7"/></svg>,
+  check:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--warning-fill)' }}><path d="m5 13 4 4L19 7"/></svg>,
   whatsapp: () => <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 14, height: 14 }}><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.8.9-1 1.1c-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.4-.9-.8-1.5-1.8-1.7-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.3-.7.3-1.2.2-1.4 0-.1-.3-.2-.6-.4Zm-5.5 7.5c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.5 4.4-9.9 9.9-9.9s9.9 4.4 9.9 9.9-4.5 9.9-10 9.9Zm8.4-18.3C18.2 1.5 15.2.3 12 .3 5.4.3.1 5.6.1 12.2c0 2.1.6 4.2 1.6 6L0 24l5.9-1.5c1.7 1 3.7 1.5 5.7 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4Z"/></svg>,
   clock:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
   edit:     () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
@@ -175,8 +175,8 @@ function LeadsContent() {
 
   useEffect(() => {
     const h = (e: Event) => setSearch((e as CustomEvent).detail ?? '')
-    window.addEventListener('ipesa:search', h)
-    return () => window.removeEventListener('ipesa:search', h)
+    window.addEventListener('crm:search', h)
+    return () => window.removeEventListener('crm:search', h)
   }, [])
 
   const load = useCallback(async () => {
@@ -233,7 +233,7 @@ function LeadsContent() {
         <h2>Pipeline de leads</h2>
         <span className="count">{filtered.length} de {leads.length}</span>
         {isAdmin && (
-          <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--ipesa-blue)', background: 'var(--ipesa-blue-soft)', borderRadius: 20, padding: '3px 10px' }}>
+          <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--c-cyan-ink)', background: 'var(--c-cyan-soft)', borderRadius: 20, padding: '3px 10px' }}>
             👁 Vista de administrador · todos los usuarios
           </span>
         )}
@@ -266,13 +266,13 @@ function LeadsContent() {
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
-          <div style={{ width: 32, height: 32, border: '3px solid var(--line)', borderTopColor: 'var(--ipesa-orange)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+          <div style={{ width: 32, height: 32, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--muted)', fontSize: 13 }}>
           {canalF !== 'Todos' || segF !== 'Todos' || estadoF !== 'Todos' || search
             ? 'Sin resultados para estos filtros.'
-            : <>Sin leads aún · <Link href="/contactos" style={{ color: 'var(--ipesa-orange)', fontWeight: 600 }}>Crear desde un contacto →</Link></>}
+            : <>Sin leads aún · <Link href="/contactos" style={{ color: 'var(--brand)', fontWeight: 600 }}>Crear desde un contacto →</Link></>}
         </div>
       ) : view === 'tabla' ? (
         <LeadsTable leads={filtered} onSelect={setSelected} isAdmin={isAdmin} />
@@ -406,7 +406,7 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
   lead: any
   onEstadoUpdate: (estado: string) => void
 }) {
-  const storeName = useSession()?.store?.name || 'IPESA Pinturas'
+  const storeName = useSession()?.store?.name || 'nuestra tienda'
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading]       = useState(true)
   const [active, setActive]         = useState<AType | null>(null)
@@ -585,7 +585,7 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
           {active === 'quote' && lead.estado !== 'Cotizado' && (
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--ink-2)', cursor: 'pointer', marginBottom: 12, userSelect: 'none' }}>
               <input type="checkbox" checked={updateEstado} onChange={e => setUpdateEstado(e.target.checked)}
-                style={{ width: 15, height: 15, accentColor: 'var(--ipesa-orange)', cursor: 'pointer' }} />
+                style={{ width: 15, height: 15, accentColor: 'var(--brand)', cursor: 'pointer' }} />
               Actualizar estado del lead a <strong>Cotizado</strong>
             </label>
           )}
@@ -604,7 +604,7 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
             </button>
           </div>
           {saveError && (
-            <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 7, background: 'var(--ipesa-rose-soft)', color: 'var(--ipesa-rose)', fontSize: 12, fontWeight: 600 }}>
+            <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 7, background: 'var(--danger-soft)', color: 'var(--danger)', fontSize: 12, fontWeight: 600 }}>
               ⚠️ {saveError}
             </div>
           )}
@@ -612,7 +612,7 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
       )}
 
       {!active && saveError && (
-        <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: 'var(--ipesa-rose-soft)', color: 'var(--ipesa-rose)', fontSize: 12.5, fontWeight: 600 }}>
+        <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: 'var(--danger-soft)', color: 'var(--danger)', fontSize: 12.5, fontWeight: 600 }}>
           ⚠️ {saveError}
         </div>
       )}
@@ -649,7 +649,7 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
       {/* ── Timeline de actividades ── */}
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
-          <div style={{ width: 20, height: 20, border: '2.5px solid var(--line)', borderTopColor: 'var(--ipesa-orange)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+          <div style={{ width: 20, height: 20, border: '2.5px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         </div>
       ) : activities.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--muted)' }}>
@@ -683,7 +683,7 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 12.5, fontWeight: 700, color: t.color }}>{t.label}</span>
                         {a.amount && (
-                          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ipesa-orange)', fontFamily: 'var(--font-display)' }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--brand)', fontFamily: 'var(--font-display)' }}>
                             ${Number(a.amount).toLocaleString('es-MX')}
                           </span>
                         )}
@@ -788,13 +788,13 @@ function RemindersTab({ lead }: { lead: any }) {
           <Ico.bell />
           <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink-2)' }}>Recordatorios</span>
           {pending.length > 0 && (
-            <span style={{ background: 'var(--ipesa-orange)', color: '#fff', borderRadius: 999, fontSize: 10, fontWeight: 700, padding: '1px 6px' }}>
+            <span style={{ background: 'var(--brand)', color: '#fff', borderRadius: 999, fontSize: 10, fontWeight: 700, padding: '1px 6px' }}>
               {pending.length}
             </span>
           )}
         </div>
         <button onClick={() => setShowForm(s => !s)}
-          style={{ fontSize: 11, fontWeight: 600, color: 'var(--ipesa-orange)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', borderRadius: 6 }}>
+          style={{ fontSize: 11, fontWeight: 600, color: 'var(--brand)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', borderRadius: 6 }}>
           {showForm ? '× Cancelar' : '+ Nuevo'}
         </button>
       </div>
@@ -806,7 +806,7 @@ function RemindersTab({ lead }: { lead: any }) {
           <div style={{ display: 'flex', gap: 5, marginBottom: 8 }}>
             {REM_TYPE_OPTS.map(t => (
               <button key={t.key} onClick={() => setRemType(t.key)}
-                style={{ padding: '5px 10px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: '1px solid', borderColor: remType === t.key ? 'var(--ipesa-orange)' : 'var(--line)', background: remType === t.key ? 'var(--ipesa-orange-soft)' : 'transparent' }}>
+                style={{ padding: '5px 10px', borderRadius: 20, fontSize: 13, cursor: 'pointer', border: '1px solid', borderColor: remType === t.key ? 'var(--brand)' : 'var(--line)', background: remType === t.key ? 'var(--brand-soft)' : 'transparent' }}>
                 {t.emoji}
               </button>
             ))}
@@ -830,7 +830,7 @@ function RemindersTab({ lead }: { lead: any }) {
       {pending.map(r => {
         const overdue = new Date(r.fecha_recordatorio) < now
         return (
-          <div key={r.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 9, marginBottom: 6, background: overdue ? 'var(--ipesa-orange-soft)' : 'var(--paper)', border: `1px solid ${overdue ? '#F5C8B3' : 'var(--line)'}` }}>
+          <div key={r.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 9, marginBottom: 6, background: overdue ? 'var(--brand-soft)' : 'var(--paper)', border: `1px solid ${overdue ? '#F5C8B3' : 'var(--line)'}` }}>
             <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>
               {REM_TYPE_OPTS.find(t => t.key === r.type)?.emoji ?? '📋'}
             </span>
@@ -840,7 +840,7 @@ function RemindersTab({ lead }: { lead: any }) {
             </div>
             <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
               <button onClick={() => completeReminder(r.id)}
-                style={{ fontSize: 11, fontWeight: 600, color: 'var(--ipesa-green)', background: 'var(--ipesa-green-soft)', border: 'none', borderRadius: 6, padding: '3px 8px', cursor: 'pointer' }}>
+                style={{ fontSize: 11, fontWeight: 600, color: 'var(--success)', background: 'var(--success-soft)', border: 'none', borderRadius: 6, padding: '3px 8px', cursor: 'pointer' }}>
                 ✓
               </button>
               <button onClick={() => deleteReminder(r.id)}
@@ -952,7 +952,7 @@ function LeadDetail({
             <SegmentoChip value={lead.segmento || '—'} />
             <CanalChip value={lead.canal || '—'} />
             {lead.monto && (
-              <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: 'var(--ipesa-orange)' }}>
+              <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: 'var(--brand)' }}>
                 ${Number(lead.monto).toLocaleString('es-MX')}
               </span>
             )}
@@ -970,7 +970,7 @@ function LeadDetail({
                   padding: '10px 12px', fontSize: 12.5, fontWeight: 600,
                   border: 'none', background: 'none', cursor: 'pointer',
                   borderBottom: '2px solid', marginBottom: -1,
-                  borderColor: tab === t.key ? 'var(--ipesa-orange)' : 'transparent',
+                  borderColor: tab === t.key ? 'var(--brand)' : 'transparent',
                   color: tab === t.key ? 'var(--ink)' : 'var(--muted)',
                   transition: 'color 0.12s',
                 }}>
@@ -1020,7 +1020,7 @@ function LeadDetail({
                   <label>Notas</label>
                   <textarea value={editForm.notas} onChange={e => setEditForm(f => ({ ...f, notas: e.target.value }))} rows={3} style={{ resize: 'vertical', minHeight: 72 }} />
                 </div>
-                {saveError && <div style={{ color: 'var(--ipesa-rose)', fontSize: 12.5, marginBottom: 8 }}>{saveError}</div>}
+                {saveError && <div style={{ color: 'var(--danger)', fontSize: 12.5, marginBottom: 8 }}>{saveError}</div>}
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                   <button className="btn btn-ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>Cancelar</button>
                   <button className="btn btn-primary" onClick={handleSaveLead} disabled={saving} style={{ flex: 1 }}>
@@ -1102,7 +1102,7 @@ function LeadDetail({
             <button className="btn btn-ghost btn-ghost-call" onClick={() => { setEditing(true); setConfirmDel(false) }}>
               <Ico.edit /> Editar
             </button>
-            <button className="btn btn-ghost btn-ghost-danger" onClick={() => { setConfirmDel(true); setEditing(false) }} style={{ color: 'var(--ipesa-rose)' }}>
+            <button className="btn btn-ghost btn-ghost-danger" onClick={() => { setConfirmDel(true); setEditing(false) }} style={{ color: 'var(--danger)' }}>
               <Ico.trash /> Eliminar
             </button>
           </>}
@@ -1166,7 +1166,7 @@ function ContactPickerModal({ onClose, onSelect }: {
         <div className="modal-body" style={{ padding: 0 }}>
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: 32 }}>
-              <div style={{ width: 24, height: 24, border: '3px solid var(--line)', borderTopColor: 'var(--ipesa-orange)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+              <div style={{ width: 24, height: 24, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--muted)', fontSize: 13 }}>

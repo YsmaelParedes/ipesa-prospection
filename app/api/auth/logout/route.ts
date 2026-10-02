@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { ACTIVE_STORE_COOKIE } from '@/lib/supabase-server'
 
 export async function POST(req: NextRequest) {
   const res = NextResponse.json({ ok: true })
@@ -17,6 +18,6 @@ export async function POST(req: NextRequest) {
 
   await supabase.auth.signOut()
   // La tienda activa es una preferencia del navegador: se olvida al salir
-  res.cookies.delete('ipesa_store')
+  res.cookies.delete(ACTIVE_STORE_COOKIE)
   return res
 }

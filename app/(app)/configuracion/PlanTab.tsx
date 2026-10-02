@@ -33,7 +33,7 @@ export function PlanTab({ store }: { store: ClientStore }) {
     return readonly ? 'Tu pago está pendiente' : 'Tu plan está activo'
   })()
 
-  const subject = encodeURIComponent(`Activar IPESA CRM · ${store.name}`)
+  const subject = encodeURIComponent(`Activar ${LEGAL.product} · ${store.name}`)
   const body = encodeURIComponent(`Hola, quiero activar el plan ${store.planLabel} para la tienda "${store.name}" (${store.slug}).`)
 
   return (
@@ -75,7 +75,7 @@ export function PlanTab({ store }: { store: ClientStore }) {
         {LEGAL.email ? (
           <a className="btn btn-primary" href={`mailto:${LEGAL.email}?subject=${subject}&body=${body}`}><Ico.mail style={{ width: 15, height: 15 }} />Escribir para activar</a>
         ) : (
-          <p className={s.hint} style={{ marginTop: 0 }}>Contacta a tu asesor de IPESA CRM y compártele el identificador de tu tienda.</p>
+          <p className={s.hint} style={{ marginTop: 0 }}>Contacta a tu asesor de {LEGAL.product} y compártele el identificador de tu tienda.</p>
         )}
         <div className={s.slugRow}>
           <span>Identificador de tu tienda</span>

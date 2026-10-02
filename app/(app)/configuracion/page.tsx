@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { BRAND_MARK } from '@/lib/brand'
 import { useSession } from '@/lib/profile'
 import { ROLE_LABELS, STATUS_LABELS, type StoreModule } from '@/lib/stores'
 import { Ico, Spinner, WhatsAppGlyph, cx } from './ui'
@@ -62,7 +63,7 @@ function Settings() {
   return (
     <>
       <header className={s.storeHead}>
-        <div className={s.storeLogo}><img src={store.logoUrl || '/ipesa-logo.png'} alt="" /></div>
+        <div className={s.storeLogo}><img src={store.logoUrl || BRAND_MARK} alt="" /></div>
         <div className={s.storeInfo}>
           <h2>{store.name}</h2>
           <p>{location || 'Agrega la ciudad y el estado de tu tienda'}</p>

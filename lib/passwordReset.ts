@@ -7,7 +7,7 @@
 import { createHmac, timingSafeEqual } from 'crypto'
 import { cookies } from 'next/headers'
 
-const COOKIE = 'ipesa_pw_reset'
+const COOKIE = 'crm_pw_reset'
 const TTL_SECONDS = 15 * 60
 
 function sign(payload: string): string {

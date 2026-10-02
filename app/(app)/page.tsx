@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Avatar, CanalChip, EstadoChip, TrendIcon, Donut, canalColor, fmtDate, segColor } from '@/components/IpesaUI'
+import { Avatar, CanalChip, EstadoChip, TrendIcon, Donut, canalColor, fmtDate, segColor } from '@/components/CrmUI'
 import { getDisplayName, useSession } from '@/lib/profile'
 
 type Trend = { current: number; previous: number }
@@ -77,7 +77,7 @@ export default function DashboardPage() {
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
-      <div style={{ width: 36, height: 36, border: '3px solid var(--line)', borderTopColor: 'var(--ipesa-orange)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+      <div style={{ width: 36, height: 36, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
     </div>
   )
 
@@ -227,7 +227,7 @@ export default function DashboardPage() {
             <Link href="/leads" className="panel-action">Ver todos →</Link>
           </div>
           {recentLeads.length === 0 ? (
-            <p style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '24px 0' }}>Sin leads aún · <Link href="/leads" style={{ color: 'var(--ipesa-orange)', fontWeight: 600 }}>Crear primero</Link></p>
+            <p style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: '24px 0' }}>Sin leads aún · <Link href="/leads" style={{ color: 'var(--brand)', fontWeight: 600 }}>Crear primero</Link></p>
           ) : (
             <table className="table" style={{ marginTop: -4 }}>
               <thead>
