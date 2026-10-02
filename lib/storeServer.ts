@@ -23,6 +23,8 @@ export const STORE_PROFILE_SCHEMA: Schema = {
 
 export function storeLogoUrl(path: string | null): string | null {
   if (!path) return null
+  // Logos incluidos en la app (public/logos/), como el de la tienda original
+  if (/^\/logos\/[\w.-]+\.(png|jpe?g|webp)$/.test(path)) return path
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/store-assets/${path}`
 }
 
