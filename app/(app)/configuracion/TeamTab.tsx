@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ClientStore } from '@/lib/profile'
 import { ROLE_LABELS, type StoreRole } from '@/lib/stores'
 import { Ico, Note, Panel, Spinner, WhatsAppGlyph, api, avatarTone, copyText, cx, fmtDate, initialsOf, send, useToast } from './ui'
@@ -36,6 +36,12 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
   const [newLink, setNewLink]   = useState<NewLink | null>(null)
   const [busyId, setBusyId]     = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  const linkRef = useRef<HTMLDivElement>(null)
+
+  // Un enlace nuevo (también desde "Invitaciones pendientes") siempre queda a la vista
+  useEffect(() => {
+    if (newLink) linkRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [newLink])
 
   const load = useCallback(async () => {
     try {
@@ -120,7 +126,7 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
         </p>
         {error && <div className={s.error}>{error}</div>}
         {newLink && (
-          <div className={s.linkBox}>
+          <div className={s.linkBox} ref={linkRef}>
             <strong>Invitación lista para {newLink.email}</strong>
             <div className={s.linkRow}>
               <input className={cx(s.input, s.mono)} readOnly value={newLink.link} onFocus={e => e.currentTarget.select()} aria-label="Enlace de invitación" />

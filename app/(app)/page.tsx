@@ -25,12 +25,43 @@ function greeting(name: string): { text: string; emoji: string } {
   return                         { text: `¡Buenas noches, ${name}!`, emoji: '🌙' }
 }
 
+const FIRST_STEPS = [
+  { id: 'wa',    href: '/configuracion?tab=whatsapp', title: 'Conecta tu WhatsApp',    text: 'Atiende y manda campañas desde el número de tu tienda.' },
+  { id: 'cli',   href: '/contactos',                  title: 'Agrega tus clientes',     text: 'Uno por uno o importa tu lista de Excel.' },
+  { id: 'team',  href: '/configuracion?tab=equipo',   title: 'Invita a tu equipo',      text: 'Cada vendedor entra con su propio acceso.' },
+  { id: 'lead',  href: '/leads',                      title: 'Registra tu primer lead', text: 'Da seguimiento a cada cotización hasta cerrarla.' },
+]
+
+function FirstSteps({ whatsapp }: { whatsapp: boolean }) {
+  const steps = FIRST_STEPS.filter(st => whatsapp || st.id !== 'wa')
+  return (
+    <section className="first-steps">
+      <div className="first-steps-head">
+        <div>
+          <h2>Primeros pasos</h2>
+          <p>Deja lista tu tienda en unos minutos. Este cuadro desaparece cuando registres tu primer cliente.</p>
+        </div>
+      </div>
+      <div className="first-steps-grid">
+        {steps.map((st, i) => (
+          <Link key={st.id} href={st.href} className="first-step">
+            <span className="first-step-num">{i + 1}</span>
+            <strong>{st.title}</strong>
+            <span>{st.text}</span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [data,        setData]        = useState<any>(null)
   const [loading,     setLoading]     = useState(true)
   const [displayName, setDisplayName] = useState('')
-  const storeName = useSession()?.store?.name
+  const session   = useSession()
+  const storeName = session?.store?.name
 
   useEffect(() => {
     fetch('/api/data/dashboard')
@@ -86,6 +117,11 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Tienda nueva: guía de arranque para quien la administra */}
+      {session?.isAdmin && session.store && (m.totalContacts ?? 0) === 0 && (
+        <FirstSteps whatsapp={session.store.modules.whatsapp} />
       )}
 
       {/* KPIs */}
