@@ -1,6 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
+import Link from 'next/link'
+import { normalizePhone } from '@/lib/phone'
 
 /* ══════════════════════════════════════════════════════════
    TIPOS Y CONSTANTES
@@ -21,7 +23,8 @@ type Reminder = {
 type LeadContact = { id: string; name: string; phone?: string; email?: string }
 
 function buildTelHref(phone: string) { return `tel:${phone.replace(/[^\d+]/g, '')}` }
-function buildWhatsAppHref(phone: string) { return `https://wa.me/52${phone.replace(/\D/g, '')}` }
+// El chat abre dentro del CRM (número del negocio, historial ligado al lead)
+function buildWhatsAppHref(phone: string) { return `/whatsapp?phone=${normalizePhone(phone)}` }
 function buildMailHref(email: string) { return `mailto:${email}` }
 
 const REM_TYPES = [
@@ -465,10 +468,10 @@ function RemCard({
                 <Ico.phone />
               </a>
             )}
-            {contact?.phone && (
-              <a href={buildWhatsAppHref(contact.phone)} target="_blank" rel="noopener noreferrer" title="WhatsApp" className="icon-btn icon-btn-whatsapp">
+            {contact?.phone && normalizePhone(contact.phone).length === 10 && (
+              <Link href={buildWhatsAppHref(contact.phone)} title="Abrir chat de WhatsApp" className="icon-btn icon-btn-whatsapp">
                 <Ico.whatsapp />
-              </a>
+              </Link>
             )}
             {contact?.email && (
               <a href={buildMailHref(contact.email)} title="Correo" className="icon-btn icon-btn-mail">
@@ -560,38 +563,32 @@ export default function RecordatoriosPage() {
   useEffect(() => { load() }, [load])
 
   /* CRUD */
-  const handleCreate = async (data: any) => {
-    await fetch('/api/data/reminders', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
-    })
-    setShowModal(false)
-    showToast('Recordatorio creado ✓')
+  const mutate = async (url: string, init: RequestInit, okMsg: string) => {
+    const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...init }).catch(() => null)
+    if (!r?.ok) {
+      const d = await r?.json().catch(() => ({}))
+      showToast(d?.error || 'No se pudo guardar. Intenta de nuevo.')
+      return false
+    }
+    showToast(okMsg)
     await load()
+    return true
+  }
+
+  const handleCreate = async (data: any) => {
+    if (await mutate('/api/data/reminders', { method: 'POST', body: JSON.stringify(data) }, 'Recordatorio creado ✓')) setShowModal(false)
   }
 
   const handleEdit = async (data: any) => {
     if (!editRem) return
-    await fetch(`/api/data/reminders/${editRem.id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
-    })
-    setEditRem(null)
-    showToast('Recordatorio actualizado ✓')
-    await load()
+    if (await mutate(`/api/data/reminders/${editRem.id}`, { method: 'PATCH', body: JSON.stringify(data) }, 'Recordatorio actualizado ✓')) setEditRem(null)
   }
 
-  const handleComplete = async (id: string) => {
-    await fetch(`/api/data/reminders/${id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ completado: true }),
-    })
-    showToast('¡Marcado como listo!')
-    await load()
-  }
+  const handleComplete = (id: string) =>
+    mutate(`/api/data/reminders/${id}`, { method: 'PATCH', body: JSON.stringify({ completado: true }) }, '¡Marcado como listo!')
 
-  const handleDelete = async (id: string) => {
-    await fetch(`/api/data/reminders/${id}`, { method: 'DELETE' })
-    showToast('Eliminado')
-    await load()
-  }
+  const handleDelete = (id: string) =>
+    mutate(`/api/data/reminders/${id}`, { method: 'DELETE' }, 'Eliminado')
 
   /* Filtrado */
   const now     = new Date()
@@ -601,7 +598,7 @@ export default function RecordatoriosPage() {
   const applyTypeFilter = (list: Reminder[]) =>
     typeFilter === 'all' ? list : list.filter(r => (r.type || 'task') === typeFilter)
 
-  const contactsById = new Map(leads.map(l => [l.id, l]))
+  const contactsById = useMemo(() => new Map(leads.map(l => [l.id, l])), [leads])
 
   const pendingF  = applyTypeFilter(pending)
   const overdue   = pendingF.filter(r => new Date(r.fecha_recordatorio) < now)

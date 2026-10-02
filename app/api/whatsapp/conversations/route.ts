@@ -1,50 +1,76 @@
-import { NextResponse } from 'next/server'
-import { getServerSupabase, getUserId, unauthorizedResponse } from '@/lib/supabase-server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSupabase, requireUser } from '@/lib/supabase-server'
+import { contactsForPhones } from '@/lib/whatsappInbox'
+import { isWindowOpen } from '@/lib/whatsappSafety'
+import { serverError } from '@/lib/validation'
 
-// GET /api/whatsapp/conversations — lista una fila por número de teléfono,
-// con el último mensaje y el conteo de mensajes entrantes sin leer.
-export async function GET() {
+const PAGE = 100
+
+/**
+ * GET /api/whatsapp/conversations?filter=all|unread|unknown&q=texto&before=ISO
+ * Una fila por número (vista whatsapp_conversations), con el contacto del
+ * CRM vinculado, no leídos y estado de la ventana de 24 h.
+ */
+export async function GET(req: NextRequest) {
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
+
+  const filter = req.nextUrl.searchParams.get('filter') ?? 'all'
+  const q      = (req.nextUrl.searchParams.get('q') ?? '').trim().toLowerCase().slice(0, 60)
+  const before = req.nextUrl.searchParams.get('before')
+
   try {
-    const uid = await getUserId()
-    if (!uid) return unauthorizedResponse()
+    let query = getServerSupabase()
+      .from('whatsapp_conversations')
+      .select('*')
+      .order('last_at', { ascending: false })
+      // Con búsqueda se filtra en memoria sobre un rango mayor
+      .limit(q ? 1000 : PAGE + 1)
+    if (filter === 'unread') query = query.gt('unread', 0)
+    if (before && !Number.isNaN(Date.parse(before))) query = query.lt('last_at', before)
 
-    const supabase = getServerSupabase()
-
-    const [{ data: messages, error }, { data: contacts }] = await Promise.all([
-      supabase
-        .from('whatsapp_messages')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1000),
-      supabase.from('contacts').select('id, name, phone'),
-    ])
+    const { data, error } = await query
     if (error) throw error
+    const rows = data ?? []
 
-    const nameByPhone = new Map((contacts ?? []).map(c => [c.phone, c.name]))
+    const contacts = await contactsForPhones(
+      rows.map(r => r.phone),
+      rows.map(r => r.contact_id).filter(Boolean),
+    )
 
-    const byPhone = new Map<string, any>()
-    for (const m of messages ?? []) {
-      if (!byPhone.has(m.phone)) {
-        byPhone.set(m.phone, {
-          phone: m.phone,
-          name: nameByPhone.get(m.phone) ?? null,
-          lastMessage: m.body,
-          lastDirection: m.direction,
-          lastAt: m.created_at,
-          unread: 0,
-        })
+    let conversations = rows.map(r => {
+      const contact = contacts.get(r.phone)
+      return {
+        phone:         r.phone as string,
+        contactId:     contact?.id ?? null,
+        name:          contact?.name ?? null,
+        profileName:   r.profile_name as string | null,
+        segment:       contact?.segment ?? null,
+        optOut:        contact?.wa_opt_out ?? false,
+        lastBody:      r.last_body as string | null,
+        lastDirection: r.last_direction as 'inbound' | 'outbound',
+        lastStatus:    r.last_status as string,
+        lastMediaType: r.last_media_type as string | null,
+        lastTemplate:  r.last_template as string | null,
+        lastAt:        r.last_at as string,
+        unread:        r.unread as number,
+        lastInboundAt: r.last_inbound_at as string | null,
+        windowOpen:    isWindowOpen(r.last_inbound_at),
       }
-      if (m.direction === 'inbound' && !m.read_at) {
-        byPhone.get(m.phone).unread++
-      }
+    })
+
+    if (filter === 'unknown') conversations = conversations.filter(c => !c.contactId)
+    if (q) {
+      const digits = q.replace(/\D/g, '')
+      conversations = conversations.filter(c =>
+        (c.name ?? '').toLowerCase().includes(q) ||
+        (c.profileName ?? '').toLowerCase().includes(q) ||
+        (digits.length >= 3 && c.phone.includes(digits)))
     }
 
-    const conversations = Array.from(byPhone.values())
-      .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime())
-
-    return NextResponse.json({ conversations })
-  } catch (error: any) {
-    console.error('[GET /api/whatsapp/conversations]', error?.message ?? error)
-    return NextResponse.json({ error: 'Error al obtener conversaciones' }, { status: 500 })
+    const hasMore = conversations.length > PAGE
+    return NextResponse.json({ conversations: conversations.slice(0, PAGE), hasMore })
+  } catch (error) {
+    return serverError('GET /api/whatsapp/conversations', error, 'Error al obtener conversaciones')
   }
 }

@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
-import { getDisplayName } from '@/lib/profile'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { getDisplayName, invalidateCurrentUser } from '@/lib/profile'
 import { CHANGELOG, CURRENT_VERSION } from '@/lib/changelog'
 import { SYSTEM_NOTICE } from '@/lib/systemNotice'
 
@@ -23,12 +24,23 @@ function localDatetimeMin(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-// Convierte valor de datetime-local ("YYYY-MM-DDTHH:MM") al formato para guardar en BD
-// La columna reminder_date es timestamp SIN zona horaria → guardar hora LOCAL directamente
-// NO convertir a UTC: si conviertes, PostgreSQL almacena la UTC como si fuera local
+// La columna reminder_date es timestamp SIN zona horaria → se guarda la hora
+// LOCAL tal cual ("2026-05-25T13:02" → "2026-05-25T13:02:00"), sin pasar a UTC.
 function datetimeLocalToISO(value: string): string {
-  // "2026-05-25T13:02" → "2026-05-25T13:02:00"
   return value + ':00'
+}
+
+/** Ejecuta `fn` cada `ms` solo con la pestaña visible (y al volver a ella). */
+function useVisibleInterval(fn: () => void, ms: number) {
+  const ref = useRef(fn)
+  ref.current = fn
+  useEffect(() => {
+    ref.current()
+    const t = setInterval(() => { if (document.visibilityState === 'visible') ref.current() }, ms)
+    const onVis = () => { if (document.visibilityState === 'visible') ref.current() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVis) }
+  }, [ms])
 }
 
 /* ── Iconos ── */
@@ -73,27 +85,30 @@ function fmtRem(iso: string) {
 }
 
 const NAV_ITEMS = [
-  { id: 'dashboard',      href: '/',                label: 'Dashboard',      icon: Icon.dashboard, mobile: true  },
-  { id: 'contactos',      href: '/contactos',       label: 'Contactos',      icon: Icon.contacts,  mobile: true  },
-  { id: 'leads',          href: '/leads',           label: 'Leads',          icon: Icon.leads,     mobile: true  },
-  { id: 'recordatorios',  href: '/recordatorios',   label: 'Recordatorios',  icon: Icon.clock,     mobile: true  },
-  { id: 'formulas',       href: '/formulas',        label: 'Fórmulas',       icon: Icon.flask,     mobile: false },
-  { id: 'whatsapp',       href: '/whatsapp',        label: 'WhatsApp',       icon: Icon.whatsapp,  mobile: false },
-  { id: 'configuracion',  href: '/configuracion',   label: 'Configuración',  icon: Icon.settings,  mobile: false },
+  { id: 'dashboard',     href: '/',              label: 'Dashboard',     short: 'Inicio',    icon: Icon.dashboard, mobile: true  },
+  { id: 'contactos',     href: '/contactos',     label: 'Contactos',     short: 'Contactos', icon: Icon.contacts,  mobile: true  },
+  { id: 'leads',         href: '/leads',         label: 'Leads',         short: 'Leads',     icon: Icon.leads,     mobile: true  },
+  { id: 'whatsapp',      href: '/whatsapp',      label: 'WhatsApp',      short: 'WhatsApp',  icon: Icon.whatsapp,  mobile: true  },
+  { id: 'recordatorios', href: '/recordatorios', label: 'Recordatorios', short: 'Pendientes', icon: Icon.clock,    mobile: true  },
+  { id: 'formulas',      href: '/formulas',      label: 'Fórmulas',      short: 'Fórmulas',  icon: Icon.flask,     mobile: false },
+  { id: 'configuracion', href: '/configuracion', label: 'Configuración', short: 'Ajustes',   icon: Icon.settings,  mobile: false },
 ]
 
 const TITLE_MAP: Record<string, { t: string; s: string }> = {
-  '/':               { t: 'Dashboard',         s: 'Resumen de actividad'             },
-  '/contactos':      { t: 'Contactos',         s: 'Base de clientes registrados'     },
-  '/leads':          { t: 'Pipeline de leads', s: 'Gestión de oportunidades'         },
-  '/recordatorios':  { t: 'Recordatorios',     s: 'Seguimiento y tareas pendientes'  },
-  '/whatsapp':       { t: 'WhatsApp',          s: 'Conversaciones con contactos'     },
-  '/configuracion':  { t: 'Configuración',     s: 'Segmentos y canales'              },
+  '/':               { t: 'Dashboard',         s: 'Resumen de actividad'                },
+  '/contactos':      { t: 'Contactos',         s: 'Base de clientes registrados'        },
+  '/leads':          { t: 'Pipeline de leads', s: 'Gestión de oportunidades'            },
+  '/recordatorios':  { t: 'Recordatorios',     s: 'Seguimiento y tareas pendientes'     },
+  '/whatsapp':       { t: 'WhatsApp',          s: 'Conversaciones y campañas'           },
+  '/formulas':       { t: 'Fórmulas',          s: 'Igualación de colores'               },
+  '/configuracion':  { t: 'Configuración',     s: 'Catálogos, usuarios e integraciones' },
 }
+
+// Páginas tipo "app" que ocupan exactamente el alto de la pantalla
+const FILL_ROUTES = ['/whatsapp']
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const router   = useRouter()
 
   const [drawerOpen,  setDrawerOpen]  = useState(false)
   const [displayName, setDisplayName] = useState('Staff')
@@ -103,6 +118,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [whatsNewOpen,  setWhatsNewOpen]  = useState(false)
   const [noticeVisible, setNoticeVisible] = useState(false)
+  const [waUnread,      setWaUnread]      = useState(0)
 
   /* General reminder form inside bell panel */
   const [remForm,   setRemForm]   = useState(false)
@@ -113,13 +129,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   /* Push notifications */
   const [pushSupported,   setPushSupported]   = useState(false)
   const [pushSubscribed,  setPushSubscribed]  = useState(false)
+  const [pushWhatsapp,    setPushWhatsapp]    = useState(true)
   const [pushLoading,     setPushLoading]     = useState(false)
   const [pushError,       setPushError]       = useState('')
   const swRegRef     = useRef<ServiceWorkerRegistration | null>(null)
   const notifiedRef  = useRef<Set<string>>(new Set())  // IDs ya notificados esta sesión
 
-  const bellRef   = useRef<HTMLDivElement>(null)
-  const searchRef = useRef<HTMLInputElement>(null)
+  const bellRef = useRef<HTMLDivElement>(null)
 
   /* Notas de versión — se muestran solas la primera vez que hay una nueva */
   useEffect(() => {
@@ -150,6 +166,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     try { window.localStorage.setItem('ipesa:whatsnew:lastSeen', CURRENT_VERSION) } catch {}
   }
 
+  /* Cerrar el menú lateral al navegar */
+  useEffect(() => { setDrawerOpen(false); setBellOpen(false) }, [pathname])
+
   /* Botón "volver arriba" — visible tras scrollear hacia abajo */
   useEffect(() => {
     const onScroll = () => setShowScrollTop(window.scrollY > 400)
@@ -158,17 +177,30 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  /* Display name — desde user_metadata */
+  /* Display name — desde user_metadata (se refresca si alguien edita el perfil) */
   useEffect(() => {
     getDisplayName().then(setDisplayName)
-  }, [])
-
-  /* Refresca el nombre cuando alguien lo actualiza desde Configuración */
-  useEffect(() => {
-    const refresh = () => getDisplayName().then(setDisplayName)
+    const refresh = () => { invalidateCurrentUser(); getDisplayName().then(setDisplayName) }
     window.addEventListener('ipesa:profile-updated', refresh)
     return () => window.removeEventListener('ipesa:profile-updated', refresh)
   }, [])
+
+  /* WhatsApp: conversaciones sin leer (menú + título de la pestaña) */
+  const loadWaUnread = useCallback(() => {
+    fetch('/api/whatsapp/unread')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d && typeof d.unread === 'number') setWaUnread(d.unread) })
+      .catch(() => {})
+  }, [])
+  useVisibleInterval(loadWaUnread, 30_000)
+  useEffect(() => {
+    window.addEventListener('ipesa:wa-unread-changed', loadWaUnread)
+    return () => window.removeEventListener('ipesa:wa-unread-changed', loadWaUnread)
+  }, [loadWaUnread])
+  useEffect(() => {
+    const base = document.title.replace(/^\(\d+\+?\)\s*/, '')
+    document.title = waUnread > 0 ? `(${waUnread > 99 ? '99+' : waUnread}) ${base}` : base
+  }, [waUnread, pathname])
 
   /* Registrar Service Worker + detectar estado de push */
   useEffect(() => {
@@ -179,15 +211,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       swRegRef.current = reg
       reg.pushManager.getSubscription().then(sub => {
         setPushSubscribed(!!sub)
-        // Re-guardar la suscripción existente para garantizar que user_id esté vinculado.
-        // Resuelve el caso donde el usuario activó push antes del fix multi-usuario.
-        if (sub) {
-          fetch('/api/push/subscribe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(sub.toJSON()),
-          }).catch(() => {})
-        }
+        if (!sub) return
+        // Re-guardar la suscripción para garantizar que quede ligada al usuario actual
+        fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sub.toJSON()),
+        }).catch(() => {})
+        fetch(`/api/push/subscribe?endpoint=${encodeURIComponent(sub.endpoint)}`)
+          .then(r => (r.ok ? r.json() : null))
+          .then(d => { if (d) setPushWhatsapp(d.notifyWhatsapp !== false) })
+          .catch(() => {})
       })
     }).catch(err => console.warn('[SW]', err))
   }, [])
@@ -201,7 +235,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
         setPushError('Permiso denegado. Actívalo en Ajustes del navegador.')
-        setPushLoading(false)
         return
       }
 
@@ -216,14 +249,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       const res = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sub.toJSON()),
+        body: JSON.stringify({ ...sub.toJSON(), notifyWhatsapp: pushWhatsapp }),
       })
-
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error || `Error ${res.status} al guardar suscripción`)
       }
-
       setPushSubscribed(true)
     } catch (err: any) {
       console.error('[Push] Error al activar:', err)
@@ -254,6 +285,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }
 
+  /* Avisos de WhatsApp en este dispositivo */
+  const toggleWhatsappPush = async () => {
+    const next = !pushWhatsapp
+    setPushWhatsapp(next)
+    const sub = await swRegRef.current?.pushManager.getSubscription()
+    if (!sub) return
+    const r = await fetch('/api/push/subscribe', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: sub.endpoint, notifyWhatsapp: next }),
+    }).catch(() => null)
+    if (!r?.ok) setPushWhatsapp(!next)
+  }
+
   /* Notificación de prueba — usa el servidor (verifica VAPID keys + user_id en DB) */
   const testPush = async () => {
     setPushError('')
@@ -261,58 +306,47 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     try {
       const res  = await fetch('/api/push/test', { method: 'POST' })
       const data = await res.json()
-      if (!res.ok) {
-        setPushError(data.error || `Error ${res.status}`)
-      } else if (data.sent === 0) {
-        setPushError('Se envió pero el navegador no recibió la notificación. Revisa los permisos del sitio.')
-      }
-      // Si res.ok y sent > 0, la notificación se ve en pantalla
-    } catch (e: any) {
+      if (!res.ok) setPushError(data.error || `Error ${res.status}`)
+      else if (data.sent === 0) setPushError('Se envió pero el navegador no recibió la notificación. Revisa los permisos del sitio.')
+    } catch {
       setPushError('No se pudo conectar al servidor de prueba.')
     } finally {
       setPushLoading(false)
     }
   }
 
-  /* Load pending reminders + disparar notificación si alguno vence ahora */
+  /* Recordatorios pendientes + notificación local si alguno vence ahora */
   const loadReminders = useCallback(async () => {
     try {
       const r = await fetch('/api/data/reminders')
+      if (!r.ok) return
       const d = await r.json()
       const pending = (d.reminders || []).filter((rem: any) => !rem.completado)
       setReminders(pending)
 
-      // Notificación local cuando la app está abierta y el recordatorio vence
-      if (Notification.permission === 'granted' && swRegRef.current) {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && swRegRef.current) {
         const now = Date.now()
         for (const rem of pending) {
           const due = new Date(rem.fecha_recordatorio).getTime()
-          // Vence en los próximos 65s o venció hace menos de 65s, y no notificado aún
+          // Vence en los próximos 65 s o venció hace menos de 65 s, y no notificado aún
           if (Math.abs(due - now) <= 65_000 && !notifiedRef.current.has(rem.id)) {
             notifiedRef.current.add(rem.id)
-            const nota  = rem.nota || rem.lead_name || 'Recordatorio pendiente'
-            const title = due <= now ? '⏰ Recordatorio vencido' : '🔔 Recordatorio próximo'
-            swRegRef.current.showNotification(title, {
-              body:             nota,
-              icon:             '/ipesa-logo.png',
-              badge:            '/ipesa-logo.png',
-              tag:              `rem-${rem.id}`,
+            swRegRef.current.showNotification(due <= now ? '⏰ Recordatorio vencido' : '🔔 Recordatorio próximo', {
+              body: rem.nota || rem.lead_name || 'Recordatorio pendiente',
+              icon: '/icon-192.png',
+              badge: '/icon-192.png',
+              tag: `rem-${rem.id}`,
               requireInteraction: true,
-              data:             { url: '/recordatorios' },
+              data: { url: '/recordatorios' },
             })
           }
         }
       }
     } catch {}
   }, [])
+  useVisibleInterval(loadReminders, 60_000)
 
-  useEffect(() => {
-    loadReminders()
-    const t = setInterval(loadReminders, 120_000)  // cada 2 min — suficiente para recordatorios
-    return () => clearInterval(t)
-  }, [loadReminders])
-
-  /* Close bell on outside click */
+  /* Cerrar campana con clic fuera */
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
@@ -324,22 +358,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener('mousedown', h)
   }, [])
 
-  /* Sync search → páginas escuchan ipesa:search */
+  /* Búsqueda global → cada página escucha ipesa:search */
   const dispatchSearch = (q: string) => {
     window.dispatchEvent(new CustomEvent('ipesa:search', { detail: q }))
   }
+  useEffect(() => { setSearch('') }, [pathname])
 
-  /* Mark complete */
   const completeReminder = async (id: string) => {
-    await fetch(`/api/data/reminders/${id}`, {
+    const r = await fetch(`/api/data/reminders/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ completado: true }),
     })
-    setReminders(prev => prev.filter(r => r.id !== id))
+    if (r.ok) setReminders(prev => prev.filter(x => x.id !== id))
   }
 
-  /* Save general reminder */
   const saveGeneralReminder = async () => {
     if (!remFecha) return
     setRemSaving(true)
@@ -362,6 +395,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const currentTitle = TITLE_MAP[pathname] ?? { t: 'IPESA', s: '' }
   const isActive     = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   const isContactos  = isActive('/contactos')
+  const fill         = FILL_ROUTES.some(r => pathname.startsWith(r))
 
   const now        = new Date()
   const badgeCount = reminders.length
@@ -381,7 +415,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <img
             src="/ipesa-logo.png"
             alt="IPESA Pinturas"
-            style={{ height: 72, objectFit: 'contain', background: '#fff', borderRadius: 12, padding: '8px 16px', display: 'block' }}
+            width={480}
+            height={209}
+            style={{ height: 72, width: 'auto', objectFit: 'contain', background: '#fff', borderRadius: 12, padding: '8px 16px', display: 'block' }}
           />
         </div>
 
@@ -390,10 +426,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {NAV_ITEMS.map(it => {
             const Ic = it.icon
             return (
-              <a key={it.id} href={it.href} className={`nav-item ${isActive(it.href) ? 'active' : ''}`} onClick={() => setDrawerOpen(false)}>
+              <Link key={it.id} href={it.href} className={`nav-item ${isActive(it.href) ? 'active' : ''}`}>
                 <Ic className="nav-icon" />
                 <span>{it.label}</span>
-              </a>
+                {it.id === 'whatsapp' && waUnread > 0 && <span className="nav-count wa">{waUnread > 99 ? '99+' : waUnread}</span>}
+              </Link>
             )
           })}
         </nav>
@@ -404,11 +441,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <div className="user-name">{displayName}</div>
             <div className="user-role">Sesión activa</div>
           </div>
-          <button onClick={handleLogout} title="Cerrar sesión"
-            style={{ padding: 6, borderRadius: 6, color: 'rgba(245,239,228,0.5)', display: 'grid', placeItems: 'center' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(245,239,228,0.08)'; (e.currentTarget as HTMLElement).style.color = '#fff' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'rgba(245,239,228,0.5)' }}
-          >
+          <button onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión" className="logout-btn">
             <Icon.logout style={{ width: 16, height: 16 }} />
           </button>
         </div>
@@ -422,18 +455,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ── Main ── */}
-      <main className="main">
+      <main className={`main ${fill ? 'main--fill' : ''}`}>
         <div className="topbar">
           <button className="menu-btn" onClick={() => setDrawerOpen(true)} aria-label="Abrir menú">
             <Icon.menu />
           </button>
 
           <div className="topbar-brand-mini">
-            <img
-              src="/ipesa-logo.png"
-              alt="IPESA Pinturas"
-              style={{ height: 44, objectFit: 'contain', display: 'block' }}
-            />
+            <img src="/ipesa-logo.png" alt="IPESA Pinturas" width={480} height={209} style={{ height: 44, width: 'auto', objectFit: 'contain', display: 'block' }} />
           </div>
 
           <div className="topbar-title-block">
@@ -450,36 +479,34 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="topbar-actions">
-            {/* Search — despacha evento que cada página escucha */}
-            <div className="search-input">
-              <Icon.search style={{ width: 16, height: 16, color: 'var(--muted)' }} />
-              <input
-                ref={searchRef}
-                placeholder="Buscar…"
-                value={search}
-                onChange={e => { setSearch(e.target.value); dispatchSearch(e.target.value) }}
-                onKeyDown={e => { if (e.key === 'Escape') { setSearch(''); dispatchSearch('') } }}
-              />
-              {search && (
-                <button onClick={() => { setSearch(''); dispatchSearch('') }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '0 4px', fontSize: 14, lineHeight: 1 }}>
-                  ×
-                </button>
-              )}
-            </div>
+            {/* La búsqueda global solo aplica a páginas con lista (Contactos/Leads) */}
+            {!fill && (
+              <div className="search-input">
+                <Icon.search style={{ width: 16, height: 16, color: 'var(--muted)' }} />
+                <input
+                  placeholder="Buscar…"
+                  value={search}
+                  onChange={e => { setSearch(e.target.value); dispatchSearch(e.target.value) }}
+                  onKeyDown={e => { if (e.key === 'Escape') { setSearch(''); dispatchSearch('') } }}
+                />
+                {search && (
+                  <button onClick={() => { setSearch(''); dispatchSearch('') }} aria-label="Limpiar búsqueda"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', padding: '0 4px', fontSize: 14, lineHeight: 1 }}>
+                    ×
+                  </button>
+                )}
+              </div>
+            )}
 
-            {/* Novedades — notas de versión */}
-            <button className="btn-icon" title="Novedades" onClick={() => setWhatsNewOpen(true)}>
+            <button className="btn-icon" title="Novedades" aria-label="Novedades" onClick={() => setWhatsNewOpen(true)}>
               <Icon.sparkles style={{ width: 16, height: 16, color: 'var(--ink-2)' }} />
             </button>
 
             {/* Bell + panel de recordatorios */}
             <div className="bell-wrap" ref={bellRef}>
-              <button className="btn-icon" title="Recordatorios" onClick={() => { setBellOpen(o => !o); setRemForm(false) }}>
+              <button className="btn-icon" title="Recordatorios" aria-label="Recordatorios" onClick={() => { setBellOpen(o => !o); setRemForm(false) }}>
                 <Icon.bell style={{ width: 16, height: 16, color: badgeCount > 0 ? 'var(--ipesa-orange)' : 'var(--ink-2)' }} />
-                {badgeCount > 0 && (
-                  <span className="bell-badge">{badgeCount > 9 ? '9+' : badgeCount}</span>
-                )}
+                {badgeCount > 0 && <span className="bell-badge">{badgeCount > 9 ? '9+' : badgeCount}</span>}
               </button>
 
               {bellOpen && (
@@ -498,7 +525,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     </button>
                   </div>
 
-                  {/* Formulario recordatorio general */}
                   {remForm && (
                     <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--line)', background: 'var(--ipesa-orange-soft)' }}>
                       <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 8 }}>Nuevo recordatorio</div>
@@ -507,6 +533,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         value={remNota}
                         onChange={e => setRemNota(e.target.value)}
                         placeholder="Descripción del recordatorio…"
+                        maxLength={1000}
                         style={{ width: '100%', padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 7, fontSize: 12.5, outline: 'none', background: '#fff', marginBottom: 7, boxSizing: 'border-box' }}
                       />
                       <input
@@ -525,7 +552,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     </div>
                   )}
 
-                  {/* Lista de recordatorios */}
                   {reminders.length === 0 ? (
                     <div className="notif-empty">
                       <Icon.check style={{ width: 28, height: 28, color: 'var(--ipesa-green)', opacity: 0.5, display: 'block', margin: '0 auto 10px' }} />
@@ -545,15 +571,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                               {fmtRem(r.fecha_recordatorio)}
                             </div>
                           </div>
-                          <button className="notif-done" onClick={() => completeReminder(r.id)}>
-                            ✓ Listo
-                          </button>
+                          <button className="notif-done" onClick={() => completeReminder(r.id)}>✓ Listo</button>
                         </div>
                       )
                     })
                   )}
 
-                  {/* Toggle push notifications */}
                   {pushSupported && (
                     <div style={{ borderTop: '1px solid var(--line)', padding: '10px 14px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -562,14 +585,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                           {pushSubscribed ? 'Notificaciones activas' : 'Alertas cuando la app esté cerrada'}
                         </span>
                         {pushSubscribed && (
-                          <button
-                            onClick={testPush}
-                            title="Enviar notificación de prueba"
-                            style={{
-                              padding: '4px 8px', fontSize: 11, fontWeight: 600, borderRadius: 6,
-                              cursor: 'pointer', border: '1px solid var(--line)',
-                              background: 'none', color: 'var(--muted)',
-                            }}>
+                          <button onClick={testPush} title="Enviar notificación de prueba"
+                            style={{ padding: '4px 8px', fontSize: 11, fontWeight: 600, borderRadius: 6, cursor: 'pointer', border: '1px solid var(--line)', background: 'none', color: 'var(--muted)' }}>
                             Test
                           </button>
                         )}
@@ -586,12 +603,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                           {pushLoading ? '…' : pushSubscribed ? 'Desactivar' : 'Activar'}
                         </button>
                       </div>
+                      {pushSubscribed && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, fontSize: 12, color: 'var(--ink-2)', cursor: 'pointer' }}>
+                          <input type="checkbox" checked={pushWhatsapp} onChange={toggleWhatsappPush} style={{ accentColor: '#25D366' }} />
+                          Avisarme cuando llegue un WhatsApp
+                        </label>
+                      )}
                       {pushError && (
-                        <div style={{
-                          marginTop: 8, padding: '6px 10px', borderRadius: 6,
-                          background: 'var(--ipesa-rose-soft)', color: 'var(--ipesa-rose)',
-                          fontSize: 11.5, fontWeight: 600, lineHeight: 1.4,
-                        }}>
+                        <div style={{ marginTop: 8, padding: '6px 10px', borderRadius: 6, background: 'var(--ipesa-rose-soft)', color: 'var(--ipesa-rose)', fontSize: 11.5, fontWeight: 600, lineHeight: 1.4 }}>
                           ⚠️ {pushError}
                         </div>
                       )}
@@ -611,16 +630,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {noticeVisible && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '10px 20px', margin: '0 24px', marginTop: 16,
-            background: 'var(--ipesa-yellow-soft)', border: '1px solid #F0E0B5',
-            borderRadius: 10, fontSize: 13, color: '#5A4416',
-          }}>
+          <div className="system-notice">
             <Icon.wrench style={{ width: 15, height: 15, flexShrink: 0 }} />
             <span style={{ flex: 1 }}>{SYSTEM_NOTICE.message}</span>
-            <button onClick={dismissNotice} title="Cerrar"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5A4416', flexShrink: 0, display: 'grid', placeItems: 'center', padding: 4 }}>
+            <button onClick={dismissNotice} title="Cerrar" aria-label="Cerrar aviso">
               <Icon.close style={{ width: 15, height: 15 }} />
             </button>
           </div>
@@ -629,40 +642,39 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="content">{children}</div>
       </main>
 
-      {/* ── Bottom nav (mobile) — solo los items con mobile: true ── */}
-      <nav className="bottom-nav">
+      {/* ── Bottom nav (mobile) ── */}
+      <nav className="bottom-nav" aria-label="Navegación principal">
         {NAV_ITEMS.filter(it => it.mobile).map(it => {
           const Ic = it.icon
           return (
-            <button key={it.id} className={isActive(it.href) ? 'active' : ''} onClick={() => router.push(it.href)}>
+            <Link key={it.id} href={it.href} className={isActive(it.href) ? 'active' : ''} aria-current={isActive(it.href) ? 'page' : undefined}>
               <Ic />
-              <span>{it.label === 'Dashboard' ? 'Inicio' : it.label}</span>
-            </button>
+              <span>{it.short}</span>
+              {it.id === 'whatsapp' && waUnread > 0 && <span className="bn-badge">{waUnread > 99 ? '99+' : waUnread}</span>}
+            </Link>
           )
         })}
       </nav>
 
       {/* ── FAB — solo en Contactos ── */}
       {isContactos && (
-        <button
-          className="fab"
-          onClick={() => window.dispatchEvent(new CustomEvent('ipesa:new-contact'))}
-          aria-label="Nuevo contacto"
-        >
+        <button className="fab" onClick={() => window.dispatchEvent(new CustomEvent('ipesa:new-contact'))} aria-label="Nuevo contacto">
           <Icon.plus />
         </button>
       )}
 
-      {/* ── Volver arriba — visible en todas las secciones tras hacer scroll ── */}
-      <button
-        className={`scroll-top-btn ${showScrollTop ? 'visible' : ''}`}
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        aria-label="Volver arriba"
-        title="Volver arriba"
-        tabIndex={showScrollTop ? 0 : -1}
-      >
-        <Icon.arrowUp />
-      </button>
+      {/* ── Volver arriba ── */}
+      {!fill && (
+        <button
+          className={`scroll-top-btn ${showScrollTop ? 'visible' : ''}`}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Volver arriba"
+          title="Volver arriba"
+          tabIndex={showScrollTop ? 0 : -1}
+        >
+          <Icon.arrowUp />
+        </button>
+      )}
 
       {/* ── Novedades — notas de versión ── */}
       {whatsNewOpen && (
@@ -670,7 +682,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <div className="modal-card" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
             <div className="modal-head">
               <h3>🎉 Novedades</h3>
-              <button className="modal-close btn-icon" onClick={closeWhatsNew}><Icon.close style={{ width: 16, height: 16 }} /></button>
+              <button className="modal-close btn-icon" onClick={closeWhatsNew} aria-label="Cerrar"><Icon.close style={{ width: 16, height: 16 }} /></button>
             </div>
             <div className="modal-body">
               {CHANGELOG.map((entry, i) => (

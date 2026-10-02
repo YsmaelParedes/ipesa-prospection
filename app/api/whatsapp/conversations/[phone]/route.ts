@@ -1,81 +1,143 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getUserId, unauthorizedResponse } from '@/lib/supabase-server'
-import { sendWhatsAppText } from '@/lib/whatsapp'
+import { NextRequest, NextResponse, after } from 'next/server'
+import { getServerSupabase, requireUser } from '@/lib/supabase-server'
+import { markWhatsAppRead, sendWhatsAppText } from '@/lib/whatsapp'
+import { contactForPhone } from '@/lib/whatsappInbox'
+import { normalizePhone, toWhatsAppNumber } from '@/lib/phone'
+import { isWindowOpen, windowClosesAt } from '@/lib/whatsappSafety'
+import { jsonError, readJson, serverError } from '@/lib/validation'
 
-// GET /api/whatsapp/conversations/[phone] — hilo completo de un número,
-// marca los mensajes entrantes como leídos al abrirlo.
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ phone: string }> }) {
+type Ctx = { params: Promise<{ phone: string }> }
+
+const MESSAGE_FIELDS = 'id, phone, direction, body, status, error_message, template_name, media_id, media_type, media_mime, profile_name, contact_id, user_id, created_at'
+
+async function phoneParam(params: Ctx['params']): Promise<string | null> {
+  const phone = normalizePhone(decodeURIComponent((await params).phone))
+  return /^\d{10}$/.test(phone) ? phone : null
+}
+
+/**
+ * GET /api/whatsapp/conversations/[phone][?preview=1&limit=n]
+ * Hilo completo + ficha del CRM (contacto, leads visibles para el usuario)
+ * + estado de la ventana de 24 h. Sin `preview`, marca los entrantes como
+ * leídos (también en el WhatsApp del cliente).
+ */
+export async function GET(req: NextRequest, { params }: Ctx) {
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
+  const phone = await phoneParam(params)
+  if (!phone) return jsonError('Número inválido')
+
+  const preview = req.nextUrl.searchParams.get('preview') === '1'
+  const limit   = Math.min(Math.max(Number(req.nextUrl.searchParams.get('limit')) || 300, 1), 500)
+
   try {
-    const uid = await getUserId()
-    if (!uid) return unauthorizedResponse()
-
-    const { phone } = await params
     const supabase = getServerSupabase()
-
-    const { data, error } = await supabase
-      .from('whatsapp_messages')
-      .select('*')
-      .eq('phone', phone)
-      .order('created_at', { ascending: true })
+    const [{ data: newestFirst, error }, { data: lastInbound }] = await Promise.all([
+      supabase.from('whatsapp_messages').select(MESSAGE_FIELDS).eq('phone', phone)
+        .order('created_at', { ascending: false }).limit(limit),
+      supabase.from('whatsapp_messages').select('created_at, profile_name, contact_id, wa_message_id')
+        .eq('phone', phone).eq('direction', 'inbound')
+        .order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    ])
     if (error) throw error
+    const messages = (newestFirst ?? []).reverse()
 
-    const unreadIds = (data ?? []).filter(m => m.direction === 'inbound' && !m.read_at).map(m => m.id)
-    if (unreadIds.length) {
-      await supabase.from('whatsapp_messages').update({ read_at: new Date().toISOString() }).in('id', unreadIds)
+    const linkedId = lastInbound?.contact_id ?? messages.find(m => m.contact_id)?.contact_id ?? null
+    const contact = await contactForPhone(phone, linkedId)
+
+    // Leads del contacto que el usuario puede ver (empleado: suyos + heredados)
+    let leads: { id: string; name: string; estado: string; monto: number | null; canal: string; created_at: string; user_id: string | null }[] = []
+    if (contact) {
+      const { data } = await supabase.from('leads')
+        .select('id, name, estado, monto, canal, created_at, user_id')
+        .or(`contact_id.eq.${contact.id},phone.eq.${phone}`)
+        .order('created_at', { ascending: false }).limit(20)
+      leads = (data ?? []).filter(l => ctx.role === 'admin' || !l.user_id || l.user_id === ctx.uid)
     }
 
-    return NextResponse.json({ messages: data ?? [] })
-  } catch (error: any) {
-    console.error('[GET /api/whatsapp/conversations/[phone]]', error?.message ?? error)
-    return NextResponse.json({ error: 'Error al obtener la conversación' }, { status: 500 })
+    let markedRead = 0
+    if (!preview) {
+      const { data: marked } = await supabase.from('whatsapp_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('phone', phone).eq('direction', 'inbound').is('read_at', null)
+        .select('id')
+      // Palomitas azules para el cliente: basta con marcar el último entrante
+      const waId = lastInbound?.wa_message_id
+      markedRead = marked?.length ?? 0
+      if (markedRead && waId) after(() => markWhatsAppRead(waId))
+    }
+
+    return NextResponse.json({
+      phone,
+      messages,
+      contact,
+      leads,
+      profileName: lastInbound?.profile_name ?? null,
+      lastInboundAt: lastInbound?.created_at ?? null,
+      windowOpen: isWindowOpen(lastInbound?.created_at),
+      windowClosesAt: windowClosesAt(lastInbound?.created_at),
+      markedRead,
+    })
+  } catch (error) {
+    return serverError('GET /api/whatsapp/conversations/[phone]', error, 'Error al obtener la conversación')
   }
 }
 
 // POST /api/whatsapp/conversations/[phone] — responde con texto libre
-// (solo funciona dentro de la ventana de 24h desde el último mensaje del cliente)
-export async function POST(req: NextRequest, { params }: { params: Promise<{ phone: string }> }) {
+// (Meta solo lo permite dentro de las 24 h desde el último mensaje del cliente)
+export async function POST(req: NextRequest, { params }: Ctx) {
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
+  const phone = await phoneParam(params)
+  if (!phone) return jsonError('Número inválido')
+
+  const body = await readJson(req)
+  const text = typeof body?.body === 'string' ? body.body.trim() : ''
+  if (!text) return jsonError('El mensaje no puede estar vacío')
+  if (text.length > 4096) return jsonError('El mensaje excede 4096 caracteres')
+
+  const result = await sendWhatsAppText(toWhatsAppNumber(phone), text)
+  if (!result.ok) return NextResponse.json({ error: result.error, code: result.code }, { status: 502 })
+
   try {
-    const uid = await getUserId()
-    if (!uid) return unauthorizedResponse()
-
-    const { phone } = await params
-    const { body: text } = await req.json()
-    if (!text || typeof text !== 'string' || text.trim().length === 0) {
-      return NextResponse.json({ error: 'El mensaje no puede estar vacío' }, { status: 400 })
-    }
-    if (text.length > 4096) {
-      return NextResponse.json({ error: 'El mensaje excede 4096 caracteres' }, { status: 400 })
-    }
-
-    const supabase = getServerSupabase()
-
-    // Formato E.164 sin "+" para el envío — el número de la BD es local (10 dígitos)
-    const toWhatsApp = phone.length === 10 ? `52${phone}` : phone
-    const result = await sendWhatsAppText(toWhatsApp, text.trim())
-
-    if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: 502 })
-    }
-
-    const { data: contact } = await supabase.from('contacts').select('id').eq('phone', phone).maybeSingle()
-
-    const { data, error } = await supabase
+    const contact = await contactForPhone(phone)
+    const { data, error } = await getServerSupabase()
       .from('whatsapp_messages')
       .insert([{
         contact_id: contact?.id ?? null,
         phone,
         direction: 'outbound',
-        body: text.trim(),
+        body: text,
         wa_message_id: result.messageId,
         status: 'sent',
-        user_id: uid,
+        user_id: ctx.uid,
       }])
-      .select()
+      .select(MESSAGE_FIELDS)
     if (error) throw error
-
     return NextResponse.json({ message: data?.[0] })
-  } catch (error: any) {
-    console.error('[POST /api/whatsapp/conversations/[phone]]', error?.message ?? error)
-    return NextResponse.json({ error: 'Error al enviar el mensaje' }, { status: 500 })
+  } catch (error) {
+    // El mensaje SÍ salió; solo falló guardarlo en el historial
+    return serverError('POST /api/whatsapp/conversations/[phone]', error, 'El mensaje se envió pero no se pudo guardar en el historial')
   }
+}
+
+// PATCH /api/whatsapp/conversations/[phone] — { optOut: boolean } en el contacto vinculado
+export async function PATCH(req: NextRequest, { params }: Ctx) {
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
+  const phone = await phoneParam(params)
+  if (!phone) return jsonError('Número inválido')
+
+  const body = await readJson(req)
+  if (typeof body?.optOut !== 'boolean') return jsonError('optOut debe ser verdadero o falso')
+
+  const contact = await contactForPhone(phone)
+  if (!contact) return jsonError('Primero guarda este número como contacto', 404)
+
+  const { error } = await getServerSupabase()
+    .from('contacts')
+    .update({ wa_opt_out: body.optOut, wa_opt_out_at: body.optOut ? new Date().toISOString() : null })
+    .eq('id', contact.id)
+  if (error) return serverError('PATCH /api/whatsapp/conversations/[phone]', error, 'Error al guardar la preferencia')
+  return NextResponse.json({ ok: true, optOut: body.optOut })
 }

@@ -1,40 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUserContext, unauthorizedResponse } from '@/lib/supabase-server'
-import { sendWhatsAppTemplate, WhatsAppTemplateComponent } from '@/lib/whatsapp'
+import { requireAdmin } from '@/lib/supabase-server'
+import { sanitizeTemplateParam, sendWhatsAppTemplate, type WhatsAppTemplateComponent } from '@/lib/whatsapp'
+import { jsonError, readJson } from '@/lib/validation'
 
 // POST /api/whatsapp/test-send — envía una plantilla a un número de prueba
 // (solo admin, para verificar que la integración de Meta quedó bien configurada)
 export async function POST(req: NextRequest) {
-  const ctx = await getUserContext()
-  if (!ctx) return unauthorizedResponse()
-  if (ctx.role !== 'admin') {
-    return NextResponse.json({ error: 'Sin permisos de administrador' }, { status: 403 })
-  }
+  const ctx = await requireAdmin()
+  if (ctx instanceof Response) return ctx
 
-  const { to, template, language, headerImageUrl, bodyParam } = await req.json()
-  if (!to || typeof to !== 'string' || !/^\d{10,15}$/.test(to)) {
-    return NextResponse.json({ error: 'to debe ser un número en formato 52XXXXXXXXXX (solo dígitos)' }, { status: 400 })
-  }
-  if (!template || typeof template !== 'string' || template.trim().length === 0) {
-    return NextResponse.json({ error: 'template es requerido (el nombre exacto de la plantilla aprobada en Meta)' }, { status: 400 })
+  const body = await readJson(req)
+  if (!body) return jsonError('Cuerpo de solicitud inválido')
+  const { to, template, language, headerImageUrl, bodyParam } = body
+
+  if (typeof to !== 'string' || !/^\d{10,15}$/.test(to)) return jsonError('to debe ser un número en formato 52XXXXXXXXXX (solo dígitos)')
+  if (typeof template !== 'string' || !/^[a-z0-9_]{1,512}$/.test(template.trim())) {
+    return jsonError('template es requerido (el nombre exacto de la plantilla aprobada en Meta)')
   }
 
   const components: WhatsAppTemplateComponent[] = []
-  if (headerImageUrl && typeof headerImageUrl === 'string' && headerImageUrl.trim()) {
+  if (typeof headerImageUrl === 'string' && headerImageUrl.trim()) {
+    try { if (new URL(headerImageUrl.trim()).protocol !== 'https:') throw new Error() } catch { return jsonError('La URL de la imagen debe ser https') }
     components.push({ type: 'header', parameters: [{ type: 'image', image: { link: headerImageUrl.trim() } }] })
   }
-  if (bodyParam && typeof bodyParam === 'string' && bodyParam.trim()) {
-    components.push({ type: 'body', parameters: [{ type: 'text', text: bodyParam.trim() }] })
+  if (typeof bodyParam === 'string' && bodyParam.trim()) {
+    components.push({ type: 'body', parameters: [{ type: 'text', text: sanitizeTemplateParam(bodyParam) }] })
   }
 
-  const result = await sendWhatsAppTemplate(
-    to,
-    template.trim(),
-    (language && typeof language === 'string') ? language : 'es_MX',
-    components
-  )
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 502 })
-  }
+  const lang = typeof language === 'string' && /^[a-zA-Z_]{2,10}$/.test(language) ? language : 'es_MX'
+  const result = await sendWhatsAppTemplate(to, template.trim(), lang, components)
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 502 })
   return NextResponse.json({ success: true, messageId: result.messageId })
 }

@@ -1,99 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getUserContext, unauthorizedResponse } from '@/lib/supabase-server'
+import { getServerSupabase, getUserNameMap, requireUser } from '@/lib/supabase-server'
+import { isUUID, jsonError, parseFields, readJson, serverError } from '@/lib/validation'
+import { LEAD_SCHEMA, ownLeadsFilter } from '@/lib/leads'
+import { normalizePhone } from '@/lib/phone'
 
-// Allowed fields for lead creation — must match DB columns exactly
-const ALLOWED_LEAD_FIELDS = [
-  'name', 'email', 'phone',
-  'canal', 'segmento', 'estado',
-  'monto', 'notas', 'fecha',
-  'contact_id',
-] as const
+// GET /api/data/leads[?contact_id=uuid]
+// Empleado: solo sus leads (+ legacy sin user_id). Admin: todos, con el nombre del vendedor.
+export async function GET(req: NextRequest) {
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
 
-function pickLeadFields(body: Record<string, unknown>) {
-  const out: Record<string, unknown> = {}
-  for (const key of ALLOWED_LEAD_FIELDS) {
-    if (key in body) out[key] = body[key]
-  }
-  return out
-}
+  const contactId = req.nextUrl.searchParams.get('contact_id')
+  if (contactId && !isUUID(contactId)) return jsonError('contact_id inválido')
+  const phone = normalizePhone(req.nextUrl.searchParams.get('phone'))
 
-function validateLeadPost(body: Record<string, unknown>): string | null {
-  if (!body.name || typeof body.name !== 'string' || body.name.trim().length === 0) {
-    return 'El campo name es requerido'
-  }
-  if (body.name.length > 200) return 'name excede 200 caracteres'
-  if (body.email && typeof body.email === 'string' && body.email.length > 254) return 'email excede 254 caracteres'
-  if (body.phone && typeof body.phone === 'string' && body.phone.length > 30) return 'phone excede 30 caracteres'
-  if (body.notas && typeof body.notas === 'string' && body.notas.length > 5000) return 'notas excede 5000 caracteres'
-  if (body.monto !== undefined && body.monto !== null) {
-    const v = Number(body.monto)
-    if (isNaN(v) || v < 0 || v > 1_000_000_000) return 'monto inválido'
-  }
-  return null
-}
-
-// GET /api/data/leads
-// Empleado: solo sus leads (+ legacy sin user_id). Admin: todos los leads, con el nombre del vendedor.
-export async function GET() {
   try {
-    const ctx = await getUserContext()
-    if (!ctx) return unauthorizedResponse()
-
-    const supabase = getServerSupabase()
-
-    if (ctx.role === 'admin') {
-      const [{ data, error }, { data: usersData }] = await Promise.all([
-        supabase.from('leads').select('*').order('created_at', { ascending: false }),
-        supabase.auth.admin.listUsers({ perPage: 200 }),
-      ])
-      if (error) throw error
-
-      const nameByUid = new Map(
-        (usersData?.users ?? []).map(u => [u.id, (u.user_metadata?.display_name as string)?.trim() || u.email || 'Usuario'])
-      )
-      const leads = (data ?? []).map(l => ({
-        ...l,
-        owner_name: l.user_id ? (nameByUid.get(l.user_id) ?? 'Usuario') : 'Sin asignar',
-      }))
-      return NextResponse.json({ leads })
+    let q = getServerSupabase().from('leads').select('*').order('created_at', { ascending: false })
+    if (contactId) {
+      // Leads del contacto: por vínculo o, para los heredados sin vínculo, por teléfono
+      q = /^\d{10}$/.test(phone) ? q.or(`contact_id.eq.${contactId},phone.eq.${phone}`) : q.eq('contact_id', contactId)
+    } else if (ctx.role !== 'admin') {
+      q = q.or(ownLeadsFilter(ctx.uid))
     }
 
-    const { data, error } = await supabase
-      .from('leads')
-      .select('*')
-      .or(`user_id.eq.${ctx.uid},user_id.is.null`)
-      .order('created_at', { ascending: false })
-
+    const [{ data, error }, names] = await Promise.all([
+      q,
+      ctx.role === 'admin' ? getUserNameMap().catch(() => new Map<string, string>()) : Promise.resolve(null),
+    ])
     if (error) throw error
-    return NextResponse.json({ leads: data })
-  } catch (error: any) {
-    console.error('[GET /api/data/leads]', error?.message ?? error)
-    return NextResponse.json({ error: 'Error al obtener leads' }, { status: 500 })
+
+    const visible = (data ?? []).filter(l => ctx.role === 'admin' || !l.user_id || l.user_id === ctx.uid)
+    const leads = names
+      ? visible.map(l => ({ ...l, owner_name: l.user_id ? (names.get(l.user_id) ?? 'Usuario') : 'Sin asignar' }))
+      : visible
+    return NextResponse.json({ leads })
+  } catch (error) {
+    return serverError('GET /api/data/leads', error, 'Error al obtener leads')
   }
 }
 
 // POST /api/data/leads — crea lead vinculado al usuario autenticado
 export async function POST(req: NextRequest) {
-  try {
-    const ctx = await getUserContext()
-    if (!ctx) return unauthorizedResponse()
-    const { uid } = ctx
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
 
-    const body = await req.json()
-    const validationError = validateLeadPost(body)
-    if (validationError) return NextResponse.json({ error: validationError }, { status: 400 })
+  const body = await readJson(req)
+  if (!body) return jsonError('Cuerpo de solicitud inválido')
+  const parsed = parseFields(body, LEAD_SCHEMA)
+  if (!parsed.ok) return jsonError(parsed.error)
+  if (typeof parsed.data.phone === 'string') parsed.data.phone = normalizePhone(parsed.data.phone)
 
-    const leadData = pickLeadFields(body)
-    const supabase = getServerSupabase()
-    const { data, error } = await supabase
-      .from('leads')
-      .insert([{ ...leadData, user_id: uid }])
-      .select()
-
-    if (error) throw error
-    return NextResponse.json(data)
-  } catch (error: any) {
-    console.error('[POST /api/data/leads]', error?.message ?? error)
-    return NextResponse.json({ error: 'Error al crear lead' }, { status: 500 })
-  }
+  const { data, error } = await getServerSupabase()
+    .from('leads')
+    .insert([{ ...parsed.data, user_id: ctx.uid }])
+    .select()
+  if (error) return serverError('POST /api/data/leads', error, 'Error al crear lead')
+  return NextResponse.json(data)
 }

@@ -1,63 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getUserId, unauthorizedResponse } from '@/lib/supabase-server'
+import { getServerSupabase, requireAdmin, requireUser } from '@/lib/supabase-server'
+import { jsonError, readJson, serverError } from '@/lib/validation'
 
-// Allowed config types — whitelist prevents arbitrary table queries
-const ALLOWED_CONFIG_TYPES = ['estado', 'canal', 'segment', 'segmento', 'fuente', 'etapa'] as const
+// Tipos reales en la BD (CHECK type IN ('segment','canal'))
+const CONFIG_TYPES = ['segment', 'canal'] as const
+type ConfigType = typeof CONFIG_TYPES[number]
+const isConfigType = (v: unknown): v is ConfigType => typeof v === 'string' && (CONFIG_TYPES as readonly string[]).includes(v)
 
+// GET /api/data/config[?type=segment|canal] — cualquier usuario (alimenta los formularios)
 export async function GET(req: NextRequest) {
-  try {
-    const uid = await getUserId()
-    if (!uid) return unauthorizedResponse()
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
 
-    const supabase = getServerSupabase()
-    const type = req.nextUrl.searchParams.get('type')
+  const type = req.nextUrl.searchParams.get('type')
+  if (type && !isConfigType(type)) return jsonError('Tipo de configuración no válido')
 
-    // Validate type param against whitelist to prevent injection
-    if (type && !ALLOWED_CONFIG_TYPES.includes(type as typeof ALLOWED_CONFIG_TYPES[number])) {
-      return NextResponse.json({ error: 'Tipo de configuración no válido' }, { status: 400 })
-    }
-
-    let q = supabase.from('app_config').select('*').order('label', { ascending: true })
-    if (type) q = q.eq('type', type)
-    const { data, error } = await q
-    if (error) throw error
-    // NO cachear en CDN — la config es editable por el usuario y debe verse inmediatamente.
-    return NextResponse.json({ items: data ?? [] }, {
-      headers: { 'Cache-Control': 'no-store' },
-    })
-  } catch (error: any) {
-    return NextResponse.json({ error: 'Error al obtener config' }, { status: 500 })
-  }
+  let q = getServerSupabase().from('app_config').select('id, type, label, created_at').order('label', { ascending: true })
+  if (type) q = q.eq('type', type)
+  const { data, error } = await q
+  if (error) return serverError('GET /api/data/config', error, 'Error al obtener config')
+  // No cachear: es editable y debe verse de inmediato.
+  return NextResponse.json({ items: data ?? [] }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
+// POST /api/data/config — solo administradores (cambia las opciones de todos)
 export async function POST(req: NextRequest) {
-  try {
-    const uid = await getUserId()
-    if (!uid) return unauthorizedResponse()
+  const ctx = await requireAdmin()
+  if (ctx instanceof Response) return ctx
 
-    const body = await req.json()
+  const body = await readJson(req)
+  if (!body || !isConfigType(body.type)) return jsonError('Tipo de configuración no válido')
+  const label = typeof body.label === 'string' ? body.label.trim() : ''
+  if (!label) return jsonError('label es requerido')
+  if (label.length > 100) return jsonError('label excede 100 caracteres')
 
-    if (!body.type || typeof body.type !== 'string') {
-      return NextResponse.json({ error: 'type es requerido' }, { status: 400 })
-    }
-    if (!ALLOWED_CONFIG_TYPES.includes(body.type as typeof ALLOWED_CONFIG_TYPES[number])) {
-      return NextResponse.json({ error: 'Tipo de configuración no válido' }, { status: 400 })
-    }
-    if (!body.label || typeof body.label !== 'string' || body.label.trim().length === 0) {
-      return NextResponse.json({ error: 'label es requerido' }, { status: 400 })
-    }
-    if (body.label.length > 100) {
-      return NextResponse.json({ error: 'label excede 100 caracteres' }, { status: 400 })
-    }
-
-    const supabase = getServerSupabase()
-    const { data, error } = await supabase
-      .from('app_config')
-      .insert([{ type: body.type, label: body.label.trim() }])
-      .select()
-    if (error) throw error
-    return NextResponse.json(data?.[0] ?? {})
-  } catch (error: any) {
-    return NextResponse.json({ error: 'Error al crear item' }, { status: 500 })
+  const { data, error } = await getServerSupabase().from('app_config').insert([{ type: body.type, label }]).select()
+  if (error) {
+    if (error.code === '23505') return jsonError(`Ya existe "${label}"`)
+    return serverError('POST /api/data/config', error, 'Error al crear item')
   }
+  return NextResponse.json(data?.[0] ?? {})
 }

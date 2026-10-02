@@ -24,12 +24,6 @@ export default function LoginPage() {
         setError(data.error || 'Credenciales incorrectas. Verifica tu correo y contraseña.')
         return
       }
-      // Derive display name from email (before @)
-      try {
-        const raw = email.split('@')[0].replace(/[._-]/g, ' ')
-        const name = raw.replace(/\b\w/g, l => l.toUpperCase())
-        localStorage.setItem('ipesa_display_name', name)
-      } catch {}
       window.location.href = '/'
     } catch {
       setError('Error de conexión. Intenta de nuevo.')
@@ -46,7 +40,9 @@ export default function LoginPage() {
             <img
               src="/ipesa-logo.png"
               alt="IPESA Pinturas"
-              style={{ height: 64, objectFit: 'contain', display: 'block', margin: '0 auto' }}
+              width={480}
+              height={209}
+              style={{ height: 64, width: 'auto', objectFit: 'contain', display: 'block', margin: '0 auto' }}
             />
           </div>
 
@@ -107,7 +103,7 @@ export default function LoginPage() {
           </button>
 
           <div className="login-foot-help" style={{ marginTop: 20 }}>
-            ¿Problemas para acceder? <a href="#">Contacta a soporte interno</a>
+            ¿Problemas para acceder? Pide a un administrador que revise tu usuario.
           </div>
         </form>
       </div>

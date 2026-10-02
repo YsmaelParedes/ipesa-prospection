@@ -1,110 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getUserId, unauthorizedResponse } from '@/lib/supabase-server'
+import { getServerSupabase, requireUser } from '@/lib/supabase-server'
+import { isUUID, jsonError, parseFields, readJson, serverError } from '@/lib/validation'
+import { REMINDER_SCHEMA, reminderToApp, reminderToDB } from '@/lib/reminders'
+import { getAccessibleLead } from '@/lib/leads'
 
-function toDB(body: any) {
-  const { fecha_recordatorio, ...rest } = body
-  return { ...rest, ...(fecha_recordatorio !== undefined ? { reminder_date: fecha_recordatorio } : {}) }
-}
+type Ctx = { params: Promise<{ id: string }> }
 
-// Allowed fields for reminder updates — prevents mass assignment
-const ALLOWED_REMINDER_UPDATE_FIELDS = [
-  'nota', 'lead_id', 'lead_name', 'completado',
-  'fecha_recordatorio', 'reminder_date',
-  'type', 'priority',
-] as const
-
-function pickReminderUpdateFields(body: Record<string, unknown>) {
-  const out: Record<string, unknown> = {}
-  for (const key of ALLOWED_REMINDER_UPDATE_FIELDS) {
-    if (key in body) out[key] = body[key]
-  }
-  return out
+async function ownReminder(uid: string, id: string) {
+  const { data } = await getServerSupabase().from('reminders').select('user_id').eq('id', id).maybeSingle()
+  return !!data && data.user_id === uid
 }
 
 // PATCH /api/data/reminders/[id]
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const uid = await getUserId()
-    if (!uid) return unauthorizedResponse()
+export async function PATCH(req: NextRequest, { params }: Ctx) {
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
 
-    const { id }   = await params
-    const rawBody  = await req.json()
-    const pickedBody = pickReminderUpdateFields(rawBody)
-    const updates  = toDB(pickedBody)
+  const { id } = await params
+  if (!isUUID(id)) return jsonError('Recordatorio no encontrado', 404)
+  const body = await readJson(req)
+  if (!body) return jsonError('Cuerpo de solicitud inválido')
 
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ error: 'No se proporcionaron campos válidos para actualizar' }, { status: 400 })
-    }
-    if (updates.nota && typeof updates.nota === 'string' && updates.nota.length > 1000) {
-      return NextResponse.json({ error: 'nota excede 1000 caracteres' }, { status: 400 })
-    }
+  const parsed = parseFields(body, REMINDER_SCHEMA, { partial: true })
+  if (!parsed.ok) return jsonError(parsed.error)
+  const updates = reminderToDB(parsed.data) as Record<string, unknown>
+  if (Object.keys(updates).length === 0) return jsonError('No se proporcionaron campos válidos para actualizar')
 
-    const supabase = getServerSupabase()
+  if (!(await ownReminder(ctx.uid, id))) return jsonError('Recordatorio no encontrado', 404)
+  if (updates.lead_id && !(await getAccessibleLead(ctx, updates.lead_id as string))) return jsonError('Lead no encontrado', 404)
 
-    // Verifica propiedad (permite legacy user_id NULL)
-    const { data: existing } = await supabase
-      .from('reminders')
-      .select('user_id')
-      .eq('id', id)
-      .single()
+  // Volver a notificar si se reprograma o se reactiva el recordatorio. La
+  // comparación es entre horas locales de México en formato ISO (texto).
+  const nowLocal = new Date().toLocaleString('sv-SE', { timeZone: 'America/Mexico_City', hour12: false }).replace(' ', 'T')
+  const newDate  = updates.reminder_date as string | undefined
+  const resetPush = (!!newDate && newDate > nowLocal) || updates.completado === false
 
-    if (!existing) return NextResponse.json({ error: 'Recordatorio no encontrado' }, { status: 404 })
-    if (existing.user_id !== uid) {
-      return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
-    }
-
-    // Resetear push_sent si:
-    //  a) se cambia la fecha a un valor futuro → notificar en el nuevo horario
-    //  b) se vuelve a activar el recordatorio (completado → false)
-    const newDate   = updates.reminder_date as string | undefined
-    const resetPush =
-      (newDate && new Date(newDate) > new Date()) ||
-      updates.completado === false
-
-    const { data, error } = await supabase
-      .from('reminders')
-      .update({
-        ...updates,
-        ...(updates.completado === true  ? { completado_at: new Date().toISOString() } : {}),
-        ...(updates.completado === false ? { completado_at: null }                      : {}),
-        ...(resetPush                   ? { push_sent: false }                          : {}),
-      })
-      .eq('id', id)
-      .select()
-
-    if (error) throw error
-    return NextResponse.json(data?.[0] ?? {})
-  } catch (error: any) {
-    console.error('[PATCH /api/data/reminders/[id]]', error?.message)
-    return NextResponse.json({ error: error?.message ?? 'Error al actualizar recordatorio' }, { status: 500 })
-  }
+  const { data, error } = await getServerSupabase()
+    .from('reminders')
+    .update({
+      ...updates,
+      ...(updates.completado === true  ? { completado_at: new Date().toISOString() } : {}),
+      ...(updates.completado === false ? { completado_at: null } : {}),
+      ...(resetPush ? { push_sent: false } : {}),
+    })
+    .eq('id', id)
+    .select()
+  if (error) return serverError('PATCH /api/data/reminders/[id]', error, 'Error al actualizar recordatorio')
+  return NextResponse.json(data?.[0] ? reminderToApp(data[0]) : {})
 }
 
 // DELETE /api/data/reminders/[id]
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const uid = await getUserId()
-    if (!uid) return unauthorizedResponse()
+export async function DELETE(_req: NextRequest, { params }: Ctx) {
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
 
-    const { id }   = await params
-    const supabase = getServerSupabase()
+  const { id } = await params
+  if (!isUUID(id)) return jsonError('Recordatorio no encontrado', 404)
+  if (!(await ownReminder(ctx.uid, id))) return jsonError('Recordatorio no encontrado', 404)
 
-    // Verifica propiedad
-    const { data: existing } = await supabase
-      .from('reminders')
-      .select('user_id')
-      .eq('id', id)
-      .single()
-
-    if (!existing) return NextResponse.json({ error: 'Recordatorio no encontrado' }, { status: 404 })
-    if (existing.user_id !== uid) {
-      return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
-    }
-
-    const { error } = await supabase.from('reminders').delete().eq('id', id)
-    if (error) throw error
-    return NextResponse.json({ success: true })
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message ?? 'Error al eliminar recordatorio' }, { status: 500 })
-  }
+  const { error } = await getServerSupabase().from('reminders').delete().eq('id', id)
+  if (error) return serverError('DELETE /api/data/reminders/[id]', error, 'Error al eliminar recordatorio')
+  return NextResponse.json({ success: true })
 }
