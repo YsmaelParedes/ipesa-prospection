@@ -1,87 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getUserId, unauthorizedResponse } from '@/lib/supabase-server'
+import { getServerSupabase, requireUser } from '@/lib/supabase-server'
+import { isUUID, jsonError, parseFields, readJson, serverError, type Schema } from '@/lib/validation'
+import { ACTIVITY_TYPES, getAccessibleLead } from '@/lib/leads'
 
-// GET /api/data/activities?lead_id=xxx
-export async function GET(req: NextRequest) {
-  try {
-    const uid = await getUserId()
-    if (!uid) return unauthorizedResponse()
-
-    const supabase = getServerSupabase()
-    const leadId   = req.nextUrl.searchParams.get('lead_id')
-
-    let q = supabase
-      .from('lead_activities')
-      .select('*')
-      .order('activity_date', { ascending: false })
-
-    if (leadId) {
-      // Para un lead específico: traer todas las actividades del lead
-      q = q.eq('lead_id', leadId)
-    } else {
-      // Sin lead: traer las del usuario actual
-      q = q.or(`user_id.eq.${uid},user_id.is.null`)
-    }
-
-    const { data, error } = await q
-    if (error) throw error
-    return NextResponse.json({ activities: data ?? [] })
-  } catch (error: any) {
-    console.error('[GET /api/data/activities]', error?.message)
-    return NextResponse.json({ error: error?.message ?? 'Error al obtener actividades' }, { status: 500 })
-  }
+const ACTIVITY_SCHEMA: Schema = {
+  lead_id:       { type: 'uuid', required: true, label: 'Lead' },
+  type:          { type: 'enum', values: ACTIVITY_TYPES, required: true, label: 'Tipo' },
+  description:   { type: 'text', max: 2000, nullable: true, label: 'Descripción' },
+  amount:        { type: 'number', min: 0, max: 1_000_000_000, nullable: true, label: 'Monto' },
+  activity_date: { type: 'datetime', label: 'Fecha' },
 }
 
-// Allowed fields for activity creation — must match DB columns exactly
-// DB: id, lead_id, user_id, type, description, amount, activity_date, created_at
-const ALLOWED_ACTIVITY_FIELDS = [
-  'type', 'description', 'amount', 'activity_date', 'lead_id',
-] as const
+// GET /api/data/activities?lead_id=xxx — historial de un lead al que el usuario tiene acceso
+export async function GET(req: NextRequest) {
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
 
-function pickActivityFields(body: Record<string, unknown>) {
-  const out: Record<string, unknown> = {}
-  for (const key of ALLOWED_ACTIVITY_FIELDS) {
-    if (key in body) out[key] = body[key]
-  }
-  return out
+  const leadId = req.nextUrl.searchParams.get('lead_id')
+  if (!isUUID(leadId)) return jsonError('lead_id es requerido')
+  if (!(await getAccessibleLead(ctx, leadId))) return jsonError('Lead no encontrado', 404)
+
+  const { data, error } = await getServerSupabase()
+    .from('lead_activities')
+    .select('*')
+    .eq('lead_id', leadId)
+    .order('activity_date', { ascending: false })
+  if (error) return serverError('GET /api/data/activities', error, 'Error al obtener actividades')
+  return NextResponse.json({ activities: data ?? [] })
 }
 
 // POST /api/data/activities
 export async function POST(req: NextRequest) {
-  try {
-    const uid = await getUserId()
-    if (!uid) return unauthorizedResponse()
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
 
-    const body = await req.json()
+  const body = await readJson(req)
+  if (!body) return jsonError('Cuerpo de solicitud inválido')
+  const parsed = parseFields(body, ACTIVITY_SCHEMA)
+  if (!parsed.ok) return jsonError(parsed.error)
+  if (!(await getAccessibleLead(ctx, parsed.data.lead_id as string))) return jsonError('Lead no encontrado', 404)
 
-    if (!body.type || typeof body.type !== 'string' || body.type.trim().length === 0) {
-      return NextResponse.json({ error: 'type es requerido' }, { status: 400 })
-    }
-    if (body.type.length > 100) {
-      return NextResponse.json({ error: 'type excede 100 caracteres' }, { status: 400 })
-    }
-    if (body.description && typeof body.description === 'string' && body.description.length > 2000) {
-      return NextResponse.json({ error: 'description excede 2000 caracteres' }, { status: 400 })
-    }
-    if (body.amount !== undefined && body.amount !== null) {
-      const v = Number(body.amount)
-      if (isNaN(v) || v < 0 || v > 1_000_000_000) {
-        return NextResponse.json({ error: 'amount inválido' }, { status: 400 })
-      }
-    }
-
-    const activityData = pickActivityFields(body)
-    const supabase = getServerSupabase()
-
-    const { data, error } = await supabase
-      .from('lead_activities')
-      .insert([{ ...activityData, user_id: uid }])
-      .select()
-
-    if (error) throw error
-    return NextResponse.json(data?.[0] ?? {})
-  } catch (error: any) {
-    console.error('[POST /api/data/activities]', error?.message)
-    return NextResponse.json({ error: error?.message ?? 'Error al crear actividad' }, { status: 500 })
-  }
+  const { data, error } = await getServerSupabase()
+    .from('lead_activities')
+    .insert([{ ...parsed.data, user_id: ctx.uid }])
+    .select()
+  if (error) return serverError('POST /api/data/activities', error, 'Error al crear actividad')
+  return NextResponse.json(data?.[0] ?? {})
 }

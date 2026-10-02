@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getUserId, unauthorizedResponse } from '@/lib/supabase-server'
+import { getServerSupabase, requireAdmin } from '@/lib/supabase-server'
+import { isUUID, jsonError, serverError } from '@/lib/validation'
 
+// DELETE /api/data/config/[id] — solo administradores
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const uid = await getUserId()
-    if (!uid) return unauthorizedResponse()
+  const ctx = await requireAdmin()
+  if (ctx instanceof Response) return ctx
 
-    const { id } = await params
-    const supabase = getServerSupabase()
-    const { error } = await supabase.from('app_config').delete().eq('id', id)
-    if (error) throw error
-    return NextResponse.json({ success: true })
-  } catch (error: any) {
-    return NextResponse.json({ error: 'Error al eliminar' }, { status: 500 })
-  }
+  const { id } = await params
+  if (!isUUID(id)) return jsonError('No encontrado', 404)
+
+  const { error } = await getServerSupabase().from('app_config').delete().eq('id', id)
+  if (error) return serverError('DELETE /api/data/config/[id]', error, 'Error al eliminar')
+  return NextResponse.json({ success: true })
 }

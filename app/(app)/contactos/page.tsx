@@ -1,11 +1,14 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
-import { Avatar, TipoChip, CanalChip, FilterDropdown, fmtDateLong, fmtPhone, normalizePhone, isMobilePhone } from '@/components/IpesaUI'
+import { Suspense, useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Avatar, TipoChip, CanalChip, FilterDropdown, EstadoChip, fmtDateLong, fmtPhone, normalizePhone, isMobilePhone } from '@/components/IpesaUI'
 import { getUserRole } from '@/lib/profile'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
 import { useWhatsAppCampaignQuota, CampaignQuotaNote } from '@/components/WhatsAppCampaignQuota'
-import { useCampaignSend, CampaignConfirmPanel, CampaignProgressPanel } from '@/components/WhatsAppCampaignSend'
+import { useCampaignSend, CampaignConfirmPanel, CampaignProgressPanel, CampaignResultsPanel } from '@/components/WhatsAppCampaignSend'
+import { StatusTicks, WindowBadge, fmtTime, mediaCaption } from '@/components/WhatsAppUI'
 
 /* ── Iconos ── */
 const Ico = {
@@ -22,7 +25,6 @@ const Ico = {
   xmark:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><path d="M18 6 6 18M6 6l12 12"/></svg>,
   whatsapp: () => <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 14, height: 14 }}><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.8.9-1 1.1c-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.4-.9-.8-1.5-1.8-1.7-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.3-.7.3-1.2.2-1.4 0-.1-.3-.2-.6-.4Zm-5.5 7.5c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.5 4.4-9.9 9.9-9.9s9.9 4.4 9.9 9.9-4.5 9.9-10 9.9Zm8.4-18.3C18.2 1.5 15.2.3 12 .3 5.4.3.1 5.6.1 12.2c0 2.1.6 4.2 1.6 6L0 24l5.9-1.5c1.7 1 3.7 1.5 5.7 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4Z"/></svg>,
   send:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>,
-  image:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22, color: 'var(--muted-2)' }}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>,
 }
 
 const TIPO_COLORS: Record<string, string> = {
@@ -74,6 +76,14 @@ function SelectField({ label, value, options, onChange, required, placeholder }:
 }
 
 export default function ContactosPage() {
+  // useSearchParams (?id= para abrir una ficha directo) requiere Suspense
+  return <Suspense fallback={null}><ContactosContent /></Suspense>
+}
+
+function ContactosContent() {
+  const router       = useRouter()
+  const searchParams = useSearchParams()
+  const deepId       = searchParams.get('id')
   const [contacts, setContacts]       = useState<any[]>([])
   const [tipos, setTipos]             = useState<string[]>(TIPOS_DEFAULT)
   const [canales, setCanales]         = useState<string[]>(CANALES_DEFAULT)
@@ -120,6 +130,19 @@ export default function ContactosPage() {
 
   useEffect(() => { load() }, [load])
 
+  /* Abrir la ficha indicada en la URL (?id=…), p. ej. desde la bandeja de WhatsApp */
+  useEffect(() => {
+    if (!deepId || loading) return
+    const found = contacts.find(c => c.id === deepId)
+    if (found) { setSelected(found); return }
+    fetch(`/api/data/contacts/${deepId}`).then(r => (r.ok ? r.json() : null)).then(c => { if (c?.id) setSelected(c) }).catch(() => {})
+  }, [deepId, loading, contacts])
+
+  const closeDetail = () => {
+    setSelected(null)
+    if (deepId) router.replace('/contactos', { scroll: false })
+  }
+
   /* Escuchar búsqueda global del topbar */
   useEffect(() => {
     const h = (e: Event) => setSearch((e as CustomEvent).detail ?? '')
@@ -133,20 +156,30 @@ export default function ContactosPage() {
     return () => window.removeEventListener('ipesa:new-contact', h)
   }, [])
 
-  const landlineCount = contacts.filter(c => !isMobilePhone(c.phone)).length
+  // Cálculos derivados memoizados: con cientos de contactos, recalcularlos en
+  // cada tecla/clic era lo que hacía lenta la lista.
+  const mobileIds = useMemo(() => new Set(contacts.filter(c => isMobilePhone(c.phone)).map(c => c.id)), [contacts])
+  const landlineCount = contacts.length - mobileIds.size
 
-  const filtered = contacts.filter(c => {
-    if (showOnlyLandlines && isMobilePhone(c.phone)) return false
-    if (!showOnlyLandlines && tipoFiltro !== 'Todos' && c.segment !== tipoFiltro) return false
-    if (search) {
-      const q = search.toLowerCase()
-      const hay = `${c.name} ${c.email} ${c.phone} ${c.company || ''} ${c.acquisition_channel || ''}`.toLowerCase()
-      if (!hay.includes(q)) return false
-    }
-    return true
-  })
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return contacts.filter(c => {
+      if (showOnlyLandlines && mobileIds.has(c.id)) return false
+      if (!showOnlyLandlines && tipoFiltro !== 'Todos' && c.segment !== tipoFiltro) return false
+      if (q) {
+        const hay = `${c.name} ${c.email || ''} ${c.phone} ${c.company || ''} ${c.acquisition_channel || ''}`.toLowerCase()
+        if (!hay.includes(q)) return false
+      }
+      return true
+    })
+  }, [contacts, search, tipoFiltro, showOnlyLandlines, mobileIds])
 
-  const countFor = (t: string) => t === 'Todos' ? contacts.length : contacts.filter(c => c.segment === t).length
+  const segmentCounts = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const c of contacts) if (c.segment) m.set(c.segment, (m.get(c.segment) ?? 0) + 1)
+    return m
+  }, [contacts])
+  const countFor = (t: string) => t === 'Todos' ? contacts.length : (segmentCounts.get(t) ?? 0)
 
   /* Update selected contact in-place after edit */
   const handleContactUpdated = (updated: any) => {
@@ -156,7 +189,7 @@ export default function ContactosPage() {
   }
 
   const handleContactDeleted = (id: string) => {
-    setSelected(null)
+    closeDetail()
     setContacts(prev => prev.filter(c => c.id !== id))
     showToast('Contacto eliminado')
   }
@@ -204,13 +237,23 @@ export default function ContactosPage() {
   const handleBulkDelete = async () => {
     setBulkDeleting(true)
     const ids = [...checkedIds]
-    await Promise.all(ids.map(id => fetch(`/api/data/contacts/${id}`, { method: 'DELETE' })))
-    setContacts(prev => prev.filter(c => !checkedIds.has(c.id)))
-    if (selected && checkedIds.has(selected.id)) setSelected(null)
-    const n = ids.length
+    const deleted = new Set<string>()
+    // Un solo request por cada 500 (antes era uno por contacto)
+    for (let i = 0; i < ids.length; i += 500) {
+      const chunk = ids.slice(i, i + 500)
+      const r = await fetch('/api/data/contacts', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: chunk }),
+      }).catch(() => null)
+      if (r?.ok) chunk.forEach(id => deleted.add(id))
+    }
+    setContacts(prev => prev.filter(c => !deleted.has(c.id)))
+    if (selected && deleted.has(selected.id)) closeDetail()
     clearSelection()
     setBulkDeleting(false)
-    showToast(`${n} contacto${n !== 1 ? 's' : ''} eliminado${n !== 1 ? 's' : ''} ✓`)
+    const n = deleted.size
+    showToast(n === ids.length
+      ? `${n} contacto${n !== 1 ? 's' : ''} eliminado${n !== 1 ? 's' : ''} ✓`
+      : `Se eliminaron ${n} de ${ids.length}. Intenta de nuevo con el resto.`)
   }
 
   return (
@@ -403,11 +446,12 @@ export default function ContactosPage() {
 
       {selected && (
         <ContactDetail
+          key={selected.id}
           contact={selected}
           tipos={tipos}
           canales={canales}
-          onClose={() => setSelected(null)}
-            onUpdated={handleContactUpdated}
+          onClose={closeDetail}
+          onUpdated={handleContactUpdated}
           onDeleted={handleContactDeleted}
         />
       )}
@@ -439,7 +483,7 @@ export default function ContactosPage() {
       {showImport && (
         <ImportModal
           onClose={() => setShowImport(false)}
-          onDone={() => { setShowImport(false); load(); showToast('Importación completada ✓') }}
+          onDone={(msg) => { setShowImport(false); load(); showToast(msg) }}
         />
       )}
 
@@ -484,24 +528,23 @@ function ContactDetail({
   const [saving, setSaving]       = useState(false)
   const [deleting, setDeleting]   = useState(false)
   const [editForm, setEditForm]   = useState({
-    name: c.name || '', phone: c.phone || '', email: c.email || '',
+    name: c.name || '', phone: normalizePhone(c.phone), email: c.email || '',
     company: c.company || '', segment: c.segment || tipos[0] || '',
     acquisition_channel: c.acquisition_channel || canales[0] || '',
-    address: c.address || '',
+    address: c.address || '', postal_code: c.postal_code || '',
   })
   const [phoneErr, setPhoneErr]   = useState('')
   const [saveError, setSaveError] = useState('')
 
+  // Solo los leads de este contacto (antes se descargaban todos y se filtraban aquí)
   useEffect(() => {
-    fetch('/api/data/leads')
+    const params = new URLSearchParams({ contact_id: c.id })
+    if (c.phone) params.set('phone', normalizePhone(c.phone))
+    fetch(`/api/data/leads?${params}`)
       .then(r => r.json())
-      .then(d => setLeads((d.leads || []).filter((l: any) =>
-        l.contact_id === c.id ||
-        (c.email && l.email && l.email === c.email) ||
-        (c.phone && l.phone && l.phone === c.phone)
-      )))
+      .then(d => setLeads(d.leads || []))
       .catch(() => {})
-  }, [c])
+  }, [c.id, c.phone])
 
   const upd = (k: string, v: string) => setEditForm(f => ({ ...f, [k]: v }))
   const onPhoneChange = (raw: string) => {
@@ -577,6 +620,16 @@ function ContactDetail({
                 <label>Empresa</label>
                 <input value={editForm.company} onChange={e => upd('company', e.target.value)} />
               </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>Dirección</label>
+                  <input value={editForm.address} onChange={e => upd('address', e.target.value)} maxLength={500} />
+                </div>
+                <div className="field">
+                  <label>C.P.</label>
+                  <input value={editForm.postal_code} onChange={e => upd('postal_code', e.target.value.replace(/\D/g, '').slice(0, 5))} inputMode="numeric" maxLength={5} />
+                </div>
+              </div>
               <SelectField label="Canal de adquisición" value={editForm.acquisition_channel} options={canales} onChange={v => upd('acquisition_channel', v)} required placeholder="— Seleccionar canal —" />
               <SelectField label="Tipo de cliente" value={editForm.segment} options={tipos} onChange={v => upd('segment', v)} required placeholder="— Seleccionar tipo —" />
               {saveError && <div style={{ color: 'var(--ipesa-rose)', fontSize: 12.5, marginTop: 4 }}>{saveError}</div>}
@@ -597,10 +650,14 @@ function ContactDetail({
                   <div className="kv"><div className="k">Correo</div><div className="v" style={{ fontSize: 13 }}>{c.email || '—'}</div></div>
                   <div className="kv"><div className="k">Empresa</div><div className="v">{c.company || '—'}</div></div>
                   <div className="kv"><div className="k">Canal</div><div className="v">{c.acquisition_channel || '—'}</div></div>
-                  <div className="kv"><div className="k">Dirección</div><div className="v" style={{ fontSize: 12 }}>{c.address || '—'}</div></div>
+                  <div className="kv"><div className="k">Dirección</div><div className="v" style={{ fontSize: 12 }}>{c.address || '—'}{c.postal_code ? ` · C.P. ${c.postal_code}` : ''}</div></div>
                   <div className="kv"><div className="k">Registro</div><div className="v">{fmtDateLong(c.created_at?.slice(0,10) || '')}</div></div>
                 </div>
               </div>
+
+              {normalizePhone(c.phone).length === 10 && (
+                <ContactWhatsApp contact={c} onUpdated={onUpdated} />
+              )}
 
               <div className="detail-section">
                 <h4>Leads asociados ({leads.length})</h4>
@@ -611,15 +668,11 @@ function ContactDetail({
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {leads.map((l: any) => (
-                      <div key={l.id} className="lead-card">
+                      <Link key={l.id} href={`/leads?id=${l.id}`} className="lead-card">
                         <div className="lc-name">{l.name}</div>
                         <div className="lc-meta">{l.monto ? `$${Number(l.monto).toLocaleString('es-MX')}` : 'Sin monto'} · {l.fecha?.slice(0,10) || ''}</div>
-                        <div className="lc-foot">
-                          <span className={`chip chip-${(l.estado||'nuevo').toLowerCase().replace(/\s+/g,'-').normalize('NFD').replace(/[̀-ͯ]/g,'')}`} style={{ fontSize: 11, padding: '3px 8px' }}>
-                            <span className="chip-dot"></span>{l.estado}
-                          </span>
-                        </div>
-                      </div>
+                        <div className="lc-foot"><EstadoChip value={l.estado || 'Nuevo'} small /></div>
+                      </Link>
                     ))}
                   </div>
                 )}
@@ -646,6 +699,9 @@ function ContactDetail({
         <div className="detail-foot">
           {!editing && <>
             {c.phone && <a href={`tel:${normalizePhone(c.phone)}`} className="btn btn-ghost btn-ghost-call"><Ico.phone /> Llamar</a>}
+            {normalizePhone(c.phone).length === 10 && (
+              <Link href={`/whatsapp?phone=${normalizePhone(c.phone)}`} className="btn btn-ghost btn-ghost-whatsapp"><Ico.whatsapp /> WhatsApp</Link>
+            )}
             {c.email && <a href={`mailto:${c.email}`} className="btn btn-ghost btn-ghost-mail"><Ico.mail /> Correo</a>}
             <button className="btn btn-ghost btn-ghost-call" onClick={() => { setEditing(true); setConfirmDel(false) }} style={{ color: 'var(--ink-2)' }}>
               <Ico.edit /> Editar
@@ -660,21 +716,72 @@ function ContactDetail({
   )
 }
 
+/* ── WhatsApp dentro de la ficha: últimos mensajes, ventana de 24 h y opt-out ── */
+function ContactWhatsApp({ contact: c, onUpdated }: { contact: any; onUpdated: (c: any) => void }) {
+  const phone = normalizePhone(c.phone)
+  const [data, setData] = useState<{ messages: any[]; lastInboundAt: string | null } | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetch(`/api/whatsapp/conversations/${phone}?preview=1&limit=3`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => setData(d ? { messages: d.messages ?? [], lastInboundAt: d.lastInboundAt } : { messages: [], lastInboundAt: null }))
+      .catch(() => setData({ messages: [], lastInboundAt: null }))
+  }, [phone])
+
+  const toggleOptOut = async () => {
+    setSaving(true)
+    try {
+      const r = await fetch(`/api/data/contacts/${c.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wa_opt_out: !c.wa_opt_out }),
+      })
+      if (r.ok) { const d = await r.json(); onUpdated(Array.isArray(d) ? d[0] : d) }
+    } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="detail-section">
+      <h4 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>WhatsApp {data && <WindowBadge lastInboundAt={data.lastInboundAt} />}</h4>
+      <div className="wa-mini">
+        {data === null ? (
+          <div className="wa-thread-loading" style={{ padding: 18 }}><span className="wa-spinner sm" /></div>
+        ) : data.messages.length === 0 ? (
+          <div className="wa-muted-box" style={{ margin: 10 }}>Aún no hay conversación de WhatsApp con este contacto.</div>
+        ) : (
+          <div className="wa-mini-msgs">
+            {data.messages.map(m => (
+              <div key={m.id} className={`wa-msg ${m.direction === 'outbound' ? 'out' : 'in'} ${m.status === 'failed' ? 'failed' : ''}`}>
+                <div className="wa-bubble">
+                  <div className="wa-text">{(m.media_id ? mediaCaption(m.body) || m.body : m.body) || '—'}</div>
+                  <div className="wa-meta"><span>{fmtTime(m.created_at)}</span>{m.direction === 'outbound' && <StatusTicks status={m.status} />}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="wa-mini-foot">
+          <label className="wa-check-row" style={{ alignItems: 'center' }}>
+            <input type="checkbox" checked={!c.wa_opt_out} onChange={toggleOptOut} disabled={saving} />
+            <span>Recibe campañas de WhatsApp</span>
+          </label>
+          <Link href={`/whatsapp?phone=${phone}`} className="btn btn-ghost btn-ghost-whatsapp" style={{ padding: '7px 12px' }}>
+            <Ico.whatsapp /> Abrir chat
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ── Modal unificado: crear/editar contacto ── */
 function ContactModal({
-  contact, tipos, canales, onClose, onSave,
+  tipos, canales, onClose, onSave,
 }: {
-  contact?: any; tipos: string[]; canales: string[];
+  tipos: string[]; canales: string[];
   onClose: () => void; onSave: (d: any) => Promise<string | void>;
 }) {
-  const isEdit = !!contact
   const [form, setForm] = useState({
-    name: contact?.name || '',
-    phone: contact?.phone || '',
-    email: contact?.email || '',
-    company: contact?.company || '',
-    segment: contact?.segment || '',
-    acquisition_channel: contact?.acquisition_channel || '',
+    name: '', phone: '', email: '', company: '', segment: '', acquisition_channel: '',
   })
   const [phoneErr, setPhoneErr] = useState('')
   const [saving, setSaving]     = useState(false)
@@ -701,7 +808,7 @@ function ContactModal({
     <div className="modal" onClick={onClose}>
       <div className="modal-card" onClick={e => e.stopPropagation()}>
         <div className="modal-head">
-          <h3>{isEdit ? 'Editar contacto' : 'Nuevo contacto'}</h3>
+          <h3>Nuevo contacto</h3>
           <button className="modal-close btn-icon" onClick={onClose}><Ico.close /></button>
         </div>
         <div className="modal-body">
@@ -726,7 +833,7 @@ function ContactModal({
         <div className="modal-foot">
           <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
           <button className="btn btn-primary" disabled={!canSave || saving} onClick={handleSubmit}>
-            <Ico.plus /> {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Guardar contacto'}
+            <Ico.plus /> {saving ? 'Guardando…' : 'Guardar contacto'}
           </button>
         </div>
       </div>
@@ -817,9 +924,13 @@ function WhatsAppCampaignModal({
 }) {
   const [selection, setSelection] = useState<WhatsAppTemplateSelection | null>(null)
   const { quota, refetch: refetchQuota } = useWhatsAppCampaignQuota()
-  const { phase, total, done, sent, failed, outcomes, askConfirm, backToForm, run } = useCampaignSend()
+  const { phase, total, done, sent, failed, skipped, outcomes, stopReason, askConfirm, backToForm, run, cancel } = useCampaignSend()
 
-  const selectedContacts = contacts.filter(c => contactIds.includes(c.id))
+  const ids = new Set(contactIds)
+  const chosen = contacts.filter(c => ids.has(c.id))
+  // Los dados de baja nunca reciben campañas (el servidor también lo valida)
+  const selectedContacts = chosen.filter(c => !c.wa_opt_out)
+  const optedOut = chosen.length - selectedContacts.length
   const exampleName = (selectedContacts[0]?.name || 'Cliente').trim().split(/\s+/)[0]
 
   const overQuota = !!quota && selectedContacts.length > quota.remaining
@@ -837,34 +948,14 @@ function WhatsAppCampaignModal({
       <div className="modal-card" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
         <div className="modal-head">
           <h3>Enviar plantilla de WhatsApp</h3>
-          {!busy && <button className="modal-close btn-icon" onClick={onClose}><Ico.close /></button>}
+          {!busy && <button className="modal-close btn-icon" onClick={onClose} aria-label="Cerrar"><Ico.close /></button>}
         </div>
 
         <div className="modal-body">
           {phase === 'results' ? (
-            <div>
-              <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-                <div style={{ flex: 1, padding: '14px', background: 'var(--ipesa-green-soft)', borderRadius: 10, textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--ipesa-green)' }}>{sent}</div>
-                  <div style={{ fontSize: 12, color: 'var(--ink-2)' }}>enviados</div>
-                </div>
-                <div style={{ flex: 1, padding: '14px', background: failed > 0 ? 'var(--ipesa-rose-soft)' : 'var(--paper)', borderRadius: 10, textAlign: 'center' }}>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: failed > 0 ? 'var(--ipesa-rose)' : 'var(--muted)' }}>{failed}</div>
-                  <div style={{ fontSize: 12, color: 'var(--ink-2)' }}>fallidos</div>
-                </div>
-              </div>
-              {failed > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
-                  {outcomes.filter(o => !o.ok).map((o, i) => (
-                    <div key={i} style={{ padding: '8px 12px', background: 'var(--paper)', borderRadius: 8, fontSize: 12.5 }}>
-                      <strong>{o.name || 'Contacto'}</strong>: <span style={{ color: 'var(--ipesa-rose)' }}>{o.error}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <CampaignResultsPanel sent={sent} skipped={skipped} failed={failed} outcomes={outcomes} stopReason={stopReason} onDone={onDone} />
           ) : phase === 'sending' ? (
-            <CampaignProgressPanel total={total} done={done} sent={sent} failed={failed} />
+            <CampaignProgressPanel total={total} done={done} sent={sent} failed={failed} skipped={skipped} onCancel={cancel} />
           ) : phase === 'confirm' ? (
             <CampaignConfirmPanel
               targetCount={selectedContacts.length} selection={selection} quota={quota}
@@ -873,27 +964,22 @@ function WhatsAppCampaignModal({
           ) : (
             <>
               <WhatsAppTemplatePicker exampleName={exampleName} onChange={setSelection} />
-
-              <div style={{ padding: '10px 12px', background: 'var(--paper)', borderRadius: 9, fontSize: 12.5, color: 'var(--ink-2)', marginTop: 14 }}>
+              <div className="wa-quota" style={{ marginTop: 14 }}>
                 Se enviará a <strong>{selectedContacts.length}</strong> contacto{selectedContacts.length !== 1 ? 's' : ''} seleccionado{selectedContacts.length !== 1 ? 's' : ''}.
+                {optedOut > 0 && <> Se omiten <strong>{optedOut}</strong> que pidieron no recibir campañas.</>}
+                {' '}Quien ya recibió esta plantilla en los últimos 7 días también se omite automáticamente.
               </div>
               <CampaignQuotaNote quota={quota} selectedCount={selectedContacts.length} />
             </>
           )}
         </div>
 
-        {(phase === 'idle' || phase === 'results') && (
+        {phase === 'idle' && (
           <div className="modal-foot">
-            {phase === 'results' ? (
-              <button className="btn btn-primary" onClick={onDone} style={{ flex: 1, justifyContent: 'center' }}>Listo</button>
-            ) : (
-              <>
-                <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
-                <button className="btn btn-primary" onClick={askConfirm} disabled={!canSend}>
-                  <Ico.send /> Enviar a {selectedContacts.length}
-                </button>
-              </>
-            )}
+            <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+            <button className="btn btn-primary" onClick={askConfirm} disabled={!canSend}>
+              <Ico.send /> Enviar a {selectedContacts.length}
+            </button>
           </div>
         )}
       </div>
@@ -902,7 +988,7 @@ function WhatsAppCampaignModal({
 }
 
 /* ── Modal de importación CSV/XLSX (con previsualización y solo celulares) ── */
-function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summary: string) => void }) {
   type Step = 'drop' | 'map' | 'preview' | 'importing'
   const [step, setStep]         = useState<Step>('drop')
   const [rows, setRows]         = useState<any[]>([])
@@ -918,25 +1004,22 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
 
   const parseFile = async (file: File) => {
     setError('')
+    if (file.size > 10 * 1024 * 1024) { setError('El archivo excede 10 MB.'); return }
     if (file.name.match(/\.xlsx?$/i)) {
-      const XLSX = await import('xlsx')
-      const reader = new FileReader()
-      reader.onload = e => {
-        try {
-          const wb = XLSX.read(e.target?.result, { type: 'binary' })
-          const ws = wb.Sheets[wb.SheetNames[0]]
-          const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][]
-          if (data.length < 2) { setError('El archivo no tiene filas de datos.'); return }
-          const hdrs = data[0].map(String)
-          const dataRows = data.slice(1).map(row => {
-            const obj: any = {}
-            hdrs.forEach((h, i) => { obj[h] = row[i] ?? '' })
-            return obj
-          }).filter(r => Object.values(r).some(v => v !== ''))
-          setHeaders(hdrs); setRows(dataRows); setStep('map')
-        } catch { setError('No se pudo leer el archivo Excel.') }
-      }
-      reader.readAsBinaryString(file)
+      try {
+        const XLSX = await import('xlsx')
+        const wb = XLSX.read(await file.arrayBuffer())
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][]
+        if (data.length < 2) { setError('El archivo no tiene filas de datos.'); return }
+        const hdrs = data[0].map(h => String(h ?? '').trim())
+        const dataRows = data.slice(1).map(row => {
+          const obj: any = {}
+          hdrs.forEach((h, i) => { obj[h] = row[i] ?? '' })
+          return obj
+        }).filter(r => Object.values(r).some(v => v !== ''))
+        setHeaders(hdrs); setRows(dataRows); setStep('map')
+      } catch { setError('No se pudo leer el archivo Excel.') }
     } else {
       const Papa = (await import('papaparse')).default
       Papa.parse(file, {
@@ -977,19 +1060,30 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
     setStep('preview')
   }
 
+  // Importación por lotes de 200 (antes: una petición por contacto). Los
+  // teléfonos ya registrados se omiten en el servidor sin cortar el lote.
   const doImport = async () => {
     if (!preview) return
     setStep('importing'); setTotal(preview.valid.length); setProgress(0)
-    let done = 0
-    for (const contact of preview.valid) {
-      await fetch('/api/data/contacts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(contact),
-      })
-      done++; setProgress(done)
+    let inserted = 0, duplicates = 0, failed = 0, done = 0
+    for (let i = 0; i < preview.valid.length; i += 200) {
+      const chunk = preview.valid.slice(i, i + 200)
+      try {
+        const r = await fetch('/api/data/contacts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contacts: chunk }),
+        })
+        const d = await r.json().catch(() => ({}))
+        if (r.ok) { inserted += d.inserted ?? 0; duplicates += d.duplicates ?? 0; failed += d.invalid ?? 0 }
+        else failed += chunk.length
+      } catch { failed += chunk.length }
+      done += chunk.length; setProgress(done)
     }
-    onDone()
+    const parts = [`${inserted} importado${inserted !== 1 ? 's' : ''}`]
+    if (duplicates) parts.push(`${duplicates} ya existían`)
+    if (failed) parts.push(`${failed} con error`)
+    onDone(`Importación: ${parts.join(' · ')} ✓`)
   }
 
   const titleMap: Record<Step, string> = {

@@ -33,8 +33,8 @@ function chipColor(label: string) {
 }
 
 /* ── Sección genérica de config ── */
-function ConfigSection({ title, icon, type, description }: {
-  title: string; icon: React.ReactNode; type: 'segment' | 'canal'; description: string
+function ConfigSection({ title, icon, type, description, canEdit }: {
+  title: string; icon: React.ReactNode; type: 'segment' | 'canal'; description: string; canEdit: boolean
 }) {
   const [items, setItems]       = useState<ConfigItem[]>([])
   const [loading, setLoading]   = useState(true)
@@ -80,8 +80,13 @@ function ConfigSection({ title, icon, type, description }: {
   }
 
   const handleDelete = async (id: string, label: string) => {
-    await fetch(`/api/data/config/${id}`, { method: 'DELETE' })
-    showToast(`"${label}" eliminado`)
+    const r = await fetch(`/api/data/config/${id}`, { method: 'DELETE' })
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}))
+      setError(d.error || 'No se pudo eliminar')
+    } else {
+      showToast(`"${label}" eliminado`)
+    }
     setConfirmDel(null)
     await load()
   }
@@ -128,7 +133,7 @@ function ConfigSection({ title, icon, type, description }: {
                   <span className="chip-dot" style={{ background: color }} />
                   {item.label}
                 </span>
-                {confirmDel === item.id ? (
+                {!canEdit ? null : confirmDel === item.id ? (
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginLeft: 'auto' }}>
                     <span style={{ fontSize: 12, color: 'var(--muted)' }}>¿Eliminar?</span>
                     <button onClick={() => handleDelete(item.id, item.label)}
@@ -148,6 +153,11 @@ function ConfigSection({ title, icon, type, description }: {
         </div>
       )}
 
+      {!canEdit ? (
+        <div style={{ fontSize: 12.5, color: 'var(--muted)', background: 'var(--paper)', borderRadius: 10, padding: '10px 12px' }}>
+          Solo un administrador puede agregar o quitar opciones (afectan a todo el equipo).
+        </div>
+      ) : (
       <div style={{ display: 'flex', gap: 8 }}>
         <input
           value={newLabel}
@@ -162,6 +172,7 @@ function ConfigSection({ title, icon, type, description }: {
           <Ico.plus /> {saving ? 'Guardando…' : 'Agregar'}
         </button>
       </div>
+      )}
       {error && <div style={{ fontSize: 12, color: 'var(--ipesa-rose)', marginTop: 6 }}>{error}</div>}
       {toast && <div className="toast-fixed"><Ico.check /> {toast}</div>}
     </div>
@@ -297,7 +308,171 @@ function UsersSection() {
   )
 }
 
-/* ── Prueba de conexión con WhatsApp Cloud API (temporal, hasta tener la sección de Campañas) ── */
+/* ── Estado de la integración con WhatsApp (solo admin) ── */
+type WaStatus = {
+  config: Record<string, boolean>
+  health: { displayPhoneNumber?: string; verifiedName?: string; qualityRating?: string; messagingLimitTier?: string; nameStatus?: string } | null
+  graphVersion: string
+}
+
+const STATUS_ITEMS: { key: string; label: string; help: string; critical?: boolean }[] = [
+  { key: 'accessToken',     label: 'Token de acceso',        help: 'WHATSAPP_ACCESS_TOKEN — permite enviar mensajes', critical: true },
+  { key: 'phoneNumberId',   label: 'Número emisor',          help: 'WHATSAPP_PHONE_NUMBER_ID', critical: true },
+  { key: 'businessAccount', label: 'Cuenta de WhatsApp Business', help: 'WHATSAPP_BUSINESS_ACCOUNT_ID — plantillas en vivo y calidad del número' },
+  { key: 'appSecret',       label: 'Firma del webhook',      help: 'WHATSAPP_APP_SECRET — sin esto no se verifica que los mensajes entrantes vengan de Meta', critical: true },
+  { key: 'verifyToken',     label: 'Token de verificación',  help: 'WHATSAPP_WEBHOOK_VERIFY_TOKEN — solo para registrar el webhook en Meta' },
+  { key: 'vapid',           label: 'Notificaciones push',    help: 'NEXT_PUBLIC_VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY' },
+  { key: 'cronSecret',      label: 'Recordatorios automáticos', help: 'CRON_SECRET — protege el aviso diario de recordatorios' },
+]
+
+function WhatsAppStatusSection() {
+  const [data, setData] = useState<WaStatus | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    fetch('/api/whatsapp/status').then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error); setData(d) })
+      .catch(e => setError(e?.message || 'No se pudo consultar el estado'))
+  }, [])
+
+  const quality: Record<string, string> = { GREEN: '🟢 Alta', YELLOW: '🟡 Media', RED: '🔴 Baja', UNKNOWN: '⚪ Sin datos' }
+
+  return (
+    <div style={{ maxWidth: 640 }}>
+      <SectionHeader icon={<Ico.whatsapp />} title="Estado de la integración" subtitle="Variables configuradas en el servidor (sin mostrar valores) y salud del número en Meta" green />
+      {error && <div style={{ fontSize: 12.5, color: 'var(--ipesa-rose)' }}>{error}</div>}
+      {!data && !error && <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Consultando…</div>}
+      {data && (
+        <>
+          {data.health && (
+            <div className="kv-grid" style={{ marginBottom: 12 }}>
+              <div className="kv"><div className="k">Número</div><div className="v">{data.health.displayPhoneNumber || '—'}</div></div>
+              <div className="kv"><div className="k">Nombre verificado</div><div className="v">{data.health.verifiedName || '—'}</div></div>
+              <div className="kv"><div className="k">Calidad</div><div className="v">{quality[data.health.qualityRating ?? 'UNKNOWN'] ?? data.health.qualityRating}</div></div>
+              <div className="kv"><div className="k">Nivel de mensajería</div><div className="v">{data.health.messagingLimitTier?.replace('TIER_', '') ?? '—'}</div></div>
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {STATUS_ITEMS.map(it => {
+              const ok = !!data.config[it.key]
+              return (
+                <div key={it.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--card)', border: `1px solid ${!ok && it.critical ? '#F5C2C2' : 'var(--line)'}`, borderRadius: 10 }}>
+                  <span style={{ width: 22, height: 22, borderRadius: '50%', display: 'grid', placeItems: 'center', flexShrink: 0, fontSize: 12, fontWeight: 800, background: ok ? 'var(--ipesa-green-soft)' : it.critical ? 'var(--ipesa-rose-soft)' : 'var(--paper)', color: ok ? 'var(--ipesa-green)' : it.critical ? 'var(--ipesa-rose)' : 'var(--muted)' }}>
+                    {ok ? '✓' : '!'}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600 }}>{it.label}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--muted)', overflowWrap: 'anywhere' }}>{it.help}</div>
+                  </div>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: ok ? 'var(--ipesa-green)' : it.critical ? 'var(--ipesa-rose)' : 'var(--muted)', whiteSpace: 'nowrap' }}>
+                    {ok ? 'Configurado' : 'Falta'}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 8 }}>Graph API {data.graphVersion}. Las variables se configuran en Vercel → Settings → Environment Variables.</div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function SectionHeader({ icon, title, subtitle, green }: { icon: React.ReactNode; title: string; subtitle: string; green?: boolean }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+      <span style={{ width: 38, height: 38, borderRadius: 10, background: green ? '#DCF5E3' : 'var(--ipesa-orange-soft)', color: green ? '#1B9E4B' : 'var(--ipesa-orange)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>{icon}</span>
+      <div>
+        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>{title}</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>{subtitle}</div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Respuestas rápidas del chat (solo admin las administra; todos las usan) ── */
+type QuickReply = { id: string; title: string; body: string }
+
+function QuickRepliesSection() {
+  const [items, setItems]     = useState<QuickReply[]>([])
+  const [loading, setLoading] = useState(true)
+  const [title, setTitle]     = useState('')
+  const [body, setBody]       = useState('')
+  const [saving, setSaving]   = useState(false)
+  const [error, setError]     = useState('')
+  const [confirmDel, setConfirmDel] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch('/api/whatsapp/quick-replies')
+      const d = await r.json()
+      setItems(d.items ?? [])
+    } catch {} finally { setLoading(false) }
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const add = async () => {
+    setSaving(true); setError('')
+    try {
+      const r = await fetch('/api/whatsapp/quick-replies', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title.trim(), body: body.trim() }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { setError(d.error || 'No se pudo guardar'); return }
+      setTitle(''); setBody('')
+      await load()
+    } finally { setSaving(false) }
+  }
+
+  const remove = async (id: string) => {
+    await fetch(`/api/whatsapp/quick-replies/${id}`, { method: 'DELETE' })
+    setConfirmDel(null)
+    await load()
+  }
+
+  return (
+    <div style={{ maxWidth: 640 }}>
+      <SectionHeader icon={<span style={{ fontSize: 16 }}>⚡</span>} title="Respuestas rápidas" subtitle="Mensajes frecuentes que el equipo inserta en el chat con un clic. Usa {nombre} para el nombre del cliente." />
+      {loading ? (
+        <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Cargando…</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+          {items.length === 0 && (
+            <div style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center', padding: '18px 0', background: 'var(--paper)', borderRadius: 10 }}>
+              Aún no hay respuestas rápidas. Ejemplos: «Horario», «Ubicación», «Formas de pago».
+            </div>
+          )}
+          {items.map(q => (
+            <div key={q.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 14px', background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700 }}>{q.title}</div>
+                <div style={{ fontSize: 12.5, color: 'var(--ink-2)', whiteSpace: 'pre-wrap', marginTop: 2 }}>{q.body}</div>
+              </div>
+              {confirmDel === q.id ? (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <button onClick={() => remove(q.id)} style={{ padding: '3px 10px', fontSize: 12, fontWeight: 600, color: 'var(--ipesa-rose)', background: 'var(--ipesa-rose-soft)', borderRadius: 6 }}>Sí</button>
+                  <button onClick={() => setConfirmDel(null)} style={{ padding: '3px 10px', fontSize: 12, fontWeight: 600, color: 'var(--muted)', background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 6 }}>No</button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmDel(q.id)} title="Eliminar" className="icon-btn icon-btn-delete"><Ico.trash /></button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 12, padding: 12 }}>
+        <input value={title} onChange={e => setTitle(e.target.value)} maxLength={60} placeholder="Título (ej. Horario)"
+          style={{ padding: '9px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none' }} />
+        <textarea value={body} onChange={e => setBody(e.target.value)} maxLength={1000} rows={3} placeholder="¡Hola {nombre}! Nuestro horario es de lunes a sábado de 9:00 a 19:00 h."
+          style={{ padding: '9px 12px', border: '1px solid var(--line)', borderRadius: 9, background: 'var(--card)', fontSize: 13.5, outline: 'none', resize: 'vertical', fontFamily: 'var(--font-body)' }} />
+        {error && <div style={{ fontSize: 12, color: 'var(--ipesa-rose)' }}>{error}</div>}
+        <button className="btn btn-primary" onClick={add} disabled={!title.trim() || !body.trim() || saving} style={{ alignSelf: 'flex-end' }}>
+          <Ico.plus /> {saving ? 'Guardando…' : 'Agregar respuesta'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ── Prueba de conexión con WhatsApp Cloud API ── */
 function WhatsAppTestSection() {
   const [phone, setPhone]       = useState('')
   const [template, setTemplate] = useState('')
@@ -328,19 +503,8 @@ function WhatsAppTestSection() {
   }
 
   return (
-    <div style={{ maxWidth: 500 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-        <span style={{
-          width: 38, height: 38, borderRadius: 10, background: '#DCF5E3',
-          color: '#1B9E4B', display: 'grid', placeItems: 'center', flexShrink: 0,
-        }}><Ico.whatsapp /></span>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}>Probar conexión de WhatsApp</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>
-            Envía una plantilla aprobada para confirmar que Meta quedó bien configurado
-          </div>
-        </div>
-      </div>
+    <div style={{ maxWidth: 640 }}>
+      <SectionHeader icon={<Ico.whatsapp />} title="Probar conexión de WhatsApp" subtitle="Envía una plantilla aprobada para confirmar que Meta quedó bien configurado" green />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div>
@@ -446,15 +610,21 @@ export default function ConfiguracionPage() {
       </div>
 
       {tab === 'segment' && (
-        <ConfigSection key="segment" title="Segmentos" icon={<Ico.tag />} type="segment"
+        <ConfigSection key="segment" title="Segmentos" icon={<Ico.tag />} type="segment" canEdit={isAdmin}
           description="Tipos de cliente disponibles en formularios de contacto y leads" />
       )}
       {tab === 'canal' && (
-        <ConfigSection key="canal" title="Canales de adquisición" icon={<Ico.channel />} type="canal"
+        <ConfigSection key="canal" title="Canales de adquisición" icon={<Ico.channel />} type="canal" canEdit={isAdmin}
           description="Orígenes de contacto disponibles al registrar contactos y leads" />
       )}
       {tab === 'users' && isAdmin && <UsersSection key="users" />}
-      {tab === 'whatsapp' && isAdmin && <WhatsAppTestSection key="whatsapp" />}
+      {tab === 'whatsapp' && isAdmin && (
+        <div key="whatsapp" style={{ display: 'flex', flexDirection: 'column', gap: 36 }}>
+          <WhatsAppStatusSection />
+          <QuickRepliesSection />
+          <WhatsAppTestSection />
+        </div>
+      )}
     </>
   )
 }

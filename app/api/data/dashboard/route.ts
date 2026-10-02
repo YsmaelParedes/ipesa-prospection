@@ -1,119 +1,145 @@
 import { NextResponse } from 'next/server'
-import { getServerSupabase, getUserContext, unauthorizedResponse } from '@/lib/supabase-server'
+import { getServerSupabase, getUserNameMap, requireUser } from '@/lib/supabase-server'
+import { ownLeadsFilter } from '@/lib/leads'
+import { serverError } from '@/lib/validation'
+import { CAMPAIGN_DAILY_LIMIT } from '@/lib/whatsappSafety'
+
+const WON = 'Ganado / Venta realizada'
+const ACTIVE_STATES = ['Nuevo', 'En seguimiento', 'Cotizado']
+
+/**
+ * Inicio de día/mes en México (UTC-6 todo el año desde 2022) como instante
+ * UTC. Sirve tanto para columnas timestamptz como para las `timestamp` sin
+ * zona que guardan hora UTC (contacts.created_at): Postgres ignora la "Z".
+ */
+function mexicoBoundaries() {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' })
+      .formatToParts(new Date()).map(p => [p.type, p.value]),
+  )
+  const y = Number(parts.year), m = Number(parts.month) - 1, d = Number(parts.day)
+  const at = (yy: number, mm: number, dd: number) => new Date(Date.UTC(yy, mm, dd, 6)).toISOString()
+  return {
+    startOfToday:     at(y, m, d),
+    startOfMonth:     at(y, m, 1),
+    startOfLastMonth: at(y, m - 1, 1),
+  }
+}
 
 export async function GET() {
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
+  const isAdmin = ctx.role === 'admin'
+
   try {
-    const ctx = await getUserContext()
-    if (!ctx) return unauthorizedResponse()
-    const { uid, role } = ctx
-
     const supabase = getServerSupabase()
+    const { startOfToday, startOfMonth, startOfLastMonth } = mexicoBoundaries()
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
-    const now          = new Date()
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+    // Admin: leads de todos (supervisión). Empleado: solo los suyos (+ legacy).
+    let leadsQuery = supabase.from('leads').select('id, name, canal, estado, fecha, created_at, user_id').order('created_at', { ascending: false })
+    if (!isAdmin) leadsQuery = leadsQuery.or(ownLeadsFilter(ctx.uid))
 
-    // Admin: leads de todos los usuarios (supervisión). Empleado: solo los suyos (+ legacy).
-    const leadsQuery = role === 'admin'
-      ? supabase.from('leads').select('*').order('created_at', { ascending: false })
-      : supabase.from('leads').select('*').or(`user_id.eq.${uid},user_id.is.null`).order('created_at', { ascending: false })
+    const contactsCount = () => supabase.from('contacts').select('id', { count: 'exact', head: true })
 
     const [
       { count: totalContacts },
-      { data: leadsData,    error: leadsError },
-      { data: contactsData },
-      usersResult,
+      { count: contactsThisMonth },
+      { count: contactsLastMonth },
+      { data: leadsData, error: leadsError },
+      { data: segmentsData },
+      { count: waUnread },
+      { count: waInboundToday },
+      { count: waTemplates24h },
+      names,
     ] = await Promise.all([
-      // Contactos: global (compartido entre usuarios)
-      supabase.from('contacts').select('*', { count: 'exact', head: true }),
+      contactsCount(),
+      contactsCount().gte('created_at', startOfMonth),
+      contactsCount().gte('created_at', startOfLastMonth).lt('created_at', startOfMonth),
       leadsQuery,
-      // Contactos por segmento: global
-      supabase.from('contacts').select('segment, acquisition_channel'),
-      role === 'admin' ? supabase.auth.admin.listUsers({ perPage: 200 }) : Promise.resolve(null),
+      supabase.from('contacts').select('segment'),
+      supabase.from('whatsapp_conversations').select('phone', { count: 'exact', head: true }).gt('unread', 0),
+      supabase.from('whatsapp_messages').select('id', { count: 'exact', head: true }).eq('direction', 'inbound').gte('created_at', startOfToday),
+      supabase.from('whatsapp_messages').select('id', { count: 'exact', head: true })
+        .eq('direction', 'outbound').not('template_name', 'is', null).neq('status', 'failed').gte('created_at', since24h),
+      isAdmin ? getUserNameMap().catch(() => new Map<string, string>()) : Promise.resolve(null),
     ])
-
     if (leadsError) throw leadsError
 
-    const leads    = leadsData    || []
-    const contacts = contactsData || []
+    const leads = leadsData ?? []
+    const inRange = (iso: string, from: string, to?: string) => iso >= from && (!to || iso < to)
+    const thisMonth = leads.filter(l => inRange(new Date(l.created_at).toISOString(), startOfMonth))
+    const lastMonth = leads.filter(l => inRange(new Date(l.created_at).toISOString(), startOfLastMonth, startOfMonth))
+    const won = (list: typeof leads) => list.filter(l => l.estado === WON).length
+    const rate = (list: typeof leads) => list.length ? Math.round((won(list) / list.length) * 100) : 0
 
     // ── Desglose por vendedor (solo admin) ──────────────────────────────────
     let byOwner: { name: string; count: number }[] = []
-    if (role === 'admin' && usersResult) {
-      const nameByUid = new Map(
-        (usersResult.data?.users ?? []).map(u => [u.id, (u.user_metadata?.display_name as string)?.trim() || u.email || 'Usuario'])
-      )
-      const ownerCounts: Record<string, number> = {}
+    if (names) {
+      const counts: Record<string, number> = {}
       for (const l of leads) {
-        const name = l.user_id ? (nameByUid.get(l.user_id) ?? 'Usuario') : 'Sin asignar'
-        ownerCounts[name] = (ownerCounts[name] || 0) + 1
+        const name = l.user_id ? (names.get(l.user_id) ?? 'Usuario') : 'Sin asignar'
+        counts[name] = (counts[name] || 0) + 1
       }
-      byOwner = Object.entries(ownerCounts)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count)
+      byOwner = Object.entries(counts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
     }
 
-    // ── Métricas del usuario ────────────────────────────────────────────────
-    const activeStates  = ['Nuevo', 'En seguimiento', 'Cotizado']
-    const leadsActivos  = leads.filter(l => activeStates.includes(l.estado)).length
-    const cierresMes    = leads.filter(l => l.estado === 'Ganado / Venta realizada' && l.created_at >= startOfMonth).length
-    const conversion    = leads.length > 0
-      ? Math.round((leads.filter(l => l.estado === 'Ganado / Venta realizada').length / leads.length) * 100)
-      : 0
-
-    // ── Canal breakdown (últimos 30 días, leads del usuario) ─────────────────
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-    const recentLeadsAll = leads.filter(l => l.created_at >= thirtyDaysAgo)
+    // ── Canal (últimos 30 días) ─────────────────────────────────────────────
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
     const channelCounts: Record<string, number> = {}
-    for (const l of recentLeadsAll) {
+    for (const l of leads) {
+      if (new Date(l.created_at).getTime() < thirtyDaysAgo) continue
       const ch = l.canal || 'Otro'
       channelCounts[ch] = (channelCounts[ch] || 0) + 1
     }
-    const byChannel = Object.entries(channelCounts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 8)
+    const byChannel = Object.entries(channelCounts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 8)
 
-    // ── Segmento breakdown (contactos globales) ───────────────────────────────
+    // ── Segmento (contactos globales) ───────────────────────────────────────
     const segmentCounts: Record<string, number> = {}
-    for (const c of contacts) {
+    for (const c of segmentsData ?? []) {
       if (c.segment) segmentCounts[c.segment] = (segmentCounts[c.segment] || 0) + 1
     }
-    const bySegment = Object.entries(segmentCounts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
+    const bySegment = Object.entries(segmentCounts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
 
-    // ── Leads recientes del usuario ───────────────────────────────────────────
+    // ── Leads recientes + actividad de hoy ──────────────────────────────────
     const recentLeads = leads.slice(0, 6).map(l => ({
-      id:     l.id,
-      name:   l.name,
-      canal:  l.canal,
-      estado: l.estado,
-      fecha:  l.fecha || l.created_at?.slice(0, 10),
+      id: l.id, name: l.name, canal: l.canal, estado: l.estado,
+      fecha: l.fecha || String(l.created_at).slice(0, 10),
     }))
-
-    // ── Feed de actividad de hoy ──────────────────────────────────────────────
-    const todayLeads = leads.filter(l => l.created_at >= startOfToday)
+    const todayLeads = leads.filter(l => new Date(l.created_at).toISOString() >= startOfToday)
     const activity = [
-      ...todayLeads.filter(l => l.estado === 'Ganado / Venta realizada').map(l => ({
-        type: 'close', who: l.name, what: 'cerró como cliente', time: 'hoy', color: '#3D8B5C',
-      })),
-      ...todayLeads.filter(l => l.estado !== 'Ganado / Venta realizada').map(l => ({
-        type: 'lead', who: l.name, what: `nuevo lead · ${l.canal}`, time: 'hoy', color: '#EE5A24',
-      })),
+      ...todayLeads.filter(l => l.estado === WON).map(l => ({ id: l.id, type: 'close', who: l.name, what: 'cerró como cliente', time: 'hoy', color: '#3D8B5C' })),
+      ...todayLeads.filter(l => l.estado !== WON).map(l => ({ id: l.id, type: 'lead', who: l.name, what: `nuevo lead · ${l.canal}`, time: 'hoy', color: '#EE5A24' })),
     ].slice(0, 8)
 
     return NextResponse.json({
-      metrics: { totalContacts: totalContacts || 0, leadsActivos, cierresMes, conversion },
+      metrics: {
+        totalContacts: totalContacts || 0,
+        leadsActivos:  leads.filter(l => ACTIVE_STATES.includes(l.estado)).length,
+        cierresMes:    won(thisMonth),
+        conversion:    leads.length ? Math.round((won(leads) / leads.length) * 100) : 0,
+      },
+      // Comparativo real mes actual vs mes anterior (antes eran porcentajes fijos)
+      trends: {
+        contacts:   { current: contactsThisMonth || 0, previous: contactsLastMonth || 0 },
+        leads:      { current: thisMonth.length,       previous: lastMonth.length },
+        wins:       { current: won(thisMonth),         previous: won(lastMonth) },
+        conversion: { current: rate(thisMonth),        previous: rate(lastMonth) },
+      },
+      whatsapp: {
+        unreadConversations: waUnread || 0,
+        inboundToday:        waInboundToday || 0,
+        templates24h:        waTemplates24h || 0,
+        dailyLimit:          CAMPAIGN_DAILY_LIMIT,
+      },
       byChannel,
       bySegment,
       byOwner,
       recentLeads,
       activity,
-      isAdmin: role === 'admin',
+      isAdmin,
     })
-  } catch (error: any) {
-    console.error('[GET /api/data/dashboard]', error?.message ?? error)
-    return NextResponse.json({ error: 'Error al obtener métricas' }, { status: 500 })
+  } catch (error) {
+    return serverError('GET /api/data/dashboard', error, 'Error al obtener métricas')
   }
 }

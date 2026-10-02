@@ -1,101 +1,89 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getUserId, unauthorizedResponse } from '@/lib/supabase-server'
+import { getServerSupabase, requireUser } from '@/lib/supabase-server'
+import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
+import { CONTACT_COLUMNS, duplicateContactMessage, linkWhatsAppMessages, parseContact } from '@/lib/contacts'
 
-// Allowed fields for contact creation/update — prevents mass assignment
-const ALLOWED_CONTACT_FIELDS = [
-  'name', 'email', 'phone', 'company', 'segment',
-  'acquisition_channel', 'notes', 'address', 'city',
-] as const
+const MAX_BULK = 500
 
-function pickContactFields(body: Record<string, unknown>) {
-  const out: Record<string, unknown> = {}
-  for (const key of ALLOWED_CONTACT_FIELDS) {
-    if (key in body) out[key] = body[key]
-  }
-  return out
-}
-
-function validateContactPost(body: Record<string, unknown>): string | null {
-  if (!body.name || typeof body.name !== 'string' || body.name.trim().length === 0) {
-    return 'El campo name es requerido'
-  }
-  if (body.name.length > 200) return 'name excede 200 caracteres'
-  if (body.email && typeof body.email === 'string' && body.email.length > 254) return 'email excede 254 caracteres'
-  if (body.phone && typeof body.phone === 'string' && body.phone.length > 30) return 'phone excede 30 caracteres'
-  if (body.notes && typeof body.notes === 'string' && body.notes.length > 2000) return 'notes excede 2000 caracteres'
-  return null
-}
-
+// GET /api/data/contacts — base compartida de contactos
 export async function GET() {
-  try {
-    const uid = await getUserId()
-    if (!uid) return unauthorizedResponse()
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
 
-    const supabase = getServerSupabase()
-    const { data, error } = await supabase
-      .from('contacts')
-      .select('*')
-      .order('created_at', { ascending: false })
-    if (error) throw error
-    return NextResponse.json({ contacts: data })
-  } catch (error: any) {
-    console.error('[GET /api/data/contacts]', error?.message ?? error)
-    return NextResponse.json({ error: 'Error al obtener contactos' }, { status: 500 })
-  }
+  const { data, error } = await getServerSupabase()
+    .from('contacts')
+    .select(CONTACT_COLUMNS)
+    .order('created_at', { ascending: false })
+  if (error) return serverError('GET /api/data/contacts', error, 'Error al obtener contactos')
+  return NextResponse.json({ contacts: data })
 }
 
+/**
+ * POST /api/data/contacts
+ *  - Un objeto → crea un contacto.
+ *  - { contacts: [...] } → importación masiva (hasta 500 por petición). Los
+ *    teléfonos ya registrados se omiten en vez de fallar todo el lote.
+ */
 export async function POST(req: NextRequest) {
-  try {
-    const uid = await getUserId()
-    if (!uid) return unauthorizedResponse()
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
 
-    const body = await req.json()
-    const validationError = validateContactPost(body)
-    if (validationError) return NextResponse.json({ error: validationError }, { status: 400 })
+  const body = await readJson(req)
+  if (!body) return jsonError('Cuerpo de solicitud inválido')
+  const supabase = getServerSupabase()
 
-    const contact = pickContactFields(body)
-    const supabase = getServerSupabase()
+  if (Array.isArray(body.contacts)) {
+    const list = body.contacts as unknown[]
+    if (list.length === 0 || list.length > MAX_BULK) return jsonError(`Se permiten de 1 a ${MAX_BULK} contactos por petición`)
+
+    const rows: Record<string, unknown>[] = []
+    const seen = new Set<string>()
+    let invalid = 0
+    for (const item of list) {
+      const parsed = item && typeof item === 'object' ? parseContact(item as Record<string, unknown>) : null
+      if (!parsed || !parsed.ok) { invalid++; continue }
+      const phone = parsed.data.phone as string
+      if (seen.has(phone)) { invalid++; continue }
+      seen.add(phone)
+      rows.push(parsed.data)
+    }
+    if (!rows.length) return NextResponse.json({ inserted: 0, duplicates: 0, invalid })
+
     const { data, error } = await supabase
       .from('contacts')
-      .insert([contact])
-      .select()
-    if (error) throw error
-    return NextResponse.json(data)
-  } catch (error: any) {
-    console.error('[POST /api/data/contacts]', error?.message ?? error)
-    if (error?.code === '23505') {
-      const field = error.message?.includes('phone') ? 'número de teléfono' : error.message?.includes('email') ? 'correo' : 'dato'
-      return NextResponse.json({ error: `Ya existe un contacto con este ${field}` }, { status: 400 })
-    }
-    return NextResponse.json({ error: 'Error al crear contacto' }, { status: 500 })
+      .upsert(rows, { onConflict: 'phone', ignoreDuplicates: true })
+      .select('id, phone')
+    if (error) return serverError('POST /api/data/contacts (bulk)', error, 'Error al importar contactos')
+
+    const inserted = data?.length ?? 0
+    if (inserted) await linkWhatsAppMessages(data!)
+    return NextResponse.json({ inserted, duplicates: rows.length - inserted, invalid })
   }
+
+  const parsed = parseContact(body)
+  if (!parsed.ok) return jsonError(parsed.error)
+
+  const { data, error } = await supabase.from('contacts').insert([parsed.data]).select(CONTACT_COLUMNS)
+  if (error) {
+    if (error.code === '23505') return jsonError(duplicateContactMessage(error.message))
+    return serverError('POST /api/data/contacts', error, 'Error al crear contacto')
+  }
+  await linkWhatsAppMessages(data ?? [])
+  return NextResponse.json(data)
 }
 
+// DELETE /api/data/contacts — borrado masivo { ids: string[] }
 export async function DELETE(req: NextRequest) {
-  try {
-    const uid = await getUserId()
-    if (!uid) return unauthorizedResponse()
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
 
-    const { ids } = await req.json()
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return NextResponse.json({ error: 'ids debe ser un array no vacío' }, { status: 400 })
-    }
-    if (ids.length > 100) {
-      return NextResponse.json({ error: 'Se permite eliminar máximo 100 contactos a la vez' }, { status: 400 })
-    }
-    // Validate each id is a string (UUID format)
-    if (ids.some(id => typeof id !== 'string' || id.length > 40)) {
-      return NextResponse.json({ error: 'ids inválidos' }, { status: 400 })
-    }
+  const body = await readJson(req)
+  const ids = body?.ids
+  if (!Array.isArray(ids) || ids.length === 0) return jsonError('ids debe ser un array no vacío')
+  if (ids.length > MAX_BULK) return jsonError(`Se permite eliminar máximo ${MAX_BULK} contactos a la vez`)
+  if (!ids.every(isUUID)) return jsonError('ids inválidos')
 
-    const supabase = getServerSupabase()
-    const { error } = await supabase
-      .from('contacts')
-      .delete()
-      .in('id', ids)
-    if (error) throw error
-    return NextResponse.json({ success: true })
-  } catch (error: any) {
-    return NextResponse.json({ error: 'Error al eliminar contactos' }, { status: 500 })
-  }
+  const { error } = await getServerSupabase().from('contacts').delete().in('id', ids)
+  if (error) return serverError('DELETE /api/data/contacts', error, 'Error al eliminar contactos')
+  return NextResponse.json({ success: true, deleted: ids.length })
 }

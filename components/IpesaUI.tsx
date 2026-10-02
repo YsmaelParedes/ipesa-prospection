@@ -190,43 +190,8 @@ export function fmtDateLong(iso: string) {
   return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`
 }
 
-/** Normaliza teléfono: elimina prefijo 52, deja exactamente 10 dígitos */
-export function normalizePhone(raw: string): string {
-  if (!raw) return ''
-  const digits = raw.replace(/\D/g, '')
-  if (digits.startsWith('52') && digits.length === 12) return digits.slice(2)
-  if (digits.startsWith('1')  && digits.length === 11) return digits.slice(1)
-  if (digits.length > 10) return digits.slice(-10)
-  return digits
-}
-
-/**
- * Detecta si un teléfono mexicano (10 dígitos normalizados) es celular — apto para SMS.
- * Usa rangos conservadores: solo marca como fijo los rangos claramente TELMEX/fijo.
- * Es preferible dejar pasar un fijo que bloquear un celular.
- */
-export function isMobilePhone(phone: string): boolean {
-  const d = normalizePhone(phone)
-  if (d.length !== 10) return false
-  // Toll-free / premium
-  if (d.startsWith('800') || d.startsWith('900')) return false
-  // Ladas de 2 dígitos — solo el rango clásico de fijo de cada ciudad:
-  const lada2 = d.slice(0, 2)
-  if (lada2 === '55') return d[2] !== '5'  // CDMX: 55 5xxx = fijo (TELMEX)
-  if (lada2 === '33') return d[2] !== '3'  // Guadalajara: 33 3xxx = fijo
-  if (lada2 === '81') return d[2] !== '8'  // Monterrey: 81 8xxx = fijo
-  // Ladas de 3 dígitos (Puebla 222, Querétaro 442, Mérida 999, etc.)
-  // Solo local que empieza con 2 es fijo (serie TELMEX típica).
-  // 1, 3, 4, 5, 6, 7, 8, 9 = celular.
-  return d[3] !== '2'
-}
-
-/** Formatea teléfono 10 dígitos → XXX XXX XXXX */
-export function fmtPhone(phone: string): string {
-  const d = normalizePhone(phone)
-  if (d.length === 10) return `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}`
-  return phone || ''
-}
+/* Teléfonos: una sola implementación compartida con el servidor (lib/phone.ts) */
+export { normalizePhone, isMobilePhone, fmtPhone } from '@/lib/phone'
 
 /**
  * Dropdown de filtro reutilizable — reemplaza <select> nativo y filas de pills.

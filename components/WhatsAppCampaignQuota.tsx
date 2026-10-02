@@ -1,44 +1,40 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { CAMPAIGN_SEND_DELAY_MS, CAMPAIGN_SEND_JITTER_MS } from '@/lib/whatsappSafety'
+import { useCallback, useEffect, useState } from 'react'
+import { campaignEtaLabel } from '@/lib/whatsappSafety'
 
 export type CampaignQuota = { sentToday: number; limit: number; remaining: number }
 
-/** Cuota diaria restante de plantillas — para avisar antes de enviar, no para hacer cumplir el límite (eso lo hace el servidor). */
+/** Cuota diaria restante de plantillas — para avisar antes de enviar (el límite lo hace cumplir el servidor). */
 export function useWhatsAppCampaignQuota() {
   const [quota, setQuota] = useState<CampaignQuota | null>(null)
-  const refetch = () => {
+  const refetch = useCallback(() => {
     fetch('/api/whatsapp/campaigns/send')
       .then(r => r.json())
       .then(d => { if (d && typeof d.remaining === 'number') setQuota(d) })
       .catch(() => {})
-  }
-  useEffect(refetch, [])
+  }, [])
+  useEffect(refetch, [refetch])
   return { quota, refetch }
 }
-
-const AVG_DELAY_SEC = (CAMPAIGN_SEND_DELAY_MS + CAMPAIGN_SEND_JITTER_MS / 2) / 1000
 
 export function CampaignQuotaNote({ quota, selectedCount }: { quota: CampaignQuota | null; selectedCount: number }) {
   if (!quota) return null
   const overDaily = selectedCount > quota.remaining
-  const etaSec = Math.round(selectedCount * AVG_DELAY_SEC)
-  const etaText = etaSec < 60 ? `~${etaSec}s` : `~${Math.ceil(etaSec / 60)} min`
+  const pct = Math.min(100, Math.round((quota.sentToday / Math.max(1, quota.limit)) * 100))
 
   return (
-    <div style={{
-      padding: '10px 12px', borderRadius: 9, fontSize: 12.5, color: 'var(--ink-2)', marginTop: 10,
-      background: overDaily ? 'var(--ipesa-rose-soft)' : 'var(--paper)',
-    }}>
-      <div>Cuota de hoy: <strong>{quota.remaining}</strong> de {quota.limit} plantillas disponibles.</div>
+    <div className={`wa-quota ${overDaily ? 'over' : ''}`}>
+      <div className="wa-quota-top">
+        <span>Cuota de hoy</span>
+        <strong>{quota.remaining} de {quota.limit} disponibles</strong>
+      </div>
+      <div className="wa-quota-bar"><div style={{ width: `${pct}%` }} /></div>
       {selectedCount > 0 && !overDaily && (
-        <div style={{ marginTop: 2 }}>Enviar a {selectedCount} tomará {etaText} (pausa de ~3s entre cada uno para cuidar el número).</div>
+        <div className="wa-quota-note">Enviar a {selectedCount} tomará {campaignEtaLabel(selectedCount)} (pausa de ~3 s entre cada uno para cuidar el número).</div>
       )}
       {overDaily && (
-        <div style={{ color: 'var(--ipesa-rose)', marginTop: 2, fontWeight: 600 }}>
-          Supera la cuota diaria restante ({quota.remaining}). Reduce la selección o espera a mañana.
-        </div>
+        <div className="wa-quota-note bad">Supera la cuota diaria restante ({quota.remaining}). Reduce la selección o espera a mañana.</div>
       )}
     </div>
   )

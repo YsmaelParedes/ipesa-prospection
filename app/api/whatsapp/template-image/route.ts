@@ -1,68 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getUserContext, unauthorizedResponse } from '@/lib/supabase-server'
+import { getServerSupabase, requireAdmin, requireUser } from '@/lib/supabase-server'
+import { jsonError, serverError } from '@/lib/validation'
 
-const BUCKET = 'whatsapp-media'
-const MAX_SIZE = 5 * 1024 * 1024 // 5MB — límite de Meta para imágenes en plantillas
+const BUCKET   = 'whatsapp-media'
+const MAX_SIZE = 5 * 1024 * 1024 // límite de Meta para imágenes en plantillas
+const TEMPLATE_RE = /^[a-z0-9_]{1,512}$/
 
-// GET /api/whatsapp/template-image?template=promo_aplazo_pinturas
-// Regresa la URL pública guardada para esa plantilla, o null si nunca se subió.
+// Meta solo acepta JPEG y PNG en encabezados de plantilla. El tipo se valida
+// por los bytes reales del archivo (el `type` del navegador es falsificable).
+function detectImage(bytes: Uint8Array): { mime: string; ext: string } | null {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return { mime: 'image/jpeg', ext: 'jpeg' }
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return { mime: 'image/png', ext: 'png' }
+  return null
+}
+
+// GET /api/whatsapp/template-image?template=nombre — URL pública guardada (o null)
 export async function GET(req: NextRequest) {
-  const ctx = await getUserContext()
-  if (!ctx) return unauthorizedResponse()
+  const ctx = await requireUser()
+  if (ctx instanceof Response) return ctx
 
-  const template = req.nextUrl.searchParams.get('template')
-  if (!template) return NextResponse.json({ error: 'template es requerido' }, { status: 400 })
+  const template = req.nextUrl.searchParams.get('template') ?? ''
+  if (!TEMPLATE_RE.test(template)) return jsonError('template inválido')
 
   const supabase = getServerSupabase()
   const { data, error } = await supabase.storage.from(BUCKET).list('', { search: template })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return serverError('GET /api/whatsapp/template-image', error, 'Error al consultar la imagen')
 
   const match = (data ?? []).find(f => f.name.startsWith(`${template}.`))
   if (!match) return NextResponse.json({ url: null })
-
+  // ?v= evita que el navegador muestre la versión anterior tras reemplazarla
   const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(match.name)
-  return NextResponse.json({ url: pub.publicUrl })
+  const version = match.updated_at ? `?v=${Date.parse(match.updated_at)}` : ''
+  return NextResponse.json({ url: `${pub.publicUrl}${version}` })
 }
 
-// POST /api/whatsapp/template-image — sube/reemplaza la imagen de una plantilla
-// de forma permanente (solo admin). Se guarda una sola vez y se reutiliza en
-// todas las campañas futuras de esa plantilla.
+// POST /api/whatsapp/template-image — sube/reemplaza la imagen de una plantilla (solo admin)
 export async function POST(req: NextRequest) {
-  const ctx = await getUserContext()
-  if (!ctx) return unauthorizedResponse()
-  if (ctx.role !== 'admin') {
-    return NextResponse.json({ error: 'Sin permisos de administrador' }, { status: 403 })
-  }
+  const ctx = await requireAdmin()
+  if (ctx instanceof Response) return ctx
 
-  const form = await req.formData()
-  const file     = form.get('file') as File | null
-  const template = form.get('template') as string | null
+  let form: FormData
+  try { form = await req.formData() } catch { return jsonError('Formulario inválido') }
+  const file     = form.get('file')
+  const template = form.get('template')
 
-  if (!template || !/^[a-z0-9_]+$/.test(template)) {
-    return NextResponse.json({ error: 'template inválido' }, { status: 400 })
-  }
-  if (!file) return NextResponse.json({ error: 'file es requerido' }, { status: 400 })
-  if (!file.type.startsWith('image/')) {
-    return NextResponse.json({ error: 'El archivo debe ser una imagen' }, { status: 400 })
-  }
-  if (file.size > MAX_SIZE) {
-    return NextResponse.json({ error: 'La imagen excede 5MB' }, { status: 400 })
-  }
+  if (typeof template !== 'string' || !TEMPLATE_RE.test(template)) return jsonError('template inválido')
+  if (!(file instanceof File)) return jsonError('file es requerido')
+  if (file.size > MAX_SIZE) return jsonError('La imagen excede 5 MB')
 
-  const supabase = getServerSupabase()
-
-  // Limpia versiones previas con otra extensión para no acumular archivos huérfanos
-  const { data: existing } = await supabase.storage.from(BUCKET).list('', { search: template })
-  const stale = (existing ?? []).filter(f => f.name.startsWith(`${template}.`)).map(f => f.name)
-  if (stale.length) await supabase.storage.from(BUCKET).remove(stale)
-
-  const ext  = (file.name.split('.').pop() || 'jpg').toLowerCase()
-  const path = `${template}.${ext}`
   const buffer = Buffer.from(await file.arrayBuffer())
+  const kind = detectImage(buffer)
+  if (!kind) return jsonError('La imagen debe ser JPG o PNG (los formatos que acepta WhatsApp)')
 
-  const { error } = await supabase.storage.from(BUCKET).upload(path, buffer, { contentType: file.type, upsert: true })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  try {
+    const supabase = getServerSupabase()
+    // Limpia versiones previas con otra extensión para no acumular archivos huérfanos
+    const { data: existing } = await supabase.storage.from(BUCKET).list('', { search: template })
+    const stale = (existing ?? []).filter(f => f.name.startsWith(`${template}.`)).map(f => f.name)
+    if (stale.length) await supabase.storage.from(BUCKET).remove(stale)
 
-  const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path)
-  return NextResponse.json({ url: pub.publicUrl })
+    const path = `${template}.${kind.ext}`
+    const { error } = await supabase.storage.from(BUCKET).upload(path, buffer, { contentType: kind.mime, upsert: true })
+    if (error) throw error
+
+    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path)
+    return NextResponse.json({ url: `${pub.publicUrl}?v=${Date.now()}` })
+  } catch (error) {
+    return serverError('POST /api/whatsapp/template-image', error, 'Error al subir la imagen')
+  }
 }

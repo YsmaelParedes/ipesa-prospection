@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
-import { Avatar, CanalChip, EstadoChip, SegmentoChip, OwnerChip, FilterDropdown, fmtDate, fmtDateLong, fmtPhone } from '@/components/IpesaUI'
+import { Suspense, useEffect, useMemo, useState, useCallback, useRef } from 'react'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Avatar, CanalChip, EstadoChip, SegmentoChip, OwnerChip, FilterDropdown, fmtDate, fmtDateLong, fmtPhone, normalizePhone } from '@/components/IpesaUI'
 import { getUserRole } from '@/lib/profile'
 
 /* ══════════════════════════════════════════════════════════
@@ -70,18 +72,33 @@ function fmtRemDate(iso: string) {
 
 function getAType(key: string) { return ACTIVITY_TYPES.find(t => t.key === key) ?? ACTIVITY_TYPES[6] }
 
-function buildWhatsApp(phone: string, name: string, description: string, amount: number | null) {
-  const cleanPhone = phone.replace(/\D/g, '')
-  const msg = [
+function buildQuoteText(name: string, description: string, amount: number | null) {
+  return [
     `Hola ${name}, te comparto la cotización de IPESA Pinturas:`,
     '',
     description || '(Descripción de la cotización)',
-    '',
-    amount ? `💰 Total: $${Number(amount).toLocaleString('es-MX')} MXN` : '',
+    ...(amount ? ['', `💰 Total: $${Number(amount).toLocaleString('es-MX')} MXN`] : []),
     '',
     '¿Tienes alguna pregunta? Estamos a tus órdenes. 🎨',
-  ].filter(l => l !== null).join('\n')
-  return `https://wa.me/52${cleanPhone}?text=${encodeURIComponent(msg)}`
+  ].join('\n')
+}
+
+function buildWhatsApp(phone: string, name: string, description: string, amount: number | null) {
+  return `https://wa.me/52${normalizePhone(phone)}?text=${encodeURIComponent(buildQuoteText(name, description, amount))}`
+}
+
+/** ¿Está abierta la ventana de 24 h con este número? (para enviar desde el número del negocio) */
+function useWhatsAppWindow(phone: string | null | undefined) {
+  const [open, setOpen] = useState(false)
+  const p = normalizePhone(phone || '')
+  useEffect(() => {
+    if (p.length !== 10) return
+    fetch(`/api/whatsapp/conversations/${p}?preview=1&limit=1`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => setOpen(!!d?.windowOpen))
+      .catch(() => {})
+  }, [p])
+  return p.length === 10 && open
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -111,6 +128,14 @@ const Ico = {
    PÁGINA PRINCIPAL
 ══════════════════════════════════════════════════════════ */
 export default function LeadsPage() {
+  // useSearchParams (?id= para abrir un lead directo) requiere Suspense
+  return <Suspense fallback={null}><LeadsContent /></Suspense>
+}
+
+function LeadsContent() {
+  const router       = useRouter()
+  const searchParams = useSearchParams()
+  const deepId       = searchParams.get('id')
   const [leads, setLeads]           = useState<any[]>([])
   const [canales, setCanales]       = useState<string[]>(CANALES_DEFAULT)
   const [segmentos, setSegmentos]   = useState<string[]>(SEGMENTOS_DEFAULT)
@@ -168,22 +193,35 @@ export default function LeadsPage() {
 
   useEffect(() => { load() }, [load])
 
-  const owners = Array.from(new Set(leads.map(l => l.owner_name).filter(Boolean))) as string[]
+  /* Abrir el lead indicado en la URL (?id=…), p. ej. desde WhatsApp o Contactos */
+  useEffect(() => {
+    if (!deepId || loading) return
+    const found = leads.find(l => l.id === deepId)
+    if (found) setSelected(found)
+  }, [deepId, loading, leads])
 
-  const filtered = leads.filter(l => {
-    if (canalF  !== 'Todos' && l.canal    !== canalF)  return false
-    if (segF    !== 'Todos' && l.segmento !== segF)    return false
-    if (estadoF !== 'Todos' && l.estado   !== estadoF) return false
-    if (ownerF  !== 'Todos' && l.owner_name !== ownerF) return false
-    if (search) {
-      const q = search.toLowerCase()
-      if (!`${l.name} ${l.phone||''} ${l.email||''} ${l.canal||''} ${l.segmento||''} ${l.estado||''}`.toLowerCase().includes(q)) return false
-    }
-    return true
-  })
+  const closeDetail = () => {
+    setSelected(null)
+    if (deepId) router.replace('/leads', { scroll: false })
+  }
+
+  const owners = useMemo(() => Array.from(new Set(leads.map(l => l.owner_name).filter(Boolean))) as string[], [leads])
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return leads.filter(l => {
+      if (canalF  !== 'Todos' && l.canal    !== canalF)  return false
+      if (segF    !== 'Todos' && l.segmento !== segF)    return false
+      if (estadoF !== 'Todos' && l.estado   !== estadoF) return false
+      if (ownerF  !== 'Todos' && l.owner_name !== ownerF) return false
+      if (q && !`${l.name} ${l.phone||''} ${l.email||''} ${l.canal||''} ${l.segmento||''} ${l.estado||''}`.toLowerCase().includes(q)) return false
+      return true
+    })
+  }, [leads, canalF, segF, estadoF, ownerF, search])
 
   const updateEstado = async (id: string, estado: string) => {
-    await fetch(`/api/data/leads/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado }) })
+    const r = await fetch(`/api/data/leads/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado }) })
+    if (!r.ok) { showToast('No se pudo cambiar el estado'); return }
     setLeads(prev => prev.map(l => l.id === id ? { ...l, estado } : l))
     if (selected?.id === id) setSelected((s: any) => ({ ...s, estado }))
     showToast(`Estado → "${estado}"`)
@@ -234,7 +272,7 @@ export default function LeadsPage() {
         <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--muted)', fontSize: 13 }}>
           {canalF !== 'Todos' || segF !== 'Todos' || estadoF !== 'Todos' || search
             ? 'Sin resultados para estos filtros.'
-            : <>Sin leads aún · <a href="/contactos" style={{ color: 'var(--ipesa-orange)', fontWeight: 600 }}>Crear desde un contacto →</a></>}
+            : <>Sin leads aún · <Link href="/contactos" style={{ color: 'var(--ipesa-orange)', fontWeight: 600 }}>Crear desde un contacto →</Link></>}
         </div>
       ) : view === 'tabla' ? (
         <LeadsTable leads={filtered} onSelect={setSelected} isAdmin={isAdmin} />
@@ -247,10 +285,11 @@ export default function LeadsPage() {
           lead={selected}
           configCanales={configCanales}
           configSegmentos={configSegmentos}
-          onClose={() => setSelected(null)}
+          key={selected.id}
+          onClose={closeDetail}
           onChangeEstado={updateEstado}
           onUpdated={upd => { setLeads(prev => prev.map(l => l.id === upd.id ? upd : l)); setSelected(upd); showToast('Lead actualizado ✓') }}
-          onDeleted={id  => { setLeads(prev => prev.filter(l => l.id !== id)); setSelected(null); showToast('Lead eliminado') }}
+          onDeleted={id  => { setLeads(prev => prev.filter(l => l.id !== id)); closeDetail(); showToast('Lead eliminado') }}
         />
       )}
 
@@ -374,7 +413,26 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
   const [saving, setSaving]         = useState(false)
   const [updateEstado, setUpdateEstado] = useState(true)
   const [quoteLink, setQuoteLink]   = useState<string | null>(null)
+  const [quoteText, setQuoteText]   = useState('')
+  const [sendingQuote, setSendingQuote] = useState(false)
+  const [quoteSent, setQuoteSent]   = useState(false)
+  const windowOpen = useWhatsAppWindow(lead.phone)
   const descRef = useRef<HTMLTextAreaElement>(null)
+
+  // Con la ventana de 24 h abierta, la cotización sale del número del negocio
+  // y queda en la bandeja de WhatsApp del CRM.
+  const sendQuoteFromCrm = async (text: string) => {
+    setSendingQuote(true)
+    try {
+      const r = await fetch(`/api/whatsapp/conversations/${normalizePhone(lead.phone)}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body: text }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { setSaveError(d.error || 'No se pudo enviar por WhatsApp'); return }
+      setQuoteSent(true)
+      setQuoteLink(prev => prev ?? buildWhatsApp(lead.phone, lead.name, '', null))
+    } finally { setSendingQuote(false) }
+  }
 
   const loadActivities = useCallback(async () => {
     setLoading(true)
@@ -395,6 +453,7 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
     setForm({ description: '', amount: '', date: localNow() })
     setUpdateEstado(true)
     setQuoteLink(null)
+    setQuoteSent(false)
   }
 
   const selectType = (t: AType) => {
@@ -432,9 +491,12 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
         onEstadoUpdate('Cotizado')
       }
 
-      // WhatsApp link para cotizaciones
+      // Compartir la cotización por WhatsApp
       if (active === 'quote' && lead.phone) {
-        setQuoteLink(buildWhatsApp(lead.phone, lead.name, form.description, form.amount ? Number(form.amount) : null))
+        const amount = form.amount ? Number(form.amount) : null
+        setQuoteLink(buildWhatsApp(lead.phone, lead.name, form.description, amount))
+        setQuoteText(buildQuoteText(lead.name, form.description, amount))
+        setQuoteSent(false)
       }
 
       await loadActivities()
@@ -548,19 +610,37 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
         </div>
       )}
 
-      {/* ── Link de WhatsApp post-cotización ── */}
+      {!active && saveError && (
+        <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: 'var(--ipesa-rose-soft)', color: 'var(--ipesa-rose)', fontSize: 12.5, fontWeight: 600 }}>
+          ⚠️ {saveError}
+        </div>
+      )}
+
+      {/* ── Compartir la cotización por WhatsApp ── */}
       {quoteLink && (
-        <div style={{ background: '#DBEADF', border: '1px solid #86EFAC', borderRadius: 10, padding: '12px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ background: '#DBEADF', border: '1px solid #86EFAC', borderRadius: 10, padding: '12px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 20 }}>💬</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#1F5536', marginBottom: 2 }}>Cotización registrada</div>
-            <div style={{ fontSize: 12, color: '#166534' }}>Comparte la cotización por WhatsApp directamente</div>
+          <div style={{ flex: '1 1 180px' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#1F5536', marginBottom: 2 }}>{quoteSent ? 'Cotización enviada por WhatsApp ✓' : 'Cotización registrada'}</div>
+            <div style={{ fontSize: 12, color: '#166534' }}>
+              {quoteSent ? 'Quedó en la bandeja de WhatsApp del CRM.'
+                : windowOpen ? 'El cliente escribió en las últimas 24 h: puedes enviarla desde el número del negocio.'
+                : 'Compártela por WhatsApp.'}
+            </div>
           </div>
-          <a href={quoteLink} target="_blank" rel="noopener noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#25D366', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-            <Ico.whatsapp /> Abrir WhatsApp
-          </a>
-          <button onClick={() => setQuoteLink(null)}
+          {!quoteSent && windowOpen && (
+            <button onClick={() => sendQuoteFromCrm(quoteText)} disabled={sendingQuote}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#1B9E4B', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <Ico.send /> {sendingQuote ? 'Enviando…' : 'Enviar desde el CRM'}
+            </button>
+          )}
+          {!quoteSent && (
+            <a href={quoteLink} target="_blank" rel="noopener noreferrer"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: windowOpen ? 'transparent' : '#25D366', color: windowOpen ? '#1F5536' : '#fff', border: windowOpen ? '1px solid #86EFAC' : 'none', borderRadius: 8, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+              <Ico.whatsapp /> Abrir WhatsApp
+            </a>
+          )}
+          <button onClick={() => setQuoteLink(null)} aria-label="Cerrar"
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#166534', fontSize: 18, lineHeight: 1 }}>×</button>
         </div>
       )}
@@ -614,13 +694,18 @@ function ActivitiesTab({ lead, onEstadoUpdate }: {
                         <div style={{ fontSize: 12.5, color: 'var(--ink-2)', lineHeight: 1.45 }}>{a.description}</div>
                       )}
                       {/* WhatsApp para cotizaciones pasadas */}
-                      {a.type === 'quote' && lead.phone && (
+                      {a.type === 'quote' && lead.phone && (windowOpen ? (
+                        <button onClick={() => sendQuoteFromCrm(buildQuoteText(lead.name, a.description || '', a.amount))} disabled={sendingQuote}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 700, color: '#1F5536', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
+                          <Ico.whatsapp /> {sendingQuote ? 'Enviando…' : 'Reenviar desde el CRM'}
+                        </button>
+                      ) : (
                         <a href={buildWhatsApp(lead.phone, lead.name, a.description || '', a.amount)}
                           target="_blank" rel="noopener noreferrer"
                           style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, fontWeight: 600, color: '#1F5536', textDecoration: 'none' }}>
                           <Ico.whatsapp /> Reenviar por WhatsApp
                         </a>
-                      )}
+                      ))}
                       {/* Delete */}
                       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
                         <button onClick={() => handleDelete(a.id)}
@@ -819,15 +904,19 @@ function LeadDetail({
     'Cotizado': '#EE5A24', 'Ganado / Venta realizada': '#3D8B5C', 'Perdido': '#80766B',
   }
 
+  const [saveError, setSaveError] = useState('')
   const handleSaveLead = async () => {
-    setSaving(true)
-    const r = await fetch(`/api/data/leads/${lead.id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...editForm, monto: editForm.monto ? Number(editForm.monto) : null }),
-    })
-    if (r.ok) { const upd = await r.json(); onUpdated({ ...lead, ...upd }) }
-    setSaving(false)
-    setEditing(false)
+    setSaving(true); setSaveError('')
+    try {
+      const r = await fetch(`/api/data/leads/${lead.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...editForm, monto: editForm.monto ? Number(editForm.monto) : null }),
+      })
+      const upd = await r.json().catch(() => ({}))
+      if (!r.ok) { setSaveError(upd.error || 'No se pudieron guardar los cambios'); return }
+      onUpdated({ ...lead, ...upd })
+      setEditing(false)
+    } finally { setSaving(false) }
   }
 
   const handleDeleteLead = async () => {
@@ -930,6 +1019,7 @@ function LeadDetail({
                   <label>Notas</label>
                   <textarea value={editForm.notas} onChange={e => setEditForm(f => ({ ...f, notas: e.target.value }))} rows={3} style={{ resize: 'vertical', minHeight: 72 }} />
                 </div>
+                {saveError && <div style={{ color: 'var(--ipesa-rose)', fontSize: 12.5, marginBottom: 8 }}>{saveError}</div>}
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                   <button className="btn btn-ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>Cancelar</button>
                   <button className="btn btn-primary" onClick={handleSaveLead} disabled={saving} style={{ flex: 1 }}>
@@ -1003,10 +1093,10 @@ function LeadDetail({
         <div className="detail-foot">
           {tab === 'info' && !editing && <>
             {lead.phone && <a href={`tel:${lead.phone}`} className="btn btn-ghost btn-ghost-call"><Ico.phone /> Llamar</a>}
-            {lead.phone && (
-              <a href={`https://wa.me/52${(lead.phone || '').replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-ghost-whatsapp">
+            {normalizePhone(lead.phone).length === 10 && (
+              <Link href={`/whatsapp?phone=${normalizePhone(lead.phone)}`} className="btn btn-ghost btn-ghost-whatsapp">
                 <Ico.whatsapp /> WhatsApp
-              </a>
+              </Link>
             )}
             <button className="btn btn-ghost btn-ghost-call" onClick={() => { setEditing(true); setConfirmDel(false) }}>
               <Ico.edit /> Editar
@@ -1015,10 +1105,10 @@ function LeadDetail({
               <Ico.trash /> Eliminar
             </button>
           </>}
-          {tab === 'actividades' && lead.phone && (
-            <a href={`https://wa.me/52${(lead.phone || '').replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-ghost-whatsapp">
-              <Ico.whatsapp /> WhatsApp
-            </a>
+          {tab === 'actividades' && normalizePhone(lead.phone).length === 10 && (
+            <Link href={`/whatsapp?phone=${normalizePhone(lead.phone)}`} className="btn btn-ghost btn-ghost-whatsapp">
+              <Ico.whatsapp /> Abrir chat de WhatsApp
+            </Link>
           )}
         </div>
       </aside>
