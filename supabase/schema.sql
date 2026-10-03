@@ -4,8 +4,11 @@
 -- Generado con pg_dump (solo esquema "public") a partir de una base que corre
 -- el esquema anterior + las migraciones 20261003120000 … 20261003120400, es
 -- decir, como queda producción después de aplicar la migración de cierre
--- (20261003120100_multi_store_finalize.sql). Es una REFERENCIA: los cambios se
--- hacen con migraciones nuevas en supabase/migrations/, nunca editando esto.
+-- (20261003120100_multi_store_finalize.sql); cron_tokens se agregó a mano con
+-- 20261003120500_reminder_push_on_time.sql, que además programa en pg_cron
+-- (fuera de "public") los avisos de recordatorios a la hora. Es una
+-- REFERENCIA: los cambios se hacen con migraciones nuevas en
+-- supabase/migrations/, nunca editando esto.
 --
 -- Modelo de acceso
 --   · Toda lectura/escritura pasa por las API routes de Next.js con la
@@ -96,6 +99,11 @@ CREATE TABLE public.contacts (
     created_at timestamp without time zone DEFAULT now(),
     updated_at timestamp without time zone DEFAULT now(),
     store_id uuid NOT NULL
+);
+
+CREATE TABLE public.cron_tokens (
+    token text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 CREATE TABLE public.lead_activities (
@@ -306,6 +314,9 @@ ALTER TABLE ONLY public.contacts
 ALTER TABLE ONLY public.contacts
     ADD CONSTRAINT contacts_store_phone_key UNIQUE (store_id, phone);
 
+ALTER TABLE ONLY public.cron_tokens
+    ADD CONSTRAINT cron_tokens_pkey PRIMARY KEY (token);
+
 ALTER TABLE ONLY public.lead_activities
     ADD CONSTRAINT lead_activities_pkey PRIMARY KEY (id);
 
@@ -468,6 +479,8 @@ ALTER TABLE public.app_config ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE public.contacts ENABLE ROW LEVEL SECURITY;
 
+ALTER TABLE public.cron_tokens ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE public.lead_activities ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY lead_activities_user_only ON public.lead_activities TO authenticated USING ((user_id = ( SELECT auth.uid() AS uid))) WITH CHECK ((user_id = ( SELECT auth.uid() AS uid)));
@@ -506,6 +519,8 @@ GRANT ALL ON FUNCTION public.platform_store_overview() TO service_role;
 
 REVOKE ALL ON FUNCTION public.store_member_directory(p_store uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.store_member_directory(p_store uuid) TO service_role;
+
+GRANT SELECT,DELETE ON TABLE public.cron_tokens TO service_role;
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.platform_admins TO service_role;
 
