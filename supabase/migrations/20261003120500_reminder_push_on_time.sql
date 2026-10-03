@@ -12,7 +12,8 @@
 -- 'crm-avisos-recordatorios' con la dirección nueva (mismo nombre = lo reemplaza).
 
 create extension if not exists pg_cron with schema pg_catalog;
-create extension if not exists pg_net;
+-- En "extensions" (no en "public", lo marca el linter); sus funciones viven en "net"
+create extension if not exists pg_net with schema extensions;
 
 -- ── Pases de un solo uso (solo service_role los lee y borra) ───────────────
 create table if not exists public.cron_tokens (
