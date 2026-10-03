@@ -15,6 +15,16 @@ import { ROLE_LABELS, STATUS_LABELS, type StoreModule } from '@/lib/stores'
 import { reminderSubject, reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
 import { fmtDue, isDueToday, isOverdue } from '@/lib/datetime'
+import { enableDevicePush, pushSupport, testDevicePush } from '@/lib/pushClient'
+
+/** Estado de los avisos push en este dispositivo. */
+function pushStateOf(sub: PushSubscription | null): 'blocked' | 'off' | 'on' {
+  if (sub) return 'on'
+  return typeof Notification !== 'undefined' && Notification.permission === 'denied' ? 'blocked' : 'off'
+}
+
+/** Cada cuánto se vuelve a sugerir activar los avisos si alguien cerró la sugerencia. */
+const PUSH_PROMPT_SNOOZE_MS = 7 * 86_400_000
 
 /** Ejecuta `fn` cada `ms` solo con la pestaña visible (y al volver a ella). */
 function useVisibleInterval(fn: () => void, ms: number) {
@@ -108,7 +118,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [whatsNewOpen,  setWhatsNewOpen]  = useState(false)
   const [noticeVisible, setNoticeVisible] = useState(false)
   const [waUnread,      setWaUnread]      = useState(0)
-  const [pushState,     setPushState]     = useState<'unsupported' | 'off' | 'on'>('unsupported')
+  const [pushState,     setPushState]     = useState<'unsupported' | 'ios-install' | 'blocked' | 'off' | 'on'>('unsupported')
+  const [pushPrompt,    setPushPrompt]    = useState(false)
+  const [pushBusy,      setPushBusy]      = useState(false)
   const [now,           setNow]           = useState(() => new Date())
 
   const swRegRef    = useRef<ServiceWorkerRegistration | null>(null)
@@ -202,14 +214,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const checkPush = useCallback(() => {
     const reg = swRegRef.current
     if (!reg) return
-    reg.pushManager.getSubscription().then(sub => setPushState(sub ? 'on' : 'off')).catch(() => {})
+    reg.pushManager.getSubscription().then(sub => setPushState(pushStateOf(sub))).catch(() => {})
   }, [])
   useEffect(() => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      if (pushSupport() === 'ios-install') setPushState('ios-install')
+      return
+    }
     navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(reg => {
       swRegRef.current = reg
       reg.pushManager.getSubscription().then(sub => {
-        setPushState(sub ? 'on' : 'off')
+        setPushState(pushStateOf(sub))
         if (!sub) return
         // Re-guardar la suscripción para garantizar que quede ligada al usuario actual
         fetch('/api/push/subscribe', {
@@ -222,6 +237,38 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     window.addEventListener('crm:push-changed', checkPush)
     return () => window.removeEventListener('crm:push-changed', checkPush)
   }, [checkPush])
+
+  /* Sugerir activar los avisos en este dispositivo (cada uno se activa por separado;
+     en iPhone, primero hay que instalar la app) */
+  useEffect(() => {
+    if (pushState !== 'off' && pushState !== 'ios-install') { setPushPrompt(false); return }
+    try {
+      const snoozed = Number(window.localStorage.getItem('crm:push-prompt:snoozed') || 0)
+      setPushPrompt(Date.now() - snoozed > PUSH_PROMPT_SNOOZE_MS)
+    } catch {
+      setPushPrompt(true)
+    }
+  }, [pushState])
+
+  const snoozePushPrompt = () => {
+    setPushPrompt(false)
+    try { window.localStorage.setItem('crm:push-prompt:snoozed', String(Date.now())) } catch {}
+  }
+
+  const enablePushHere = async () => {
+    setPushBusy(true)
+    try {
+      const permission = await enableDevicePush()
+      if (permission === 'granted') await testDevicePush()  // la prueba confirma que todo funciona
+      else snoozePushPrompt()
+    } catch (err) {
+      console.warn('[push]', err)
+      router.push('/configuracion?tab=cuenta')  // ahí se ve el detalle del problema
+    } finally {
+      setPushBusy(false)
+      checkPush()
+    }
+  }
 
   /* Recordatorios pendientes + notificación local si alguno vence ahora */
   const loadReminders = useCallback(async () => {
@@ -240,10 +287,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           // Vence en los próximos 65 s o venció hace menos de 65 s, y no notificado aún
           if (Math.abs(due - t) <= 65_000 && !notifiedRef.current.has(rem.id)) {
             notifiedRef.current.add(rem.id)
+            // Misma etiqueta que el aviso del servidor: si llegan los dos, uno reemplaza al otro
             swRegRef.current.showNotification(due <= t ? '⏰ Recordatorio vencido' : '🔔 Recordatorio próximo', {
               body: reminderTitle(rem),
               icon: '/icon-192.png',
-              badge: '/icon-192.png',
+              badge: '/badge-96.png',
               tag: `rem-${rem.id}`,
               requireInteraction: true,
               data: { url: '/recordatorios' },
@@ -461,10 +509,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   <Link href="/recordatorios" className="notif-foot">
                     {reminders.length > 8 ? `Ver los ${reminders.length} en la Agenda →` : 'Abrir la Agenda →'}
                   </Link>
-                  {pushState === 'off' && (
+                  {(pushState === 'off' || pushState === 'blocked') && (
                     <Link href="/configuracion?tab=cuenta" className="notif-push-hint">
                       <Icon.bellOff style={{ width: 14, height: 14, flexShrink: 0 }} />
-                      Activa los avisos en este dispositivo para no perderte ninguno
+                      {pushState === 'blocked'
+                        ? 'Los avisos están bloqueados en este navegador. Ver cómo activarlos'
+                        : 'Activa los avisos en este dispositivo para no perderte ninguno'}
                     </Link>
                   )}
                 </div>
@@ -491,6 +541,28 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               Prueba gratis: {trialLeft === 0 ? 'termina hoy' : `te ${trialLeft === 1 ? 'queda 1 día' : `quedan ${trialLeft} días`}`}.
             </span>
             <Link href="/configuracion?tab=plan" className="plan-banner-cta">Ver plan</Link>
+          </div>
+        )}
+
+        {pushPrompt && (
+          <div className="plan-banner push" role="status">
+            <Icon.bell style={{ width: 16, height: 16, flexShrink: 0 }} />
+            {pushState === 'ios-install' ? (
+              <span>
+                <strong>Para recibir avisos en este iPhone</strong>, agrega la app a tu pantalla de inicio: toca Compartir
+                y luego «Agregar a inicio». Ábrela desde ese ícono y activa los avisos.
+              </span>
+            ) : (
+              <>
+                <span>
+                  <strong>Activa los avisos en este dispositivo</strong> para que te lleguen tus recordatorios a su hora y los mensajes de tus clientes.
+                </span>
+                <button className="plan-banner-cta" onClick={enablePushHere} disabled={pushBusy}>{pushBusy ? '…' : 'Activar'}</button>
+              </>
+            )}
+            <button className="plan-banner-close" onClick={snoozePushPrompt} title="Ahora no" aria-label="Ahora no">
+              <Icon.close style={{ width: 14, height: 14 }} />
+            </button>
           </div>
         )}
 

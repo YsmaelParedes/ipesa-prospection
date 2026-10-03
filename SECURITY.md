@@ -51,7 +51,9 @@ Cloud API y Web Push, y el aislamiento entre tiendas.
   errores internos se registran en el servidor y al cliente le llega un mensaje genérico.
 - **Webhooks y cron autenticados**: firma HMAC-SHA256 de Meta (`X-Hub-Signature-256`) y
   `CRON_SECRET`, ambos comparados en tiempo constante. El cron falla cerrado si no hay
-  secreto.
+  secreto. Los avisos a la hora los dispara pg_cron con un pase aleatorio de un solo uso
+  (`cron_tokens`, 244 bits, caduca en 5 min, solo `service_role` lo lee/borra), así que
+  ningún secreto se copia a la base de datos.
 - **Cabeceras** definidas en un solo lugar (`next.config.ts`): CSP estricta (sin
   `unsafe-eval` en producción, `object-src 'none'`, `frame-ancestors 'none'`), HSTS con
   preload, COOP, `nosniff`, `X-Frame-Options: DENY`, Permissions-Policy restrictiva y sin
@@ -112,7 +114,8 @@ teléfonos que partía una misma conversación de WhatsApp en dos.
 1. **Configurar `WHATSAPP_APP_SECRET` en Vercel** (Meta → tu app → Configuración → Básica →
    Clave secreta). Desde la versión multi-tienda el webhook falla cerrado: mientras falte, los
    mensajes entrantes de la tienda original se rechazan.
-2. **Confirmar `CRON_SECRET` en Vercel.** Sin ella, los recordatorios diarios no se envían.
+2. ~~Confirmar `CRON_SECRET` en Vercel.~~ Verificado el 2026-10-02: el cron diario corre
+   (los recordatorios quedan marcados como avisados).
 3. **Activar "Leaked password protection"** en Supabase → Authentication → Sign In / Providers
    → Email (bloquea contraseñas filtradas en HaveIBeenPwned).
 4. **Rotar el token de INEGI DENUE**: quedó en el historial de git aunque el archivo ya no

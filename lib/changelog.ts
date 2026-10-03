@@ -15,6 +15,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026-10-02.4',
+    date: '2 de octubre, 2026',
+    title: 'Avisos a tiempo',
+    items: [
+      'Importante: la app cambió de dirección (crm-pinturas.vercel.app). Vuelve a activar los avisos en cada celular y computadora con el botón "Activar" que aparece arriba, o en Configuración → Mi cuenta. En iPhone, borra el ícono viejo y agrega la app otra vez desde Safari.',
+      'Los recordatorios ahora te avisan a la hora exacta, aunque la app esté cerrada (antes llegaban todos juntos a las 8:00).',
+      'A las 8:00 te llega un solo aviso con tu agenda del día y los pendientes vencidos.',
+      'Cada aviso dice qué hacer y con quién, por ejemplo "📞 Llamar a Juan Pérez", y al tocarlo se abre la pantalla correcta aunque la app ya esté abierta.',
+      'Al activar los avisos te llega una prueba al instante, y si el navegador los tiene bloqueados te decimos cómo permitirlos.',
+    ],
+  },
+  {
     version: '2026-10-02.3',
     date: '2 de octubre, 2026',
     title: 'Todo más ordenado y a la mano',

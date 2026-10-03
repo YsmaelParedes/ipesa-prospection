@@ -1,11 +1,11 @@
 // ── CRM Pinturas — Service Worker ─────────────────────────────────────────
-// Versión: v7 — actualizar al hacer cambios importantes (v7: nueva marca e íconos)
+// Versión: v8 — actualizar al hacer cambios importantes (v8: avisos más confiables)
 // Estrategia: cache mínimo (solo recursos PWA esenciales + página offline).
 // Next.js ya versiona sus bundles JS/CSS con content-hash en los URLs,
 // así que no es necesario cachearlos aquí — hacerlo solo acumula basura.
-const CACHE_NAME = 'crm-v7'
+const CACHE_NAME = 'crm-v8'
 
-const PRECACHE = ['/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png']
+const PRECACHE = ['/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/badge-96.png']
 
 const OFFLINE_HTML = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sin conexión · CRM Pinturas</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,sans-serif;background:#F4F4F5;color:#131313;text-align:center;padding:24px}
@@ -56,46 +56,71 @@ self.addEventListener('fetch', e => {
 })
 
 // ── Push: mostrar notificación nativa ────────────────────────────────────
+// Siempre se muestra algo: iPhone da de baja los avisos de un sitio que
+// recibe pushes sin mostrarlos.
 self.addEventListener('push', e => {
-  if (!e.data) return
-
-  let payload = { title: 'CRM Pinturas', body: 'Tienes un aviso pendiente', url: '/recordatorios', tag: '' }
-  try { payload = { ...payload, ...e.data.json() } } catch {}
+  let p = { title: 'CRM Pinturas', body: 'Tienes un aviso pendiente', url: '/recordatorios', tag: '' }
+  try { if (e.data) p = { ...p, ...e.data.json() } } catch {}
+  const chat = p.url.startsWith('/whatsapp')
 
   e.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body:     payload.body,
-      icon:     '/icon-192.png',
-      badge:    '/icon-192.png',
-      // Etiqueta por recordatorio/conversación: antes todas compartían la misma
-      // y cada aviso nuevo reemplazaba al anterior.
-      tag:      payload.tag || `crm-${Date.now()}`,
-      renotify: !!payload.tag,
-      requireInteraction: payload.url === '/recordatorios',
-      vibrate:  [200, 100, 200],
-      data:     { url: payload.url },
-      actions:  [
-        { action: 'open',  title: payload.url.startsWith('/whatsapp') ? 'Abrir chat' : 'Ver recordatorio' },
+    self.registration.showNotification(p.title, {
+      body:  p.body,
+      icon:  '/icon-192.png',
+      badge: '/badge-96.png',  // silueta de la gota en la barra de Android
+      // Una etiqueta por recordatorio/conversación: el aviso nuevo reemplaza
+      // al anterior del mismo tema en vez de apilarse.
+      tag:   p.tag || `crm-${Date.now()}`,
+      // Un chat vuelve a sonar con cada mensaje; un recordatorio repetido no
+      renotify: !!p.tag && (p.renotify ?? chat),
+      requireInteraction: !!p.sticky,
+      vibrate:   [200, 100, 200],
+      timestamp: Date.now(),
+      data:      { url: p.url },
+      actions: [
+        { action: 'open',  title: chat ? 'Abrir chat' : 'Ver agenda' },
         { action: 'close', title: 'Cerrar' },
       ],
     })
   )
 })
 
-// ── Notification click: abrir la app en la página correcta ───────────────
+// ── Notification click: abrir la app en la pantalla del aviso ────────────
 self.addEventListener('notificationclick', e => {
   e.notification.close()
   if (e.action === 'close') return
 
-  const url = e.notification.data?.url || '/recordatorios'
-  e.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      for (const client of clientList) {
-        if ('focus' in client) {
-          return client.focus().then(c => ('navigate' in c ? c.navigate(url) : c))
-        }
-      }
-      return self.clients.openWindow(url)
+  const target = new URL(e.notification.data?.url || '/recordatorios', self.location.origin).href
+  e.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    // Ya está abierta justo ahí: solo traerla al frente
+    const same = windows.find(w => w.url === target)
+    if (same) return same.focus()
+    // Abierta en otra pantalla: traerla al frente y llevarla al aviso
+    for (const w of windows) {
+      try {
+        const win = await w.focus()
+        return await (win || w).navigate(target)
+      } catch {}  // una pestaña que este service worker no controla no se puede mover
+    }
+    return self.clients.openWindow(target)
+  })())
+})
+
+// ── El navegador renovó la suscripción: registrar la nueva ───────────────
+// Sin esto, los avisos dejaban de llegar en silencio hasta volver a abrir la app.
+self.addEventListener('pushsubscriptionchange', e => {
+  e.waitUntil((async () => {
+    const old = e.oldSubscription
+    const key = old && old.options && old.options.applicationServerKey
+    const sub = e.newSubscription
+      || (key ? await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key }) : null)
+    if (!sub) return  // al abrir la app, la campana pedirá activarlos de nuevo
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ ...sub.toJSON(), oldEndpoint: old ? old.endpoint : undefined }),
     })
-  )
+  })().catch(() => {}))
 })

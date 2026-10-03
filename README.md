@@ -28,7 +28,7 @@ versión multi-tienda) conserva todos sus datos.
 | Datos y Auth | Supabase (Postgres + Auth + Storage) |
 | Mensajería | WhatsApp Cloud API de Meta (Graph API, sin intermediarios) |
 | Notificaciones | Web Push (VAPID) + service worker propio (`public/sw.js`) |
-| Hosting | Vercel (incluye el cron diario de recordatorios) |
+| Hosting | Vercel (cron diario del resumen de la agenda) + Supabase pg_cron (avisos a la hora) |
 
 > Next.js 16 cambia varias convenciones respecto a versiones anteriores (por ejemplo,
 > `middleware.ts` ahora es `proxy.ts`). Antes de tocar código revisa la guía incluida en
@@ -52,7 +52,7 @@ npm run build     # compila para producción (lo mismo que corre Vercel)
 | `SUPABASE_SERVICE_KEY` | Sí | Llave `service_role`; **solo servidor**. Sin ella la API no arranca |
 | `NEXT_PUBLIC_SITE_URL` | Sí | Dominio público (`https://…`, sin `/` final). Se usa en los enlaces de los correos, invitaciones y webhooks |
 | `CREDENTIALS_ENCRYPTION_KEY` | Sí | Llave AES-256 para cifrar las credenciales de WhatsApp de cada tienda. Generar con `openssl rand -base64 32`. **No cambiarla** después: las credenciales guardadas dejarían de abrirse |
-| `CRON_SECRET` | Sí | Protege `/api/cron/reminders` (Vercel la manda sola). Sin ella el cron queda deshabilitado |
+| `CRON_SECRET` | Sí | Protege los crons: Vercel la manda sola a `/api/cron/agenda`. Sin ella el resumen diario queda deshabilitado |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Para push | Generar con `npx web-push generate-vapid-keys` |
 | `VAPID_SUBJECT` | No | Contacto que se envía a los servicios de push (`mailto:…`) |
 | `NEXT_PUBLIC_LEGAL_NAME` | Para vender | Razón social o nombre del responsable en Términos y Aviso de privacidad |
@@ -131,6 +131,22 @@ Qué hace la sección **WhatsApp** del CRM:
   repetir la misma plantilla a la misma persona en 7 días, y baja automática cuando el
   cliente escribe "BAJA", "STOP" o toca "Detener promociones".
 - Notificación push al equipo cuando llega un mensaje (se puede desactivar por dispositivo).
+
+## Avisos (notificaciones push)
+
+Cada persona los activa en cada dispositivo (Configuración → Mi cuenta, o la barra que
+aparece en la app mientras estén apagados). En iPhone solo funcionan con la app agregada a
+la pantalla de inicio (iOS 16.4+).
+
+| Aviso | Quién lo dispara |
+|---|---|
+| A la hora de cada recordatorio | Supabase **pg_cron** revisa cada minuto si ya toca alguno y solo entonces llama a `/api/cron/reminders` con un pase de un solo uso (`cron_tokens`), sin secretos compartidos. Ver `supabase/migrations/20261003120500_reminder_push_on_time.sql` |
+| Resumen de la agenda a las 8:00 | Cron diario de Vercel → `/api/cron/agenda` (con `CRON_SECRET`) |
+| Mensaje nuevo de WhatsApp | El webhook, al guardar el mensaje |
+
+Las suscripciones son por dominio: **si cambia el dominio de la app**, actualiza la URL del
+job `crm-avisos-recordatorios` en pg_cron, borra las filas viejas de `push_subscriptions`
+(apuntan al dominio anterior) y pide al equipo que vuelva a activar los avisos.
 
 ## Base de datos
 

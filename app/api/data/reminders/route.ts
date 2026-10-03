@@ -3,6 +3,7 @@ import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-
 import { isUUID, jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 import { REMINDER_SCHEMA, reminderToApp, reminderToDB } from '@/lib/reminders'
 import { getAccessibleLead } from '@/lib/leads'
+import { naiveIso, zonedIso } from '@/lib/datetime'
 
 const COLUMNS = 'id, user_id, lead_id, lead_name, nota, reminder_date, completado, completado_at, created_at, type, priority'
 
@@ -62,9 +63,13 @@ export async function POST(req: NextRequest) {
     return jsonError('Lead no encontrado', 404)
   }
 
+  // El aviso push sale a la hora del recordatorio. Si esa hora ya pasó al
+  // capturarlo, no hay nada que avisar: quien lo guarda ya lo tiene a la vista.
+  const pushSent = naiveIso(parsed.data.fecha_recordatorio) <= zonedIso(new Date(), ctx.store.timezone)
+
   const { data, error } = await getServerSupabase()
     .from('reminders')
-    .insert([{ ...reminderToDB(parsed.data), user_id: ctx.uid, store_id: ctx.storeId }])
+    .insert([{ ...reminderToDB(parsed.data), user_id: ctx.uid, store_id: ctx.storeId, push_sent: pushSent }])
     .select()
   if (error) return serverError('POST /api/data/reminders', error, 'Error al crear recordatorio')
   return NextResponse.json(data?.[0] ? reminderToApp(data[0]) : {})

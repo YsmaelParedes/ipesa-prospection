@@ -35,11 +35,22 @@ export async function POST(req: NextRequest) {
   if (typeof keys?.p256dh !== 'string' || keys.p256dh.length > 256) return jsonError('Clave p256dh inválida')
   if (typeof keys?.auth !== 'string' || keys.auth.length > 64) return jsonError('Clave auth inválida')
 
+  const supabase = getServerSupabase()
   const row: Record<string, unknown> = { endpoint: body.endpoint, p256dh: keys.p256dh, auth: keys.auth, user_id: user.id }
   if (typeof body.notifyWhatsapp === 'boolean') row.notify_whatsapp = body.notifyWhatsapp
 
-  const { error } = await getServerSupabase().from('push_subscriptions').upsert(row, { onConflict: 'endpoint' })
+  // El navegador renovó la suscripción (public/sw.js → pushsubscriptionchange):
+  // la nueva conserva la preferencia de WhatsApp y la vieja se retira.
+  const oldEndpoint = validEndpoint(body.oldEndpoint) && body.oldEndpoint !== body.endpoint ? body.oldEndpoint : null
+  if (oldEndpoint && row.notify_whatsapp === undefined) {
+    const { data: prev } = await supabase.from('push_subscriptions').select('notify_whatsapp')
+      .eq('endpoint', oldEndpoint).eq('user_id', user.id).maybeSingle()
+    if (prev) row.notify_whatsapp = prev.notify_whatsapp
+  }
+
+  const { error } = await supabase.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' })
   if (error) return serverError('POST /api/push/subscribe', error, 'Error al registrar suscripción')
+  if (oldEndpoint) await supabase.from('push_subscriptions').delete().eq('endpoint', oldEndpoint).eq('user_id', user.id)
   return NextResponse.json({ ok: true })
 }
 

@@ -168,7 +168,9 @@ export async function notifyStoreTeam(storeId: string, items: InboundNotificatio
       title: `💬 ${item.title}`,
       body:  item.text.length > 140 ? `${item.text.slice(0, 137)}…` : item.text,
       url:   `/whatsapp?phone=${item.phone}`,
+      // Un aviso por chat; cada mensaje nuevo lo reemplaza y vuelve a sonar
       tag:   `wa-${storeId.slice(0, 8)}-${item.phone}`,
+      renotify: true,
     })
   }
 }

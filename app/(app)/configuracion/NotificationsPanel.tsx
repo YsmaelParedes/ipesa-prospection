@@ -1,101 +1,75 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { currentSubscription, disableDevicePush, enableDevicePush, pushSupport, testDevicePush } from '@/lib/pushClient'
 import { Ico, Note, Panel, cx } from './ui'
 import s from './configuracion.module.css'
 
-function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64  = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const raw     = window.atob(base64)
-  const output  = new Uint8Array(raw.length)
-  for (let i = 0; i < raw.length; i++) output[i] = raw.charCodeAt(i)
-  return output.buffer as ArrayBuffer
-}
-
-/** Avisa al shell (campana) que cambió la suscripción de este dispositivo. */
-const notifyPushChanged = () => window.dispatchEvent(new Event('crm:push-changed'))
-
-async function getRegistration(): Promise<ServiceWorkerRegistration | null> {
-  if (!('serviceWorker' in navigator)) return null
-  return (await navigator.serviceWorker.getRegistration('/')) ?? (await navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => null))
+type Status = 'loading' | 'ios-install' | 'unsupported' | 'blocked' | 'off' | 'on'
+const STATUS_LABEL: Record<Status, string> = {
+  loading: '…', 'ios-install': 'Desactivados', unsupported: 'No disponibles', blocked: 'Bloqueados', off: 'Desactivados', on: 'Activados',
 }
 
 /**
- * Avisos en este dispositivo (notificaciones push): recordatorios que vencen
- * y mensajes de WhatsApp. Antes vivía dentro de la campana de recordatorios.
+ * Avisos en este dispositivo (notificaciones push): recordatorios a su hora,
+ * el resumen de la mañana y mensajes de WhatsApp. Cada celular o computadora
+ * se activa por separado.
  */
 export function NotificationsPanel() {
-  const [supported, setSupported]   = useState<boolean | null>(null)
-  const [subscribed, setSubscribed] = useState(false)
-  const [whatsapp, setWhatsapp]     = useState(true)
-  const [busy, setBusy]             = useState(false)
-  const [error, setError]           = useState('')
-  const [info, setInfo]             = useState('')
+  const [status, setStatus]     = useState<Status>('loading')
+  const [whatsapp, setWhatsapp] = useState(true)
+  const [busy, setBusy]         = useState(false)
+  const [error, setError]       = useState('')
+  const [info, setInfo]         = useState('')
 
   useEffect(() => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) { setSupported(false); return }
-    setSupported(true)
-    getRegistration().then(reg => reg?.pushManager.getSubscription()).then(sub => {
-      setSubscribed(!!sub)
-      if (!sub) return
+    const support = pushSupport()
+    if (support !== 'ok') { setStatus(support); return }
+    currentSubscription().then(sub => {
+      if (!sub) { setStatus(Notification.permission === 'denied' ? 'blocked' : 'off'); return }
+      setStatus('on')
       fetch(`/api/push/subscribe?endpoint=${encodeURIComponent(sub.endpoint)}`)
         .then(r => (r.ok ? r.json() : null))
         .then(d => { if (d) setWhatsapp(d.notifyWhatsapp !== false) })
         .catch(() => {})
-    }).catch(() => {})
+    }).catch(() => setStatus('off'))
   }, [])
 
-  const enable = async () => {
+  const run = async (fn: () => Promise<void>) => {
     setBusy(true); setError(''); setInfo('')
-    try {
-      const permission = await Notification.requestPermission()
-      if (permission !== 'granted') { setError('El navegador bloqueó los avisos. Actívalos en los ajustes del sitio y vuelve a intentar.'); return }
-      const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-      if (!key) throw new Error('Los avisos no están configurados en el servidor.')
-      const reg = await getRegistration()
-      if (!reg) throw new Error('Este navegador no permite avisos.')
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(key) })
-      const res = await fetch('/api/push/subscribe', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...sub.toJSON(), notifyWhatsapp: whatsapp }),
-      })
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}))
-        throw new Error(d.error || 'No se pudo guardar la suscripción')
-      }
-      setSubscribed(true)
-      notifyPushChanged()
-    } catch (err) {
-      setError((err as Error).message || 'No se pudieron activar los avisos')
+    try { await fn() } catch (err) {
+      setError((err as Error).message || 'No se pudo conectar con el servidor.')
     } finally {
       setBusy(false)
     }
   }
 
-  const disable = async () => {
-    setBusy(true); setError(''); setInfo('')
-    try {
-      const reg = await getRegistration()
-      const sub = await reg?.pushManager.getSubscription()
-      if (sub) {
-        await fetch('/api/push/subscribe', {
-          method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }),
-        })
-        await sub.unsubscribe()
-      }
-      setSubscribed(false)
-      notifyPushChanged()
-    } finally {
-      setBusy(false)
+  const test = async () => {
+    const r = await testDevicePush({ notifyWhatsapp: whatsapp })
+    if (r.ok) setInfo('Te mandamos un aviso de prueba. Si no aparece, revisa que el dispositivo no esté en "No molestar".')
+    else {
+      if (r.inactive) setStatus('off')
+      setError(r.error)
     }
   }
+
+  // Al activarlos se manda una prueba: así se ve de inmediato que todo funciona
+  const enable = () => run(async () => {
+    const permission = await enableDevicePush(whatsapp)
+    if (permission !== 'granted') { setStatus(permission === 'denied' ? 'blocked' : 'off'); return }
+    setStatus('on')
+    await test()
+  })
+
+  const disable = () => run(async () => {
+    await disableDevicePush()
+    setStatus('off')
+  })
 
   const toggleWhatsapp = async () => {
     const next = !whatsapp
     setWhatsapp(next)
-    const reg = await getRegistration()
-    const sub = await reg?.pushManager.getSubscription()
+    const sub = await currentSubscription()
     if (!sub) return
     const r = await fetch('/api/push/subscribe', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -104,41 +78,44 @@ export function NotificationsPanel() {
     if (!r?.ok) setWhatsapp(!next)
   }
 
-  const test = async () => {
-    setBusy(true); setError(''); setInfo('')
-    try {
-      const res = await fetch('/api/push/test', { method: 'POST' })
-      const d = await res.json().catch(() => ({}))
-      if (!res.ok) setError(d.error || `Error ${res.status}`)
-      else if (d.sent === 0) setError('Se envió, pero este dispositivo no la recibió. Revisa los permisos del sitio.')
-      else setInfo('Listo: debió llegarte un aviso de prueba.')
-    } catch {
-      setError('No se pudo conectar con el servidor.')
-    } finally {
-      setBusy(false)
-    }
-  }
+  const on = status === 'on'
 
   return (
     <Panel icon={Ico.bolt} tone="tAmber" title="Avisos en este dispositivo"
-      subtitle="Te avisamos cuando vence un recordatorio o te escribe un cliente, aunque la app esté cerrada.">
-      {supported === false ? (
-        <Note>Este navegador no permite avisos. En iPhone, primero agrega la app a tu pantalla de inicio.</Note>
+      subtitle="A la hora de cada recordatorio, un resumen de tu agenda a las 8:00 y cuando te escribe un cliente, aunque la app esté cerrada.">
+      {status === 'ios-install' ? (
+        <Note kind="info">
+          En iPhone los avisos solo llegan con la app instalada: en Safari toca <strong>Compartir</strong> → <strong>Agregar a inicio</strong>,
+          abre la app desde ese ícono y actívalos aquí.
+        </Note>
+      ) : status === 'unsupported' ? (
+        <Note>Este navegador no permite avisos. Usa Chrome, Edge o Safari actualizados (en iPhone, iOS 16.4 o más reciente).</Note>
       ) : (
         <div className={s.formGrid}>
           <div className={cx(s.span2)} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span className={cx(s.badge, subscribed ? s.bActive : s.bMuted)}><i />{subscribed ? 'Activados' : 'Desactivados'}</span>
+            <span className={cx(s.badge, on ? s.bActive : status === 'blocked' ? s.bWarn : s.bMuted)}><i />{STATUS_LABEL[status]}</span>
             <span style={{ flex: 1 }} />
-            {subscribed && <button className="btn btn-ghost" onClick={test} disabled={busy}>Enviar prueba</button>}
-            <button className={subscribed ? 'btn btn-ghost' : 'btn btn-primary'} onClick={subscribed ? disable : enable} disabled={busy || supported === null}>
-              {busy ? '…' : subscribed ? 'Desactivar' : 'Activar avisos'}
+            {on && <button className="btn btn-ghost" onClick={() => run(test)} disabled={busy}>Enviar prueba</button>}
+            <button className={on ? 'btn btn-ghost' : 'btn btn-primary'} onClick={on ? disable : enable} disabled={busy || status === 'loading'}>
+              {busy ? '…' : on ? 'Desactivar' : 'Activar avisos'}
             </button>
           </div>
-          {subscribed && (
+          {status === 'blocked' && (
+            <div className={s.span2}>
+              <Note kind="warn">
+                Este navegador tiene bloqueados los avisos de la app. Permítelos en el candado junto a la dirección
+                (en la app instalada: Ajustes del celular → Notificaciones) y vuelve a tocar «Activar avisos».
+              </Note>
+            </div>
+          )}
+          {on && (
             <label className={s.span2} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, color: 'var(--ink-2)', cursor: 'pointer' }}>
               <input type="checkbox" checked={whatsapp} onChange={toggleWhatsapp} style={{ accentColor: '#25D366', width: 16, height: 16 }} />
               Avisarme también cuando llegue un mensaje de WhatsApp
             </label>
+          )}
+          {!on && status !== 'loading' && (
+            <p className={cx(s.hint, s.span2)}>Cada celular o computadora se activa por separado.</p>
           )}
           {error && <div className={cx(s.error, s.span2)}>{error}</div>}
           {info && <div className={s.span2}><Note kind="ok">{info}</Note></div>}

@@ -95,3 +95,35 @@ export function greetingFor(date = new Date()): string {
   if (h >= 12 && h < 19) return 'Buenas tardes'
   return 'Buenas noches'
 }
+
+/* ── Servidor: la hora de la tienda (el servidor corre en UTC) ─────────── */
+
+export const DEFAULT_TZ = 'America/Mexico_City'
+
+const zoneFormats = new Map<string, Intl.DateTimeFormat>()
+function zoneFormat(tz: string): Intl.DateTimeFormat {
+  let f = zoneFormats.get(tz)
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz, hourCycle: 'h23',
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+    })
+    zoneFormats.set(tz, f)
+  }
+  return f
+}
+
+/**
+ * `date` como "YYYY-MM-DDTHH:MM:SS" en la zona `tz`: el mismo formato que
+ * reminder_date, así que ambos se comparan como texto.
+ */
+export function zonedIso(date: Date, tz = DEFAULT_TZ): string {
+  let f: Intl.DateTimeFormat
+  try { f = zoneFormat(tz) } catch { f = zoneFormat(DEFAULT_TZ) }  // zona inválida en la tienda
+  const p: Record<string, string> = {}
+  for (const part of f.formatToParts(date)) p[part.type] = part.value
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`
+}
+
+/** reminder_date tal como llega de la base → "YYYY-MM-DDTHH:MM:SS". */
+export const naiveIso = (v: unknown) => toDbLocal(String(v).slice(0, 19))
