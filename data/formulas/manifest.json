@@ -4,5 +4,11 @@
     "productLine": "Vinipesa Matte",
     "fandeck": "INFINITE 2000",
     "file": "vinipesa-matte-infinite-2000.json"
+  },
+  {
+    "id": "vintek-infinite-1000",
+    "productLine": "Vintek",
+    "fandeck": "INFINITE 1000",
+    "file": "vintek-infinite-1000.json"
   }
 ]

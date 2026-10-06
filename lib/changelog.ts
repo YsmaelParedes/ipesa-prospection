@@ -15,6 +15,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026-10-06',
+    date: '6 de octubre, 2026',
+    title: 'Fórmulas de Vintek',
+    items: [
+      'Fórmulas ahora incluye el catálogo Vintek INFINITE 1000, con 1,232 colores y su muestra de color real, junto al de Vinipesa Matte.',
+      'Cambia entre catálogos con las pestañas de arriba; la búsqueda por nombre o código y el cálculo en litro, galón, cubeta o cualquier cantidad funcionan igual en los dos.',
+    ],
+  },
+  {
     version: '2026-10-02.4',
     date: '2 de octubre, 2026',
     title: 'Avisos a tiempo',

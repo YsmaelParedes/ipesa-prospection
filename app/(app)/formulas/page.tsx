@@ -74,6 +74,7 @@ export default function FormulasPage() {
   const [volumeUnit, setVolumeUnit]   = useState<VolumeUnit>('L')
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const reqRef = useRef(0)
 
   /* Catálogos disponibles */
   useEffect(() => {
@@ -88,15 +89,17 @@ export default function FormulasPage() {
 
   const runSearch = useCallback((id: string, q: string) => {
     if (!id) return
+    const req = ++reqRef.current
     setLoading(true)
     fetch(`/api/formulas/${id}?q=${encodeURIComponent(q)}`)
       .then(r => r.json())
       .then((d: CatalogResponse) => {
+        if (req !== reqRef.current) return
         setResults(d.colors || [])
         setMatchCount(d.matchCount ?? 0)
       })
-      .catch(() => { setResults([]); setMatchCount(0) })
-      .finally(() => setLoading(false))
+      .catch(() => { if (req === reqRef.current) { setResults([]); setMatchCount(0) } })
+      .finally(() => { if (req === reqRef.current) setLoading(false) })
   }, [])
 
   /* Búsqueda con debounce */
@@ -124,13 +127,29 @@ export default function FormulasPage() {
         </span>
       </div>
 
+      {catalogs.length > 1 && (
+        <div className="status-tabs" role="tablist" aria-label="Catálogo de fórmulas">
+          {catalogs.map(c => (
+            <button
+              key={c.id}
+              role="tab"
+              aria-selected={catalogId === c.id}
+              className={`status-tab ${catalogId === c.id ? 'active' : ''}`}
+              onClick={() => { if (c.id !== catalogId) { setSelected(null); setCatalogId(c.id) } }}
+            >
+              {c.productLine} · {c.fandeck}<span className="status-tab-count">{c.colorCount}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="formulas-grid">
         {/* ── Columna izquierda: búsqueda + resultados ── */}
         <div className={`panel formulas-list ${selected ? 'is-hidden' : ''}`} style={{ padding: 16 }}>
           <div className="formulas-search" style={{ marginBottom: 12 }}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: 'var(--muted)', flexShrink: 0 }}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
             <input
-              placeholder="Buscar por nombre o código (ej. AB238-1, Red Planet)…"
+              placeholder="Buscar por nombre o código (ej. AB238-1, 001-1, Red Planet)…"
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => { if (e.key === 'Escape') setQuery('') }}
