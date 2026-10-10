@@ -1892,7 +1892,6 @@ button.follow-chip.none:hover { background: var(--warning-soft); }
 .mini-label { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
 .soft-note { padding: 10px 12px; margin-bottom: 14px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); font-size: 12.5px; color: var(--ink-3); line-height: 1.55; }
 .soft-note a { font-weight: 700; }
-.tag-muted { margin-left: 6px; font: 700 10px var(--font-body); padding: 1px 6px; border-radius: 4px; background: var(--paper-2); color: var(--muted); vertical-align: middle; }
 .btn-danger { background: var(--danger); color: #fff; border: none; }
 .btn-danger:hover:not(:disabled) { background: #A50519; }
 

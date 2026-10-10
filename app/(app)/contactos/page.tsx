@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Avatar, TipoChip, CanalChip, FilterDropdown, EstadoChip, fmtDateLong, fmtPhone, normalizePhone, isMobilePhone } from '@/components/CrmUI'
+import { Avatar, TipoChip, CanalChip, FilterDropdown, EstadoChip, fmtDateLong, fmtPhone, normalizePhone } from '@/components/CrmUI'
 import { phoneDigits } from '@/components/ContactFormModal'
 import { useSession } from '@/lib/profile'
 import { useCatalogs } from '@/lib/catalogs'
@@ -65,7 +65,6 @@ function ContactosContent() {
   const [selected, setSelected]       = useState<any | null>(null)
   const [showImport, setShowImport]   = useState(false)
   const [showExport, setShowExport]   = useState(false)
-  const [onlyLandlines, setOnlyLandlines] = useState(false)
   const [toast, setToast]             = useState('')
   const [showWhatsAppCampaign, setShowWhatsAppCampaign] = useState(false)
 
@@ -108,7 +107,6 @@ function ContactosContent() {
 
   // Cálculos derivados memoizados: con cientos de contactos, recalcularlos en
   // cada tecla/clic hacía lenta la lista.
-  const landlineIds = useMemo(() => new Set(contacts.filter(c => !isMobilePhone(c.phone)).map(c => c.id)), [contacts])
   const segmentCounts = useMemo(() => countBy(contacts, 'segment'), [contacts])
   const canalCounts   = useMemo(() => countBy(contacts, 'acquisition_channel'), [contacts])
   const segmentOptions = useMemo(() => [...segmentCounts.keys()].sort(), [segmentCounts])
@@ -119,7 +117,6 @@ function ContactosContent() {
     const words = q ? q.split(/\s+/) : []
     const digits = search.replace(/\D/g, '')
     return contacts.filter(c => {
-      if (onlyLandlines && !landlineIds.has(c.id)) return false
       if (segF !== 'Todos' && c.segment !== segF) return false
       if (canalF !== 'Todos' && c.acquisition_channel !== canalF) return false
       if (words.length) {
@@ -130,10 +127,10 @@ function ContactosContent() {
       }
       return true
     })
-  }, [contacts, search, segF, canalF, onlyLandlines, landlineIds])
+  }, [contacts, search, segF, canalF])
 
-  const filtersOn = segF !== 'Todos' || canalF !== 'Todos' || onlyLandlines || !!search.trim()
-  const clearFilters = () => { setSegF('Todos'); setCanalF('Todos'); setOnlyLandlines(false); setSearch('') }
+  const filtersOn = segF !== 'Todos' || canalF !== 'Todos' || !!search.trim()
+  const clearFilters = () => { setSegF('Todos'); setCanalF('Todos'); setSearch('') }
 
   /* ── Selección múltiple ── */
   const someChecked        = checkedIds.size > 0
@@ -267,14 +264,8 @@ function ContactosContent() {
               countFor={v => v === 'Todos' ? contacts.length : (canalCounts.get(v) ?? 0)}
               triggerLabel={v => v === 'Todos' ? 'Canal' : v} optionLabel={v => v === 'Todos' ? 'Todos los canales' : v} searchPlaceholder="Buscar canal…" />
           )}
-          {landlineIds.size > 0 && (
-            <button className={`filter-pill ${onlyLandlines ? 'active' : ''}`} onClick={() => setOnlyLandlines(v => !v)}
-              title="Números que parecen de teléfono fijo: no reciben WhatsApp">
-              📞 Posibles fijos <span className="count">{landlineIds.size}</span>
-            </button>
-          )}
-          {(segF !== 'Todos' || canalF !== 'Todos' || onlyLandlines) && (
-            <button className="filter-pill" onClick={() => { setSegF('Todos'); setCanalF('Todos'); setOnlyLandlines(false) }}>Limpiar filtros</button>
+          {(segF !== 'Todos' || canalF !== 'Todos') && (
+            <button className="filter-pill" onClick={() => { setSegF('Todos'); setCanalF('Todos') }}>Limpiar filtros</button>
           )}
         </div>
       </div>
@@ -332,10 +323,7 @@ function ContactosContent() {
                         </div>
                       </div>
                     </td>
-                    <td data-label="Teléfono" className="cell-mono" style={{ whiteSpace: 'nowrap' }}>
-                      {fmtPhone(c.phone)}
-                      {landlineIds.has(c.id) && <span className="tag-muted" title="Parece teléfono fijo: no recibe WhatsApp">Fijo</span>}
-                    </td>
+                    <td data-label="Teléfono" className="cell-mono" style={{ whiteSpace: 'nowrap' }}>{fmtPhone(c.phone)}</td>
                     <td data-label="Segmento">{c.segment ? <TipoChip value={c.segment} small /> : <span className="cell-muted">—</span>}</td>
                     <td data-label="Canal">{c.acquisition_channel ? <CanalChip value={c.acquisition_channel} small /> : <span className="cell-muted">—</span>}</td>
                     <td data-label="Registro" className="cell-muted col-secondary" style={{ whiteSpace: 'nowrap' }}>{fmtDateLong(c.created_at?.slice(0, 10) || '')}</td>
@@ -879,7 +867,7 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
   const [dragging, setDragging] = useState(false)
   const [error, setError]       = useState('')
   const [preview, setPreview]   = useState<{
-    valid: any[]; landlines: number; invalid: number; noName: number
+    valid: any[]; invalid: number; noName: number
   } | null>(null)
 
   // Sugerir el mapeo por el nombre de la columna (Nombre, Teléfono, Correo…)
@@ -936,7 +924,7 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
   }
 
   const buildPreview = () => {
-    let landlines = 0, invalid = 0, noName = 0
+    let invalid = 0, noName = 0
     const valid: any[] = []
     for (const row of rows) {
       const contact: any = {}
@@ -948,11 +936,10 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
       const raw = contact.phone || ''
       const normalized = normalizePhone(raw)
       if (!raw || normalized.length !== 10) { invalid++; continue }
-      if (!isMobilePhone(normalized)) { landlines++; continue }
       contact.phone = normalized
       valid.push(contact)
     }
-    setPreview({ valid, landlines, invalid, noName })
+    setPreview({ valid, invalid, noName })
     setStep('preview')
   }
 
@@ -1005,7 +992,7 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
                 <input type="file" accept=".csv,.xlsx,.xls" onChange={e => { const f = e.target.files?.[0]; if (f) parseFile(f) }} />
               </label>
               <div className="soft-note" style={{ marginTop: 12, marginBottom: 0 }}>
-                Solo se importan números <strong>celulares</strong> (los que pueden recibir WhatsApp). Los fijos, los inválidos y los que ya están registrados se omiten solos.
+                Cada contacto necesita nombre y un teléfono de 10 dígitos. Los inválidos y los que ya están registrados se omiten solos.
               </div>
               {error && <div className="field-error" style={{ marginTop: 10 }}>{error}</div>}
             </>
@@ -1033,18 +1020,17 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div style={{ padding: '14px 16px', background: 'var(--success-soft)', border: '1px solid #BDE7C9', borderRadius: 10, textAlign: 'center' }}>
                   <div style={{ fontSize: 30, fontWeight: 700, color: 'var(--success-fill)', lineHeight: 1 }}>{preview.valid.length}</div>
-                  <div style={{ fontSize: 12, color: 'var(--success)', marginTop: 4, fontWeight: 600 }}>Celulares válidos</div>
+                  <div style={{ fontSize: 12, color: 'var(--success)', marginTop: 4, fontWeight: 600 }}>Teléfonos válidos</div>
                   <div style={{ fontSize: 11, color: 'var(--success-fill)', marginTop: 2 }}>Se importarán</div>
                 </div>
                 <div style={{ padding: '14px 16px', background: 'var(--danger-soft)', border: '1px solid #F7C1C9', borderRadius: 10, textAlign: 'center' }}>
-                  <div style={{ fontSize: 30, fontWeight: 700, color: 'var(--danger)', lineHeight: 1 }}>{preview.landlines + preview.invalid + preview.noName}</div>
+                  <div style={{ fontSize: 30, fontWeight: 700, color: 'var(--danger)', lineHeight: 1 }}>{preview.invalid + preview.noName}</div>
                   <div style={{ fontSize: 12, color: '#7A0A18', marginTop: 4, fontWeight: 600 }}>Se omitirán</div>
-                  <div style={{ fontSize: 11, color: '#E8798A', marginTop: 2 }}>Fijos, sin nombre o inválidos</div>
+                  <div style={{ fontSize: 11, color: '#E8798A', marginTop: 2 }}>Sin nombre o inválidos</div>
                 </div>
               </div>
-              {(preview.landlines > 0 || preview.invalid > 0 || preview.noName > 0) && (
+              {(preview.invalid > 0 || preview.noName > 0) && (
                 <div style={{ padding: '10px 14px', background: 'var(--paper)', borderRadius: 9, fontSize: 12.5, color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  {preview.landlines > 0 && <span>📞 <strong>{preview.landlines}</strong> número{preview.landlines !== 1 ? 's' : ''} fijo{preview.landlines !== 1 ? 's' : ''}</span>}
                   {preview.invalid > 0  && <span>⚠️ <strong>{preview.invalid}</strong> teléfono{preview.invalid !== 1 ? 's' : ''} con formato inválido</span>}
                   {preview.noName > 0   && <span>👤 <strong>{preview.noName}</strong> fila{preview.noName !== 1 ? 's' : ''} sin nombre</span>}
                 </div>

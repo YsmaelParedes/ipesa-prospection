@@ -29,26 +29,6 @@ export function phoneVariants(raw: string): string[] {
   return [d, `52${d}`, `521${d}`]
 }
 
-/**
- * Detecta si un teléfono mexicano (10 dígitos normalizados) es celular — apto para SMS/WhatsApp.
- * Usa rangos conservadores: solo marca como fijo los rangos claramente TELMEX/fijo.
- * Es preferible dejar pasar un fijo que bloquear un celular.
- */
-export function isMobilePhone(phone: string): boolean {
-  const d = normalizePhone(phone)
-  if (d.length !== 10) return false
-  // Toll-free / premium
-  if (d.startsWith('800') || d.startsWith('900')) return false
-  // Ladas de 2 dígitos — solo el rango clásico de fijo de cada ciudad:
-  const lada2 = d.slice(0, 2)
-  if (lada2 === '55') return d[2] !== '5'  // CDMX: 55 5xxx = fijo (TELMEX)
-  if (lada2 === '33') return d[2] !== '3'  // Guadalajara: 33 3xxx = fijo
-  if (lada2 === '81') return d[2] !== '8'  // Monterrey: 81 8xxx = fijo
-  // Ladas de 3 dígitos (Puebla 222, Querétaro 442, Mérida 999, etc.)
-  // Solo local que empieza con 2 es fijo (serie TELMEX típica).
-  return d[3] !== '2'
-}
-
 /** Formatea teléfono 10 dígitos → XXX XXX XXXX */
 export function fmtPhone(phone: string | null | undefined): string {
   const d = normalizePhone(phone)

@@ -217,7 +217,7 @@ export function fmtDateLong(iso: string) {
 }
 
 /* Teléfonos: una sola implementación compartida con el servidor (lib/phone.ts) */
-export { normalizePhone, isMobilePhone, fmtPhone } from '@/lib/phone'
+export { normalizePhone, fmtPhone } from '@/lib/phone'
 
 /**
  * Dropdown de filtro reutilizable — reemplaza <select> nativo y filas de pills.

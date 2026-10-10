@@ -24,6 +24,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Te avisa cuando un número ya había fallado antes por lo mismo, para que sepas cuáles conviene revisar.',
       'Puedes filtrar por estado, buscar por nombre o teléfono, exportar la lista a Excel (CSV) y copiar los números que no recibieron el mensaje.',
       'Si Meta no entregó por un límite temporal, "Reintentar" abre Campañas con esa plantilla y esos contactos ya elegidos; tú revisas y confirmas el envío.',
+      'Se quitó "Posibles fijos" de Contactos: adivinaba por el número y se equivocaba. Al importar ya no se descartan números por parecer fijos.',
     ],
   },
   {
