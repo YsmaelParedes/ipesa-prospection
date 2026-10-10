@@ -36,10 +36,12 @@ function loadTemplates() {
  * reutiliza automáticamente) + valores de las variables {{n}}.
  */
 export function WhatsAppTemplatePicker({
-  exampleName, onChange,
+  exampleName, onChange, initialTemplateName,
 }: {
   exampleName: string
   onChange: (sel: WhatsAppTemplateSelection) => void
+  /** Plantilla que se elige al cargar la lista (p. ej. al reintentar una campaña). */
+  initialTemplateName?: string
 }) {
   const [templates, setTemplates] = useState<WhatsAppTemplateDef[]>([])
   const [loadingTemplates, setLoadingTemplates] = useState(true)
@@ -73,7 +75,8 @@ export function WhatsAppTemplatePicker({
     loadTemplates().then(({ templates: list, error }) => {
       setTemplates(list)
       setTemplatesError(error)
-      const firstUsable = list.find(t => !t.unsupported) ?? list[0]
+      const preferred = initialTemplateName ? list.find(t => t.name === initialTemplateName && !t.unsupported) : undefined
+      const firstUsable = preferred ?? list.find(t => !t.unsupported) ?? list[0]
       setTemplateKey(prev => (prev && list.some(t => `${t.name}|${t.language}` === prev)) ? prev : firstUsable ? `${firstUsable.name}|${firstUsable.language}` : '')
     }).finally(() => setLoadingTemplates(false))
   }, [])

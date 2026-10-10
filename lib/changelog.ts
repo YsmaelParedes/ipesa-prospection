@@ -15,6 +15,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026-10-09',
+    date: '9 de octubre, 2026',
+    title: 'Resultados de campañas más claros',
+    items: [
+      'Resultados ahora muestra cada campaña por separado, con una barra de leídos, entregados, pendientes y no entregados, y cuántas personas respondieron.',
+      'Al abrir una campaña ves a cada destinatario con su estado y, si el mensaje no llegó, el motivo en palabras sencillas (por ejemplo, el número no tiene WhatsApp o Meta alcanzó su límite de marketing por persona).',
+      'Te avisa cuando un número ya había fallado antes por lo mismo, para que sepas cuáles conviene revisar.',
+      'Puedes filtrar por estado, buscar por nombre o teléfono, exportar la lista a Excel (CSV) y copiar los números que no recibieron el mensaje.',
+      'Si Meta no entregó por un límite temporal, "Reintentar" abre Campañas con esa plantilla y esos contactos ya elegidos; tú revisas y confirmas el envío.',
+    ],
+  },
+  {
     version: '2026-10-06',
     date: '6 de octubre, 2026',
     title: 'Fórmulas de Vintek',

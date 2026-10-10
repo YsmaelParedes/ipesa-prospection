@@ -40,7 +40,7 @@ export type WhatsAppSendResult = {
  * de Meta va en inglés y es críptico ("(#131047) Re-engagement message").
  * https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes
  */
-const FRIENDLY_ERRORS: Record<number, string> = {
+export const FRIENDLY_ERRORS: Record<number, string> = {
   131047: 'Pasaron más de 24 h desde el último mensaje del cliente: solo se puede enviar una plantilla aprobada.',
   131026: 'El mensaje no se pudo entregar (el número no tiene WhatsApp o no aceptó los términos recientes).',
   131049: 'Meta no entregó esta plantilla para cuidar la experiencia del usuario (límite de mensajes de marketing por persona). Intenta más adelante.',

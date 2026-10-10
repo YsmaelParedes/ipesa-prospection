@@ -1,8 +1,10 @@
 'use client'
 
 import { Suspense, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import WhatsAppInbox from '@/components/WhatsAppInbox'
-import { WhatsAppCampaigns, WhatsAppCampaignResults } from '@/components/WhatsAppCampaigns'
+import { WhatsAppCampaigns, type CampaignPreset } from '@/components/WhatsAppCampaigns'
+import { WhatsAppCampaignResults } from '@/components/WhatsAppCampaignHistory'
 import { WaIcon } from '@/components/WhatsAppUI'
 import { useSession } from '@/lib/profile'
 
@@ -10,10 +12,12 @@ type Tab = 'bandeja' | 'campanas' | 'resultados'
 
 export default function WhatsAppPage() {
   const session = useSession()
+  const router = useRouter()
   const isAdmin = !!session?.isAdmin
   // Las campañas son para administradores y se pueden apagar en Configuración → Herramientas
   const campaigns = isAdmin && (!session?.store || session.store.modules.campaigns)
   const [tab, setTab] = useState<Tab>('bandeja')
+  const [retry, setRetry] = useState<CampaignPreset | null>(null)
   const current: Tab = campaigns ? tab : 'bandeja'
 
   return (
@@ -38,8 +42,13 @@ export default function WhatsAppPage() {
           <WhatsAppInbox isAdmin={isAdmin} />
         </Suspense>
       )}
-      {current === 'campanas' && <WhatsAppCampaigns />}
-      {current === 'resultados' && <WhatsAppCampaignResults />}
+      {current === 'campanas' && <WhatsAppCampaigns preset={retry} onPresetApplied={() => setRetry(null)} />}
+      {current === 'resultados' && (
+        <WhatsAppCampaignResults
+          onRetry={r => { setRetry(r); setTab('campanas') }}
+          onOpenChat={phone => { router.push(`/whatsapp?phone=${phone}`); setTab('bandeja') }}
+        />
+      )}
     </div>
   )
 }

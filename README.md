@@ -125,8 +125,15 @@ Qué hace la sección **WhatsApp** del CRM:
 - **Respuestas rápidas** del equipo (admin las crea en Configuración; `{nombre}` se
   reemplaza por el nombre del cliente).
 - **Campañas** (admin): plantillas aprobadas consultadas en vivo en Meta, filtros por tipo
-  de cliente, vista previa, progreso real y pestaña de **Resultados** (entregados, leídos,
-  respuestas, fallidos).
+  de cliente, vista previa y progreso real.
+- **Resultados** (admin): historial con cada envío por separado (leídos, entregados,
+  pendientes, no entregados y respuestas en 72 h). El detalle de cada campaña lista a cada
+  destinatario con su estado y, si falló, el motivo (sin WhatsApp, límite de marketing de
+  Meta…), si ya había fallado antes, y permite exportar a CSV, copiar los números y
+  reintentar a quienes toparon con un límite temporal. No hay tabla de campañas: se arman
+  agrupando los mensajes de una misma plantilla separados por menos de 30 min
+  (`lib/campaignHistory.ts`). Los rechazos de Meta llegan por el webhook después del envío,
+  por eso el resultado final tarda unos minutos.
 - **Reglas anti-bloqueo**: pausa de ~3 s entre envíos, tope de 200 plantillas por día, no
   repetir la misma plantilla a la misma persona en 7 días, y baja automática cuando el
   cliente escribe "BAJA", "STOP" o toca "Detener promociones".

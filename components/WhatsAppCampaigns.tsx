@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Avatar, TipoChip } from '@/components/CrmUI'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
@@ -12,20 +12,15 @@ import { TEMPLATE_REPEAT_DAYS } from '@/lib/whatsappSafety'
 
 type Contact = { id: string; name: string; phone: string; segment?: string | null; wa_opt_out?: boolean }
 
+/** Reintento desde Resultados: plantilla y contactos que se preseleccionan (el envío se confirma como siempre). */
+export type CampaignPreset = { template: string; contactIds: string[]; label: string }
+
 type Health = {
   config: { connected: boolean; source: 'store' | 'env'; businessAccount: boolean; appSecret: boolean }
   health: { displayPhoneNumber?: string; verifiedName?: string; qualityRating?: string; messagingLimitTier?: string } | null
 }
 
-type Stats = {
-  days: number
-  repeatDays: number
-  recentRecipients: Record<string, string[]>
-  templates: {
-    template: string; sent: number; delivered: number; read: number; failed: number; replied: number
-    lastSentAt: string; topErrors: { error: string; count: number }[]
-  }[]
-}
+type Stats = { recentRecipients: Record<string, string[]> }
 
 const QUALITY: Record<string, { label: string; tone: 'good' | 'warn' | 'bad' | 'muted'; tip: string }> = {
   GREEN:   { label: 'Alta',  tone: 'good', tip: 'Calidad alta: puedes seguir enviando campañas con normalidad.' },
@@ -81,7 +76,8 @@ export function NumberHealthCard() {
 /* ══════════════════════════════════════════════════════════════════════════
    Campañas: elegir contactos + plantilla y enviar
 ══════════════════════════════════════════════════════════════════════════ */
-export function WhatsAppCampaigns() {
+export function WhatsAppCampaigns({ preset, onPresetApplied }: { preset?: CampaignPreset | null; onPresetApplied?: () => void }) {
+  const [retry, setRetry]         = useState<CampaignPreset | null>(preset ?? null)
   const [contacts, setContacts]   = useState<Contact[]>([])
   const [loading, setLoading]     = useState(true)
   const [search, setSearch]       = useState('')
@@ -104,8 +100,18 @@ export function WhatsAppCampaigns() {
       .then(r => r.json())
       .then(d => setSegmentos((d.items ?? []).map((i: { label: string }) => i.label)))
       .catch(() => {})
-    fetch('/api/whatsapp/campaigns/stats?days=30').then(r => r.json()).then(d => { if (d.templates) setStats(d) }).catch(() => {})
+    fetch('/api/whatsapp/campaigns/stats').then(r => r.json()).then(d => { if (d.recentRecipients) setStats(d) }).catch(() => {})
   }, [])
+
+  // Reintento: al cargar los contactos se preselecciona a quienes no recibieron el mensaje
+  const presetApplied = useRef(false)
+  useEffect(() => {
+    if (!retry || presetApplied.current || loading) return
+    presetApplied.current = true
+    const ids = new Set(retry.contactIds)
+    setCheckedIds(new Set(contacts.filter(c => ids.has(c.id) && !c.wa_opt_out).map(c => c.id)))
+    onPresetApplied?.()
+  }, [retry, loading, contacts, onPresetApplied])
 
   // Quienes ya recibieron la plantilla elegida en los últimos días
   const recentPhones = useMemo(
@@ -165,8 +171,9 @@ export function WhatsAppCampaigns() {
   const handleConfirmed = async () => {
     if (!selection) return
     await run(selectedContacts.map(c => ({ id: c.id, name: c.name, phone: c.phone })), selection, { skipRecent })
+    setRetry(null)
     refetchQuota()
-    fetch('/api/whatsapp/campaigns/stats?days=30').then(r => r.json()).then(d => { if (d.templates) setStats(d) }).catch(() => {})
+    fetch('/api/whatsapp/campaigns/stats').then(r => r.json()).then(d => { if (d.recentRecipients) setStats(d) }).catch(() => {})
   }
 
   if (phase !== 'idle') {
@@ -191,6 +198,20 @@ export function WhatsAppCampaigns() {
   return (
     <div className="wa-scroll wa-campaign-wrap">
       <NumberHealthCard />
+      {retry && (
+        <div className="wa-retry">
+          <div>
+            <strong>Reintento de «{retry.label}»</strong>
+            <span>
+              {checkedIds.size === 0 ? 'Ninguno de los contactos se puede volver a elegir (ya la recibieron o se dieron de baja).' : `${checkedIds.size} contacto${checkedIds.size !== 1 ? 's' : ''} elegido${checkedIds.size !== 1 ? 's' : ''}. Revisa la plantilla y confirma el envío.`}
+            </span>
+            {selection?.templateName && selection.templateName !== retry.template && (
+              <em>La plantilla elegida ahora es «{selection.templateName.replace(/_/g, ' ')}», no la del reintento.</em>
+            )}
+          </div>
+          <button className="wa-link-btn muted" onClick={() => { setRetry(null); clearSelection() }}>Cancelar reintento</button>
+        </div>
+      )}
       <div className="wa-campaign">
         {/* Selector de contactos */}
         <section className="wa-card wa-picker">
@@ -247,7 +268,7 @@ export function WhatsAppCampaigns() {
         {/* Plantilla + envío */}
         <section className="wa-card wa-builder">
           <div className="wa-builder-body">
-            <WhatsAppTemplatePicker exampleName={exampleName} onChange={setSelection} />
+            <WhatsAppTemplatePicker exampleName={exampleName} onChange={setSelection} initialTemplateName={retry?.template} />
             <CampaignQuotaNote quota={quota} selectedCount={selectedContacts.length} />
           </div>
           <div className="wa-builder-foot">
@@ -262,104 +283,6 @@ export function WhatsAppCampaigns() {
           </div>
         </section>
       </div>
-    </div>
-  )
-}
-
-/* ══════════════════════════════════════════════════════════════════════════
-   Resultados de campañas
-══════════════════════════════════════════════════════════════════════════ */
-const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0)
-
-export function WhatsAppCampaignResults() {
-  const [days, setDays]   = useState(30)
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    setStats(null); setError('')
-    fetch(`/api/whatsapp/campaigns/stats?days=${days}`)
-      .then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error); setStats(d) })
-      .catch(e => setError(e?.message || 'No se pudieron cargar los resultados'))
-  }, [days])
-
-  const totals = useMemo(() => (stats?.templates ?? []).reduce(
-    (a, t) => ({ sent: a.sent + t.sent, delivered: a.delivered + t.delivered, read: a.read + t.read, replied: a.replied + t.replied, failed: a.failed + t.failed }),
-    { sent: 0, delivered: 0, read: 0, replied: 0, failed: 0 },
-  ), [stats])
-
-  return (
-    <div className="wa-scroll">
-      <div className="wa-results-head">
-        <div>
-          <div className="wa-results-title">Resultados de campañas</div>
-          <div className="wa-results-sub">Entregas, lecturas y respuestas de las plantillas enviadas</div>
-        </div>
-        <div className="wa-seg">
-          {[7, 30, 90].map(d => <button key={d} className={days === d ? 'active' : ''} onClick={() => setDays(d)}>{d} días</button>)}
-        </div>
-      </div>
-
-      {error ? (
-        <div className="wa-card wa-empty small"><WaIcon.alert size={20} />{error}</div>
-      ) : !stats ? (
-        <div className="wa-card wa-empty small"><span className="wa-spinner" /></div>
-      ) : stats.templates.length === 0 ? (
-        <div className="wa-card wa-empty small"><WaIcon.chart size={26} /> No se han enviado plantillas en este periodo.</div>
-      ) : (
-        <>
-          <div className="wa-kpis">
-            <Kpi label="Enviadas" value={totals.sent} />
-            <Kpi label="Entregadas" value={`${pct(totals.delivered, totals.sent)}%`} sub={`${totals.delivered} mensajes`} />
-            <Kpi label="Leídas" value={`${pct(totals.read, totals.sent)}%`} sub={`${totals.read} mensajes`} />
-            <Kpi label="Respondieron" value={`${pct(totals.replied, totals.sent)}%`} sub={`${totals.replied} personas`} highlight />
-            <Kpi label="Fallidas" value={totals.failed} tone={totals.failed ? 'bad' : undefined} />
-          </div>
-
-          <div className="wa-template-stats">
-            {stats.templates.map(t => (
-              <div className="wa-card wa-tstat" key={t.template}>
-                <div className="wa-tstat-head">
-                  <div>
-                    <div className="wa-tstat-name">{t.template.replace(/_/g, ' ')}</div>
-                    <div className="wa-tstat-sub">Último envío: {new Date(t.lastSentAt).toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
-                  </div>
-                  <div className="wa-tstat-total"><strong>{t.sent}</strong><span>enviadas</span></div>
-                </div>
-                <Funnel label="Entregadas" value={t.delivered} total={t.sent} color="var(--success-fill)" />
-                <Funnel label="Leídas" value={t.read} total={t.sent} color="#34B7F1" />
-                <Funnel label="Respondieron (72 h)" value={t.replied} total={t.sent} color="var(--brand)" />
-                {t.failed > 0 && (
-                  <div className="wa-tstat-errors">
-                    <div><WaIcon.alert size={13} /> {t.failed} no se entregaron</div>
-                    {t.topErrors.map((e, i) => <div key={i} className="wa-tstat-error">{e.count} × {e.error}</div>)}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-function Kpi({ label, value, sub, highlight, tone }: { label: string; value: number | string; sub?: string; highlight?: boolean; tone?: 'bad' }) {
-  return (
-    <div className={`wa-kpi ${highlight ? 'hl' : ''} ${tone ?? ''}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      {sub && <small>{sub}</small>}
-    </div>
-  )
-}
-
-function Funnel({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
-  const p = pct(value, total)
-  return (
-    <div className="wa-funnel">
-      <div className="wa-funnel-top"><span>{label}</span><span><strong>{p}%</strong> · {value}</span></div>
-      <div className="wa-funnel-bar"><div style={{ width: `${p}%`, background: color }} /></div>
     </div>
   )
 }
