@@ -42,7 +42,7 @@ export default function WhatsAppPage() {
           <WhatsAppInbox isAdmin={isAdmin} />
         </Suspense>
       )}
-      {current === 'campanas' && <WhatsAppCampaigns preset={retry} onPresetApplied={() => setRetry(null)} />}
+      {current === 'campanas' && <WhatsAppCampaigns preset={retry} onPresetApplied={() => setRetry(null)} onViewResults={() => setTab('resultados')} />}
       {current === 'resultados' && (
         <WhatsAppCampaignResults
           onRetry={r => { setRetry(r); setTab('campanas') }}

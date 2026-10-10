@@ -9,6 +9,7 @@ import { useCampaignSend, CampaignConfirmPanel, CampaignProgressPanel, CampaignR
 import { WaIcon } from '@/components/WhatsAppUI'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
 import { TEMPLATE_REPEAT_DAYS } from '@/lib/whatsappSafety'
+import { PERSON_STATES, PERSON_STATE_ORDER, type PersonState } from '@/lib/campaignKinds'
 
 type Contact = { id: string; name: string; phone: string; segment?: string | null; wa_opt_out?: boolean }
 
@@ -20,7 +21,11 @@ type Health = {
   health: { displayPhoneNumber?: string; verifiedName?: string; qualityRating?: string; messagingLimitTier?: string } | null
 }
 
-type Stats = { recentRecipients: Record<string, string[]> }
+type Stats = { recentRecipients: Record<string, string[]>; states?: Record<string, PersonState> }
+
+/** Filtro "Historial": cómo le fue a cada contacto con las campañas ('never' = nunca se le ha enviado una). */
+type History = 'all' | 'never' | PersonState
+const historyLabel = (h: Exclude<History, 'all'>) => (h === 'never' ? 'Sin campañas todavía' : PERSON_STATES[h].label)
 
 const QUALITY: Record<string, { label: string; tone: 'good' | 'warn' | 'bad' | 'muted'; tip: string }> = {
   GREEN:   { label: 'Alta',  tone: 'good', tip: 'Calidad alta: puedes seguir enviando campañas con normalidad.' },
@@ -76,13 +81,19 @@ export function NumberHealthCard() {
 /* ══════════════════════════════════════════════════════════════════════════
    Campañas: elegir contactos + plantilla y enviar
 ══════════════════════════════════════════════════════════════════════════ */
-export function WhatsAppCampaigns({ preset, onPresetApplied }: { preset?: CampaignPreset | null; onPresetApplied?: () => void }) {
+export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
+  preset?: CampaignPreset | null
+  onPresetApplied?: () => void
+  /** Después de enviar, lleva a Resultados (Meta confirma las entregas en los minutos siguientes). */
+  onViewResults?: () => void
+}) {
   const [retry, setRetry]         = useState<CampaignPreset | null>(preset ?? null)
   const [contacts, setContacts]   = useState<Contact[]>([])
   const [loading, setLoading]     = useState(true)
   const [search, setSearch]       = useState('')
   const [segmentos, setSegmentos] = useState<string[]>([])
   const [segmentFilter, setSegmentFilter] = useState('Todos')
+  const [history, setHistory]     = useState<History>('all')
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [selection, setSelection] = useState<WhatsAppTemplateSelection | null>(null)
   const [skipRecent, setSkipRecent] = useState(true)
@@ -118,21 +129,37 @@ export function WhatsAppCampaigns({ preset, onPresetApplied }: { preset?: Campai
     () => new Set(selection?.templateName ? (stats?.recentRecipients[selection.templateName] ?? []) : []),
     [stats, selection?.templateName],
   )
+  const historyOf = (c: Contact): Exclude<History, 'all'> =>
+    c.wa_opt_out ? 'opt_out' : stats?.states?.[normalizePhone(c.phone)] ?? 'never'
   const blockedReason = (c: Contact): string | null => {
     if (c.wa_opt_out) return 'Dado de baja'
+    if (historyOf(c) === 'no_whatsapp') return 'Sin WhatsApp'
     if (skipRecent && recentPhones.has(normalizePhone(c.phone))) return `Ya la recibió (${TEMPLATE_REPEAT_DAYS} días)`
     return null
   }
+
+  const historyCounts = useMemo(() => {
+    const map = new Map<Exclude<History, 'all'>, number>()
+    for (const c of contacts) {
+      const h = historyOf(c)
+      map.set(h, (map.get(h) ?? 0) + 1)
+    }
+    return map
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contacts, stats])
+  const noWhatsAppCount = historyCounts.get('no_whatsapp') ?? 0
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     const digits = q.replace(/\D/g, '')
     return contacts.filter(c => {
       if (segmentFilter !== 'Todos' && c.segment !== segmentFilter) return false
+      if (history !== 'all' && historyOf(c) !== history) return false
       if (!q) return true
       return c.name?.toLowerCase().includes(q) || (digits.length >= 3 && c.phone.includes(digits))
     })
-  }, [contacts, search, segmentFilter])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contacts, search, segmentFilter, history, stats])
 
   // Si cambian las exclusiones, quita de la selección a quien ya no es elegible
   useEffect(() => {
@@ -188,7 +215,8 @@ export function WhatsAppCampaigns({ preset, onPresetApplied }: { preset?: Campai
           )}
           {phase === 'results' && (
             <CampaignResultsPanel sent={sent} skipped={skipped} failed={failed} outcomes={outcomes} stopReason={stopReason}
-              onDone={() => { reset(); clearSelection() }} doneLabel="Enviar otra campaña" />
+              onDone={() => { reset(); clearSelection() }} doneLabel="Enviar otra campaña"
+              onViewResults={onViewResults ? () => { reset(); clearSelection(); onViewResults() } : undefined} />
           )}
         </div>
       </div>
@@ -224,14 +252,33 @@ export function WhatsAppCampaigns({ preset, onPresetApplied }: { preset?: Campai
               <WaIcon.search />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar nombre o teléfono…" />
             </label>
-            <select className="wa-select" value={segmentFilter} onChange={e => setSegmentFilter(e.target.value)} aria-label="Segmento">
-              <option value="Todos">Todos los segmentos</option>
-              {segmentos.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <div className="wa-picker-filters">
+              <select className="wa-select" value={segmentFilter} onChange={e => setSegmentFilter(e.target.value)} aria-label="Segmento">
+                <option value="Todos">Todos los segmentos</option>
+                {segmentos.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <select className="wa-select" value={history} onChange={e => setHistory(e.target.value as History)} aria-label="Historial de campañas"
+                title="Cómo le fue a cada contacto con tus campañas anteriores">
+                <option value="all">Todo el historial</option>
+                {(['never', ...PERSON_STATE_ORDER] as const).filter(h => historyCounts.get(h) || history === h).map(h => (
+                  <option key={h} value={h}>{historyLabel(h)} ({historyCounts.get(h) ?? 0})</option>
+                ))}
+              </select>
+            </div>
             <label className="wa-check-row">
               <input type="checkbox" checked={skipRecent} onChange={e => setSkipRecent(e.target.checked)} />
               <span>Omitir a quien ya recibió esta plantilla en los últimos {TEMPLATE_REPEAT_DAYS} días</span>
             </label>
+            {noWhatsAppCount > 0 && (
+              <div className="wa-nowa-note">
+                <WaIcon.ban size={13} />
+                <span>
+                  {noWhatsAppCount === 1
+                    ? '1 contacto queda fuera porque Meta reportó que no tiene WhatsApp (puede ser un teléfono fijo).'
+                    : `${noWhatsAppCount} contactos quedan fuera porque Meta reportó que no tienen WhatsApp (pueden ser teléfonos fijos).`}
+                </span>
+              </div>
+            )}
             <div className="wa-picker-actions">
               <button onClick={selectAllFiltered} className="wa-link-btn" disabled={!eligibleCount}>
                 Elegir todos ({Math.min(eligibleCount, quota?.remaining ?? eligibleCount)})
@@ -258,7 +305,7 @@ export function WhatsAppCampaigns({ preset, onPresetApplied }: { preset?: Campai
                       {c.segment && <TipoChip value={c.segment} small />}
                     </span>
                   </span>
-                  {blocked && <span className="wa-blocked-tag">{blocked}</span>}
+                  {blocked && <span className={`wa-blocked-tag ${blocked === 'Sin WhatsApp' ? 'nowa' : ''}`}>{blocked}</span>}
                 </label>
               )
             })}

@@ -17,8 +17,13 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '2026-10-09',
     date: '9 de octubre, 2026',
-    title: 'Resultados de campañas más claros',
+    title: 'Campañas con más control',
     items: [
+      'Los números que no tienen WhatsApp (Meta rechazó el envío por eso) ya no reciben campañas: en Campañas aparecen como "Sin WhatsApp" y no se pueden elegir. No se borran, porque pueden ser teléfonos fijos útiles para llamar.',
+      'En la Bandeja esos números llevan una marca roja, y el chat avisa antes de mandarles una plantilla, con un botón para llamar.',
+      'Resultados tiene una vista nueva, "Por persona": cómo le fue a cada número con tus campañas (respondió, leyó, no le llegó, sin WhatsApp…), con búsqueda, exportar a Excel (CSV) y copiar los números.',
+      'Campañas tiene un filtro "Historial" para elegir, por ejemplo, solo a quienes nunca les has enviado una campaña o a quienes leyeron sin responder.',
+      'Al terminar un envío, "Ver en Resultados" te lleva a ver quién lo recibió (Meta confirma la entrega en los minutos siguientes).',
       'Resultados ahora muestra cada campaña por separado, con una barra de leídos, entregados, pendientes y no entregados, y cuántas personas respondieron.',
       'Al abrir una campaña ves a cada destinatario con su estado y, si el mensaje no llegó, el motivo en palabras sencillas (por ejemplo, el número no tiene WhatsApp o Meta alcanzó su límite de marketing por persona).',
       'Te avisa cuando un número ya había fallado antes por lo mismo, para que sepas cuáles conviene revisar.',

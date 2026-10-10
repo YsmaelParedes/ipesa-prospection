@@ -1189,6 +1189,8 @@ a { color: inherit; text-decoration: none; }
    ============================================================ */
 .wa-page { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
 .wa-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-bottom: 4px; }
+/* Las tarjetas toman su alto natural: la que hace scroll es la columna (si se encogían, la lista quedaba cortada) */
+.wa-scroll > .wa-card { flex-shrink: 0; }
 
 .wa-tabs {
   display: flex; gap: 2px; padding: 4px; border-radius: 11px; width: fit-content; max-width: 100%;
@@ -1588,6 +1590,35 @@ a { color: inherit; text-decoration: none; }
 .wa-retry span { color: var(--ink-2); }
 .wa-retry em { font-style: normal; font-weight: 700; color: var(--danger); }
 
+/* ── Números sin WhatsApp y resultados por persona ── */
+.wa-nowa-tag { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--danger-soft); color: var(--danger); white-space: nowrap; flex-shrink: 0; }
+.wa-nowa-banner { background: var(--danger-soft); border-color: #F5C2C2; color: #7A0A18; }
+.wa-nowa-note { display: flex; gap: 6px; align-items: flex-start; font-size: 12px; line-height: 1.4; color: var(--danger); }
+.wa-nowa-note svg { flex-shrink: 0; margin-top: 2px; }
+.wa-blocked-tag.nowa { color: var(--danger); background: var(--danger-soft); border-color: #F5C2C2; }
+.wa-picker-filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.wa-view-seg { align-self: flex-start; margin-bottom: 0; flex-shrink: 0; }
+.wa-view-seg button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 13px; }
+.wa-person-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; flex-shrink: 0; }
+.wa-person-tile {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 11px 12px; text-align: left;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); transition: border-color .15s, background .15s;
+}
+.wa-person-tile:hover { border-color: var(--line-strong); }
+.wa-person-tile span { font-size: 12px; font-weight: 600; color: var(--muted); line-height: 1.3; }
+.wa-person-tile strong { font-family: var(--font-display); font-size: 24px; line-height: 1.15; letter-spacing: -0.02em; color: var(--ink); }
+.wa-person-tile small { font-size: 11.5px; color: var(--muted); }
+.wa-person-tile.good strong { color: var(--success); }
+.wa-person-tile.warn strong { color: var(--warning); }
+.wa-person-tile.bad strong { color: var(--danger); }
+.wa-person-tile.active { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.wa-person-note { font-size: 12.5px; line-height: 1.5; color: var(--ink-2); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; flex-shrink: 0; }
+.wa-person-note.bad { background: var(--danger-soft); border-color: #F5C2C2; color: #7A0A18; }
+.wa-recip-count { font-size: 11.5px; color: var(--muted); align-self: center; }
+.wa-state.limit { background: var(--warning-soft); color: var(--warning); }
+.wa-state.nowa { background: var(--danger); color: #fff; }
+.wa-state.optout { background: var(--paper-2); color: var(--ink-3); }
+
 /* ── WhatsApp en otras secciones (ficha de contacto / lead) ── */
 .wa-mini { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .wa-mini-msgs { padding: 10px; display: flex; flex-direction: column; gap: 4px; background: #EFEDEA; max-height: 220px; overflow-y: auto; }
@@ -1662,6 +1693,15 @@ a { color: inherit; text-decoration: none; }
   .wa-fail-item, .wa-retry { flex-direction: column; align-items: stretch; }
   .wa-tabs { width: 100%; }
   .wa-tab { flex: 1; justify-content: center; padding: 8px 10px; }
+}
+@media (max-width: 480px) {
+  .wa-picker-filters { grid-template-columns: minmax(0, 1fr); }
+  .wa-view-seg { align-self: stretch; }
+  .wa-view-seg button { flex: 1; justify-content: center; }
+  .wa-person-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .wa-person-tile { flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; }
+  .wa-person-tile strong { font-size: 18px; }
+  .wa-person-tile small { display: none; }
 }
 
 /* ============================================================

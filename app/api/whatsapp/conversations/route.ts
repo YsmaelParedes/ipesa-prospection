@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { contactsForPhones } from '@/lib/whatsappInbox'
+import { noWhatsAppAmong } from '@/lib/campaignPeople'
 import { isWindowOpen } from '@/lib/whatsappSafety'
 import { serverError } from '@/lib/validation'
 
@@ -9,7 +10,8 @@ const PAGE = 100
 /**
  * GET /api/whatsapp/conversations?filter=all|unread|unknown&q=texto&before=ISO
  * Una fila por número de la tienda (vista whatsapp_threads), con el contacto del
- * CRM vinculado, no leídos y estado de la ventana de 24 h.
+ * CRM vinculado, no leídos, estado de la ventana de 24 h y si Meta reportó que
+ * el número no tiene WhatsApp.
  */
 export async function GET(req: NextRequest) {
   const ctx = await requireStore({ module: 'whatsapp' })
@@ -71,7 +73,11 @@ export async function GET(req: NextRequest) {
     }
 
     const hasMore = conversations.length > PAGE
-    return NextResponse.json({ conversations: conversations.slice(0, PAGE), hasMore })
+    const page = conversations.slice(0, PAGE)
+    // Solo puede ser "sin WhatsApp" si lo último fue un envío nuestro que no se entregó
+    const noWhatsApp = await noWhatsAppAmong(ctx.storeId,
+      page.filter(c => c.lastDirection === 'outbound' && c.lastStatus !== 'delivered' && c.lastStatus !== 'read').map(c => c.phone))
+    return NextResponse.json({ conversations: page.map(c => ({ ...c, noWhatsApp: noWhatsApp.has(c.phone) })), hasMore })
   } catch (error) {
     return serverError('GET /api/whatsapp/conversations', error, 'Error al obtener conversaciones')
   }

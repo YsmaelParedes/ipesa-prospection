@@ -52,6 +52,12 @@ const KIND_BY_CODE: Record<number, FailureKind> = {
 // se recupera el código a partir de ese texto.
 const CODE_BY_TEXT = new Map<string, number>(Object.entries(FRIENDLY_ERRORS).map(([code, text]) => [text, Number(code)]))
 
+// Títulos en inglés que Meta manda sin código (así quedaron guardados algunos envíos viejos)
+const CODE_BY_META_TITLE: [RegExp, number][] = [
+  [/^message undeliverable\b/i, 131026],
+  [/healthy ecosystem engagement/i, 131049],
+]
+
 /** Motivo de un mensaje fallido a partir del texto que quedó guardado. */
 export function failureKindOf(message: string | null | undefined): FailureKind {
   if (!message) return 'other'
@@ -61,6 +67,7 @@ export function failureKindOf(message: string | null | undefined): FailureKind {
     const m = /\b(13[0-2]\d{3})\b/.exec(message)
     if (m) code = Number(m[1])
   }
+  code ??= CODE_BY_META_TITLE.find(([re]) => re.test(message))?.[1]
   return (code !== undefined ? KIND_BY_CODE[code] : undefined) ?? 'other'
 }
 

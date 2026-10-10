@@ -128,8 +128,10 @@ export function CampaignProgressPanel({ total, done, sent, failed, skipped, onCa
   )
 }
 
-export function CampaignResultsPanel({ sent, skipped, failed, outcomes, stopReason, onDone, doneLabel = 'Listo' }: {
+export function CampaignResultsPanel({ sent, skipped, failed, outcomes, stopReason, onDone, doneLabel = 'Listo', onViewResults }: {
   sent: number; skipped: number; failed: number; outcomes: CampaignOutcome[]; stopReason?: string; onDone: () => void; doneLabel?: string
+  /** Botón "Ver en Resultados" (solo en WhatsApp › Campañas). */
+  onViewResults?: () => void
 }) {
   const problems = outcomes.filter(o => !o.ok)
   return (
@@ -148,7 +150,21 @@ export function CampaignResultsPanel({ sent, skipped, failed, outcomes, stopReas
           ))}
         </div>
       )}
-      <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={onDone}>{doneLabel}</button>
+      {onViewResults ? (
+        <>
+          {sent > 0 && (
+            <div className="wa-muted-box" style={{ marginTop: 12 }}>
+              Meta confirma la entrega en los minutos siguientes. En Resultados verás quién lo recibió, quién lo leyó y a quién no le llegó (y por qué).
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+            <button className="btn btn-primary" onClick={onViewResults}>Ver en Resultados</button>
+            <button className="btn btn-ghost" onClick={onDone}>{doneLabel}</button>
+          </div>
+        </>
+      ) : (
+        <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={onDone}>{doneLabel}</button>
+      )}
     </div>
   )
 }

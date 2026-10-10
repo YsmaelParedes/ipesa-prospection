@@ -3,6 +3,7 @@ import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { markWhatsAppRead, sendWhatsAppText } from '@/lib/whatsapp'
 import { WHATSAPP_NOT_CONNECTED, getStoreWhatsAppCreds } from '@/lib/storeWhatsApp'
 import { contactForPhone } from '@/lib/whatsappInbox'
+import { noWhatsAppOf } from '@/lib/campaignPeople'
 import { normalizePhone, toWhatsAppNumber } from '@/lib/phone'
 import { isWindowOpen, windowClosesAt } from '@/lib/whatsappSafety'
 import { jsonError, readJson, serverError } from '@/lib/validation'
@@ -22,7 +23,8 @@ async function phoneParam(params: Ctx['params']): Promise<string | null> {
 /**
  * GET /api/whatsapp/conversations/[phone][?preview=1&limit=n]
  * Hilo completo + ficha del CRM (contacto, leads visibles para el usuario)
- * + estado de la ventana de 24 h. Sin `preview` y con el encabezado
+ * + estado de la ventana de 24 h + si Meta reportó que el número no tiene
+ * WhatsApp (`noWhatsApp`). Sin `preview` y con el encabezado
  * `x-crm-read: 1`, marca los entrantes como leídos (también en el WhatsApp
  * del cliente).
  */
@@ -89,6 +91,7 @@ export async function GET(req: NextRequest, { params }: Ctx) {
       lastInboundAt: lastInbound?.created_at ?? null,
       windowOpen: isWindowOpen(lastInbound?.created_at),
       windowClosesAt: windowClosesAt(lastInbound?.created_at),
+      noWhatsApp: noWhatsAppOf(messages),
       markedRead,
     })
   } catch (error) {

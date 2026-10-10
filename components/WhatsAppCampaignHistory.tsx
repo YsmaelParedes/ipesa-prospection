@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { Avatar, TipoChip } from '@/components/CrmUI'
 import { WaIcon } from '@/components/WhatsAppUI'
 import { fmtPhone } from '@/lib/phone'
+import { csvStamp, downloadCsv } from '@/lib/csv'
+import { WhatsAppCampaignPeople } from '@/components/WhatsAppCampaignPeople'
 import {
   FAILURE_KINDS, type CampaignBucket, type CampaignDetail, type CampaignRecipient, type CampaignSummary, type FailureKind,
 } from '@/lib/campaignKinds'
@@ -70,6 +72,7 @@ export function WhatsAppCampaignResults({ onRetry, onOpenChat }: {
   onRetry: (retry: CampaignRetry) => void
   onOpenChat: (phone: string) => void
 }) {
+  const [view, setView]     = useState<'campaigns' | 'people'>('campaigns')
   const [days, setDays]     = useState(30)
   const [list, setList]     = useState<CampaignSummary[] | null>(null)
   const [error, setError]   = useState('')
@@ -92,9 +95,25 @@ export function WhatsAppCampaignResults({ onRetry, onOpenChat }: {
 
   if (openId) return <CampaignDetailView id={openId} onBack={() => setOpenId(null)} onRetry={onRetry} onOpenChat={onOpenChat} />
 
+  const viewSwitch = (
+    <div className="wa-seg wa-view-seg" role="tablist" aria-label="Ver resultados">
+      <button role="tab" aria-selected={view === 'campaigns'} className={view === 'campaigns' ? 'active' : ''} onClick={() => setView('campaigns')}>
+        <WaIcon.megaphone size={14} /> Por campaña
+      </button>
+      <button role="tab" aria-selected={view === 'people'} className={view === 'people' ? 'active' : ''} onClick={() => setView('people')}>
+        <WaIcon.user size={14} /> Por persona
+      </button>
+    </div>
+  )
+
+  if (view === 'people') {
+    return <div className="wa-scroll">{viewSwitch}<WhatsAppCampaignPeople onOpenChat={onOpenChat} /></div>
+  }
+
   const reached = totals.read + totals.delivered
   return (
     <div className="wa-scroll">
+      {viewSwitch}
       <div className="wa-results-head">
         <div>
           <div className="wa-results-title">Resultados de campañas</div>
@@ -171,32 +190,14 @@ function noteFor(r: CampaignRecipient): string {
   return `${r.bucket === 'read' ? 'Leído' : 'Entregado'} ${when(r.updatedAt)}`
 }
 
-function csvCell(value: string) {
-  // Evita que Excel interprete texto del usuario como fórmula
-  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value
-  return /[",\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe
-}
-
-const stamp = (iso: string) => {
-  const d = new Date(iso)
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
-}
-
-function downloadCsv(c: CampaignDetail) {
+function exportCampaign(c: CampaignDetail) {
   const head = ['Nombre', 'Teléfono', 'Segmento', 'Estado', 'Motivo', 'Respondió', 'Enviado', 'Última actualización']
   const rows = c.recipients.map(r => [
     r.name ?? '', fmtPhone(r.phone), r.segment ?? '', BUCKET_LABEL[r.bucket],
     r.bucket === 'failed' ? (r.kind && r.kind !== 'other' ? FAILURE_KINDS[r.kind].title : r.error ?? '') : '',
-    r.replied ? 'Sí' : 'No', stamp(r.sentAt), stamp(r.updatedAt),
+    r.replied ? 'Sí' : 'No', csvStamp(r.sentAt), csvStamp(r.updatedAt),
   ])
-  const csv = '﻿' + [head, ...rows].map(row => row.map(csvCell).join(',')).join('\r\n')
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `campana-${c.template}-${stamp(c.startedAt).slice(0, 10)}.csv`
-  document.body.appendChild(a); a.click(); a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  downloadCsv(`campana-${c.template}-${csvStamp(c.startedAt).slice(0, 10)}.csv`, head, rows)
 }
 
 function CampaignDetailView({ id, onBack, onRetry, onOpenChat }: {
@@ -346,7 +347,7 @@ function CampaignDetailView({ id, onBack, onRetry, onOpenChat }: {
                 <Avatar name={r.name || r.phone} size={34} />
                 <div style={{ minWidth: 0 }}>
                   <div className="wa-recip-name">{r.name || fmtPhone(r.phone)}</div>
-                  <div className="wa-recip-sub">{fmtPhone(r.phone)}{r.segment && <TipoChip value={r.segment} small />}</div>
+                  <div className="wa-recip-sub">{r.name ? fmtPhone(r.phone) : 'No está en Contactos'}{r.segment && <TipoChip value={r.segment} small />}</div>
                 </div>
                 <div className="wa-recip-state">
                   <span>
@@ -372,7 +373,7 @@ function CampaignDetailView({ id, onBack, onRetry, onOpenChat }: {
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingBottom: 8 }}>
-        <button className="btn btn-ghost" onClick={() => downloadCsv(data)}>Exportar lista (CSV)</button>
+        <button className="btn btn-ghost" onClick={() => exportCampaign(data)}>Exportar lista (CSV)</button>
         {data.failed > 0 && <button className="btn btn-ghost" onClick={copyFailed}>{copied ? 'Copiados ✓' : `Copiar los ${data.failed} números no entregados`}</button>}
       </div>
     </div>

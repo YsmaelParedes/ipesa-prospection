@@ -6,6 +6,7 @@ import {
 } from '@/lib/whatsapp'
 import { CAMPAIGN_DAILY_LIMIT, TEMPLATE_REPEAT_DAYS } from '@/lib/whatsappSafety'
 import { contactForPhone } from '@/lib/whatsappInbox'
+import { noWhatsAppFor } from '@/lib/campaignPeople'
 import { WHATSAPP_NOT_CONNECTED, getStoreWhatsAppCreds } from '@/lib/storeWhatsApp'
 import { normalizePhone, toWhatsAppNumber } from '@/lib/phone'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
@@ -43,9 +44,11 @@ export async function GET() {
  * POST /api/whatsapp/campaigns/send — envía una plantilla a UN destinatario
  * (dueño/admin: toca el número real de la tienda y su reputación con Meta).
  * Body: { contactId | phone, template, language, headerImageUrl?,
- *         bodyPreview, personalize?, bodyParams?: string[], skipRecent? }
+ *         bodyPreview, personalize?, bodyParams?: string[], skipRecent?, force? }
  * El cliente llama una vez por contacto con pausa entre llamadas (ver
  * lib/whatsappSafety.ts) para mostrar progreso real sin timeouts.
+ * A un número que Meta reportó sin WhatsApp no se le envía; `force` (solo con
+ * `phone`, desde el chat) lo intenta de todos modos.
  * Respuestas: { ok: true } · { ok: false, error } · { ok: false, skipped: true, error }.
  */
 export async function POST(req: NextRequest) {
@@ -55,7 +58,7 @@ export async function POST(req: NextRequest) {
 
   const body = await readJson(req)
   if (!body) return jsonError('Cuerpo de solicitud inválido')
-  const { contactId, template, language, headerImageUrl, personalize, bodyPreview, bodyParams, skipRecent } = body
+  const { contactId, template, language, headerImageUrl, personalize, bodyPreview, bodyParams, skipRecent, force } = body
 
   const templateName = typeof template === 'string' ? template.trim() : ''
   if (!/^[a-z0-9_]{1,512}$/.test(templateName)) return jsonError('template es requerido')
@@ -88,6 +91,16 @@ export async function POST(req: NextRequest) {
 
     if (contact?.wa_opt_out) {
       return NextResponse.json({ ok: false, skipped: true, error: 'Pidió no recibir campañas (dado de baja)' })
+    }
+
+    // Sin WhatsApp: no se le vuelve a mandar nada (puede ser un teléfono fijo).
+    // En campañas nunca; desde el chat solo si se confirma "intentar de todos modos".
+    if (!(force === true && !contactId)) {
+      const noWhatsApp = await noWhatsAppFor(ctx.storeId, phone)
+      if (noWhatsApp) {
+        const times = noWhatsApp.failures === 1 ? 'el último envío' : `los últimos ${noWhatsApp.failures} envíos`
+        return NextResponse.json({ ok: false, skipped: true, noWhatsApp: true, error: `Sin WhatsApp: Meta rechazó ${times}. Puede ser un teléfono fijo.` })
+      }
     }
 
     // ── Reglas anti-bloqueo ──

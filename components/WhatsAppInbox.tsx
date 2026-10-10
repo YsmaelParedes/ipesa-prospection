@@ -14,6 +14,7 @@ import { isWindowOpen } from '@/lib/whatsappSafety'
 import { loadCatalogs, whatsappChannel, type Catalogs } from '@/lib/catalogs'
 import { isOpenLead } from '@/lib/crm'
 import { notifyDataChanged } from '@/lib/crmEvents'
+import type { NoWhatsApp } from '@/lib/campaignKinds'
 
 /* ══════════════════════════════════════════════════════════════════════════
    Tipos
@@ -34,6 +35,8 @@ type Conversation = {
   unread: number
   lastInboundAt: string | null
   windowOpen: boolean
+  /** Meta reportó que el número no tiene WhatsApp (puede ser un fijo): ya no se le envían campañas. */
+  noWhatsApp?: boolean
 }
 
 type Message = {
@@ -64,6 +67,7 @@ type Thread = {
   leads: LeadLite[]
   profileName: string | null
   lastInboundAt: string | null
+  noWhatsApp: NoWhatsApp | null
 }
 
 type QuickReply = { id: string; title: string; body: string }
@@ -103,6 +107,7 @@ function displayName(c: { name: string | null; profileName: string | null; phone
 }
 
 const notifyUnreadChanged = () => window.dispatchEvent(new CustomEvent('crm:wa-unread-changed'))
+const fmtShortDay = (iso: string) => new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
 
 /* ══════════════════════════════════════════════════════════════════════════
    Bandeja
@@ -124,7 +129,8 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
   const [thread, setThread]               = useState<Thread | null>(null)
   const [loadingThread, setLoadingThread] = useState(false)
   const [panelOpen, setPanelOpen]         = useState(false)
-  const [templateOpen, setTemplateOpen]   = useState(false)
+  // 'force': número sin WhatsApp, se intenta de todos modos (lo confirma quien envía)
+  const [templateMode, setTemplateMode]   = useState<'normal' | 'force' | null>(null)
   const [newConvOpen, setNewConvOpen]     = useState(false)
   const [toast, setToast]                 = useState('')
 
@@ -178,14 +184,14 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
         if (silent && prev?.phone === phone) {
           return { ...prev, ...d, messages: mergeMessages(prev.messages, d.messages) }
         }
-        return { phone, messages: d.messages, contact: d.contact, leads: d.leads, profileName: d.profileName, lastInboundAt: d.lastInboundAt }
+        return { phone, messages: d.messages, contact: d.contact, leads: d.leads, profileName: d.profileName, lastInboundAt: d.lastInboundAt, noWhatsApp: d.noWhatsApp ?? null }
       })
       if (d.markedRead > 0) {
         setConversations(prev => prev.map(c => c.phone === phone ? { ...c, unread: 0 } : c))
         notifyUnreadChanged()
       }
     } catch {
-      if (!silent) setThread({ phone, messages: [], contact: null, leads: [], profileName: null, lastInboundAt: null })
+      if (!silent) setThread({ phone, messages: [], contact: null, leads: [], profileName: null, lastInboundAt: null, noWhatsApp: null })
     } finally {
       if (!silent) setLoadingThread(false)
     }
@@ -279,7 +285,7 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
             onBack={closeConversation}
             onTogglePanel={() => setPanelOpen(o => !o)}
             panelOpen={panelOpen}
-            onOpenTemplate={() => setTemplateOpen(true)}
+            onOpenTemplate={(force) => setTemplateMode(force ? 'force' : 'normal')}
             onMessageSent={(m) => {
               setThread(prev => prev && prev.phone === selected ? { ...prev, messages: mergeMessages(prev.messages, [m]) } : prev)
               loadRef.current()
@@ -307,12 +313,13 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
         </>
       )}
 
-      {templateOpen && selected && (
+      {templateMode && selected && (
         <TemplateSendModal
           phone={selected}
           name={thread?.contact?.name || selectedConvo?.profileName || ''}
-          onClose={() => setTemplateOpen(false)}
-          onSent={() => { setTemplateOpen(false); showToast('Plantilla enviada ✓'); loadThread(selected, { silent: true }); loadRef.current() }}
+          force={templateMode === 'force'}
+          onClose={() => setTemplateMode(null)}
+          onSent={() => { setTemplateMode(null); showToast('Plantilla enviada ✓'); loadThread(selected, { silent: true }); loadRef.current() }}
         />
       )}
 
@@ -350,6 +357,7 @@ function ConversationRow({ c, active, onClick }: { c: Conversation; active: bool
             {c.lastDirection === 'outbound' && <StatusTicks status={c.lastStatus} />}
             <span className="wa-ellipsis">{preview}</span>
           </span>
+          {c.noWhatsApp && <span className="wa-nowa-tag" title="Meta reportó que no tiene WhatsApp: ya no se le envían campañas">Sin WhatsApp</span>}
           {c.optOut && <span className="wa-optout-mini" title="Pidió no recibir campañas"><WaIcon.ban size={12} /></span>}
           {c.unread > 0 && <span className="wa-unread">{c.unread > 99 ? '99+' : c.unread}</span>}
         </span>
@@ -385,7 +393,7 @@ function ChatView({
   onBack: () => void
   onTogglePanel: () => void
   panelOpen: boolean
-  onOpenTemplate: () => void
+  onOpenTemplate: (force?: boolean) => void
   onMessageSent: (m: Message) => void
   setThread: React.Dispatch<React.SetStateAction<Thread | null>>
 }) {
@@ -479,6 +487,7 @@ function ChatView({
               {fmtPhone(phone)}
               {contact?.segment && <TipoChip value={contact.segment} small />}
               {!contact && <span className="wa-tag-muted">Sin registrar</span>}
+              {thread?.noWhatsApp && <span className="wa-nowa-tag">Sin WhatsApp</span>}
             </span>
           </span>
         </button>
@@ -514,6 +523,7 @@ function ChatView({
         firstName={(contact?.name || profileName || '').split(/\s+/)[0] || ''}
         onSend={send}
         onOpenTemplate={onOpenTemplate}
+        noWhatsApp={thread?.noWhatsApp ?? null}
       />
     </>
   )
@@ -544,9 +554,10 @@ function Bubble({ m, onDiscard }: { m: Message; onDiscard: () => void }) {
 }
 
 /* ── Compositor ────────────────────────────────────────────────────────── */
-function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onOpenTemplate }: {
+function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onOpenTemplate, noWhatsApp }: {
   phone: string; windowOpen: boolean; isAdmin: boolean; firstName: string
-  onSend: (text: string) => Promise<boolean>; onOpenTemplate: () => void
+  onSend: (text: string) => Promise<boolean>; onOpenTemplate: (force?: boolean) => void
+  noWhatsApp: NoWhatsApp | null
 }) {
   const [draft, setDraft]       = useState('')
   const [sending, setSending]   = useState(false)
@@ -611,6 +622,23 @@ function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onOpenTemplat
     inputRef.current?.focus()
   }
 
+  if (!windowOpen && noWhatsApp) {
+    return (
+      <div className="wa-composer">
+        <div className="wa-closed-banner wa-nowa-banner">
+          <WaIcon.ban size={16} />
+          <div>
+            <strong>Este número no tiene WhatsApp.</strong> Meta rechazó {noWhatsApp.failures === 1 ? 'el último envío' : `los últimos ${noWhatsApp.failures} envíos`} ({fmtShortDay(noWhatsApp.lastFailedAt)}). Puede ser un teléfono fijo: mejor llámale. Ya no se le incluye en campañas.
+          </div>
+        </div>
+        <div className="wa-closed-actions">
+          <a className="btn btn-primary" href={`tel:${phone}`}><WaIcon.phone /> Llamar</a>
+          {isAdmin && <button className="btn btn-ghost" onClick={() => onOpenTemplate(true)}>Intentar de todos modos</button>}
+        </div>
+      </div>
+    )
+  }
+
   if (!windowOpen) {
     return (
       <div className="wa-composer">
@@ -622,7 +650,7 @@ function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onOpenTemplat
         </div>
         <div className="wa-closed-actions">
           {isAdmin ? (
-            <button className="btn btn-primary" onClick={onOpenTemplate}><WaIcon.template /> Enviar plantilla</button>
+            <button className="btn btn-primary" onClick={() => onOpenTemplate()}><WaIcon.template /> Enviar plantilla</button>
           ) : (
             <span className="wa-hint">Pide a un administrador que envíe una plantilla.</span>
           )}
@@ -656,7 +684,7 @@ function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onOpenTemplat
           )}
         </div>
         {isAdmin && (
-          <button className="wa-icon-btn wa-hide-sm" onClick={onOpenTemplate} title="Enviar plantilla" aria-label="Enviar plantilla"><WaIcon.template size={18} /></button>
+          <button className="wa-icon-btn wa-hide-sm" onClick={() => onOpenTemplate()} title="Enviar plantilla" aria-label="Enviar plantilla"><WaIcon.template size={18} /></button>
         )}
         <textarea
           ref={inputRef}
@@ -945,7 +973,7 @@ function OptOutSection({ phone, optOut, onChanged, toast }: { phone: string; opt
 /* ══════════════════════════════════════════════════════════════════════════
    Modales
 ══════════════════════════════════════════════════════════════════════════ */
-function TemplateSendModal({ phone, name, onClose, onSent }: { phone: string; name: string; onClose: () => void; onSent: () => void }) {
+function TemplateSendModal({ phone, name, force = false, onClose, onSent }: { phone: string; name: string; force?: boolean; onClose: () => void; onSent: () => void }) {
   const [selection, setSelection] = useState<WhatsAppTemplateSelection | null>(null)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
@@ -959,7 +987,7 @@ function TemplateSendModal({ phone, name, onClose, onSent }: { phone: string; na
         body: JSON.stringify({
           phone, template: selection.templateName, language: selection.language,
           headerImageUrl: selection.savedImageUrl || undefined, personalize: selection.personalize,
-          bodyPreview: selection.bodyPreview, bodyParams: selection.bodyParams, skipRecent: false,
+          bodyPreview: selection.bodyPreview, bodyParams: selection.bodyParams, skipRecent: false, force,
         }),
       })
       const d = await r.json().catch(() => ({}))
@@ -977,6 +1005,11 @@ function TemplateSendModal({ phone, name, onClose, onSent }: { phone: string; na
         </div>
         <div className="modal-body">
           <div className="wa-modal-to">Para: <strong>{name || fmtPhone(phone)}</strong> · {fmtPhone(phone)}</div>
+          {force && (
+            <div className="wa-warn" style={{ marginTop: 0, marginBottom: 12 }}>
+              Meta reportó que este número no tiene WhatsApp, así que lo más probable es que vuelva a fallar. Si esta vez se entrega, el número vuelve a estar disponible para campañas.
+            </div>
+          )}
           <WhatsAppTemplatePicker exampleName={(name || 'Cliente').split(/\s+/)[0]} onChange={setSelection} />
           {error && <div className="wa-form-error" style={{ marginTop: 12 }}>{error}</div>}
         </div>

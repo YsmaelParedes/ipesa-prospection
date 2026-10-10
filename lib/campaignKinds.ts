@@ -24,7 +24,7 @@ export type FailureKindInfo = {
 export const FAILURE_KINDS: Record<FailureKind, FailureKindInfo> = {
   no_whatsapp: {
     title: 'Sin WhatsApp o sin aceptar los términos nuevos',
-    hint: 'Suele ser un teléfono fijo, una línea sin WhatsApp o alguien que aún no acepta los términos nuevos. Si vuelve a fallar, conviene revisar el número.',
+    hint: 'Suele ser un teléfono fijo o una línea sin WhatsApp (a veces, alguien que aún no acepta los términos nuevos). Mientras Meta lo siga reportando así, ya no se le envían campañas; si necesitas contactarlo, llámale.',
     retry: false,
   },
   marketing_limit: {
@@ -117,3 +117,57 @@ export function parseCampaignId(id: string): { template: string; startMs: number
   const m = /^([a-z0-9_]{1,512})\.(\d{10,14})$/.exec(id)
   return m ? { template: m[1], startMs: Number(m[2]) } : null
 }
+
+// ── Resultados por persona ───────────────────────────────────────────────────
+
+/**
+ * Cómo le fue a cada número con las campañas. Se decide en este orden:
+ * dado de baja → sin WhatsApp → respondió → estado de su último mensaje.
+ */
+export type PersonState =
+  | 'replied'      // escribió dentro de las 72 h siguientes a alguna campaña
+  | 'read'
+  | 'delivered'
+  | 'pending'      // Meta aún no confirma la entrega
+  | 'meta_limit'   // Meta no lo entregó por un límite temporal (se puede reintentar)
+  | 'failed'       // no le llegó por otro motivo
+  | 'no_whatsapp'  // lo último que dijo Meta es que no tiene WhatsApp: ya no se le envía
+  | 'opt_out'      // pidió no recibir campañas
+
+export const PERSON_STATES: Record<PersonState, { label: string; chip: string }> = {
+  replied:     { label: 'Respondieron',          chip: 'Respondió' },
+  read:        { label: 'Leyeron, sin responder', chip: 'Leyó' },
+  delivered:   { label: 'Entregados, sin leer',  chip: 'Entregado' },
+  pending:     { label: 'Sin confirmar',         chip: 'Sin confirmar' },
+  meta_limit:  { label: 'Límite de Meta',        chip: 'Límite de Meta' },
+  failed:      { label: 'No les llegó',          chip: 'No le llegó' },
+  no_whatsapp: { label: 'Sin WhatsApp',          chip: 'Sin WhatsApp' },
+  opt_out:     { label: 'Dados de baja',         chip: 'Dado de baja' },
+}
+
+export const PERSON_STATE_ORDER: PersonState[] = ['replied', 'read', 'delivered', 'pending', 'meta_limit', 'failed', 'no_whatsapp', 'opt_out']
+
+/** Solo se toman en cuenta los mensajes del último año. */
+export const PEOPLE_WINDOW_DAYS = 365
+
+export type CampaignPerson = {
+  phone: string
+  contactId: string | null
+  name: string | null
+  segment: string | null
+  state: PersonState
+  /** Plantillas que se le han mandado en el periodo. */
+  sends: number
+  lastTemplate: string
+  lastSentAt: string
+  lastUpdatedAt: string
+  repliedAt: string | null
+  /** Motivo del último fallo, tal como lo guardó la app. */
+  error: string | null
+  /** Veces seguidas que Meta respondió que no tiene WhatsApp (solo en 'no_whatsapp'). */
+  noWhatsAppFailures: number
+  lastFailedAt: string | null
+}
+
+/** Lo último que Meta respondió sobre un número sin WhatsApp. */
+export type NoWhatsApp = { failures: number; lastFailedAt: string }
