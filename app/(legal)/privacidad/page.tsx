@@ -64,7 +64,7 @@ const sections: LegalSection[] = [
           <li>Crear y administrar tu cuenta y la de tu tienda, y verificar tu identidad al iniciar sesión.</li>
           <li>Prestar las funciones de la plataforma: contactos, oportunidades, recordatorios, WhatsApp, campañas, fórmulas y notificaciones.</li>
           <li>Proteger la seguridad del servicio, prevenir fraudes y accesos no autorizados.</li>
-          <li>Atender solicitudes de soporte y enviarte avisos sobre tu cuenta (prueba gratis, vencimientos y cambios del servicio).</li>
+          <li>Atender solicitudes de soporte y enviarte avisos sobre tu cuenta (activación, vencimientos y cambios del servicio).</li>
           <li>Facturar y gestionar el cobro del plan contratado.</li>
           <li>Cumplir obligaciones legales y atender requerimientos de autoridades competentes.</li>
         </ul>

@@ -10,6 +10,7 @@ import { invalidateSession, useSession, type ClientStore } from '@/lib/profile'
 import { MODULE_INFO, ROLE_LABELS, STORE_MODULES, planOf, type StoreModule, type StoreModules } from '@/lib/stores'
 import { MX_STATES } from '@/lib/mexico'
 import { pendingInvite } from '@/lib/pendingInvite'
+import { requestInviteLinks } from '@/lib/legal'
 import { signOut } from '@/lib/signOut'
 import s from './bienvenida.module.css'
 
@@ -26,6 +27,8 @@ const STEPS = [
   { title: 'Tu equipo',    desc: 'Invita a tus vendedores' },
 ]
 const DONE = STEPS.length
+/** Cuenta sin tienda: las tiendas nuevas entran solo por invitación */
+const NO_STORE = -1
 
 type Profile = { name: string; city: string; state: string; phone: string; address: string }
 type Invite = { id: string; email: string; role: 'admin' | 'employee'; link: string }
@@ -115,6 +118,8 @@ function Wizard() {
       setProfile(profileOf(current))
       setModules(current.modules)
       setStep(1)
+    } else if (!current) {
+      setStep(NO_STORE)
     } else {
       setStep(0)
     }
@@ -151,10 +156,12 @@ function Wizard() {
         </div>
       </header>
 
-      {step < DONE && <Stepper step={step} />}
+      {step >= 0 && step < DONE && <Stepper step={step} />}
 
       <main className={s.main}>
-        {step === DONE && store ? (
+        {step === NO_STORE ? (
+          <NoStoreStep />
+        ) : step === DONE && store ? (
           <DoneStep store={store} modules={modules} invites={invites.length} />
         ) : (
           <div className={s.layout}>
@@ -176,7 +183,7 @@ function Wizard() {
               )}
               {step === 3 && store && (
                 <TeamStep
-                  store={store} canInviteAdmins={isOwner} invites={invites}
+                  store={store} canInviteAdmins={isOwner} invites={invites} locked={store.access === 'readonly'}
                   onInvite={inv => setInvites(list => [inv, ...list.filter(i => i.email !== inv.email)])}
                   onBack={() => setStep(2)} onNext={() => setStep(DONE)}
                 />
@@ -489,8 +496,8 @@ function ModulesStep({ modules, setModules, onBack, onSaved }: {
 }
 
 /* ── Paso 4: equipo ─────────────────────────────────────────────────────── */
-function TeamStep({ store, canInviteAdmins, invites, onInvite, onBack, onNext }: {
-  store: ClientStore; canInviteAdmins: boolean; invites: Invite[]
+function TeamStep({ store, canInviteAdmins, invites, locked, onInvite, onBack, onNext }: {
+  store: ClientStore; canInviteAdmins: boolean; invites: Invite[]; locked: boolean
   onInvite: (inv: Invite) => void; onBack: () => void; onNext: () => void
 }) {
   const [email, setEmail]   = useState('')
@@ -529,6 +536,11 @@ function TeamStep({ store, canInviteAdmins, invites, onInvite, onBack, onNext }:
         Cada persona entra con su propio usuario. Genera su enlace y compártelo por WhatsApp o correo; vence en 7 días.
       </StepHead>
       {error && <AuthAlert>{error}</AuthAlert>}
+      {locked ? (
+        <AuthAlert kind="info">
+          Podrás invitar a tu equipo en cuanto tu tienda esté activa, al registrarse su primer pago. Lo haces desde Configuración → Equipo.
+        </AuthAlert>
+      ) : (<>
       <form onSubmit={submit} className={s.inviteForm}>
         <AuthField
           label="Correo de la persona" icon={AuthIcon.mail} type="email" value={email}
@@ -552,6 +564,7 @@ function TeamStep({ store, canInviteAdmins, invites, onInvite, onBack, onNext }:
           ? <><strong>Vendedor:</strong> registra contactos, leads y recordatorios, y atiende WhatsApp.</>
           : <><strong>Administrador:</strong> además configura la tienda, los catálogos y el equipo.</>}
       </p>
+      </>)}
 
       {invites.length > 0 && (
         <ul className={s.invites}>
@@ -584,9 +597,7 @@ function TeamStep({ store, canInviteAdmins, invites, onInvite, onBack, onNext }:
 
 /* ── Listo ──────────────────────────────────────────────────────────────── */
 function DoneStep({ store, modules, invites }: { store: ClientStore; modules: StoreModules; invites: number }) {
-  const trialEnd = store.trialEndsAt
-    ? new Date(store.trialEndsAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })
-    : null
+  const pending = store.access === 'readonly'
 
   const next = [
     modules.whatsapp
@@ -601,7 +612,9 @@ function DoneStep({ store, modules, invites }: { store: ClientStore; modules: St
       <div className={s.doneBadge} aria-hidden="true"><span><AuthIcon.check /></span></div>
       <h1>¡{store.name} está lista!</h1>
       <p className={s.doneSub}>
-        Tu prueba gratis ya empezó{trialEnd ? <> y dura hasta el <strong>{trialEnd}</strong></> : null}. Tienes todas las funciones disponibles.
+        {pending
+          ? <>Tu tienda quedará activa en cuanto se registre su primer pago. Mientras, ya puedes entrar, revisar todo y terminar de configurarla.</>
+          : <>Tienes todas las funciones disponibles.</>}
         {invites > 0 && <> Cuando tu equipo acepte su invitación lo verás en Configuración.</>}
       </p>
       <div className={s.next}>
@@ -617,6 +630,25 @@ function DoneStep({ store, modules, invites }: { store: ClientStore; modules: St
       <Link href="/" className={cx(s.btn, s.primary, s.lg)}>
         Entrar a mi tienda <AuthIcon.arrow className={s.btnArrow} />
       </Link>
+    </section>
+  )
+}
+
+/* ── Cuenta sin tienda ──────────────────────────────────────────────────── */
+function NoStoreStep() {
+  const links = requestInviteLinks()
+  return (
+    <section className={s.done}>
+      <div className={s.doneBadge} aria-hidden="true"><span><Ic.store /></span></div>
+      <h1>Tu cuenta aún no tiene tienda</h1>
+      <p className={s.doneSub}>
+        Las tiendas se dan de alta solo por invitación. Si ya te mandaron un enlace, ábrelo para unirte a tu tienda;
+        si quieres {APP_NAME} para tu tienda, pide tu invitación.
+      </p>
+      <div className={s.next} style={{ justifyContent: 'center' }}>
+        {links.whatsapp && <a href={links.whatsapp} target="_blank" rel="noopener noreferrer" className={cx(s.btn, s.primary, s.lg)}>Pedir invitación por WhatsApp</a>}
+        {links.email && <a href={links.email} className={cx(s.btn, links.whatsapp ? s.soft : s.primary, s.lg)}>Pedir invitación por correo</a>}
+      </div>
     </section>
   )
 }

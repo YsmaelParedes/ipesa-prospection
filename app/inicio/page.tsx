@@ -2,12 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { BrandLogo } from '@/components/Brand'
 import { APP_NAME, APP_TAGLINE } from '@/lib/brand'
-import { TRIAL_DAYS, planOf, DEFAULT_PLAN } from '@/lib/stores'
+import { planOf, DEFAULT_PLAN } from '@/lib/stores'
 import s from './inicio.module.css'
 
 export const metadata: Metadata = {
   title: `${APP_NAME} · ${APP_TAGLINE}`,
-  description: `Contactos, cotizaciones, WhatsApp y fórmulas de color en un solo lugar para tu tienda de pinturas. Prueba ${TRIAL_DAYS} días gratis.`,
+  description: 'Contactos, cotizaciones, WhatsApp y fórmulas de color en un solo lugar para tu tienda de pinturas. Alta por invitación.',
 }
 
 const DEMO_STORE = 'Pinturas La Paleta'
@@ -68,8 +68,8 @@ const SECURITY = [
 ]
 
 const FAQ = [
-  { q: '¿Necesito tarjeta para la prueba?', a: `No. Creas tu cuenta y usas todas las funciones durante ${TRIAL_DAYS} días, sin dejar datos de pago.` },
-  { q: '¿Qué pasa cuando termina la prueba?', a: 'Tu información se conserva y tu equipo puede consultarla, pero para registrar clientes y enviar mensajes necesitas activar tu plan. La activación la hacemos contigo.' },
+  { q: '¿Cómo empiezo?', a: 'Pide tu invitación. Acordamos contigo el plan, damos de alta tu tienda y te mandamos un enlace para que crees tu contraseña. Después tú invitas a tu equipo.' },
+  { q: '¿Cómo se paga?', a: 'El precio se acuerda con cada tienda y se paga por mes, por transferencia o en efectivo. Si un pago vence, tu información se conserva y tu equipo puede consultarla; para seguir registrando solo hay que renovar.' },
   { q: '¿Puedo usar el WhatsApp de mi tienda?', a: 'Sí. Se conecta con WhatsApp Business Platform, la API oficial de Meta, usando el número de tu sucursal. Desde Configuración te guiamos paso a paso.' },
   { q: '¿Cuántas personas pueden usarlo?', a: `El plan Profesional incluye hasta ${MAX_USERS} usuarios por tienda, con roles de dueño, administrador y vendedor.` },
   { q: '¿Otras tiendas pueden ver mis clientes?', a: 'No. Cada tienda tiene su propia información y solo la ve su equipo. Ninguna otra tienda puede acceder a ella.' },
@@ -97,7 +97,7 @@ export default function LandingPage() {
           <div className={s.navCta}>
             <Link href="/login" className={`${s.btn} ${s.btnGhost}`}>Iniciar sesión</Link>
             <Link href="/registro" className={`${s.btn} ${s.btnPrimary}`}>
-              <span className={s.hideXs}>Prueba gratis</span><span className={s.showXs}>Probar</span>
+              <span className={s.hideXs}>Pide una invitación</span><span className={s.showXs}>Invitación</span>
             </Link>
           </div>
         </div>
@@ -116,12 +116,12 @@ export default function LandingPage() {
               </p>
               <div className={s.heroCtas}>
                 <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>
-                  Prueba {TRIAL_DAYS} días gratis <Ic.arrow className={s.btnArrow} />
+                  Quiero usarlo en mi tienda <Ic.arrow className={s.btnArrow} />
                 </Link>
                 <Link href="/login" className={`${s.btn} ${s.btnLight} ${s.btnLg}`}>Ya tengo cuenta</Link>
               </div>
               <div className={s.checks}>
-                <span><Ic.check />Sin tarjeta</span>
+                <span><Ic.check />Te ayudamos a configurarlo</span>
                 <span><Ic.check />Lista en minutos</span>
                 <span><Ic.check />Celular y computadora</span>
               </div>
@@ -198,7 +198,7 @@ export default function LandingPage() {
         {/* ── Datos rápidos ── */}
         <section className={s.strip} aria-label="En resumen">
           <div className={`${s.wrap} ${s.stripGrid}`}>
-            <div className={s.stat}><strong>{TRIAL_DAYS} días</strong><span>de prueba con todas las funciones</span></div>
+            <div className={s.stat}><strong>A tu medida</strong><span>precio acordado con cada tienda</span></div>
             <div className={s.stat}><strong>{MAX_USERS} usuarios</strong><span>por tienda en el plan Profesional</span></div>
             <div className={s.stat}><strong>API oficial</strong><span>de WhatsApp Business de Meta</span></div>
             <div className={s.stat}><strong>100% web</strong><span>y se instala como app en tu celular</span></div>
@@ -332,9 +332,9 @@ export default function LandingPage() {
               <div className={s.ctaSwirl} aria-hidden="true"><i className={s.b1} /><i className={s.b2} /><i className={s.b3} /><i className={s.b4} /><i className={s.b5} /></div>
               <div className={s.ctaInner}>
                 <h2 className={s.h2}>Tu sucursal, organizada desde hoy</h2>
-                <p className={s.sub}>Pruébalo {TRIAL_DAYS} días con tu equipo. Sin tarjeta y sin compromiso.</p>
+                <p className={s.sub}>Pide tu invitación: damos de alta tu tienda y te ayudamos a configurarla con tu equipo.</p>
                 <div className={s.heroCtas}>
-                  <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>Crear mi cuenta <Ic.arrow className={s.btnArrow} /></Link>
+                  <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>Pedir invitación <Ic.arrow className={s.btnArrow} /></Link>
                   <Link href="/login" className={`${s.btn} ${s.btnLight} ${s.btnLg}`}>Iniciar sesión</Link>
                 </div>
               </div>
@@ -351,7 +351,7 @@ export default function LandingPage() {
           </div>
           <nav className={s.footLinks} aria-label="Enlaces">
             <Link href="/login">Iniciar sesión</Link>
-            <Link href="/registro">Crear cuenta</Link>
+            <Link href="/registro">Pedir invitación</Link>
             <Link href="/terminos">Términos</Link>
             <Link href="/privacidad">Aviso de privacidad</Link>
           </nav>

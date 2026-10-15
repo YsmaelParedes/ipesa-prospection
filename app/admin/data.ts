@@ -16,6 +16,8 @@ export type PlatformStore = {
   members: number; contacts: number; leads: number; whatsapp_connected: boolean; last_activity_at: string | null
   /** Precio mensual acordado con la tienda (null = sin acordar) */
   monthly_price: number | null
+  /** Invitación de dueño pendiente (solo si la tienda aún no tiene dueño) */
+  owner_invite: { email: string; expires_at: string; status: 'valid' | 'expired' | 'used' | 'revoked' } | null
 }
 
 export const DAY = 86_400_000
@@ -42,7 +44,11 @@ export const isLapsed = (st: PlatformStore, now = Date.now()) =>
 
 export const isOff = (st: PlatformStore) => st.status === 'suspended' || st.status === 'cancelled'
 
+/** Tienda nueva que espera su primer pago o cortesía. */
+export const isPending = (st: Pick<PlatformStore, 'status'>) => st.status === 'pending'
+
 export function subscriptionLine(st: PlatformStore) {
+  if (st.status === 'pending') return 'Por activar: falta su primer pago o cortesía'
   const readonly = storeAccess(st) === 'readonly'
   if (st.status === 'trial') {
     const left = trialDaysLeft(st) ?? 0
@@ -59,6 +65,7 @@ export function countStores(list: PlatformStore[], now = Date.now()) {
   const full = (st: PlatformStore) => storeAccess(st, now) === 'full'
   return {
     all: list.length,
+    pending: list.filter(isPending).length,
     trial: list.filter(st => st.status === 'trial' && full(st)).length,
     active: list.filter(st => st.status === 'active' && full(st)).length,
     expiring: list.filter(st => expiresSoon(st, now)).length,

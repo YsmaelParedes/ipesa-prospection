@@ -80,14 +80,22 @@ En Supabase → **Authentication**:
 
 | Paso | Dónde |
 |---|---|
-| La tienda descubre el producto | `/` (sin sesión) o `/inicio` |
-| Crea su cuenta y confirma su correo | `/registro` → correo → `/auth/confirm` |
-| Configura su sucursal (datos, logo, herramientas, equipo) | `/bienvenida` |
+| La tienda descubre el producto y pide una invitación | `/` (sin sesión) o `/inicio` → `/registro` (WhatsApp o correo) |
+| Tú das de alta la tienda (precio acordado) e invitas a su dueño | Panel del dueño → Tiendas → "Nueva tienda" |
+| El dueño crea su contraseña con el enlace (vence en 7 días) | `/invitacion/<token>` → correo → `/auth/confirm` |
+| Configura su sucursal (logo, herramientas, equipo) | `/bienvenida` |
+| Tú registras su primer pago (o una cortesía) y la tienda pasa a **Activa** | Ficha de la tienda en el panel |
 | Invita a su equipo con un enlace personal (vence en 7 días) | Configuración → Equipo → `/invitacion/<token>` |
 | Conecta su número de WhatsApp Business | Configuración → WhatsApp |
-| Prueba 14 días; después queda en **solo consulta** hasta activar | Configuración → Plan |
-| Tú registras sus pagos, activas o suspendes cada tienda | Panel del dueño, `/admin` (solo administradores de la plataforma) |
+| Si un pago vence queda en **solo consulta** hasta renovar | Configuración → Plan |
 
+- **Alta solo por invitación** (sin prueba gratis): `/registro` solo explica cómo pedir la
+  invitación y `/api/auth/register` responde 403. Una tienda nueva nace **"Por activar"**
+  (`status = 'pending'`): su dueño puede entrar y configurarla, pero queda en solo lectura
+  hasta su primer pago o cortesía. Una cuenta sin tienda no puede abrir una
+  (`POST /api/stores` solo para quien ya es dueño de una tienda, que agrega sucursal, o para
+  el dueño de la plataforma). Contacto para pedir invitación: `NEXT_PUBLIC_CONTACT_WHATSAPP`
+  y `NEXT_PUBLIC_CONTACT_EMAIL`.
 - **Roles por tienda**: *dueño* (todo, incluido nombrar administradores y desconectar
   WhatsApp), *administrador* (configura la tienda y ve el trabajo de todos) y *vendedor*.
   Una misma cuenta puede pertenecer a varias tiendas y cambiar entre ellas desde el menú.

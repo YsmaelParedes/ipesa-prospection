@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useMemo } from 'react'
 import { fmtMoney } from '@/lib/payments'
 import {
-  DAY, ago, countStores, currentMonth, expiresSoon, fmtDate, isLapsed, isOff, moneySummary, subscriptionLine,
+  DAY, ago, countStores, currentMonth, expiresSoon, fmtDate, isLapsed, isOff, isPending, moneySummary, subscriptionLine,
   usePayments, usePlatformStores, type PlatformStore,
 } from './data'
 import s from './admin.module.css'
@@ -17,6 +17,8 @@ import s from './admin.module.css'
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
 const IDLE_DAYS = 14
+
+const rank = (st: PlatformStore, now: number) => (isPending(st) ? 0 : isLapsed(st, now) ? 1 : 2)
 
 /** Fecha en que vence lo que la tienda tiene pagado o en prueba. */
 const dueAt = (st: PlatformStore) => new Date((st.status === 'trial' ? st.trial_ends_at : st.paid_until) ?? 0).getTime()
@@ -34,11 +36,11 @@ export default function AdminHome() {
     const now = Date.now()
     return {
       counts: countStores(list, now),
-      // Primero las que ya están en solo lectura, luego las que vencen pronto
-      attention: list.filter(st => isLapsed(st, now) || expiresSoon(st, now))
-        .sort((a, b) => Number(isLapsed(b, now)) - Number(isLapsed(a, now)) || dueAt(a) - dueAt(b)),
+      // Primero las que esperan su primer pago, luego las de solo lectura y al final las que vencen pronto
+      attention: list.filter(st => isPending(st) || isLapsed(st, now) || expiresSoon(st, now))
+        .sort((a, b) => rank(a, now) - rank(b, now) || dueAt(a) - dueAt(b)),
       recent: [...list].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5),
-      idle: list.filter(st => !isOff(st) && !isLapsed(st, now)
+      idle: list.filter(st => !isOff(st) && !isPending(st) && !isLapsed(st, now)
         && (!st.last_activity_at || now - new Date(st.last_activity_at).getTime() > IDLE_DAYS * DAY)),
     }
   }, [stores])
@@ -68,7 +70,7 @@ export default function AdminHome() {
           <div className={s.kpis}>
             <div className={s.kpi}><small>Tiendas</small><strong>{counts.all}</strong><span>registradas</span></div>
             <div className={cx(s.kpi, s.kGreen)}><small>Activas</small><strong>{counts.active}</strong><span>pagando, al corriente</span></div>
-            <div className={cx(s.kpi, s.kCyan)}><small>En prueba</small><strong>{counts.trial}</strong><span>con acceso completo</span></div>
+            <div className={cx(s.kpi, s.kMagenta)}><small>Por activar</small><strong>{counts.pending}</strong><span>esperan su primer pago</span></div>
             <div className={cx(s.kpi, s.kAmber)}><small>Por vencer</small><strong>{counts.expiring}</strong><span>prueba ≤ 3 días o pago ≤ 7</span></div>
             <div className={cx(s.kpi, s.kRed)}><small>Solo lectura</small><strong>{counts.readonly}</strong><span>prueba o pago vencido</span></div>
           </div>
@@ -80,16 +82,18 @@ export default function AdminHome() {
                 <span>{view.attention.length || ''}</span>
               </div>
               {view.attention.length === 0
-                ? <div className={s.panelEmpty}>Todo al corriente: ninguna tienda debe ni vence en los próximos días.</div>
+                ? <div className={s.panelEmpty}>Todo al corriente: ninguna tienda espera activación, debe o vence en los próximos días.</div>
                 : view.attention.map(st => (
                   <StoreLink key={st.id} st={st}>
                     <span className={s.itemMain}>
                       <strong>{st.name}</strong>
                       <small>{subscriptionLine(st)}{perMonth(st)}</small>
                     </span>
-                    {isLapsed(st)
-                      ? <em className={cx(s.badge, s.bDanger)}>Solo lectura</em>
-                      : <em className={cx(s.badge, s.bWarn)}>Por vencer</em>}
+                    {isPending(st)
+                      ? <em className={cx(s.badge, s.bPending)}>Por activar</em>
+                      : isLapsed(st)
+                        ? <em className={cx(s.badge, s.bDanger)}>Solo lectura</em>
+                        : <em className={cx(s.badge, s.bWarn)}>Por vencer</em>}
                   </StoreLink>
                 ))}
             </section>

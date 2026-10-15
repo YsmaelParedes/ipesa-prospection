@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getStoreMembers, requireStore } from '@/lib/supabase-server'
-import { hashToken, randomToken } from '@/lib/crypto'
-import { EMAIL_RE, INVITATION_DAYS, invitationStatus, siteOrigin, type InvitationRow } from '@/lib/invitations'
+import { EMAIL_RE, INVITATION_COLUMNS as COLUMNS, createInvitation, invitationStatus, type InvitationRow } from '@/lib/invitations'
 import { planOf } from '@/lib/stores'
 import { jsonError, readJson, serverError } from '@/lib/validation'
-
-const COLUMNS = 'id, store_id, email, role, expires_at, accepted_at, revoked_at, created_at'
 
 async function pendingInvitations(storeId: string): Promise<InvitationRow[]> {
   const { data, error } = await getServerSupabase().from('store_invitations').select(COLUMNS)
@@ -57,23 +54,8 @@ export async function POST(req: NextRequest) {
       return jsonError('Ese correo ya tiene una invitación de administrador; solo el dueño puede cambiarla.', 403)
     }
 
-    const db = getServerSupabase()
     // Una sola invitación vigente por correo: las anteriores se revocan
-    await db.from('store_invitations').update({ revoked_at: new Date().toISOString() })
-      .eq('store_id', ctx.storeId).eq('email', email).is('accepted_at', null).is('revoked_at', null)
-
-    const token = randomToken(32)
-    const { data, error } = await db.from('store_invitations').insert({
-      store_id: ctx.storeId,
-      email,
-      role,
-      token_hash: hashToken(token),
-      invited_by: ctx.uid,
-      expires_at: new Date(Date.now() + INVITATION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
-    }).select(COLUMNS).single()
-    if (error) throw error
-
-    const link = `${siteOrigin(req.nextUrl.origin)}/invitacion/${token}`
+    const { invitation: data, link } = await createInvitation({ storeId: ctx.storeId, email, role, invitedBy: ctx.uid, origin: req.nextUrl.origin })
     return NextResponse.json({
       invitation: { id: data.id, email, role, expiresAt: data.expires_at, status: 'valid' },
       link,

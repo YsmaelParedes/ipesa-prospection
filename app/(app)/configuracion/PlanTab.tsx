@@ -1,13 +1,13 @@
 'use client'
 
 import type { ClientStore } from '@/lib/profile'
-import { LEGAL } from '@/lib/legal'
+import { LEGAL, requestInviteLinks } from '@/lib/legal'
 import { PAYMENT_GRACE_DAYS, STATUS_LABELS, TRIAL_DAYS } from '@/lib/stores'
 import { Ico, Note, Panel, copyText, cx, fmtDate, useToast } from './ui'
 import s from './configuracion.module.css'
 
 export const STATUS_BADGE: Record<string, string> = {
-  trial: s.bTrial, active: s.bActive, suspended: s.bDanger, cancelled: s.bMuted,
+  pending: s.bWarn, trial: s.bTrial, active: s.bActive, suspended: s.bDanger, cancelled: s.bMuted,
 }
 
 const INCLUDED = [
@@ -27,6 +27,7 @@ export function PlanTab({ store }: { store: ClientStore }) {
   const trialPct = Math.max(4, Math.min(100, ((TRIAL_DAYS - daysLeft) / TRIAL_DAYS) * 100))
 
   const headline = (() => {
+    if (store.status === 'pending') return 'Tu tienda aún no está activa'
     if (store.status === 'suspended') return 'Tu tienda está suspendida'
     if (store.status === 'cancelled') return 'Tu suscripción está cancelada'
     if (trial) return readonly ? 'Tu prueba gratis terminó' : `Te quedan ${daysLeft} ${daysLeft === 1 ? 'día' : 'días'} de prueba`
@@ -50,7 +51,7 @@ export function PlanTab({ store }: { store: ClientStore }) {
         <div className={s.planStats}>
           <div className={s.planStat}>
             <small>{trial ? 'La prueba termina' : 'Pagado hasta'}</small>
-            <strong>{trial ? fmtDate(store.trialEndsAt) : store.paidUntil ? fmtDate(store.paidUntil) : 'Sin fecha de corte'}</strong>
+            <strong>{trial ? fmtDate(store.trialEndsAt) : store.paidUntil ? fmtDate(store.paidUntil) : store.status === 'pending' ? 'Pendiente del primer pago' : 'Sin fecha de corte'}</strong>
           </div>
           <div className={s.planStat}>
             <small>Acceso</small>
@@ -71,9 +72,16 @@ export function PlanTab({ store }: { store: ClientStore }) {
       )}
 
       <Panel icon={Ico.card} title={store.status === 'active' && !readonly ? '¿Necesitas ayuda con tu plan?' : 'Activa tu plan'}
-        subtitle={`La activación se hace con nosotros: te compartimos el precio y las formas de pago, y en cuanto se registra el pago tu tienda queda activa. Si un pago vence tienes ${PAYMENT_GRACE_DAYS} días de gracia.`}>
-        {LEGAL.email ? (
-          <a className="btn btn-primary" href={`mailto:${LEGAL.email}?subject=${subject}&body=${body}`}><Ico.mail style={{ width: 15, height: 15 }} />Escribir para activar</a>
+        subtitle={`La activación se hace con nosotros: acordamos el precio y la forma de pago (transferencia o efectivo), y en cuanto se registra el pago tu tienda queda activa. Si un pago vence tienes ${PAYMENT_GRACE_DAYS} días de gracia.`}>
+        {LEGAL.whatsapp || LEGAL.email ? (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {LEGAL.whatsapp && (
+              <a className="btn btn-primary" href={requestInviteLinks(decodeURIComponent(body)).whatsapp!} target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a>
+            )}
+            {LEGAL.email && (
+              <a className={LEGAL.whatsapp ? 'btn btn-ghost' : 'btn btn-primary'} href={`mailto:${LEGAL.email}?subject=${subject}&body=${body}`}><Ico.mail style={{ width: 15, height: 15 }} />Escribir por correo</a>
+            )}
+          </div>
         ) : (
           <p className={s.hint} style={{ marginTop: 0 }}>Contacta a tu asesor de {LEGAL.product} y compártele el identificador de tu tienda.</p>
         )}

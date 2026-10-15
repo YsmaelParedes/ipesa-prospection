@@ -9,7 +9,8 @@ export const TRIAL_DAYS = 14
 export const PAYMENT_GRACE_DAYS = 3
 const DAY = 24 * 60 * 60 * 1000
 
-export type StoreStatus = 'trial' | 'active' | 'suspended' | 'cancelled'
+/** pending = "Por activar": tienda nueva (ya no hay prueba gratis) hasta su primer pago o cortesía. */
+export type StoreStatus = 'pending' | 'trial' | 'active' | 'suspended' | 'cancelled'
 export type StoreRole = 'owner' | 'admin' | 'employee'
 export type StoreAccess = 'full' | 'readonly'
 
@@ -25,7 +26,7 @@ export const MODULE_INFO: Record<StoreModule, { label: string; description: stri
 }
 
 export const STATUS_LABELS: Record<StoreStatus, string> = {
-  trial: 'Prueba gratis', active: 'Activa', suspended: 'Suspendida', cancelled: 'Cancelada',
+  pending: 'Por activar', trial: 'Prueba gratis', active: 'Activa', suspended: 'Suspendida', cancelled: 'Cancelada',
 }
 
 export const ROLE_LABELS: Record<StoreRole, string> = {
@@ -45,8 +46,8 @@ export const DEFAULT_CANALES = ['WhatsApp', 'Visita en tienda', 'Recomendación'
 type AccessFields = { status: StoreStatus | string; trial_ends_at: string | null; paid_until: string | null }
 
 /**
- * Qué puede hacer una tienda: 'full' o 'readonly' (prueba vencida, pago
- * vencido, suspendida o cancelada). En solo lectura el equipo puede consultar
+ * Qué puede hacer una tienda: 'full' o 'readonly' (por activar, prueba
+ * vencida, pago vencido, suspendida o cancelada). En solo lectura el equipo puede consultar
  * y exportar su información, pero no registrar ni enviar nada.
  */
 export function storeAccess(s: AccessFields, now = Date.now()): StoreAccess {

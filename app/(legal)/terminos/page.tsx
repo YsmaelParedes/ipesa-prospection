@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LEGAL } from '@/lib/legal'
-import { PAYMENT_GRACE_DAYS, TRIAL_DAYS } from '@/lib/stores'
+import { PAYMENT_GRACE_DAYS } from '@/lib/stores'
 import { ContactEmail, LegalDoc, type LegalSection } from '../LegalDoc'
 
 export const metadata: Metadata = {
   title: `Términos de uso · ${LEGAL.product}`,
-  description: `Condiciones para usar ${LEGAL.product}: cuentas, prueba gratis, planes, información de la tienda y uso de WhatsApp.`,
+  description: `Condiciones para usar ${LEGAL.product}: cuentas, alta por invitación, planes y pagos, información de la tienda y uso de WhatsApp.`,
 }
 
 const sections: LegalSection[] = [
@@ -50,18 +50,19 @@ const sections: LegalSection[] = [
   },
   {
     id: 'planes',
-    title: 'Prueba gratis, planes y pagos',
+    title: 'Alta, planes y pagos',
     body: (
       <>
         <p>
-          Cada tienda nueva tiene una prueba gratis de {TRIAL_DAYS} días con todas las funciones, sin necesidad de
-          registrar un medio de pago. Al terminar, la información se conserva en modo de solo consulta hasta que
-          actives un plan.
+          Las tiendas se dan de alta por invitación: acordamos contigo el plan y su precio mensual, damos de alta tu
+          tienda y te enviamos un enlace para crear tu acceso. Mientras no se registre el primer pago, puedes entrar y
+          configurar tu tienda, pero no registrar información.
         </p>
         <p>
-          El precio, la periodicidad y la forma de pago del plan se acuerdan al activarlo. Si un pago vence, la tienda
-          conserva el acceso completo durante {PAYMENT_GRACE_DAYS} días de gracia; después pasa a solo consulta hasta
-          regularizarlo. Podemos suspender una tienda por falta de pago o por incumplir estos términos.
+          El plan se paga por mes, por transferencia, en efectivo u otra forma que acordemos; cada pago registrado
+          extiende la vigencia de tu tienda. Si un pago vence, la tienda conserva el acceso completo durante{' '}
+          {PAYMENT_GRACE_DAYS} días de gracia; después pasa a solo consulta hasta regularizarlo. Podemos suspender una
+          tienda por falta de pago o por incumplir estos términos.
         </p>
       </>
     ),
@@ -181,7 +182,7 @@ export default function TermsPage() {
       kicker="Términos de uso"
       title="Reglas claras para trabajar juntos"
       summary={[
-        `Pruebas ${TRIAL_DAYS} días gratis; después activas tu plan para seguir registrando.`,
+        'Tu tienda se da de alta por invitación y el precio se acuerda contigo; si un pago vence, queda en solo consulta.',
         'La información de tu tienda es tuya y ninguna otra tienda puede verla.',
         'Usa WhatsApp solo con clientes que aceptaron recibir tus mensajes.',
         'Puedes cancelar cuando quieras y llevarte tu información.',

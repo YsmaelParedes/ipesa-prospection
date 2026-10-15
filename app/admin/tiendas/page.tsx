@@ -6,24 +6,26 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { fmtMoney, isMoney } from '@/lib/payments'
 import { PLANS, STATUS_LABELS, planOf, storeAccess, type StoreStatus } from '@/lib/stores'
 import {
-  ago, countStores, expiresSoon, fmtDate as fmt, isLapsed, isOff, subscriptionLine, usePayments, usePlatformStores, type PlatformStore,
+  ago, countStores, expiresSoon, fmtDate as fmt, isLapsed, isOff, isPending, subscriptionLine, usePayments, usePlatformStores, type PlatformStore,
 } from '../data'
 import { PaymentForm, PaymentRow } from '../payments-ui'
+import { NewStoreModal, OwnerInviteBlock } from '../stores-ui'
 import s from '../admin.module.css'
 
 /**
- * Panel del dueño › Tiendas: todas las tiendas, su prueba o suscripción y,
- * en la ficha de cada una, registrar pagos, precio acordado y acciones
- * manuales (extender prueba, plan, sin vencimiento, suspender).
+ * Panel del dueño › Tiendas: alta de tiendas por invitación ("Nueva tienda"),
+ * todas las tiendas con su suscripción y, en la ficha de cada una, invitación
+ * del dueño, registrar pagos, precio acordado y acciones manuales (plan, sin
+ * vencimiento, suspender).
  * /admin/tiendas?tienda=<id> abre directo la ficha (enlaces del Resumen y Pagos).
  */
 
 type StoreRow = PlatformStore
-type Filter = 'all' | 'trial' | 'active' | 'expiring' | 'readonly' | 'off'
+type Filter = 'all' | 'pending' | 'trial' | 'active' | 'expiring' | 'readonly' | 'off'
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
 
-const STATUS_CLS: Record<StoreStatus, string> = { trial: s.bTrial, active: s.bActive, suspended: s.bDanger, cancelled: s.bMuted }
+const STATUS_CLS: Record<StoreStatus, string> = { pending: s.bPending, trial: s.bTrial, active: s.bActive, suspended: s.bDanger, cancelled: s.bMuted }
 
 export default function StoresPage() {
   return <Suspense><StoresList /></Suspense>
@@ -36,6 +38,7 @@ function StoresList() {
   const [query, setQuery]   = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [openId, setOpenId] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
 
   // Ficha pedida por la URL (?tienda=<id>)
   const wanted = params.get('tienda')
@@ -53,6 +56,7 @@ function StoresList() {
       const matches = !q || [st.name, st.slug, st.owner_email, st.owner_name, st.city, st.state].some(v => v?.toLowerCase().includes(q))
       if (!matches) return false
       switch (filter) {
+        case 'pending': return isPending(st)
         case 'trial': return st.status === 'trial' && storeAccess(st) === 'full'
         case 'active': return st.status === 'active' && storeAccess(st) === 'full'
         case 'expiring': return expiresSoon(st)
@@ -64,8 +68,10 @@ function StoresList() {
   }, [stores, query, filter])
 
   const open = stores?.find(st => st.id === openId) ?? null
+  // Ya no hay pruebas gratis: "En prueba" solo aparece si queda alguna tienda así
   const FILTERS: { id: Filter; label: string }[] = [
-    { id: 'all', label: 'Todas' }, { id: 'trial', label: 'En prueba' }, { id: 'active', label: 'Activas' },
+    { id: 'all', label: 'Todas' }, { id: 'pending', label: 'Por activar' }, { id: 'active', label: 'Activas' },
+    ...(counts.trial ? [{ id: 'trial' as Filter, label: 'En prueba' }] : []),
     { id: 'expiring', label: 'Por vencer' }, { id: 'readonly', label: 'Solo lectura' }, { id: 'off', label: 'Suspendidas' },
   ]
 
@@ -86,6 +92,10 @@ function StoresList() {
             </button>
           ))}
         </div>
+        <button className="btn btn-primary" onClick={() => setCreating(true)}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" width="15" height="15" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          Nueva tienda
+        </button>
       </div>
 
       {error && <div className={s.error}>{error}</div>}
@@ -102,7 +112,6 @@ function StoresList() {
           </div>
           {visible.length === 0 && <div className={s.empty}>No hay tiendas con ese filtro.</div>}
           {visible.map(st => {
-            const readonly = storeAccess(st) === 'readonly'
             return (
               <button key={st.id} className={s.tr} onClick={() => setOpenId(st.id)}>
                 <span className={s.cellStore}>
@@ -110,13 +119,18 @@ function StoresList() {
                   <small>{[st.city, st.state].filter(Boolean).join(', ') || st.slug}{!st.onboarding_completed_at && ' · configurando'}</small>
                 </span>
                 <span className={s.cellOwner}>
-                  <strong>{st.owner_name || '—'}</strong>
-                  <small>{st.owner_email || 'Sin dueño'}</small>
+                  {st.owner_email ? (
+                    <><strong>{st.owner_name || '—'}</strong><small>{st.owner_email}</small></>
+                  ) : st.owner_invite ? (
+                    <><strong>{st.owner_invite.status === 'expired' ? 'Invitación vencida' : 'Invitación enviada'}</strong><small>{st.owner_invite.email}</small></>
+                  ) : (
+                    <><strong>—</strong><small>Sin dueño</small></>
+                  )}
                 </span>
                 <span className={s.cellSub}>
                   <span className={s.badges}>
                     <em className={cx(s.badge, STATUS_CLS[st.status])}>{STATUS_LABELS[st.status]}</em>
-                    {readonly && st.status !== 'suspended' && st.status !== 'cancelled' && <em className={cx(s.badge, s.bDanger)}>Solo lectura</em>}
+                    {isLapsed(st) && <em className={cx(s.badge, s.bDanger)}>Solo lectura</em>}
                     {expiresSoon(st) && <em className={cx(s.badge, s.bWarn)}>Por vencer</em>}
                   </span>
                   <small>{subscriptionLine(st)}</small>
@@ -137,6 +151,10 @@ function StoresList() {
       )}
 
       {open && <StoreDrawer store={open} onClose={closeDrawer} onSaved={load} />}
+      {creating && (
+        <NewStoreModal onClose={() => setCreating(false)} onCreated={load}
+          onOpenStore={id => { setCreating(false); setOpenId(id) }} />
+      )}
     </div>
   )
 }
@@ -144,7 +162,6 @@ function StoresList() {
 /* ── Detalle y acciones de una tienda ───────────────────────────────────── */
 function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: () => void; onSaved: () => Promise<void> }) {
   const { payments, error: payError, reload: reloadPayments } = usePayments({ store: store.id })
-  const [days, setDays]     = useState(7)
   const [plan, setPlan]     = useState(store.plan)
   const [price, setPrice]   = useState(store.monthly_price === null ? '' : String(store.monthly_price))
   const [notes, setNotes]   = useState(store.platform_notes ?? '')
@@ -183,7 +200,6 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
     }
   }
 
-  const readonly = storeAccess(store) === 'readonly'
   const priceValue = price.trim() === '' ? null : Number(price)
   const priceValid = priceValue === null || isMoney(priceValue)
   // Solo el pago vigente más reciente se puede anular (la base lo vuelve a validar)
@@ -203,15 +219,17 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
         </div>
         <div className="modal-body">
           <div className={s.facts}>
-            <div><small>Estado</small><strong><em className={cx(s.badge, STATUS_CLS[store.status])}>{STATUS_LABELS[store.status]}</em>{readonly && <em className={cx(s.badge, s.bDanger)}>Solo lectura</em>}</strong></div>
+            <div><small>Estado</small><strong><em className={cx(s.badge, STATUS_CLS[store.status])}>{STATUS_LABELS[store.status]}</em>{isLapsed(store) && <em className={cx(s.badge, s.bDanger)}>Solo lectura</em>}</strong></div>
             <div><small>Suscripción</small><strong>{subscriptionLine(store)}</strong></div>
-            <div><small>Dueño</small><strong>{store.owner_name || '—'}</strong><span>{store.owner_email}</span></div>
+            <div><small>Dueño</small><strong>{store.owner_name || (store.owner_email ? '—' : 'Aún no entra')}</strong><span>{store.owner_email ?? store.owner_invite?.email}</span></div>
             <div><small>Precio acordado</small><strong>{store.monthly_price === null ? 'Sin acordar' : `${fmtMoney(store.monthly_price)} al mes`}</strong></div>
             <div><small>Uso</small><strong>{store.members} usuarios · {store.contacts} contactos · {store.leads} leads</strong></div>
             <div><small>Alta</small><strong>{fmt(store.created_at)}</strong><span>{store.onboarding_completed_at ? 'Configuración terminada' : 'Aún configurando'}</span></div>
           </div>
 
           {msg && <div className={cx(s.msg, msg.ok ? s.msgOk : s.msgErr)} role="status" style={{ marginTop: 0, marginBottom: 14 }}>{msg.text}</div>}
+
+          {!store.owner_email && <OwnerInviteBlock key={store.id} store={store} onDone={onSaved} />}
 
           <PaymentForm key={`${store.id}-${store.monthly_price}`} store={store} onDone={done} />
 
@@ -235,17 +253,6 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
                 <button className="btn btn-ghost" disabled={!!busy || !priceValid || priceValue === store.monthly_price}
                   onClick={() => patch('price', { monthlyPrice: priceValue }, priceValue === null ? 'Precio acordado borrado' : `Precio acordado: ${fmtMoney(priceValue)} al mes`)}>
                   {busy === 'price' ? 'Guardando…' : 'Guardar'}
-                </button>
-              </div>
-            </div>
-            <div className={s.action}>
-              <div><strong>Extender prueba</strong><small>Vuelve a modo prueba con acceso completo.</small></div>
-              <div className={s.actionCtl}>
-                <select className={s.select} value={days} onChange={e => setDays(Number(e.target.value))} aria-label="Días">
-                  {[3, 7, 14, 30].map(d => <option key={d} value={d}>{d} días</option>)}
-                </select>
-                <button className="btn btn-ghost" disabled={!!busy} onClick={() => patch('trial', { action: 'extend_trial', days }, `Prueba extendida ${days} días`)}>
-                  {busy === 'trial' ? 'Guardando…' : 'Extender'}
                 </button>
               </div>
             </div>

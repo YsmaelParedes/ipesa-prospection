@@ -7,7 +7,7 @@ import { ACTIVE_STORE_COOKIE, STORE_COLUMNS, getServerSupabase, invalidateMember
 import { randomToken } from './crypto'
 import {
   DEFAULT_CANALES, DEFAULT_MODULES, DEFAULT_PLAN, DEFAULT_SEGMENTS,
-  normalizeModules, planOf, slugify, storeAccess, trialDaysLeft, trialEndsAt,
+  normalizeModules, planOf, slugify, storeAccess, trialDaysLeft,
 } from './stores'
 import type { Schema } from './validation'
 
@@ -74,10 +74,12 @@ export async function setActiveStoreCookie(storeId: string) {
 }
 
 /**
- * Crea una tienda en periodo de prueba con su dueño, catálogos iniciales y
- * el registro de WhatsApp (sin conectar). El slug se desambigua si ya existe.
+ * Crea una tienda "Por activar" (sin prueba gratis: queda en solo lectura
+ * hasta su primer pago o cortesía) con sus catálogos iniciales y el registro
+ * de WhatsApp (sin conectar), SIN dueño todavía. El slug se desambigua si ya
+ * existe. Precio mensual acordado opcional (lo captura el panel del dueño).
  */
-export async function provisionStore(user: User, profile: Record<string, unknown>): Promise<StoreRow> {
+export async function createStore(createdBy: string, profile: Record<string, unknown>, monthlyPrice: number | null = null): Promise<StoreRow> {
   const db = getServerSupabase()
   const base = slugify(String(profile.name)) || 'tienda'
   let store: StoreRow | null = null
@@ -86,23 +88,16 @@ export async function provisionStore(user: User, profile: Record<string, unknown
     const { data, error } = await db.from('stores').insert({
       ...profile,
       slug: slug.length >= 3 ? slug : `${slug}-tienda`,
-      status: 'trial',
+      status: 'pending',
       plan: DEFAULT_PLAN,
-      trial_ends_at: trialEndsAt(),
       modules: DEFAULT_MODULES,
-      created_by: user.id,
+      monthly_price: monthlyPrice,
+      created_by: createdBy,
     }).select(STORE_COLUMNS).single()
     if (!error) store = data as unknown as StoreRow
     else if (error.code !== '23505') throw error
   }
   if (!store) throw new Error('No se pudo generar un identificador único para la tienda')
-
-  const rollback = async (cause: unknown) => {
-    await db.from('stores').delete().eq('id', store!.id)
-    throw cause
-  }
-  const { error: memberError } = await db.from('store_members').insert({ store_id: store.id, user_id: user.id, role: 'owner' })
-  if (memberError) await rollback(memberError)
 
   const catalogs = [
     ...DEFAULT_SEGMENTS.map(label => ({ store_id: store!.id, type: 'segment', label })),
@@ -119,6 +114,18 @@ export async function provisionStore(user: User, profile: Record<string, unknown
   })
   if (waError) console.error('[provisionStore] whatsapp', waError.message)
 
+  return store
+}
+
+/** Sucursal nueva de un dueño que ya tiene tienda: él queda como dueño. Nace "Por activar". */
+export async function provisionStore(user: User, profile: Record<string, unknown>): Promise<StoreRow> {
+  const store = await createStore(user.id, profile)
+  const db = getServerSupabase()
+  const { error: memberError } = await db.from('store_members').insert({ store_id: store.id, user_id: user.id, role: 'owner' })
+  if (memberError) {
+    await db.from('stores').delete().eq('id', store.id)
+    throw memberError
+  }
   invalidateMemberships(user.id)
   return store
 }

@@ -5,11 +5,17 @@ import { clientIp, rateLimit } from '@/lib/rateLimit'
 import { jsonError, readJson } from '@/lib/validation'
 
 /**
- * POST /api/auth/register — crea la cuenta del dueño de una tienda nueva.
- * La tienda se da de alta después, en el asistente (/bienvenida), ya con la
- * cuenta confirmada: así no quedan tiendas "fantasma" de correos falsos.
+ * POST /api/auth/register — CERRADO: las cuentas se crean solo por invitación
+ * (el panel del dueño da de alta la tienda e invita a su dueño; el dueño
+ * invita a su equipo). Se conserva el código por si se vuelve a abrir el
+ * registro (REGISTRATION_OPEN).
  */
+const REGISTRATION_OPEN = false
+
 export async function POST(req: NextRequest) {
+  if (!REGISTRATION_OPEN) {
+    return jsonError('Por ahora las cuentas se crean solo por invitación.', 403)
+  }
   if (!rateLimit(`register:${clientIp(req)}`, 5, 60 * 60 * 1000)) {
     return jsonError('Demasiados registros desde esta conexión. Intenta más tarde.', 429)
   }

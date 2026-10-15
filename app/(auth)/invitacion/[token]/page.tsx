@@ -9,7 +9,7 @@ import { signOut } from '@/lib/signOut'
 
 type Info = {
   store: { name: string; logoUrl: string | null }
-  role: 'admin' | 'employee'
+  role: 'owner' | 'admin' | 'employee'
   email: string
   status: 'valid' | 'expired' | 'used' | 'revoked'
   accountExists: boolean

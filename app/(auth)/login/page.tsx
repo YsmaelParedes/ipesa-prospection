@@ -68,7 +68,7 @@ function LoginForm() {
         </div>
         <SubmitButton loading={loading}>Entrar</SubmitButton>
       </form>
-      <p className="auth-alt">¿Tu tienda aún no usa {APP_NAME}? <Link href="/registro" className="auth-link strong">Pruébalo gratis</Link></p>
+      <p className="auth-alt">¿Tu tienda aún no usa {APP_NAME}? <Link href="/registro" className="auth-link strong">Pide una invitación</Link></p>
     </>
   )
 }

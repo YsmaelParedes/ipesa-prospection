@@ -527,8 +527,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <Icon.lock style={{ width: 16, height: 16, flexShrink: 0 }} />
             <span>
               <strong>Modo solo lectura.</strong>{' '}
-              {store.status === 'trial' ? 'Terminó tu prueba gratis' : store.status === 'active' ? 'Venció el pago de tu suscripción' : `Tu tienda está ${STATUS_LABELS[store.status].toLowerCase()}`}:
-              puedes consultar y exportar tu información, pero no registrar cambios.
+              {store.status === 'pending' ? 'Tu tienda aún no está activa' : store.status === 'trial' ? 'Terminó tu prueba gratis' : store.status === 'active' ? 'Venció el pago de tu suscripción' : `Tu tienda está ${STATUS_LABELS[store.status].toLowerCase()}`}:
+              {store.status === 'pending' ? ' se activa al registrarse su primer pago. Mientras, puedes revisarla y configurarla.' : ' puedes consultar y exportar tu información, pero no registrar cambios.'}
             </span>
             <Link href="/configuracion?tab=plan" className="plan-banner-cta">Activar</Link>
           </div>
