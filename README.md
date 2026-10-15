@@ -86,7 +86,7 @@ En Supabase → **Authentication**:
 | Invita a su equipo con un enlace personal (vence en 7 días) | Configuración → Equipo → `/invitacion/<token>` |
 | Conecta su número de WhatsApp Business | Configuración → WhatsApp |
 | Prueba 14 días; después queda en **solo consulta** hasta activar | Configuración → Plan |
-| Tú activas, extiendes o suspendes cada tienda | Panel del dueño, `/admin` (solo administradores de la plataforma) |
+| Tú registras sus pagos, activas o suspendes cada tienda | Panel del dueño, `/admin` (solo administradores de la plataforma) |
 
 - **Roles por tienda**: *dueño* (todo, incluido nombrar administradores y desconectar
   WhatsApp), *administrador* (configura la tienda y ve el trabajo de todos) y *vendedor*.
@@ -99,8 +99,17 @@ En Supabase → **Authentication**:
   "Tu tienda" abre las tiendas donde son miembros, y en la tienda el selector de sucursal
   tiene "Panel del dueño" para volver. Para cualquier otra cuenta `/admin` responde 404.
   `/plataforma` redirige a `/admin/tiendas`.
-- **Planes**: `lib/stores.ts` (`PLANS`, `TRIAL_DAYS`, `PAYMENT_GRACE_DAYS`). El cobro es
-  manual por ahora; el panel del dueño registra la vigencia del pago.
+- **Pagos (cobro manual)**: no hay precio general ni pagos en línea. Cada tienda tiene su
+  **precio mensual acordado** (`stores.monthly_price`) y los pagos se registran a mano en su
+  ficha (`/admin/tiendas`): monto, meses, método, fecha, factura y nota. La función
+  `record_store_payment` guarda el pago y extiende `paid_until` en la misma transacción (se
+  suma a lo pagado si sigue vigente). Un pago no se borra: se **anula**
+  (`void_store_payment`, solo el más reciente vigente de cada tienda) y la vigencia regresa a
+  como estaba. `/admin/pagos` muestra lo cobrado por mes; el Resumen, cobrado, ingreso
+  mensual, por cobrar y adeudo. Todo queda en la bitácora `platform_events`. "Sin
+  vencimiento" (tienda propia o acuerdo especial) es una acción aparte.
+- **Planes**: `lib/stores.ts` (`PLANS`, `TRIAL_DAYS`, `PAYMENT_GRACE_DAYS`): un solo plan
+  (límite de usuarios), sin precio; el precio se acuerda con cada tienda.
 
 ## WhatsApp
 
@@ -191,7 +200,7 @@ Los teléfonos se guardan con **10 dígitos** (formato nacional); a WhatsApp se 
 app/
   (app)/          páginas con sesión: dashboard, contactos, leads, recordatorios,
                   whatsapp, fórmulas y configuración
-  admin/          panel del dueño de la plataforma (Resumen y Tiendas)
+  admin/          panel del dueño de la plataforma (Resumen, Tiendas y Pagos)
   (auth)/         login, registro, recuperar, restablecer e invitación
   (legal)/        términos y aviso de privacidad
   inicio/         página de presentación (lo que ve quien entra sin sesión)

@@ -11,7 +11,8 @@ Cada etapa dice qué se implementa, qué cambia y si necesita migración de base
 | Modelo de ingreso | Renta mensual. No se vende el código. |
 | Quién entra | Solo por invitación desde `/admin`. `/registro` se cierra o queda como lista de espera. |
 | Prueba gratis | **Sin prueba gratis.** La tienda nace sin acceso hasta registrar su primer pago. Los pilotos reciben un pago de cortesía. |
-| Planes | Un solo plan con un precio mensual. Dos planes cuando WhatsApp y bot sean complementos. |
+| Planes y precio | **Sin precio general** (decisión del 15 de octubre). Cada tienda tiene su **precio mensual acordado**, que se negocia en la visita y se captura al invitarla. Un solo plan ("Profesional", límite de usuarios) sin pantalla de Planes. |
+| Venta | En frío, visitando tiendas. Sin pagos en línea: todo pago se registra a mano en el panel. |
 | Cuenta del dueño | La misma cuenta para `/admin` y para la tienda IPESA. Al iniciar sesión va directo a `/admin`; "Abrir mi tienda" pasa a IPESA. Más adelante, verificación en dos pasos. |
 | Cobro | Manual con historial de pagos. Automático (Mercado Pago o Stripe) al llegar a unas 10 tiendas de paga. |
 | Datos | Todas las tiendas, incluida IPESA, siguen en la misma base de datos. Se revisa el aislamiento. |
@@ -87,13 +88,17 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 - **Probado:** compilación, 4 pruebas nuevas (inicio de sesión del dueño y de otras cuentas, cálculos del Resumen) y las 16 anteriores; en el navegador, Resumen, ficha desde el Resumen, ida y vuelta panel ↔ tienda, celular y redirecciones sin sesión.
 - **Migración:** no. Sin entrada en Novedades: el cambio solo lo ve el dueño de la plataforma y las Novedades las leen todas las tiendas.
 
-### Etapa 4. Pagos, planes e ingresos
-- **Qué se implementa:** registro de pagos (cliente, monto, método, fecha, periodo cubierto, si pidió factura y su número). Cada pago renueva `paid_until`. Precio por plan. Resumen de ingresos del mes, por vencer y adeudos. Bitácora de quién activó o suspendió qué.
-- **Qué cambia:** tabla nueva `store_payments`, columna de precio en los planes, pantalla de pagos y resumen.
-- **Migración:** sí. **Solo con visto bueno explícito.**
+### Etapa 4. Pagos e ingresos ✅ (15 de octubre de 2026, en la rama `feature/mvp-saas`)
+- **Qué se implementa:** en la ficha de la tienda, "Registrar pago" (monto, meses, método, fecha, factura y número, nota) que extiende la vigencia en la misma operación y muestra hasta cuándo queda pagada; "Precio acordado" por tienda. Pantalla **Pagos** por mes (cobrado, número de pagos, con factura) con **Anular** (no se borra; la vigencia regresa a como estaba). En el Resumen: cobrado este mes, ingreso mensual acordado, por cobrar en 7 días y con adeudo. Bitácora de pagos, anulaciones, activar, suspender, plan y notas.
+- **Qué cambia:** "Activar o renovar" se reemplaza por "Registrar pago"; "Sin vencimiento" queda como acción aparte (tienda propia).
+- **Mockup:** mostrado el 15 de octubre (ficha con "Registrar pago" y pantalla Pagos).
+- **Migración:** `20261015120000_store_payments.sql`: tablas `store_payments` y `platform_events`, columna `stores.monthly_price`, funciones `record_store_payment` y `void_store_payment`. No modifica datos existentes. **Solo con visto bueno explícito.**
+- **Métodos de pago:** transferencia, efectivo, tarjeta, depósito, cortesía y otro.
+- **Migración aplicada** en producción el 15 de octubre, con visto bueno, después de un simulacro deshecho (pago desde prueba, pago que se suma, anular en orden, restaurar vigencia, anular dos veces, método inválido, permisos de anon/authenticated). Datos existentes intactos.
+- **Probado:** 9 pruebas nuevas (reglas de meses y montos, rutas de registrar y anular, ficha con precio y bitácora, cifras del Resumen) y las 20 anteriores; en el navegador, Resumen, ficha (validación sin enviar nada), Pagos y celular. No se registró ningún pago real: el primero lo hará el dueño.
 
 ### Etapa 5. Altas por invitación y sin prueba gratis
-- **Qué se implementa:** crear la tienda desde `/admin` y mandar al dueño un correo de invitación para que ponga su propia contraseña. La tienda queda sin acceso hasta registrar el primer pago (o un pago de cortesía).
+- **Qué se implementa:** crear la tienda desde `/admin` con su **precio mensual acordado** y mandar al dueño un correo de invitación para que ponga su propia contraseña. La tienda queda sin acceso hasta registrar el primer pago (o un pago de cortesía).
 - **Qué cambia:** `/registro` se cierra o pasa a lista de espera; se quita "14 días de prueba" de la bienvenida y los textos. El código de prueba queda sin uso, no se borra.
 - **Migración:** por confirmar al diseñarla.
 

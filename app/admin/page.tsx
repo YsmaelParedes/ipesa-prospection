@@ -2,12 +2,17 @@
 
 import Link from 'next/link'
 import { useMemo } from 'react'
-import { DAY, ago, countStores, expiresSoon, fmtDate, isLapsed, isOff, subscriptionLine, usePlatformStores, type PlatformStore } from './data'
+import { fmtMoney } from '@/lib/payments'
+import {
+  DAY, ago, countStores, currentMonth, expiresSoon, fmtDate, isLapsed, isOff, moneySummary, subscriptionLine,
+  usePayments, usePlatformStores, type PlatformStore,
+} from './data'
 import s from './admin.module.css'
 
 /**
- * Panel del dueño › Resumen: cuántas tiendas hay y cuáles necesitan algo
- * (pago vencido, por vencer, sin uso). Cada fila abre su ficha en Tiendas.
+ * Panel del dueño › Resumen: dinero del mes (cobrado, ingreso mensual
+ * acordado, por cobrar, adeudo), cuántas tiendas hay y cuáles necesitan
+ * algo (pago vencido, por vencer, sin uso). Cada fila abre su ficha en Tiendas.
  */
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
@@ -22,6 +27,7 @@ function StoreLink({ st, children }: { st: PlatformStore; children: React.ReactN
 
 export default function AdminHome() {
   const { stores, error } = usePlatformStores()
+  const { payments, error: payError } = usePayments({ month: currentMonth() })
 
   const view = useMemo(() => {
     const list = stores ?? []
@@ -38,13 +44,24 @@ export default function AdminHome() {
   }, [stores])
 
   const { counts } = view
+  const money = useMemo(() => (stores && payments ? moneySummary(stores, payments) : null), [stores, payments])
+  const perMonth = (st: PlatformStore) => (st.monthly_price === null ? '' : ` · ${fmtMoney(st.monthly_price)}/mes`)
 
   return (
     <div className={s.page}>
       <div className="section-head"><h2>Resumen</h2></div>
 
-      {error && <div className={s.error}>{error}</div>}
+      {(error || payError) && <div className={s.error}>{error || payError}</div>}
       {!stores && !error && <div className={s.center}><span className={s.spinner} /></div>}
+
+      {money && (
+        <div className={cx(s.kpis, s.kpis4)}>
+          <div className={cx(s.kpi, s.kGreen)}><small>Cobrado este mes</small><strong>{fmtMoney(money.collected)}</strong><span>{money.paymentsCount} {money.paymentsCount === 1 ? 'pago' : 'pagos'} · <Link href="/admin/pagos" className={s.panelLink}>ver</Link></span></div>
+          <div className={s.kpi}><small>Ingreso mensual</small><strong>{fmtMoney(money.monthly)}</strong><span>{money.unpriced ? `${money.unpriced} activa${money.unpriced === 1 ? '' : 's'} sin precio acordado` : 'precio acordado de las activas'}</span></div>
+          <div className={cx(s.kpi, s.kAmber)}><small>Por cobrar (7 días)</small><strong>{fmtMoney(money.dueAmount)}</strong><span>{money.dueCount} {money.dueCount === 1 ? 'tienda' : 'tiendas'} por vencer</span></div>
+          <div className={cx(s.kpi, s.kRed)}><small>Con adeudo</small><strong>{fmtMoney(money.debtAmount)}</strong><span>{money.debtCount} {money.debtCount === 1 ? 'tienda' : 'tiendas'} en solo lectura</span></div>
+        </div>
+      )}
 
       {stores && (
         <>
@@ -68,7 +85,7 @@ export default function AdminHome() {
                   <StoreLink key={st.id} st={st}>
                     <span className={s.itemMain}>
                       <strong>{st.name}</strong>
-                      <small>{subscriptionLine(st)}</small>
+                      <small>{subscriptionLine(st)}{perMonth(st)}</small>
                     </span>
                     {isLapsed(st)
                       ? <em className={cx(s.badge, s.bDanger)}>Solo lectura</em>

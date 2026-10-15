@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { storeAccess, trialDaysLeft, type StoreStatus } from '@/lib/stores'
+import type { StorePayment } from '@/lib/payments'
 
 /**
  * Datos del panel del dueño (/admin): todas las tiendas con su dueño, uso y
@@ -13,6 +14,8 @@ export type PlatformStore = {
   onboarding_completed_at: string | null; platform_notes: string | null
   owner_email: string | null; owner_name: string | null
   members: number; contacts: number; leads: number; whatsapp_connected: boolean; last_activity_at: string | null
+  /** Precio mensual acordado con la tienda (null = sin acordar) */
+  monthly_price: number | null
 }
 
 export const DAY = 86_400_000
@@ -62,6 +65,60 @@ export function countStores(list: PlatformStore[], now = Date.now()) {
     readonly: list.filter(st => isLapsed(st, now)).length,
     off: list.filter(isOff).length,
   }
+}
+
+/**
+ * Cifras de dinero del Resumen, con el precio acordado de cada tienda:
+ *  · cobrado: pagos (no anulados) del mes que se pasa en `payments`;
+ *  · ingreso mensual: tiendas activas con acceso completo;
+ *  · por cobrar: activas cuyo pago vence en < 7 días;
+ *  · adeudo: activas o en prueba ya en solo lectura.
+ * `unpriced` cuenta las activas con vencimiento pero sin precio acordado
+ * (el ingreso mensual se queda corto por ellas).
+ */
+export function moneySummary(stores: PlatformStore[], payments: StorePayment[], now = Date.now()) {
+  const price = (st: PlatformStore) => st.monthly_price ?? 0
+  const sum = (list: PlatformStore[]) => list.reduce((t, st) => t + price(st), 0)
+  const live = payments.filter(p => !p.voided_at)
+  const activeFull = stores.filter(st => st.status === 'active' && storeAccess(st, now) === 'full')
+  const due = activeFull.filter(st => expiresSoon(st, now))
+  const debt = stores.filter(st => isLapsed(st, now))
+  return {
+    collected: live.reduce((t, p) => t + p.amount, 0),
+    paymentsCount: live.length,
+    monthly: sum(activeFull),
+    unpriced: activeFull.filter(st => st.monthly_price === null && st.paid_until !== null).length,
+    dueAmount: sum(due), dueCount: due.length,
+    debtAmount: sum(debt), debtCount: debt.length,
+  }
+}
+
+/** Mes actual como YYYY-MM (hora local). */
+export function currentMonth(now = new Date()) {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** Pagos de un mes (`{ month: 'YYYY-MM' }`) o de una tienda (`{ store: id }`). */
+export function usePayments(filter: { month: string } | { store: string } | null) {
+  const [payments, setPayments] = useState<StorePayment[] | null>(null)
+  const [error, setError]       = useState('')
+  const qs = !filter ? null : 'month' in filter ? `month=${filter.month}` : `store=${filter.store}`
+
+  const reload = useCallback(async () => {
+    if (!qs) return
+    try {
+      const r = await fetch(`/api/platform/payments?${qs}`, { cache: 'no-store' })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(d.error || 'No se pudieron cargar los pagos')
+      setPayments(d.payments)
+      setError('')
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }, [qs])
+  useEffect(() => { setPayments(null); reload() }, [reload])
+
+  return { payments, error, reload }
 }
 
 /** Lista de tiendas; `reload` la vuelve a pedir (después de guardar un cambio). */

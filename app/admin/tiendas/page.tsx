@@ -1,17 +1,21 @@
 'use client'
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { fmtMoney, isMoney } from '@/lib/payments'
 import { PLANS, STATUS_LABELS, planOf, storeAccess, type StoreStatus } from '@/lib/stores'
 import {
-  ago, countStores, expiresSoon, fmtDate as fmt, isLapsed, isOff, subscriptionLine, usePlatformStores, type PlatformStore,
+  ago, countStores, expiresSoon, fmtDate as fmt, isLapsed, isOff, subscriptionLine, usePayments, usePlatformStores, type PlatformStore,
 } from '../data'
+import { PaymentForm, PaymentRow } from '../payments-ui'
 import s from '../admin.module.css'
 
 /**
- * Panel del dueño › Tiendas: todas las tiendas, su prueba o suscripción y
- * acciones manuales (activar, extender prueba, suspender). /admin/tiendas?tienda=<id>
- * abre directo la ficha de esa tienda (enlaces desde el Resumen).
+ * Panel del dueño › Tiendas: todas las tiendas, su prueba o suscripción y,
+ * en la ficha de cada una, registrar pagos, precio acordado y acciones
+ * manuales (extender prueba, plan, sin vencimiento, suspender).
+ * /admin/tiendas?tienda=<id> abre directo la ficha (enlaces del Resumen y Pagos).
  */
 
 type StoreRow = PlatformStore
@@ -139,13 +143,14 @@ function StoresList() {
 
 /* ── Detalle y acciones de una tienda ───────────────────────────────────── */
 function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: () => void; onSaved: () => Promise<void> }) {
-  const [months, setMonths] = useState(1)
+  const { payments, error: payError, reload: reloadPayments } = usePayments({ store: store.id })
   const [days, setDays]     = useState(7)
   const [plan, setPlan]     = useState(store.plan)
+  const [price, setPrice]   = useState(store.monthly_price === null ? '' : String(store.monthly_price))
   const [notes, setNotes]   = useState(store.platform_notes ?? '')
   const [busy, setBusy]     = useState('')
   const [msg, setMsg]       = useState<{ ok: boolean; text: string } | null>(null)
-  const [confirm, setConfirm] = useState<'suspend' | 'cancel' | null>(null)
+  const [confirm, setConfirm] = useState<'suspend' | 'cancel' | 'unlimited' | null>(null)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -153,7 +158,13 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const patch = async (key: string, body: Record<string, unknown>, done: string) => {
+  // Después de un pago o una anulación: recargar la tienda (vigencia) y sus pagos
+  const done = async (text: string) => {
+    await Promise.all([onSaved(), reloadPayments()])
+    setMsg({ ok: true, text })
+  }
+
+  const patch = async (key: string, body: Record<string, unknown>, text: string) => {
     setBusy(key)
     setMsg(null)
     try {
@@ -163,7 +174,7 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d.error || 'No se pudo guardar')
       await onSaved()
-      setMsg({ ok: true, text: done })
+      setMsg({ ok: true, text })
       setConfirm(null)
     } catch (e) {
       setMsg({ ok: false, text: (e as Error).message })
@@ -173,6 +184,10 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
   }
 
   const readonly = storeAccess(store) === 'readonly'
+  const priceValue = price.trim() === '' ? null : Number(price)
+  const priceValid = priceValue === null || isMoney(priceValue)
+  // Solo el pago vigente más reciente se puede anular (la base lo vuelve a validar)
+  const latestLive = payments?.find(p => !p.voided_at)?.id
 
   return (
     <div className="modal" onClick={onClose}>
@@ -191,21 +206,35 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
             <div><small>Estado</small><strong><em className={cx(s.badge, STATUS_CLS[store.status])}>{STATUS_LABELS[store.status]}</em>{readonly && <em className={cx(s.badge, s.bDanger)}>Solo lectura</em>}</strong></div>
             <div><small>Suscripción</small><strong>{subscriptionLine(store)}</strong></div>
             <div><small>Dueño</small><strong>{store.owner_name || '—'}</strong><span>{store.owner_email}</span></div>
-            <div><small>Teléfono</small><strong>{store.phone || '—'}</strong></div>
+            <div><small>Precio acordado</small><strong>{store.monthly_price === null ? 'Sin acordar' : `${fmtMoney(store.monthly_price)} al mes`}</strong></div>
             <div><small>Uso</small><strong>{store.members} usuarios · {store.contacts} contactos · {store.leads} leads</strong></div>
             <div><small>Alta</small><strong>{fmt(store.created_at)}</strong><span>{store.onboarding_completed_at ? 'Configuración terminada' : 'Aún configurando'}</span></div>
           </div>
 
+          {msg && <div className={cx(s.msg, msg.ok ? s.msgOk : s.msgErr)} role="status" style={{ marginTop: 0, marginBottom: 14 }}>{msg.text}</div>}
+
+          <PaymentForm key={`${store.id}-${store.monthly_price}`} store={store} onDone={done} />
+
+          <div className={s.block}>
+            <div className={s.blockHead}>
+              <strong>Pagos de esta tienda</strong>
+              <Link href="/admin/pagos" className={s.panelLink}>Ver todos los pagos</Link>
+            </div>
+            {payError && <div className={s.error}>{payError}</div>}
+            {!payments && !payError && <div className={s.center} style={{ padding: 16 }}><span className={s.spinner} /></div>}
+            {payments?.length === 0 && <div className={s.panelEmpty} style={{ padding: '4px 0 2px' }}>Todavía no hay pagos registrados.</div>}
+            {payments?.map(p => <PaymentRow key={p.id} payment={p} canVoid={p.id === latestLive} onVoided={done} />)}
+          </div>
+
           <div className={s.actions}>
             <div className={s.action}>
-              <div><strong>Activar o renovar</strong><small>Suma a lo ya pagado si sigue vigente.</small></div>
+              <div><strong>Precio acordado</strong><small>Mensual, en MXN. Prellena el monto al registrar un pago.</small></div>
               <div className={s.actionCtl}>
-                <select className={s.select} value={months} onChange={e => setMonths(Number(e.target.value))} aria-label="Meses">
-                  {[1, 2, 3, 6, 12].map(m => <option key={m} value={m}>{m} {m === 1 ? 'mes' : 'meses'}</option>)}
-                  <option value={0}>Sin vencimiento</option>
-                </select>
-                <button className="btn btn-primary" disabled={!!busy} onClick={() => patch('activate', { action: 'activate', months }, months ? `Activada por ${months} ${months === 1 ? 'mes' : 'meses'}` : 'Activada sin vencimiento')}>
-                  {busy === 'activate' ? 'Guardando…' : 'Activar'}
+                <input className={s.input} inputMode="decimal" value={price} placeholder="Sin acordar" aria-label="Precio mensual acordado"
+                  onChange={e => setPrice(e.target.value.replace(/[^\d.]/g, ''))} />
+                <button className="btn btn-ghost" disabled={!!busy || !priceValid || priceValue === store.monthly_price}
+                  onClick={() => patch('price', { monthlyPrice: priceValue }, priceValue === null ? 'Precio acordado borrado' : `Precio acordado: ${fmtMoney(priceValue)} al mes`)}>
+                  {busy === 'price' ? 'Guardando…' : 'Guardar'}
                 </button>
               </div>
             </div>
@@ -229,10 +258,25 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
                 <button className="btn btn-ghost" disabled={!!busy || plan === store.plan} onClick={() => patch('plan', { plan }, 'Plan actualizado')}>Guardar</button>
               </div>
             </div>
+            <div className={s.action}>
+              <div><strong>Sin vencimiento</strong><small>Para tu propia tienda o un acuerdo especial: activa sin fecha de pago.</small></div>
+              <div className={s.actionCtl}>
+                {confirm === 'unlimited' ? (
+                  <>
+                    <button className="btn btn-ghost" onClick={() => setConfirm(null)}>No</button>
+                    <button className="btn btn-dark" disabled={!!busy} onClick={() => patch('unlimited', { action: 'activate' }, 'Activada sin vencimiento')}>
+                      {busy === 'unlimited' ? 'Guardando…' : 'Sí, sin vencimiento'}
+                    </button>
+                  </>
+                ) : (
+                  <button className="btn btn-ghost" disabled={!!busy || (store.status === 'active' && !store.paid_until)} onClick={() => setConfirm('unlimited')}>Activar</button>
+                )}
+              </div>
+            </div>
             <div className={cx(s.action, s.actionDanger)}>
               <div><strong>Suspender o cancelar</strong><small>La tienda queda en solo lectura; no se borra nada.</small></div>
               <div className={s.actionCtl}>
-                {confirm ? (
+                {confirm === 'suspend' || confirm === 'cancel' ? (
                   <>
                     <button className="btn btn-ghost" onClick={() => setConfirm(null)}>No</button>
                     <button className="btn btn-dark" disabled={!!busy} onClick={() => patch(confirm, { action: confirm }, confirm === 'suspend' ? 'Tienda suspendida' : 'Suscripción cancelada')}>
@@ -250,10 +294,9 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
           </div>
 
           <div className="field" style={{ marginTop: 16, marginBottom: 0 }}>
-            <label htmlFor="pl-notes">Notas internas (pagos, acuerdos, contacto)</label>
-            <textarea id="pl-notes" rows={3} maxLength={2000} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Ej. Pagó 3 meses por transferencia el 2 de oct." />
+            <label htmlFor="pl-notes">Notas internas (acuerdos, contacto)</label>
+            <textarea id="pl-notes" rows={3} maxLength={2000} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Ej. Lo atiende Juan; prefiere que le llamen en la tarde." />
           </div>
-          {msg && <div className={cx(s.msg, msg.ok ? s.msgOk : s.msgErr)} role="status">{msg.text}</div>}
         </div>
         <div className="modal-foot">
           <button className="btn btn-ghost" onClick={onClose}>Cerrar</button>

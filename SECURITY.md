@@ -33,7 +33,9 @@ Cloud API y Web Push, y el aislamiento entre tiendas.
 - **Solo consulta** cuando vence la prueba o el pago: las escrituras responden `402`.
 - **Panel del dueño** (`/admin`, `/api/platform/*`): solo usuarios en `platform_admins`. El
   layout de `/admin` lo comprueba en el servidor y responde 404 a cualquier otra cuenta; cada
-  ruta de `/api/platform` lo vuelve a validar.
+  ruta de `/api/platform` lo vuelve a validar. Los pagos (`store_payments`) y la bitácora
+  (`platform_events`) solo los toca el servidor: `anon` y `authenticated` no tienen permisos
+  sobre las tablas ni sobre `record_store_payment` / `void_store_payment`.
 - **Contraseñas**: cambiarla desde la app exige la actual; desde un enlace de recuperación se
   permite durante 15 minutos con una cookie firmada (HMAC) ligada a ese usuario. Al cambiarla
   se cierran las demás sesiones.
