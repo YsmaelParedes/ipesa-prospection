@@ -93,7 +93,6 @@ const TITLE_MAP: Record<string, { t: string; s: string }> = {
   '/recordatorios':  { t: 'Agenda',        s: 'Recordatorios y seguimientos'       },
   '/formulas':       { t: 'Fórmulas',      s: 'Igualación de colores'              },
   '/configuracion':  { t: 'Configuración', s: 'Tu tienda, equipo e integraciones'  },
-  '/plataforma':     { t: 'Plataforma',    s: 'Tiendas, pruebas y suscripciones'   },
 }
 
 // Páginas tipo "app" que ocupan exactamente el alto de la pantalla
@@ -334,9 +333,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const navItems     = NAV_ITEMS.filter(withModule)
   const toolItems    = TOOL_ITEMS.filter(withModule)
   const readonly     = store?.access === 'readonly'
-  // El dueño puede abrir otra sucursal; el menú aparece si hay a dónde cambiar o algo que agregar
+  // El dueño puede abrir otra sucursal; el menú aparece si hay a dónde cambiar o algo que agregar.
+  // El dueño de la plataforma vuelve desde aquí a su panel (/admin).
   const canAddStore  = !!session?.isOwner
-  const hasStoreMenu = !!session && (session.stores.length > 1 || canAddStore)
+  const hasStoreMenu = !!session && (session.stores.length > 1 || canAddStore || session.platformAdmin)
   const trialLeft    = store?.status === 'trial' && !readonly ? store.trialDaysLeft : null
   const showFab      = !readonly && pathname in FAB_ROUTES
 
@@ -385,6 +385,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </button>
               {storeMenuOpen && session && (
                 <div className="store-menu" role="menu">
+                  {session.platformAdmin && (
+                    <Link href="/admin" role="menuitem" className="store-menu-item store-menu-admin" onClick={() => setStoreMenuOpen(false)}>
+                      <span><Icon.shield />Panel del dueño</span>
+                    </Link>
+                  )}
                   {session.stores.map(s => (
                     <button key={s.id} role="menuitem" className={`store-menu-item ${s.id === store.id ? 'current' : ''}`} onClick={() => switchStore(s.id)}>
                       <span>{s.name}</span>
@@ -418,12 +423,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <Icon.settings className="nav-icon" />
             <span>Configuración</span>
           </Link>
-          {session?.platformAdmin && (
-            <Link href="/plataforma" className={`nav-item nav-item-platform ${isActive('/plataforma') ? 'active' : ''}`}>
-              <Icon.shield className="nav-icon" />
-              <span>Plataforma</span>
-            </Link>
-          )}
         </nav>
 
         <div className="user-card">

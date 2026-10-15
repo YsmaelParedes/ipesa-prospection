@@ -31,7 +31,9 @@ Cloud API y Web Push, y el aislamiento entre tiendas.
   App Secret de esa tienda; los eventos se guardan solo si el `phone_number_id` coincide con
   el número de esa tienda.
 - **Solo consulta** cuando vence la prueba o el pago: las escrituras responden `402`.
-- **Plataforma** (`/plataforma`, `/api/platform/*`): solo usuarios en `platform_admins`.
+- **Panel del dueño** (`/admin`, `/api/platform/*`): solo usuarios en `platform_admins`. El
+  layout de `/admin` lo comprueba en el servidor y responde 404 a cualquier otra cuenta; cada
+  ruta de `/api/platform` lo vuelve a validar.
 - **Contraseñas**: cambiarla desde la app exige la actual; desde un enlace de recuperación se
   permite durante 15 minutos con una cookie firmada (HMAC) ligada a ese usuario. Al cambiarla
   se cierran las demás sesiones.

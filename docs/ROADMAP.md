@@ -80,11 +80,12 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 - **Después de aplicarla:** revisar los avisos de seguridad de Supabase y abrir Contactos, Leads, Agenda y WhatsApp en la tienda IPESA (solo lectura).
 - **Migración:** sí. **Solo con visto bueno explícito.**
 
-### Etapa 3. Panel `/admin` separado
-- **Qué se implementa:** una sección propia del dueño, con su menú y diseño, sin las secciones del CRM de una tienda. Bloques: Resumen, Tiendas, Pagos, Planes.
-- **Qué cambia:** el inicio de sesión del dueño va a `/admin`; "Plataforma" sale del menú de la tienda; se agrega "Abrir mi tienda". Se reutiliza lo que ya existe en `/plataforma` (lista, activar, plan, suspender, notas).
-- **Antes:** mockup para aprobar.
-- **Migración:** no.
+### Etapa 3. Panel `/admin` separado ✅ (15 de octubre de 2026, en la rama `feature/mvp-saas`)
+- **Qué se implementó:** el panel del dueño (`app/admin/`, `components/AdminShell.tsx`) con su propio menú: **Resumen** (totales, "Requieren atención", "Altas recientes", "Sin uso en 14 días"; cada fila abre la ficha de la tienda) y **Tiendas** (lo que era `/plataforma`, con su ficha y acciones). Abajo, "Tu tienda" abre la tienda IPESA.
+- **Qué cambió:** al iniciar sesión el dueño entra a `/admin` (la ruta de login devuelve su inicio); "Plataforma" salió del menú de la tienda; en la tienda, el selector de sucursal tiene "Panel del dueño" para volver; `/plataforma` redirige a `/admin/tiendas`; `/admin` responde 404 a cualquier cuenta que no sea administradora de la plataforma (validado en el servidor).
+- **Mockup aprobado** el 15 de octubre. Pagos, Planes con precio y las cifras de dinero llegan en la etapa 4; Instalaciones, en la etapa 6.
+- **Probado:** compilación, 4 pruebas nuevas (inicio de sesión del dueño y de otras cuentas, cálculos del Resumen) y las 16 anteriores; en el navegador, Resumen, ficha desde el Resumen, ida y vuelta panel ↔ tienda, celular y redirecciones sin sesión.
+- **Migración:** no. Sin entrada en Novedades: el cambio solo lo ve el dueño de la plataforma y las Novedades las leen todas las tiendas.
 
 ### Etapa 4. Pagos, planes e ingresos
 - **Qué se implementa:** registro de pagos (cliente, monto, método, fecha, periodo cubierto, si pidió factura y su número). Cada pago renueva `paid_until`. Precio por plan. Resumen de ingresos del mes, por vencer y adeudos. Bitácora de quién activó o suspendió qué.

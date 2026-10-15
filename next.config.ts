@@ -57,6 +57,11 @@ const nextConfig: NextConfig = {
     root: path.resolve(__dirname),
   },
 
+  // El panel de "Plataforma" pasó a ser el panel del dueño (/admin)
+  async redirects() {
+    return [{ source: '/plataforma', destination: '/admin/tiendas', permanent: false }]
+  },
+
   // Única fuente de verdad de las cabeceras (antes se duplicaban en
   // vercel.json y dos CSP distintas se aplicaban a la vez).
   async headers() {

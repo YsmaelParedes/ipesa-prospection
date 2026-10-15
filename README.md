@@ -86,7 +86,7 @@ En Supabase → **Authentication**:
 | Invita a su equipo con un enlace personal (vence en 7 días) | Configuración → Equipo → `/invitacion/<token>` |
 | Conecta su número de WhatsApp Business | Configuración → WhatsApp |
 | Prueba 14 días; después queda en **solo consulta** hasta activar | Configuración → Plan |
-| Tú activas, extiendes o suspendes cada tienda | `/plataforma` (solo administradores de la plataforma) |
+| Tú activas, extiendes o suspendes cada tienda | Panel del dueño, `/admin` (solo administradores de la plataforma) |
 
 - **Roles por tienda**: *dueño* (todo, incluido nombrar administradores y desconectar
   WhatsApp), *administrador* (configura la tienda y ve el trabajo de todos) y *vendedor*.
@@ -94,9 +94,13 @@ En Supabase → **Authentication**:
 - **Solo consulta**: con la prueba o el pago vencidos (3 días de gracia) el equipo puede ver
   y exportar, pero no registrar ni enviar; la API responde `402 STORE_READONLY`.
 - **Administradores de la plataforma**: filas en la tabla `platform_admins`
-  (`insert into public.platform_admins (user_id) values ('<uuid>');`).
+  (`insert into public.platform_admins (user_id) values ('<uuid>');`). Al iniciar sesión
+  entran al **panel del dueño** (`/admin`: Resumen y Tiendas), separado del CRM; desde ahí
+  "Tu tienda" abre las tiendas donde son miembros, y en la tienda el selector de sucursal
+  tiene "Panel del dueño" para volver. Para cualquier otra cuenta `/admin` responde 404.
+  `/plataforma` redirige a `/admin/tiendas`.
 - **Planes**: `lib/stores.ts` (`PLANS`, `TRIAL_DAYS`, `PAYMENT_GRACE_DAYS`). El cobro es
-  manual por ahora; el panel de la plataforma registra la vigencia del pago.
+  manual por ahora; el panel del dueño registra la vigencia del pago.
 
 ## WhatsApp
 
@@ -186,14 +190,15 @@ Los teléfonos se guardan con **10 dígitos** (formato nacional); a WhatsApp se 
 ```
 app/
   (app)/          páginas con sesión: dashboard, contactos, leads, recordatorios,
-                  whatsapp, fórmulas, configuración y plataforma
+                  whatsapp, fórmulas y configuración
+  admin/          panel del dueño de la plataforma (Resumen y Tiendas)
   (auth)/         login, registro, recuperar, restablecer e invitación
   (legal)/        términos y aviso de privacidad
   inicio/         página de presentación (lo que ve quien entra sin sesión)
   bienvenida/     asistente de alta de una tienda
   auth/confirm/   destino de los enlaces de los correos
   api/            rutas del servidor (datos, tiendas, equipo, WhatsApp, push, cron, webhooks, auth)
-components/       AppShell (navegación), AuthUI, Brand (logo), CrmUI y componentes de WhatsApp
+components/       AppShell (navegación), AdminShell (panel del dueño), AuthUI, Brand (logo), CrmUI y componentes de WhatsApp
 lib/              tiendas y planes, Supabase, cifrado, invitaciones, validación, WhatsApp y push
 proxy.ts          páginas públicas/privadas, CSRF y límite de peticiones por IP en /api
 public/           service worker, manifest, íconos de la PWA, la gota de la marca y logos de tiendas

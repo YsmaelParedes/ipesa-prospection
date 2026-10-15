@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { isPlatformAdmin } from '@/lib/supabase-server'
 
 /**
  * In-memory sliding-window rate limiter for the login endpoint.
@@ -74,7 +75,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Contraseña inválida' }, { status: 400 })
   }
 
-  const res = NextResponse.json({ ok: true })
+  // Las cookies de sesión se juntan aquí y se ponen en la respuesta final
+  const sessionCookies: { name: string; value: string; options: Parameters<NextResponse['cookies']['set']>[2] }[] = []
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -82,12 +84,12 @@ export async function POST(req: NextRequest) {
     {
       cookies: {
         getAll: () => req.cookies.getAll(),
-        setAll: (list) => list.forEach(({ name, value, options }) => res.cookies.set(name, value, options)),
+        setAll: (list) => { sessionCookies.push(...list) },
       },
     }
   )
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
     // Supabase solo lo reporta si la contraseña es correcta: no revela cuentas a terceros
@@ -103,5 +105,9 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // Pantalla de inicio: el dueño de la plataforma entra a su panel; los demás, a su tienda
+  const home = data.user && await isPlatformAdmin(data.user.id).catch(() => false) ? '/admin' : '/'
+  const res = NextResponse.json({ ok: true, home })
+  sessionCookies.forEach(({ name, value, options }) => res.cookies.set(name, value, options))
   return res
 }

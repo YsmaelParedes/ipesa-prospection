@@ -1,87 +1,47 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSession } from '@/lib/profile'
-import { PLANS, STATUS_LABELS, planOf, storeAccess, trialDaysLeft, type StoreStatus } from '@/lib/stores'
-import s from './plataforma.module.css'
+import { Suspense, useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { PLANS, STATUS_LABELS, planOf, storeAccess, type StoreStatus } from '@/lib/stores'
+import {
+  ago, countStores, expiresSoon, fmtDate as fmt, isLapsed, isOff, subscriptionLine, usePlatformStores, type PlatformStore,
+} from '../data'
+import s from '../admin.module.css'
 
 /**
- * Panel del dueño de la plataforma: todas las tiendas, su prueba o
- * suscripción y acciones manuales (activar, extender prueba, suspender).
- * La API vuelve a validar que quien llama sea administrador de plataforma.
+ * Panel del dueño › Tiendas: todas las tiendas, su prueba o suscripción y
+ * acciones manuales (activar, extender prueba, suspender). /admin/tiendas?tienda=<id>
+ * abre directo la ficha de esa tienda (enlaces desde el Resumen).
  */
 
-type StoreRow = {
-  id: string; slug: string; name: string; city: string | null; state: string | null; phone: string | null
-  status: StoreStatus; plan: string; trial_ends_at: string | null; paid_until: string | null; created_at: string
-  onboarding_completed_at: string | null; platform_notes: string | null
-  owner_email: string | null; owner_name: string | null
-  members: number; contacts: number; leads: number; whatsapp_connected: boolean; last_activity_at: string | null
-}
+type StoreRow = PlatformStore
 type Filter = 'all' | 'trial' | 'active' | 'expiring' | 'readonly' | 'off'
 
-const DAY = 86_400_000
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
-const fmt = (iso: string | null, o: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }) =>
-  iso ? new Date(iso).toLocaleDateString('es-MX', o) : '—'
-const ago = (iso: string | null) => {
-  if (!iso) return 'Sin actividad'
-  const d = Math.floor((Date.now() - new Date(iso).getTime()) / DAY)
-  return d <= 0 ? 'Hoy' : d === 1 ? 'Ayer' : d < 30 ? `Hace ${d} días` : fmt(iso)
-}
-
-function expiresSoon(st: StoreRow, now = Date.now()) {
-  if (storeAccess(st, now) !== 'full') return false
-  if (st.status === 'trial') return (trialDaysLeft(st, now) ?? 99) <= 3
-  return !!st.paid_until && new Date(st.paid_until).getTime() - now < 7 * DAY
-}
-
-function subscriptionLine(st: StoreRow) {
-  const readonly = storeAccess(st) === 'readonly'
-  if (st.status === 'trial') {
-    const left = trialDaysLeft(st) ?? 0
-    return readonly ? `Prueba vencida el ${fmt(st.trial_ends_at)}` : `Prueba: ${left} ${left === 1 ? 'día' : 'días'} (hasta ${fmt(st.trial_ends_at, { day: 'numeric', month: 'short' })})`
-  }
-  if (st.status === 'active') {
-    if (!st.paid_until) return 'Activa sin vencimiento'
-    return readonly ? `Pago vencido el ${fmt(st.paid_until)}` : `Pagada hasta ${fmt(st.paid_until)}`
-  }
-  return st.status === 'suspended' ? 'Suspendida' : 'Cancelada'
-}
 
 const STATUS_CLS: Record<StoreStatus, string> = { trial: s.bTrial, active: s.bActive, suspended: s.bDanger, cancelled: s.bMuted }
 
-export default function PlatformPage() {
-  const session = useSession()
-  const [stores, setStores] = useState<StoreRow[] | null>(null)
-  const [error, setError]   = useState('')
+export default function StoresPage() {
+  return <Suspense><StoresList /></Suspense>
+}
+
+function StoresList() {
+  const router = useRouter()
+  const params = useSearchParams()
+  const { stores, error, reload: load } = usePlatformStores()
   const [query, setQuery]   = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [openId, setOpenId] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
-    try {
-      const r = await fetch('/api/platform/stores', { cache: 'no-store' })
-      const d = await r.json().catch(() => ({}))
-      if (!r.ok) throw new Error(d.error || 'No se pudieron cargar las tiendas')
-      setStores(d.stores)
-    } catch (e) {
-      setError((e as Error).message)
-    }
-  }, [])
-  useEffect(() => { if (session?.platformAdmin) load() }, [session, load])
+  // Ficha pedida por la URL (?tienda=<id>)
+  const wanted = params.get('tienda')
+  useEffect(() => { if (wanted) setOpenId(wanted) }, [wanted])
+  const closeDrawer = () => {
+    setOpenId(null)
+    if (wanted) router.replace('/admin/tiendas', { scroll: false })
+  }
 
-  const counts = useMemo(() => {
-    const list = stores ?? []
-    return {
-      all: list.length,
-      trial: list.filter(st => st.status === 'trial' && storeAccess(st) === 'full').length,
-      active: list.filter(st => st.status === 'active' && storeAccess(st) === 'full').length,
-      expiring: list.filter(st => expiresSoon(st)).length,
-      readonly: list.filter(st => (st.status === 'trial' || st.status === 'active') && storeAccess(st) === 'readonly').length,
-      off: list.filter(st => st.status === 'suspended' || st.status === 'cancelled').length,
-    }
-  }, [stores])
+  const counts = useMemo(() => countStores(stores ?? []), [stores])
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -92,15 +52,12 @@ export default function PlatformPage() {
         case 'trial': return st.status === 'trial' && storeAccess(st) === 'full'
         case 'active': return st.status === 'active' && storeAccess(st) === 'full'
         case 'expiring': return expiresSoon(st)
-        case 'readonly': return (st.status === 'trial' || st.status === 'active') && storeAccess(st) === 'readonly'
-        case 'off': return st.status === 'suspended' || st.status === 'cancelled'
+        case 'readonly': return isLapsed(st)
+        case 'off': return isOff(st)
         default: return true
       }
     })
   }, [stores, query, filter])
-
-  if (session === undefined) return <div className={s.center}><span className={s.spinner} /></div>
-  if (!session?.platformAdmin) return <div className={s.denied}>Esta sección es solo para la administración de la plataforma.</div>
 
   const open = stores?.find(st => st.id === openId) ?? null
   const FILTERS: { id: Filter; label: string }[] = [
@@ -110,13 +67,8 @@ export default function PlatformPage() {
 
   return (
     <div className={s.page}>
-      <div className={s.kpis}>
-        <div className={s.kpi}><small>Tiendas</small><strong>{counts.all}</strong><span>registradas</span></div>
-        <div className={cx(s.kpi, s.kCyan)}><small>En prueba</small><strong>{counts.trial}</strong><span>con acceso completo</span></div>
-        <div className={cx(s.kpi, s.kGreen)}><small>Activas</small><strong>{counts.active}</strong><span>pagando</span></div>
-        <div className={cx(s.kpi, s.kAmber)}><small>Por vencer</small><strong>{counts.expiring}</strong><span>prueba ≤ 3 días o pago ≤ 7</span></div>
-        <div className={cx(s.kpi, s.kRed)}><small>Solo lectura</small><strong>{counts.readonly}</strong><span>prueba o pago vencido</span></div>
-      </div>
+      {/* Los totales están en el Resumen; aquí cada filtro lleva su número */}
+      <div className="section-head"><h2>Tiendas</h2></div>
 
       <div className={s.toolbar}>
         <div className={s.search}>
@@ -126,7 +78,7 @@ export default function PlatformPage() {
         <div className={s.filters} role="tablist" aria-label="Filtrar tiendas">
           {FILTERS.map(f => (
             <button key={f.id} role="tab" aria-selected={filter === f.id} className={cx(s.filter, filter === f.id && s.filterOn)} onClick={() => setFilter(f.id)}>
-              {f.label}<span>{counts[f.id]}</span>
+              {f.label}{stores && <span>{counts[f.id]}</span>}
             </button>
           ))}
         </div>
@@ -180,7 +132,7 @@ export default function PlatformPage() {
         </div>
       )}
 
-      {open && <StoreDrawer store={open} onClose={() => setOpenId(null)} onSaved={load} />}
+      {open && <StoreDrawer store={open} onClose={closeDrawer} onSaved={load} />}
     </div>
   )
 }

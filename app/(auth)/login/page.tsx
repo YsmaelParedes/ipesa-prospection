@@ -13,7 +13,7 @@ export default function LoginPage() {
 
 function LoginForm() {
   const params = useSearchParams()
-  const next = safeNext(params.get('next'))
+  const nextParam = params.get('next')
   const linkError = params.get('error') === 'enlace'
 
   const [email, setEmail]       = useState('')
@@ -36,7 +36,8 @@ function LoginForm() {
       const data = await res.json().catch(() => ({}))
       if (data.code === 'EMAIL_NOT_CONFIRMED') { setUnconfirmed(email.trim().toLowerCase()); return }
       if (!res.ok) { setError(data.error || 'No pudimos iniciar sesión.'); return }
-      window.location.href = next
+      // Sin ?next=, cada quien a su inicio (el dueño de la plataforma, a /admin)
+      window.location.href = nextParam ? safeNext(nextParam) : safeNext(data.home)
     } catch {
       setError('Error de conexión. Intenta de nuevo.')
     } finally {
