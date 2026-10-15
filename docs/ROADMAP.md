@@ -57,14 +57,27 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 - El límite de peticiones por IP vive en memoria de cada instancia. Suficiente para el MVP.
 - Quedan 4 políticas RLS viejas sin efecto (no hay permisos públicos). Limpieza opcional.
 
-### Etapa 2. Cerrar la migración multi-tienda
+### Etapa 2. Cerrar la migración multi-tienda ✅ (aplicada el 15 de octubre de 2026)
+
+**Resultado:** aplicada en producción con visto bueno del dueño. Verificado después: 0 valores por defecto de `store_id`, 0 restricciones viejas, las 6 restricciones por tienda presentes, datos intactos (575 contactos, 14 leads, 375 mensajes, 43 recordatorios, 34 catálogos), las consultas usan los índices por tienda y los avisos de seguridad de Supabase no cambiaron.
+
 - **Qué es:** `supabase/migrations/20261003120100_multi_store_finalize.sql` es el "paso 2 de 2" de la conversión a multi-tienda. El paso 1 ya está en producción. Este paso 2 quita lo que solo servía para no romper el código anterior:
   - el valor por defecto de `store_id` (hoy, si una inserción olvida la tienda, cae en silencio en IPESA; después falla);
   - los únicos globales de teléfono y de catálogos (hoy dos tiendas no pueden tener el mismo cliente);
   - las llaves y vistas viejas (`whatsapp_conversations`).
 - **Qué cambia:** la base de datos. Hay que aplicarla antes de la primera tienda ajena, después de la etapa 1 y con un respaldo.
 - **Verificado en la etapa 1:** el código ya no usa `whatsapp_conversations` y todas las inserciones mandan `store_id`, así que quitar el valor por defecto no rompe nada. Como solo existe la tienda IPESA, es el momento de menor riesgo para aplicarla.
-- **Cómo se prueba:** en local, alta de contacto, importación, lead, recordatorio y respuesta rápida en la tienda IPESA, sin crear datos reales (simulado). Después de aplicarla, revisar los avisos de seguridad de Supabase.
+- **Revisado:** sin triggers en las tablas, sin funciones de Supabase, los crons no insertan en estas tablas, ninguna vista depende de `whatsapp_conversations` y cada índice que se borra ya tiene su reemplazo por tienda.
+- **Simulacro (15 de octubre, en una transacción deshecha, nada guardado):**
+
+  | Prueba | Antes | Después |
+  |---|---|---|
+  | Teléfono de IPESA en otra tienda | Bloqueado | Se permite |
+  | Mismo teléfono dos veces en la misma tienda | — | Bloqueado (correcto) |
+  | Catálogo igual al de IPESA en otra tienda | Bloqueado | Se permite |
+  | Contacto sin tienda | Cae en IPESA | Rechazado |
+
+- **Después de aplicarla:** revisar los avisos de seguridad de Supabase y abrir Contactos, Leads, Agenda y WhatsApp en la tienda IPESA (solo lectura).
 - **Migración:** sí. **Solo con visto bueno explícito.**
 
 ### Etapa 3. Panel `/admin` separado
@@ -88,6 +101,7 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 - **Qué cambia:** Configuración → Herramientas, `/bienvenida` (el paso de WhatsApp), los textos de venta y el README. Tu tienda IPESA conserva todo encendido. Nada se borra.
 - **Migración:** la lista de verificación necesita guardarse por tienda; se confirma al diseñarla (si se evita, se guarda dentro de las notas).
 - **Descartado:** botón "Escribir por WhatsApp" con `wa.me`.
+- **Detectado en la etapa 2:** hoy toda tienda nueva nace con WhatsApp y Campañas **encendidos**, tanto en el código (`DEFAULT_MODULES` en `lib/stores.ts`) como en el valor por defecto de la columna `stores.modules`. Hay que cambiar ambos a apagado, y `normalizeModules` para que un módulo sin valor cuente como apagado.
 
 ### Etapa 7. Ciclo de vida de la cuenta
 - **Qué se implementa:** exportación a CSV de contactos y leads; solo lectura 90 días tras cancelar o vencer; borrado definitivo al terminar, con aviso previo.

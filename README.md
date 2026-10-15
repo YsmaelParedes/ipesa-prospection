@@ -166,11 +166,10 @@ job `crm-avisos-recordatorios` en pg_cron, borra las filas viejas de `push_subsc
 
 - `supabase/schema.sql`: foto del esquema multi-tienda (tablas, llaves, vista, funciones,
   RLS y permisos).
-- `supabase/migrations/`: cambios con fecha. Las de `2026-10-02` y las de `2026-10-03`
-  ya están aplicadas en producción **excepto**
-  `20261003120100_multi_store_finalize.sql`, que se aplica justo después de desplegar esta
-  versión (quita los valores por omisión de `store_id` que mantenían compatible el código
-  anterior durante el cambio).
+- `supabase/migrations/`: cambios con fecha, todos aplicados en producción.
+  `20261003120100_multi_store_finalize.sql` se aplicó el 2026-10-15: quitó los valores por
+  omisión de `store_id` (una inserción sin tienda ahora falla) y los únicos globales de
+  teléfono y catálogos (cada tienda tiene los suyos).
 
 Modelo de acceso: **toda** lectura y escritura pasa por `app/api/*` con la llave
 `service_role`; `anon` y `authenticated` no tienen permisos sobre `public`. Cada ruta
