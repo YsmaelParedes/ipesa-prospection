@@ -116,6 +116,51 @@ export function sendWhatsAppText(creds: WhatsAppCreds, to: string, body: string)
   return postMessage(creds, { to, type: 'text', text: { body, preview_url: true } })
 }
 
+/**
+ * Sube un archivo a Meta para poder enviarlo (Meta lo guarda ~30 días; con el
+ * mismo id se descarga después para mostrarlo en el chat). Devuelve su id.
+ */
+export async function uploadWhatsAppMedia(
+  creds: WhatsAppCreds, file: Blob, filename: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: string; code?: number }> {
+  try {
+    const form = new FormData()
+    form.append('messaging_product', 'whatsapp')
+    form.append('type', file.type)
+    form.append('file', file, filename)
+    // Sin Content-Type: fetch arma el multipart con su boundary
+    const res = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/${creds.phoneNumberId}/media`, {
+      method: 'POST', headers: { Authorization: `Bearer ${creds.token}` }, body: form,
+      cache: 'no-store', signal: AbortSignal.timeout(30_000),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok || !data?.id) {
+      const code = data?.error?.code as number | undefined
+      const raw  = data?.error?.error_data?.details || data?.error?.message || `Error HTTP ${res.status}`
+      return { ok: false, code, error: friendlyWhatsAppError(code, raw) }
+    }
+    return { ok: true, id: String(data.id) }
+  } catch (error: any) {
+    return { ok: false, error: error?.name === 'TimeoutError' ? 'Meta tardó demasiado en recibir el archivo' : 'Error de red al subir el archivo a WhatsApp' }
+  }
+}
+
+/** Foto, video o documento ya subido a Meta — solo dentro de las 24 h, como el texto libre. */
+export function sendWhatsAppMedia(
+  creds: WhatsAppCreds, to: string, kind: 'image' | 'video' | 'document', mediaId: string,
+  opts: { caption?: string; filename?: string } = {},
+): Promise<WhatsAppSendResult> {
+  return postMessage(creds, {
+    to,
+    type: kind,
+    [kind]: {
+      id: mediaId,
+      ...(opts.caption ? { caption: opts.caption } : {}),
+      ...(kind === 'document' && opts.filename ? { filename: opts.filename } : {}),
+    },
+  })
+}
+
 /** Marca un mensaje entrante como leído (palomitas azules para el cliente). */
 export async function markWhatsAppRead(creds: WhatsAppCreds, waMessageId: string): Promise<void> {
   await graphFetch(creds, `${creds.phoneNumberId}/messages`, {

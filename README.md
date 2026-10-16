@@ -172,6 +172,12 @@ Qué hace la sección **WhatsApp** del CRM:
   repetir la misma plantilla a la misma persona en 7 días, y baja automática cuando el
   cliente escribe "BAJA", "STOP" o toca "Detener promociones".
 - Notificación push al equipo cuando llega un mensaje (se puede desactivar por dispositivo).
+- Enviar archivos desde el chat (clip 📎): fotos JPG/PNG, PDF, Word, Excel, PowerPoint, texto y
+  video MP4 de hasta 4 MB (el límite lo pone Vercel: 4.5 MB por petición), con comentario
+  opcional y dentro de la ventana de 24 h. Se suben a Meta (`POST /{phone_number_id}/media`),
+  se envían por su id y se guardan en el historial como los recibidos (`lib/whatsappFiles.ts`,
+  `/api/whatsapp/conversations/[phone]/media`). Se revisa el contenido real del archivo, no
+  solo la extensión.
 
 ## Avisos (notificaciones push)
 

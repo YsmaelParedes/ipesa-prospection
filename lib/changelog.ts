@@ -20,6 +20,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.6.0',
+    date: '15 de octubre, 2026',
+    title: 'Envía archivos por WhatsApp',
+    items: [
+      'En el chat de WhatsApp, el clip 📎 junto al cuadro de texto adjunta un archivo: fotos (JPG o PNG), PDF, Word, Excel, PowerPoint, texto o video MP4, de hasta 4 MB.',
+      'Puedes escribir un comentario que se envía junto con el archivo. Las fotos se ven en el chat y los documentos se abren con un clic.',
+      'Como los mensajes normales, solo se puede enviar mientras la conversación está abierta (24 h desde el último mensaje del cliente).',
+    ],
+  },
+  {
     version: '2.5.1',
     date: '15 de octubre, 2026',
     title: 'Novedades a tu ritmo',

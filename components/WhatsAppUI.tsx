@@ -16,6 +16,7 @@ export const WaIcon = {
   info:     (p: IP = {}) => svg(p.size ?? 18, <><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></>, p),
   search:   (p: IP = {}) => svg(p.size ?? 15, <><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></>, p),
   plus:     (p: IP = {}) => svg(p.size ?? 16, <path d="M12 5v14M5 12h14"/>, p),
+  clip:     (p: IP = {}) => svg(p.size ?? 18, <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>, p),
   bolt:     (p: IP = {}) => svg(p.size ?? 18, <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>, p),
   template: (p: IP = {}) => svg(p.size ?? 16, <><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/></>, p),
   phone:    (p: IP = {}) => svg(p.size ?? 15, <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>, p),
@@ -114,7 +115,7 @@ export function Linkified({ text }: { text: string }) {
   )
 }
 
-/* ── Multimedia entrante (servida por el proxy autenticado) ─────────────── */
+/* ── Multimedia del chat, recibida o enviada (servida por el proxy autenticado) ── */
 export function MediaContent({ mediaId, mediaType, mime }: { mediaId: string; mediaType: string; mime?: string | null }) {
   const src = `/api/whatsapp/media/${mediaId}`
   const [failed, setFailed] = useState(false)

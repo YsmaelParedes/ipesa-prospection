@@ -11,6 +11,7 @@ import {
 } from '@/components/WhatsAppUI'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
 import { isWindowOpen } from '@/lib/whatsappSafety'
+import { MAX_CAPTION, MAX_SEND_BYTES, SEND_ACCEPT, SEND_TYPES, fmtSize, sendMimeOf } from '@/lib/whatsappFiles'
 import { loadCatalogs, whatsappChannel, type Catalogs } from '@/lib/catalogs'
 import { isOpenLead } from '@/lib/crm'
 import { notifyDataChanged } from '@/lib/crmEvents'
@@ -460,6 +461,23 @@ function ChatView({
     }
   }
 
+  // Archivos: se suben y envían en el servidor; regresa el error o null si salió
+  const sendFile = async (file: File, caption: string): Promise<string | null> => {
+    nearBottom.current = true
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      if (caption) form.append('caption', caption)
+      const r = await fetch(`/api/whatsapp/conversations/${phone}/media`, { method: 'POST', body: form })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) return d.error || 'No se pudo enviar el archivo'
+      if (d.message) onMessageSent(d.message)
+      return null
+    } catch {
+      return 'Error de conexión al enviar el archivo'
+    }
+  }
+
   const discardFailed = (id: string) =>
     setThread(prev => prev ? { ...prev, messages: prev.messages.filter(m => m.id !== id) } : prev)
 
@@ -522,6 +540,7 @@ function ChatView({
         isAdmin={isAdmin}
         firstName={(contact?.name || profileName || '').split(/\s+/)[0] || ''}
         onSend={send}
+        onSendFile={sendFile}
         onOpenTemplate={onOpenTemplate}
         noWhatsApp={thread?.noWhatsApp ?? null}
       />
@@ -554,13 +573,38 @@ function Bubble({ m, onDiscard }: { m: Message; onDiscard: () => void }) {
 }
 
 /* ── Compositor ────────────────────────────────────────────────────────── */
-function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onOpenTemplate, noWhatsApp }: {
+function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onSendFile, onOpenTemplate, noWhatsApp }: {
   phone: string; windowOpen: boolean; isAdmin: boolean; firstName: string
-  onSend: (text: string) => Promise<boolean>; onOpenTemplate: (force?: boolean) => void
+  onSend: (text: string) => Promise<boolean>; onSendFile: (file: File, caption: string) => Promise<string | null>
+  onOpenTemplate: (force?: boolean) => void
   noWhatsApp: NoWhatsApp | null
 }) {
   const [draft, setDraft]       = useState('')
   const [sending, setSending]   = useState(false)
+  // Archivo adjunto (el texto del cuadro se manda como su comentario)
+  const [file, setFile]         = useState<File | null>(null)
+  const [fileUrl, setFileUrl]   = useState<string | null>(null)
+  const [fileError, setFileError] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => () => { if (fileUrl) URL.revokeObjectURL(fileUrl) }, [fileUrl])
+  useEffect(() => { clearFile() }, [phone])   // al cambiar de chat no se arrastra el adjunto
+
+  function clearFile() {
+    setFile(null); setFileUrl(null); setFileError('')
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  const pickFile = (f: File | undefined) => {
+    if (!f) return
+    setFileError('')
+    const mime = sendMimeOf(f.name, f.type)
+    if (!mime) { setFileError('Ese tipo de archivo no se puede enviar. Usa foto (JPG o PNG), video MP4, PDF, Word, Excel, PowerPoint o texto.'); return }
+    if (f.size > MAX_SEND_BYTES) { setFileError(`"${f.name}" pesa ${fmtSize(f.size)}; el máximo es ${fmtSize(MAX_SEND_BYTES)}.`); return }
+    setFile(f)
+    setFileUrl(SEND_TYPES[mime] === 'image' ? URL.createObjectURL(f) : null)
+    inputRef.current?.focus()
+  }
   const [quickOpen, setQuickOpen] = useState(false)
   const [quick, setQuick]       = useState<QuickReply[] | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -597,6 +641,19 @@ function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onOpenTemplat
 
   const submit = async () => {
     const text = draft.trim()
+    if (file) {
+      if (sending) return
+      if (text.length > MAX_CAPTION) { setFileError(`El comentario del archivo puede tener hasta ${MAX_CAPTION} caracteres.`); return }
+      setSending(true)
+      setFileError('')
+      const error = await onSendFile(file, text)
+      setSending(false)
+      if (error) { setFileError(error); return }
+      clearFile()
+      setDraft('')
+      inputRef.current?.focus()
+      return
+    }
     if (!text || sending) return
     setSending(true)
     setDraft('')
@@ -662,7 +719,27 @@ function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onOpenTemplat
 
   return (
     <div className="wa-composer">
+      {(file || fileError) && (
+        <div className="wa-attach">
+          {file && (
+            <div className="wa-attach-file">
+              {fileUrl ? <img src={fileUrl} alt="" className="wa-attach-thumb" /> : <span className="wa-attach-icon"><WaIcon.file size={18} /></span>}
+              <span className="wa-attach-name">
+                <strong>{file.name}</strong>
+                <small>{fmtSize(file.size)}{sending ? ' · enviando…' : ' · escribe un comentario si quieres'}</small>
+              </span>
+              <button className="wa-icon-btn" onClick={clearFile} disabled={sending} title="Quitar archivo" aria-label="Quitar archivo"><WaIcon.close size={16} /></button>
+            </div>
+          )}
+          {fileError && <div className="wa-attach-error" role="alert">{fileError}</div>}
+        </div>
+      )}
       <div className="wa-composer-row">
+        <input ref={fileRef} type="file" accept={SEND_ACCEPT} hidden onChange={e => pickFile(e.target.files?.[0])} />
+        <button className={`wa-icon-btn ${file ? 'on' : ''}`} onClick={() => fileRef.current?.click()} disabled={sending}
+          title="Adjuntar archivo (foto, PDF, Word, Excel…, hasta 4 MB)" aria-label="Adjuntar archivo">
+          <WaIcon.clip />
+        </button>
         <div className="wa-quick-wrap" ref={quickRef}>
           <button className={`wa-icon-btn ${quickOpen ? 'on' : ''}`} onClick={() => setQuickOpen(o => !o)} title="Respuestas rápidas" aria-label="Respuestas rápidas" aria-expanded={quickOpen}>
             <WaIcon.bolt />
@@ -694,10 +771,10 @@ function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onOpenTemplat
           maxLength={4096}
           onChange={e => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Escribe un mensaje"
-          aria-label="Mensaje"
+          placeholder={file ? 'Comentario (opcional)' : 'Escribe un mensaje'}
+          aria-label={file ? 'Comentario del archivo' : 'Mensaje'}
         />
-        <button className="wa-send" onClick={submit} disabled={!draft.trim() || sending} aria-label="Enviar">
+        <button className="wa-send" onClick={submit} disabled={(!draft.trim() && !file) || sending} aria-label={file ? 'Enviar archivo' : 'Enviar'}>
           {sending ? <span className="wa-spinner light" /> : <WaIcon.send />}
         </button>
       </div>
