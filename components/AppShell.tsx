@@ -137,14 +137,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
   }, [storeMenuOpen])
 
-  /* Notas de versión — se muestran solas la primera vez que hay una nueva */
-  useEffect(() => {
-    try {
-      const lastSeen = window.localStorage.getItem('crm:whatsnew:lastSeen')
-      if (lastSeen !== CURRENT_VERSION) setWhatsNewOpen(true)
-    } catch {}
-  }, [])
-
   /* Aviso de sistema en mejoras — banner descartable, ver lib/systemNotice.ts */
   useEffect(() => {
     if (!SYSTEM_NOTICE.active) return
@@ -161,10 +153,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     try { window.localStorage.setItem('crm:notice:dismissed', SYSTEM_NOTICE.id) } catch {}
   }
 
-  const closeWhatsNew = () => {
-    setWhatsNewOpen(false)
-    try { window.localStorage.setItem('crm:whatsnew:lastSeen', CURRENT_VERSION) } catch {}
-  }
+  // Las novedades no se abren solas: solo con el botón de la versión
+  const closeWhatsNew = () => setWhatsNewOpen(false)
 
   /* Cerrar el menú lateral y la campana al navegar */
   useEffect(() => { setDrawerOpen(false); setBellOpen(false) }, [pathname])
@@ -616,7 +606,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               {CHANGELOG.map((entry, i) => (
                 <div key={entry.version} style={{ marginBottom: i < CHANGELOG.length - 1 ? 22 : 0 }}>
                   <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 2 }}>{entry.title}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>{entry.date}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>Versión {entry.version} · {entry.date}</div>
                   <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {entry.items.map((it, j) => (
                       <li key={j} style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>{it}</li>

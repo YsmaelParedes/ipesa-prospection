@@ -1,10 +1,15 @@
 import { APP_NAME } from './brand'
 
 /**
- * Notas de versión — un usuario ve el modal automáticamente la primera vez
- * que entra después de que se agrega una entrada nueva (comparado contra
- * localStorage). CURRENT_VERSION debe coincidir con el id de la entrada
- * más reciente.
+ * Notas de versión ("Novedades"). No se abren solas: se consultan con el
+ * botón de la versión, abajo en el menú. La entrada más reciente va primero y
+ * su número es la versión de la app (CURRENT_VERSION).
+ *
+ * Versionado semántico MAYOR.MENOR.CORRECCIÓN:
+ *  · MAYOR: un cambio grande en cómo se usa la app (p. ej. 2.0.0, multi-tienda).
+ *  · MENOR: funciones nuevas o cambios visibles.
+ *  · CORRECCIÓN: arreglos y ajustes pequeños.
+ * Mantener package.json con el mismo número.
  */
 export type ChangelogEntry = {
   version: string
@@ -15,7 +20,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: '2026-10-15',
+    version: '2.5.1',
+    date: '15 de octubre, 2026',
+    title: 'Novedades a tu ritmo',
+    items: [
+      'Las novedades ya no se abren solas al entrar: las consultas cuando quieras con el botón de la versión, abajo en el menú.',
+      'La app ahora usa números de versión (por ejemplo 2.5.1) en lugar de fechas.',
+    ],
+  },
+  {
+    version: '2.5.0',
     date: '15 de octubre, 2026',
     title: 'Descarga tu información y Configuración más simple',
     items: [
@@ -25,7 +39,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2026-10-09',
+    version: '2.4.0',
     date: '9 de octubre, 2026',
     title: 'Campañas con más control',
     items: [
@@ -43,7 +57,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2026-10-06',
+    version: '2.3.0',
     date: '6 de octubre, 2026',
     title: 'Fórmulas de Vintek',
     items: [
@@ -52,7 +66,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2026-10-02.4',
+    version: '2.2.0',
     date: '2 de octubre, 2026',
     title: 'Avisos a tiempo',
     items: [
@@ -64,7 +78,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2026-10-02.3',
+    version: '2.1.0',
     date: '2 de octubre, 2026',
     title: 'Todo más ordenado y a la mano',
     items: [
@@ -81,7 +95,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2026-10-02.2',
+    version: '2.0.0',
     date: '2 de octubre, 2026',
     title: 'Nueva imagen y tu tienda en la nube',
     items: [
@@ -95,7 +109,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2026-10-02',
+    version: '1.3.0',
     date: '2 de octubre, 2026',
     title: 'WhatsApp dentro del CRM',
     items: [
@@ -111,7 +125,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2026-09-28',
+    version: '1.2.0',
     date: '28 de septiembre, 2026',
     title: 'Panel de campañas en WhatsApp',
     items: [
@@ -124,7 +138,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2026-09-26',
+    version: '1.1.0',
     date: '26 de septiembre, 2026',
     title: 'Nueva sección: Fórmulas',
     items: [
@@ -136,7 +150,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2026-08-06',
+    version: '1.0.0',
     date: '6 de agosto, 2026',
     title: 'Roles de administrador y accesos rápidos',
     items: [
