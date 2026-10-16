@@ -66,8 +66,8 @@ export function PlanTab({ store }: { store: ClientStore }) {
 
       {readonly && (
         <Note kind="warn">
-          En solo consulta tu equipo puede ver y exportar su información, pero no registrar clientes ni enviar mensajes.
-          Nada se borra: al activar tu plan todo vuelve a funcionar al instante.
+          En solo consulta tu equipo puede ver su información y descargarla completa (Configuración → Tienda), pero no
+          registrar clientes ni enviar mensajes. Nada se borra: al activar tu plan todo vuelve a funcionar al instante.
         </Note>
       )}
 

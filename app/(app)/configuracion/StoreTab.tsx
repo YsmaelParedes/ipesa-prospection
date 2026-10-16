@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { BrandLogo } from '@/components/Brand'
 import { APP_NAME } from '@/lib/brand'
+import { downloadStoreWorkbook } from '@/lib/exportData'
 import { invalidateSession, type ClientStore } from '@/lib/profile'
 import { MX_STATES } from '@/lib/mexico'
 import { Ico, Note, Panel, api, cx, send, useToast } from './ui'
@@ -154,10 +155,42 @@ export function StoreTab({ store }: { store: ClientStore }) {
         </div>
       </Panel>
 
+      <ExportPanel store={store} onDone={showToast} />
+
       {store.access === 'readonly' && (
-        <Note kind="warn">Tu tienda está en modo de solo consulta. Puedes ajustar estos datos, pero para registrar clientes y enviar mensajes necesitas activar tu plan.</Note>
+        <Note kind="warn">Tu tienda está en modo de solo consulta. Puedes ajustar estos datos y descargar tu información, pero para registrar clientes y enviar mensajes necesitas activar tu plan.</Note>
       )}
       {toast}
     </>
+  )
+}
+
+/** Descarga completa: un Excel con todo lo de la tienda (también en solo consulta). */
+function ExportPanel({ store, onDone }: { store: ClientStore; onDone: (msg: string) => void }) {
+  const [step, setStep]   = useState('')
+  const [error, setError] = useState('')
+
+  const run = async () => {
+    setError('')
+    setStep('Contactos')
+    try {
+      const n = await downloadStoreWorkbook(store.slug, setStep)
+      onDone(`Descargado: ${n.contacts.toLocaleString('es-MX')} contactos, ${n.leads.toLocaleString('es-MX')} leads y ${n.reminders.toLocaleString('es-MX')} pendientes de agenda`)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setStep('')
+    }
+  }
+
+  return (
+    <Panel icon={Ico.download} tone="tTeal" title="Descarga tu información"
+      subtitle="Un solo archivo de Excel con tus contactos, leads con su historial, agenda y catálogos. La información es de tu tienda: puedes llevártela cuando quieras.">
+      <button className="btn btn-ghost" onClick={run} disabled={!!step}>
+        <Ico.download style={{ width: 15, height: 15 }} />
+        {step ? `Preparando ${step.toLowerCase()}…` : 'Descargar mi información'}
+      </button>
+      {error && <div className={s.error}>{error}</div>}
+    </Panel>
   )
 }

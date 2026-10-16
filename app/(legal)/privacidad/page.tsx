@@ -164,9 +164,10 @@ const sections: LegalSection[] = [
     title: 'Cuánto tiempo conservamos los datos',
     body: (
       <p>
-        Conservamos tus datos mientras tu cuenta esté activa y, después, solo el tiempo necesario para cumplir
-        obligaciones legales o resolver aclaraciones. Al cancelar el servicio, la tienda puede solicitar una copia de
-        su información; después la eliminaremos o anonimizaremos de forma segura.
+        Conservamos los datos mientras exista la cuenta de la tienda, aunque haya cancelado o su pago esté vencido
+        (en ese caso queda en solo consulta y puede descargar su información completa). Eliminamos o anonimizamos de
+        forma segura la información de una tienda cuando su dueño lo solicita por escrito, salvo lo que debamos
+        conservar para cumplir obligaciones legales.
       </p>
     ),
   },

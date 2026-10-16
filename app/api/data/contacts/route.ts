@@ -2,21 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 import { CONTACT_COLUMNS, duplicateContactMessage, linkWhatsAppMessages, parseContact } from '@/lib/contacts'
+import { fetchPaged } from '@/lib/paged'
 
 const MAX_BULK = 500
 
-// GET /api/data/contacts — base de contactos de la tienda (compartida por su equipo)
+// GET /api/data/contacts — base de contactos de la tienda (compartida por su equipo), completa
 export async function GET() {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
 
-  const { data, error } = await getServerSupabase()
-    .from('contacts')
-    .select(CONTACT_COLUMNS)
-    .eq('store_id', ctx.storeId)
-    .order('created_at', { ascending: false })
-  if (error) return serverError('GET /api/data/contacts', error, 'Error al obtener contactos')
-  return NextResponse.json({ contacts: data })
+  try {
+    const contacts = await fetchPaged((from, to) => getServerSupabase()
+      .from('contacts')
+      .select(CONTACT_COLUMNS)
+      .eq('store_id', ctx.storeId)
+      .order('created_at', { ascending: false }).order('id', { ascending: false })
+      .range(from, to), 100000)
+    return NextResponse.json({ contacts })
+  } catch (error) {
+    return serverError('GET /api/data/contacts', error, 'Error al obtener contactos')
+  }
 }
 
 /**

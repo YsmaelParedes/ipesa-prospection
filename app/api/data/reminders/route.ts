@@ -4,6 +4,7 @@ import { isUUID, jsonError, parseFields, readJson, serverError } from '@/lib/val
 import { REMINDER_SCHEMA, reminderToApp, reminderToDB } from '@/lib/reminders'
 import { getAccessibleLead } from '@/lib/leads'
 import { naiveIso, zonedIso } from '@/lib/datetime'
+import { fetchPaged } from '@/lib/paged'
 
 const COLUMNS = 'id, user_id, lead_id, lead_name, nota, reminder_date, completado, completado_at, created_at, type, priority'
 
@@ -37,14 +38,18 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  const { data, error } = await getServerSupabase()
-    .from('reminders')
-    .select(COLUMNS)
-    .eq('user_id', ctx.uid)
-    .eq('store_id', ctx.storeId)
-    .order('reminder_date', { ascending: true })
-  if (error) return serverError('GET /api/data/reminders', error, 'Error al obtener recordatorios')
-  return NextResponse.json({ reminders: (data ?? []).map(({ user_id: _uid, ...r }) => ({ ...reminderToApp(r), mine: true })) })
+  try {
+    const data = await fetchPaged<any>((from, to) => getServerSupabase()
+      .from('reminders')
+      .select(COLUMNS)
+      .eq('user_id', ctx.uid)
+      .eq('store_id', ctx.storeId)
+      .order('reminder_date', { ascending: true }).order('id', { ascending: true })
+      .range(from, to), 100000)
+    return NextResponse.json({ reminders: data.map(({ user_id: _uid, ...r }) => ({ ...reminderToApp(r), mine: true })) })
+  } catch (error) {
+    return serverError('GET /api/data/reminders', error, 'Error al obtener recordatorios')
+  }
 }
 
 // POST /api/data/reminders — crea recordatorio vinculado al usuario autenticado

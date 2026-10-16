@@ -152,9 +152,11 @@ const sections: LegalSection[] = [
     title: 'Cancelación',
     body: (
       <p>
-        Puedes cancelar el servicio en cualquier momento escribiéndonos a <ContactEmail />. Antes de cancelar puedes
-        exportar tu información desde la aplicación o pedirnos una copia. También podemos terminar el servicio si se
-        incumplen estos términos, avisándote previamente cuando sea posible.
+        Puedes cancelar el servicio en cualquier momento escribiéndonos a <ContactEmail />. Al cancelar (o si un pago
+        vence) tu tienda queda en solo consulta y su información se conserva: puedes seguir entrando y descargarla
+        completa en Excel desde Configuración → Tienda, o pedirnos una copia. No borramos la información de una tienda
+        por nuestra cuenta; la eliminamos cuando su dueño nos lo pide por escrito. También podemos terminar el servicio
+        si se incumplen estos términos, avisándote previamente cuando sea posible.
       </p>
     ),
   },

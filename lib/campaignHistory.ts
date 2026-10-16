@@ -4,6 +4,7 @@
  * campañas. Un envío = los mensajes de una misma plantilla separados por
  * menos de BATCH_GAP_MS (la campaña manda uno cada ~3 s). Solo servidor.
  */
+import { fetchPaged } from './paged'
 import { getServerSupabase } from './supabase-server'
 import { FRIENDLY_ERRORS } from './whatsapp'
 import { contactsForPhones } from './whatsappInbox'
@@ -168,20 +169,8 @@ export function summarizeBatch(batch: Batch, replied: ReadonlySet<string>): Camp
 
 const chunks = <T,>(list: T[], size: number) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, i * size + size))
 
-/** Lee todas las páginas de una consulta (PostgREST devuelve como máximo ~1000 filas por petición). */
-export async function fetchPaged<T>(
-  query: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>,
-  maxRows = 20000, pageSize = 1000,
-): Promise<T[]> {
-  const out: T[] = []
-  for (let from = 0; from < maxRows; from += pageSize) {
-    const { data, error } = await query(from, from + pageSize - 1)
-    if (error) throw error
-    out.push(...((data ?? []) as T[]))
-    if (!data || data.length < pageSize) break
-  }
-  return out
-}
+// fetchPaged vive en lib/paged.ts; se reexporta aquí porque campaignPeople la importa de este archivo
+export { fetchPaged }
 
 async function inboundFor(storeId: string, phones: string[], fromIso: string, toIso?: string) {
   const supabase = getServerSupabase()

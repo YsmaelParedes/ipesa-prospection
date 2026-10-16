@@ -16,7 +16,7 @@ Cada etapa dice qué se implementa, qué cambia y si necesita migración de base
 | Cuenta del dueño | La misma cuenta para `/admin` y para la tienda IPESA. Al iniciar sesión va directo a `/admin`; "Abrir mi tienda" pasa a IPESA. Más adelante, verificación en dos pasos. |
 | Cobro | Manual con historial de pagos. Automático (Mercado Pago o Stripe) al llegar a unas 10 tiendas de paga. |
 | Datos | Todas las tiendas, incluida IPESA, siguen en la misma base de datos. Se revisa el aislamiento. |
-| Si un cliente cancela o no paga | 90 días en solo lectura con exportación a CSV; después se borran los datos. Debe constar en los términos de uso. |
+| Si un cliente cancela o no paga | Queda en **solo lectura indefinidamente** y puede descargar toda su información en Excel. **Sin borrado automático** (decisión del 15 de octubre): se borra solo si el dueño de la tienda lo pide por escrito. Consta en términos y privacidad. |
 | Respaldos y hosting | Vercel Pro (US$20) y Supabase Pro (US$25) con el primer cliente de paga. Antes, respaldo manual mensual. |
 | Fórmulas Vinipesa y Vintek | Se quedan, como módulo opcional por tienda, para poder quitarlas si hay un reclamo. Revisar derechos de marca antes de cobrar. |
 | Nombre y dominio | Se definen antes del piloto. El nombre queda centralizado en un solo archivo. |
@@ -113,10 +113,11 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 - **Migración:** no (se escribió una y se descartó sin aplicarse). El valor por omisión de `stores.modules` en la base sigue con WhatsApp encendido, pero no se usa: el código siempre manda los módulos al crear una tienda.
 - **Probado:** 3 pruebas nuevas (módulos de tiendas nuevas e IPESA, la tienda no cambia módulos, credenciales con módulo apagado) y las 37 anteriores; en el navegador, Configuración de IPESA sin Herramientas y con WhatsApp funcionando, y páginas públicas sin ofrecer WhatsApp.
 
-### Etapa 7. Ciclo de vida de la cuenta
-- **Qué se implementa:** exportación a CSV de contactos y leads; solo lectura 90 días tras cancelar o vencer; borrado definitivo al terminar, con aviso previo.
-- **Qué cambia:** pantalla de exportación, tarea programada de limpieza, términos y aviso de privacidad.
-- **Migración:** por confirmar.
+### Etapa 7. Ciclo de vida de la cuenta ✅ (15 de octubre de 2026, en la rama `feature/mvp-saas`)
+- **Cambio de plan:** sin borrado automático ni tarea de limpieza. Una tienda cancelada o vencida queda en solo lectura con su información.
+- **Qué se hizo:** "Descarga tu información" en Configuración → Tienda (dueño/admin, también en solo lectura): un Excel con Contactos, Leads, Historial de leads, Agenda y Catálogos, pedido por partes de 1000 filas (el máximo de Supabase por consulta) a `/api/data/export` (cada respuesta queda muy por debajo del límite de 4.5 MB de Vercel; los ids de usuario se cambian por nombres). Botón **Exportar** en Leads (lo que estás viendo). Términos (Cancelación) y privacidad (Conservación) dicen que no se borra nada por nuestra cuenta, solo a petición escrita del dueño.
+- **Corregido de paso:** Contactos, Leads (y su próximo seguimiento) y Agenda leían como máximo 1000 filas (límite de Supabase por consulta); una tienda más grande se veía y exportaba incompleta. Ahora leen todas las páginas (`lib/paged.ts`). IPESA tiene 575 contactos, así que no le afectaba todavía.
+- **Migración:** no.
 
 ### Etapa 8. Listo para vender
 - Nombre del producto centralizado en un archivo y dominio propio.

@@ -8,6 +8,7 @@ import { useSession } from '@/lib/profile'
 import { useCatalogs } from '@/lib/catalogs'
 import { LEAD_ESTADOS, LOST, OPEN_ESTADOS, WON, isOpenLead, remTypeInfo, reminderTitle, type Reminder, type ReminderType } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
+import { downloadLeads } from '@/lib/exportData'
 import { QUICK_WHEN, fmtAgo, fmtDue, isDueToday, isOverdue, localNow, quickDate, toDbLocal, type QuickWhen } from '@/lib/datetime'
 
 /* ══════════════════════════════════════════════════════════
@@ -117,6 +118,7 @@ const Ico = {
   bell:     () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>,
   info:     () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>,
   send:     () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>,
+  download: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg>,
   user:     () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
 }
 
@@ -233,6 +235,10 @@ function LeadsContent() {
             <button className={view === 'tabla' ? 'active' : ''} onClick={() => setView('tabla')} aria-pressed={view === 'tabla'} title="Tabla"><Ico.table /> <span className="hide-sm">Tabla</span></button>
             <button className={view === 'kanban' ? 'active' : ''} onClick={() => setView('kanban')} aria-pressed={view === 'kanban'} title="Kanban"><Ico.kanban /> <span className="hide-sm">Kanban</span></button>
           </div>
+          <button className="btn btn-ghost" onClick={() => downloadLeads(filtered, filtersOn || tab !== 'todos')} disabled={!filtered.length}
+            title="Exportar a Excel los leads que estás viendo">
+            <Ico.download /> <span className="hide-sm">Exportar</span>
+          </button>
           {!readonly && (
             <button className="btn btn-primary page-primary" onClick={() => openQuickCreate({ kind: 'lead' })}>
               <Ico.plus /> Nuevo lead

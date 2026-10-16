@@ -3,6 +3,7 @@ import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-
 import { isUUID, jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 import { LEAD_SCHEMA, contactInStore, ownLeadsFilter } from '@/lib/leads'
 import { normalizePhone } from '@/lib/phone'
+import { fetchPaged } from '@/lib/paged'
 
 // GET /api/data/leads[?contact_id=uuid]
 // Vendedor: solo sus leads (+ legacy sin user_id). Dueño/admin: todos los de la
@@ -16,22 +17,26 @@ export async function GET(req: NextRequest) {
   const phone = normalizePhone(req.nextUrl.searchParams.get('phone'))
 
   try {
-    let q = getServerSupabase().from('leads').select('*').eq('store_id', ctx.storeId).order('created_at', { ascending: false })
-    if (contactId) {
-      // Leads del contacto: por vínculo o, para los heredados sin vínculo, por teléfono
-      q = /^\d{10}$/.test(phone) ? q.or(`contact_id.eq.${contactId},phone.eq.${phone}`) : q.eq('contact_id', contactId)
-    } else if (!ctx.isAdmin) {
-      q = q.or(ownLeadsFilter(ctx.uid))
+    // Consulta nueva por página (todas las páginas, no solo las primeras 1000 filas)
+    const page = (from: number, to: number) => {
+      let q = getServerSupabase().from('leads').select('*').eq('store_id', ctx.storeId)
+      if (contactId) {
+        // Leads del contacto: por vínculo o, para los heredados sin vínculo, por teléfono
+        q = /^\d{10}$/.test(phone) ? q.or(`contact_id.eq.${contactId},phone.eq.${phone}`) : q.eq('contact_id', contactId)
+      } else if (!ctx.isAdmin) {
+        q = q.or(ownLeadsFilter(ctx.uid))
+      }
+      return q.order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to)
     }
 
-    const [{ data, error }, names, { data: pending }] = await Promise.all([
-      q,
+    const [data, names, pending] = await Promise.all([
+      fetchPaged<any>(page, 100000),
       ctx.isAdmin ? getUserNameMap(ctx.storeId).catch(() => new Map<string, string>()) : Promise.resolve(null),
       // Próximo seguimiento programado de cada lead (de cualquier persona del equipo)
-      getServerSupabase().from('reminders').select('lead_id, reminder_date')
-        .eq('store_id', ctx.storeId).eq('completado', false).not('lead_id', 'is', null),
+      fetchPaged<{ lead_id: string; reminder_date: string }>((from, to) => getServerSupabase().from('reminders').select('lead_id, reminder_date')
+        .eq('store_id', ctx.storeId).eq('completado', false).not('lead_id', 'is', null)
+        .order('reminder_date', { ascending: true }).order('id', { ascending: true }).range(from, to), 100000),
     ])
-    if (error) throw error
 
     const nextByLead = new Map<string, string>()
     for (const r of pending ?? []) {
