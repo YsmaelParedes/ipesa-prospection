@@ -26,6 +26,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     items: [
       'Si tu tienda aún no tiene WhatsApp, el dueño lo ve en el menú y en Configuración como "Por activar", con lo que puedes hacer con él.',
       'Con el botón "Quiero activarlo" envías tu solicitud y un asesor te contacta para dejarlo listo con el número de tu tienda, sin que hagas nada técnico.',
+      'Configuración → WhatsApp ahora solo muestra tu número, su calidad y tu límite: la conexión técnica la hace tu asesor.',
     ],
   },
   {

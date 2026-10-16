@@ -10,6 +10,7 @@ import {
 } from '../data'
 import { PaymentForm, PaymentRow } from '../payments-ui'
 import { NewStoreModal, OwnerInviteBlock } from '../stores-ui'
+import { WhatsAppConnectionBlock } from '../whatsapp-ui'
 import s from '../admin.module.css'
 
 /**
@@ -246,6 +247,9 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
             {payments?.map(p => <PaymentRow key={p.id} payment={p} canVoid={p.id === latestLive} onVoided={done} />)}
           </div>
 
+          {/* Conexión técnica del número: solo cuando la tienda tiene o pidió WhatsApp */}
+          {(waActive || !!store.whatsapp_requested_at) && <WhatsAppConnectionBlock key={store.id} storeId={store.id} onChanged={onSaved} />}
+
           <div className={s.actions}>
             <div className={s.action}>
               <div><strong>Precio acordado</strong><small>Mensual, en MXN. Prellena el monto al registrar un pago.</small></div>
@@ -272,7 +276,7 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
                 <strong>WhatsApp y Campañas</strong>
                 <small>
                   {waActive
-                    ? `Activo${store.whatsapp_connected ? ' · número conectado' : ' · falta conectar el número en Configuración → WhatsApp de la tienda'}.`
+                    ? `Activo${store.whatsapp_connected ? ' · número conectado' : ' · falta conectar el número (sección Conexión de WhatsApp)'}.`
                     : store.whatsapp_requested_at
                       ? `Lo solicitó el ${fmt(store.whatsapp_requested_at)}: contacta a la tienda para ofrecérselo.`
                       : 'No lo ha solicitado. La tienda lo ve como "Por activar".'}

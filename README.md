@@ -99,7 +99,7 @@ En Supabase → **Authentication**:
   hasta su primer pago o cortesía. Nadie abre tiendas por su cuenta (`POST /api/stores`
   responde 403): solo el panel del dueño las crea. Contacto para pedir invitación: `NEXT_PUBLIC_CONTACT_WHATSAPP`
   y `NEXT_PUBLIC_CONTACT_EMAIL`.
-- **Roles por tienda**: *dueño* (todo, incluido desconectar WhatsApp), *administrador*
+- **Roles por tienda**: *dueño* (todo lo de su tienda), *administrador*
   (configura la tienda y ve el trabajo de todos; solo en el plan Interno) y *vendedor* (ve
   solo sus leads y su agenda). Si una cuenta pertenece a varias tiendas (por invitación),
   cambia entre ellas desde el menú.
@@ -131,11 +131,13 @@ En Supabase → **Authentication**:
 
 ## WhatsApp
 
-Cada tienda conecta **su propio número** desde Configuración → WhatsApp (token permanente
-de un usuario del sistema, *Phone number ID*, *WABA ID* y *App Secret*). La app verifica
-las credenciales con Meta antes de guardarlas y las cifra con `CREDENTIALS_ENCRYPTION_KEY`;
-nunca vuelven al navegador. Después se registra el webhook en Meta con los datos que muestra
-esa misma pantalla:
+Cada tienda usa **su propio número**. Lo conecta el asesor desde el panel /admin, en la
+ficha de la tienda → **Conexión de WhatsApp** (token permanente de un usuario del sistema,
+*Phone number ID*, *WABA ID* y *App Secret*; `/api/platform/stores/[id]/whatsapp`). La
+tienda no ve nada técnico: en Configuración → WhatsApp solo ve su número, la calidad y su
+límite. La app verifica las credenciales con Meta antes de guardarlas y las cifra con
+`CREDENTIALS_ENCRYPTION_KEY`; nunca vuelven al navegador. Después se registra el webhook en
+Meta con los datos que muestra esa misma sección:
 
 - URL: `https://<tu-dominio>/api/webhooks/whatsapp/<clave-de-la-tienda>`
 - Token de verificación: el que genera la app para esa tienda.

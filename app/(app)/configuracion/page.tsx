@@ -21,7 +21,7 @@ const TABS: { id: TabId; label: string; hint: string; icon: (p: React.SVGProps<S
   { id: 'catalogos',    label: 'Catálogos',    hint: 'Segmentos y canales',     icon: Ico.tag },
   { id: 'equipo',       label: 'Equipo',       hint: 'Usuarios e invitaciones', icon: Ico.users, admin: true },
   // Sin WhatsApp activo se muestra igual (al dueño/admin) como "Por activar", para ofrecerlo
-  { id: 'whatsapp',     label: 'WhatsApp',     hint: 'Conexión y respuestas',   icon: WhatsAppGlyph, admin: true },
+  { id: 'whatsapp',     label: 'WhatsApp',     hint: 'Tu número y respuestas',   icon: WhatsAppGlyph, admin: true },
   { id: 'plan',         label: 'Plan',         hint: 'Suscripción y pagos',     icon: Ico.card, admin: true },
   { id: 'cuenta',       label: 'Mi cuenta',    hint: 'Perfil, avisos y contraseña', icon: Ico.user },
 ]
@@ -90,7 +90,7 @@ function Settings() {
           {tab === 'tienda'       && <StoreTab store={store} />}
           {tab === 'catalogos'    && <CatalogsTab canEdit={isAdmin} />}
           {tab === 'equipo'       && <TeamTab store={store} isOwner={!!session.isOwner} />}
-          {tab === 'whatsapp'     && (store.modules.whatsapp ? <WhatsAppTab isOwner={!!session.isOwner} /> : <WhatsAppOffer />)}
+          {tab === 'whatsapp'     && (store.modules.whatsapp ? <WhatsAppTab /> : <WhatsAppOffer />)}
           {tab === 'plan'         && <PlanTab store={store} />}
           {tab === 'cuenta'       && <AccountTab session={session} />}
         </div>

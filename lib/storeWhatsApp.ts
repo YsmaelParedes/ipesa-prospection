@@ -62,7 +62,7 @@ export async function getStoreWhatsAppCreds(storeId: string): Promise<WhatsAppCr
   return row ? credsFromRow(row) : null
 }
 
-export const WHATSAPP_NOT_CONNECTED = 'WhatsApp no está conectado en esta tienda. Conéctalo en Configuración → WhatsApp.'
+export const WHATSAPP_NOT_CONNECTED = 'El número de WhatsApp de tu tienda aún no está conectado. Tu asesor lo está configurando.'
 
 /**
  * Tienda que usa el número del servidor (variables WHATSAPP_*). El webhook
