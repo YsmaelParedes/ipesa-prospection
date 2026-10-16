@@ -21,7 +21,7 @@ const body = Manrope({
 
 export const metadata: Metadata = {
   title: APP_NAME,
-  description: 'CRM para tiendas de pintura: contactos, leads, WhatsApp y fórmulas de color.',
+  description: 'CRM para tiendas de pintura: contactos, leads, agenda y fórmulas de color.',
   manifest: '/manifest.json',
   icons: { apple: { url: '/apple-touch-icon.png', sizes: '180x180' } },
   appleWebApp: {

@@ -7,7 +7,7 @@ import { AuthAlert, AuthField, AuthIcon } from '@/components/AuthUI'
 import { BrandLogo } from '@/components/Brand'
 import { APP_NAME } from '@/lib/brand'
 import { invalidateSession, useSession, type ClientStore } from '@/lib/profile'
-import { MODULE_INFO, ROLE_LABELS, STORE_MODULES, planOf, type StoreModule, type StoreModules } from '@/lib/stores'
+import { DEFAULT_MODULES, ROLE_LABELS, planOf, type StoreModule, type StoreModules } from '@/lib/stores'
 import { MX_STATES } from '@/lib/mexico'
 import { pendingInvite } from '@/lib/pendingInvite'
 import { requestInviteLinks } from '@/lib/legal'
@@ -15,15 +15,14 @@ import { signOut } from '@/lib/signOut'
 import s from './bienvenida.module.css'
 
 /**
- * Asistente de alta de una tienda: datos de la sucursal → logo →
- * herramientas → equipo → listo. También sirve para agregar otra sucursal
+ * Asistente de alta de una tienda: datos de la sucursal → logo → equipo →
+ * listo (las herramientas no se eligen: cada tienda tiene las básicas). También sirve para agregar otra sucursal
  * (/bienvenida?nueva=1). Cada paso guarda en la API, que valida permisos.
  */
 
 const STEPS = [
   { title: 'Tu sucursal',  desc: 'Nombre y ubicación' },
   { title: 'Tu logo',      desc: 'Cómo se verá tu tienda' },
-  { title: 'Herramientas', desc: 'Lo que usará tu equipo' },
   { title: 'Tu equipo',    desc: 'Invita a tus vendedores' },
 ]
 const DONE = STEPS.length
@@ -81,10 +80,6 @@ function WhatsAppGlyph(p: IconProps) {
   )
 }
 
-const MODULE_ICON: Record<StoreModule, (p: IconProps) => React.ReactElement> = {
-  whatsapp: WhatsAppGlyph, campaigns: Ic.megaphone, formulas: Ic.flask,
-}
-
 /* ── Página ─────────────────────────────────────────────────────────────── */
 export default function WelcomePage() {
   return <Suspense fallback={<Loader />}><Wizard /></Suspense>
@@ -101,7 +96,7 @@ function Wizard() {
   const [step, setStep]       = useState<number | null>(null)   // null = decidiendo
   const [store, setStore]     = useState<ClientStore | null>(null)
   const [profile, setProfile] = useState<Profile>({ name: '', city: '', state: '', phone: '', address: '' })
-  const [modules, setModules] = useState<StoreModules>({ whatsapp: true, campaigns: true, formulas: true })
+  const [modules, setModules] = useState<StoreModules>(DEFAULT_MODULES)
   const [invites, setInvites] = useState<Invite[]>([])
 
   // Por dónde empezar: tienda nueva, retomar la configuración o ya terminó
@@ -176,27 +171,21 @@ function Wizard() {
                 <LogoStep store={store} onLogo={logoUrl => setStore({ ...store, logoUrl })} onBack={() => setStep(0)} onNext={() => setStep(2)} />
               )}
               {step === 2 && store && (
-                <ModulesStep
-                  modules={modules} setModules={setModules} onBack={() => setStep(1)}
-                  onSaved={m => { setStore({ ...store, modules: m }); setStep(3) }}
-                />
-              )}
-              {step === 3 && store && (
                 <TeamStep
                   store={store} canInviteAdmins={isOwner} invites={invites} locked={store.access === 'readonly'}
                   onInvite={inv => setInvites(list => [inv, ...list.filter(i => i.email !== inv.email)])}
-                  onBack={() => setStep(2)} onNext={() => setStep(DONE)}
+                  onBack={() => setStep(1)} onNext={() => setStep(DONE)}
                 />
               )}
             </section>
             <aside className={s.aside}>
-              {step === 3 && store
+              {step === 2 && store
                 ? <TeamPreview owner={session.user} store={store} invites={invites} />
                 : <BrandPreview
                     name={profile.name}
                     logoUrl={store?.logoUrl ?? null}
                     modules={modules}
-                    focus={step === 0 ? 'name' : step === 1 ? 'logo' : 'nav'}
+                    focus={step === 0 ? 'name' : 'logo'}
                   />}
             </aside>
           </div>
@@ -428,74 +417,7 @@ function LogoStep({ store, onLogo, onBack, onNext }: {
   )
 }
 
-/* ── Paso 3: herramientas ───────────────────────────────────────────────── */
-const ALWAYS_INCLUDED = ['Dashboard', 'Contactos', 'Leads', 'Recordatorios']
-
-function ModulesStep({ modules, setModules, onBack, onSaved }: {
-  modules: StoreModules
-  setModules: React.Dispatch<React.SetStateAction<StoreModules>>
-  onBack: () => void
-  onSaved: (m: StoreModules) => void
-}) {
-  const [busy, setBusy]   = useState(false)
-  const [error, setError] = useState('')
-
-  const save = async () => {
-    setError('')
-    setBusy(true)
-    const next = { ...modules, campaigns: modules.whatsapp && modules.campaigns }
-    try {
-      await api('/api/store', send('PATCH', { modules: next }))
-      invalidateSession()
-      onSaved(next)
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <>
-      <StepHead n={3} title="Elige las herramientas de tu tienda">
-        Activa solo lo que tu equipo va a usar; el menú se adapta. Puedes cambiarlo cuando quieras.
-      </StepHead>
-      {error && <AuthAlert>{error}</AuthAlert>}
-      <div className={s.included}>
-        <span className={s.includedLabel}>Siempre incluido</span>
-        {ALWAYS_INCLUDED.map(m => <span key={m} className={s.pill}><AuthIcon.check />{m}</span>)}
-      </div>
-      <div className={s.mods}>
-        {STORE_MODULES.map(m => {
-          const blocked = m === 'campaigns' && !modules.whatsapp
-          const on = modules[m] && !blocked
-          const ModIcon = MODULE_ICON[m]
-          return (
-            <label key={m} className={cx(s.mod, on && s.modOn, blocked && s.modBlocked)}>
-              <span className={cx(s.modIcon, s[`mod_${m}`])}><ModIcon /></span>
-              <span className={s.modText}>
-                <strong>{MODULE_INFO[m].label}</strong>
-                <small>{MODULE_INFO[m].description}</small>
-                {m === 'whatsapp' && on && <em>Conectas tu número de WhatsApp Business desde Configuración.</em>}
-                {blocked && <em>Necesita el módulo de WhatsApp.</em>}
-              </span>
-              <input
-                type="checkbox" role="switch" className={s.switch} checked={on} disabled={blocked}
-                onChange={e => setModules(prev => ({ ...prev, [m]: e.target.checked }))}
-                aria-label={MODULE_INFO[m].label}
-              />
-            </label>
-          )
-        })}
-      </div>
-      <Actions onBack={onBack}>
-        <NextButton type="button" onClick={save} busy={busy}>Guardar y continuar</NextButton>
-      </Actions>
-    </>
-  )
-}
-
-/* ── Paso 4: equipo ─────────────────────────────────────────────────────── */
+/* ── Paso 3: equipo ─────────────────────────────────────────────────────── */
 function TeamStep({ store, canInviteAdmins, invites, locked, onInvite, onBack, onNext }: {
   store: ClientStore; canInviteAdmins: boolean; invites: Invite[]; locked: boolean
   onInvite: (inv: Invite) => void; onBack: () => void; onNext: () => void
@@ -532,7 +454,7 @@ function TeamStep({ store, canInviteAdmins, invites, locked, onInvite, onBack, o
 
   return (
     <>
-      <StepHead n={4} title="Invita a tu equipo">
+      <StepHead n={3} title="Invita a tu equipo">
         Cada persona entra con su propio usuario. Genera su enlace y compártelo por WhatsApp o correo; vence en 7 días.
       </StepHead>
       {error && <AuthAlert>{error}</AuthAlert>}
@@ -561,7 +483,7 @@ function TeamStep({ store, canInviteAdmins, invites, locked, onInvite, onBack, o
       </form>
       <p className={s.roleHelp}>
         {role === 'employee'
-          ? <><strong>Vendedor:</strong> registra contactos, leads y recordatorios, y atiende WhatsApp.</>
+          ? <><strong>Vendedor:</strong> registra contactos, leads y recordatorios{store.modules.whatsapp ? ', y atiende WhatsApp' : ''}.</>
           : <><strong>Administrador:</strong> además configura la tienda, los catálogos y el equipo.</>}
       </p>
       </>)}

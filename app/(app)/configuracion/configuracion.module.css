@@ -94,32 +94,6 @@
 .logoSide p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
 .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
-/* ── Herramientas ── */
-.included { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 14px; }
-.included > span:first-child { margin-right: 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
-.pill { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; background: var(--success-soft); color: var(--success); font-size: 12px; font-weight: 700; }
-.pill svg { width: 13px; height: 13px; }
-.mods { display: flex; flex-direction: column; gap: 10px; }
-.mod { display: flex; align-items: center; gap: 14px; padding: 15px 16px; border-radius: 15px; border: 1.5px solid var(--line-strong); background: var(--card); transition: border-color .15s, background .15s; }
-.modOn { border-color: var(--brand); background: var(--brand-softer); }
-.modBlocked { opacity: .6; }
-.modIcon { width: 42px; height: 42px; flex-shrink: 0; border-radius: 12px; display: grid; place-items: center; }
-.modIcon svg { width: 21px; height: 21px; }
-.modText { flex: 1; min-width: 0; }
-.modText strong { display: block; font-size: 14.5px; color: var(--ink); }
-.modText small { display: block; margin-top: 2px; font-size: 12.5px; line-height: 1.45; color: var(--muted); }
-.modText em { display: block; margin-top: 4px; font-style: normal; font-size: 12px; font-weight: 700; color: var(--c-cyan-ink); }
-
-.switch {
-  appearance: none; -webkit-appearance: none; margin: 0; flex-shrink: 0; position: relative; cursor: pointer;
-  width: 44px; height: 26px; border-radius: 999px; background: var(--paper-2); border: 1px solid var(--line-strong); transition: background .18s, border-color .18s;
-}
-.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: transform .18s; }
-.switch:checked { background: var(--brand); border-color: var(--brand); }
-.switch:checked::after { transform: translateX(18px); }
-.switch:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
-.switch:disabled { cursor: not-allowed; opacity: .7; }
-
 /* ── Catálogos ── */
 .count { margin-left: auto; min-width: 28px; padding: 2px 9px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); font-size: 12px; font-weight: 800; color: var(--muted); text-align: center; }
 .list { display: flex; flex-direction: column; gap: 6px; }

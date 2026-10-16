@@ -62,7 +62,7 @@ const sections: LegalSection[] = [
         <p><strong>Finalidades necesarias</strong> para prestarte el servicio:</p>
         <ul>
           <li>Crear y administrar tu cuenta y la de tu tienda, y verificar tu identidad al iniciar sesión.</li>
-          <li>Prestar las funciones de la plataforma: contactos, oportunidades, recordatorios, WhatsApp, campañas, fórmulas y notificaciones.</li>
+          <li>Prestar las funciones de la plataforma: contactos, oportunidades, recordatorios, fórmulas y notificaciones (y, en las tiendas que lo tienen conectado, WhatsApp y campañas).</li>
           <li>Proteger la seguridad del servicio, prevenir fraudes y accesos no autorizados.</li>
           <li>Atender solicitudes de soporte y enviarte avisos sobre tu cuenta (activación, vencimientos y cambios del servicio).</li>
           <li>Facturar y gestionar el cobro del plan contratado.</li>

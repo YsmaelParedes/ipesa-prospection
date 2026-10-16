@@ -138,7 +138,7 @@ function StoresList() {
                 <span className={s.cellUse}>
                   <span title="Usuarios activos">{st.members}/{planOf(st.plan).maxUsers} usuarios</span>
                   <span title="Contactos y leads">{st.contacts.toLocaleString('es-MX')} contactos · {st.leads.toLocaleString('es-MX')} leads</span>
-                  <span className={cx(s.wa, st.whatsapp_connected && s.waOn)}><i />{st.whatsapp_connected ? 'WhatsApp conectado' : 'Sin WhatsApp'}</span>
+                  {st.whatsapp_connected && <span className={cx(s.wa, s.waOn)}><i />WhatsApp conectado</span>}
                 </span>
                 <span className={s.cellAct}>
                   <strong>{ago(st.last_activity_at)}</strong>

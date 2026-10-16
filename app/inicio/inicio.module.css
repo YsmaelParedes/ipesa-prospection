@@ -169,6 +169,7 @@
 .chatHead small { display: block; font-size: 11px; color: var(--success); font-weight: 700; }
 .waBadge { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: #25D366; color: #fff; }
 .waBadge svg { width: 17px; height: 17px; }
+.todayBadge { background: var(--warning-fill); }
 .msgIn, .msgOut { margin: 0 0 6px; padding: 8px 11px; max-width: 88%; font-size: 12px; line-height: 1.45; border-radius: 12px; }
 .msgIn { background: var(--paper); border-top-left-radius: 4px; }
 .msgOut { margin-left: auto; background: #DCF8C6; border-top-right-radius: 4px; }

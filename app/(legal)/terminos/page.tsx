@@ -6,7 +6,7 @@ import { ContactEmail, LegalDoc, type LegalSection } from '../LegalDoc'
 
 export const metadata: Metadata = {
   title: `Términos de uso · ${LEGAL.product}`,
-  description: `Condiciones para usar ${LEGAL.product}: cuentas, alta por invitación, planes y pagos, información de la tienda y uso de WhatsApp.`,
+  description: `Condiciones para usar ${LEGAL.product}: cuentas, alta por invitación, planes y pagos, información de la tienda y comunicaciones con tus clientes.`,
 }
 
 const sections: LegalSection[] = [
@@ -30,7 +30,7 @@ const sections: LegalSection[] = [
     body: (
       <p>
         {LEGAL.product} es una herramienta en línea para que las tiendas de pinturas administren contactos,
-        oportunidades de venta, recordatorios, conversaciones y campañas de WhatsApp y fórmulas de color. Podemos
+        oportunidades de venta, recordatorios y fórmulas de color. Podemos
         mejorar, agregar o retirar funciones; si un cambio afecta de forma importante el servicio, te avisaremos con
         anticipación razonable.
       </p>
@@ -87,10 +87,11 @@ const sections: LegalSection[] = [
   },
   {
     id: 'whatsapp',
-    title: 'WhatsApp y comunicaciones con tus clientes',
+    title: 'Comunicaciones con tus clientes',
     body: (
       <ul>
-        <li>La conexión de WhatsApp usa WhatsApp Business Platform de Meta y está sujeta a sus términos y políticas, incluidas la Política de WhatsApp Business y la Política de Comercio.</li>
+        <li>Solo contacta a personas que te hayan dado su consentimiento para recibir mensajes de tu tienda.</li>
+        <li>Si tu tienda tiene conectado WhatsApp: la conexión usa WhatsApp Business Platform de Meta y está sujeta a sus términos y políticas, incluidas la Política de WhatsApp Business y la Política de Comercio.</li>
         <li>Solo debes escribir a personas que te hayan dado su consentimiento para recibir mensajes de tu tienda, y eres responsable del contenido de tus mensajes y plantillas.</li>
         <li>Meta puede cobrar directamente a tu cuenta por las conversaciones o mensajes según sus tarifas vigentes.</li>
         <li>Las reglas anti-bloqueo de las campañas reducen el riesgo, pero Meta puede limitar o suspender un número por decisiones propias; esas decisiones no dependen de nosotros.</li>
@@ -184,7 +185,7 @@ export default function TermsPage() {
       summary={[
         'Tu tienda se da de alta por invitación y el precio se acuerda contigo; si un pago vence, queda en solo consulta.',
         'La información de tu tienda es tuya y ninguna otra tienda puede verla.',
-        'Usa WhatsApp solo con clientes que aceptaron recibir tus mensajes.',
+        'Contacta solo a clientes que aceptaron recibir tus mensajes.',
         'Puedes cancelar cuando quieras y llevarte tu información.',
       ]}
       sections={sections}

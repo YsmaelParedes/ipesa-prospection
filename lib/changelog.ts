@@ -15,6 +15,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2026-10-15',
+    date: '15 de octubre, 2026',
+    title: 'Configuración más simple',
+    items: [
+      'Configuración ya no tiene la pestaña "Herramientas": WhatsApp, Campañas y Fórmulas quedan siempre activos en tu tienda.',
+    ],
+  },
+  {
     version: '2026-10-09',
     date: '9 de octubre, 2026',
     title: 'Campañas con más control',

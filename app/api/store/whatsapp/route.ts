@@ -16,7 +16,7 @@ import { jsonError, readJson, serverError } from '@/lib/validation'
 
 // GET — estado de la conexión y datos para configurar el webhook en Meta
 export async function GET(req: NextRequest) {
-  const ctx = await requireStore({ admin: true })
+  const ctx = await requireStore({ admin: true, module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
 
   const row = await getStoreWhatsAppRow(ctx.storeId)
@@ -46,7 +46,7 @@ const DIGITS = /^\d{5,30}$/
 // PUT — { accessToken, phoneNumberId, wabaId, appSecret } verifica con Meta y guarda cifrado.
 // Solo el dueño: quien conecta el número decide desde qué cuenta habla la tienda.
 export async function PUT(req: NextRequest) {
-  const ctx = await requireStore({ owner: true })
+  const ctx = await requireStore({ owner: true, module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
   if (!hasEncryptionKey()) {
     return jsonError('El servidor aún no tiene configurada la llave de cifrado (CREDENTIALS_ENCRYPTION_KEY). Avisa al administrador de la plataforma.', 503)
@@ -101,7 +101,7 @@ export async function PUT(req: NextRequest) {
 
 // DELETE — desconectar (borra las credenciales cifradas). Solo el dueño.
 export async function DELETE() {
-  const ctx = await requireStore({ owner: true })
+  const ctx = await requireStore({ owner: true, module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
   const row = await getStoreWhatsAppRow(ctx.storeId)
   if (row?.credentials_source === 'env') return jsonError('Esta tienda usa la conexión del servidor; se administra desde las variables de entorno.', 409)

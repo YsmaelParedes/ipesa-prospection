@@ -20,9 +20,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </Link>
           <div className="auth-art-copy">
             <h2>El CRM hecho para tiendas <span className="spectrum-text">de pintura</span></h2>
-            <p>Contactos, ventas, WhatsApp y fórmulas de color en un solo lugar. La información de cada tienda, separada y protegida.</p>
+            <p>Contactos, ventas, agenda y fórmulas de color en un solo lugar. La información de cada tienda, separada y protegida.</p>
             <ul className="auth-art-list">
-              <li><span className="dot d1" />Bandeja de WhatsApp ligada a cada cliente</li>
+              <li><span className="dot d1" />Lo que toca hoy: seguimientos y recordatorios</li>
               <li><span className="dot d2" />Pipeline de ventas, cotizaciones y recordatorios</li>
               <li><span className="dot d3" />Fórmulas de color convertidas a mL</li>
             </ul>

@@ -7,7 +7,7 @@ import s from './inicio.module.css'
 
 export const metadata: Metadata = {
   title: `${APP_NAME} · ${APP_TAGLINE}`,
-  description: 'Contactos, cotizaciones, WhatsApp y fórmulas de color en un solo lugar para tu tienda de pinturas. Alta por invitación.',
+  description: 'Contactos, cotizaciones, agenda y fórmulas de color en un solo lugar para tu tienda de pinturas. Alta por invitación.',
 }
 
 const DEMO_STORE = 'Pinturas La Paleta'
@@ -35,34 +35,27 @@ const Ic = {
   link:     icon(<><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" /></>),
   grid:     icon(<><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></>),
 }
-function WhatsAppGlyph(p: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...p}>
-      <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.8.9-1 1.1c-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.4-.9-.8-1.5-1.8-1.7-2-.2-.3 0-.5.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.3-.7.3-1.2.2-1.4 0-.1-.3-.2-.6-.4Zm-5.5 7.5c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.5 4.4-9.9 9.9-9.9s9.9 4.4 9.9 9.9-4.5 9.9-10 9.9Zm8.4-18.3C18.2 1.5 15.2.3 12 .3 5.4.3.1 5.6.1 12.2c0 2.1.6 4.2 1.6 6L0 24l5.9-1.5c1.7 1 3.7 1.5 5.7 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4Z" />
-    </svg>
-  )
-}
 
 const MAX_USERS = planOf(DEFAULT_PLAN).maxUsers
 
 const FEATURES = [
   { icon: Ic.contacts,  tone: s.tCyan,    title: 'Contactos y segmentos', text: 'Hogar, constructor, arquitecto, pintor o empresa. Encuentra a cualquier cliente en segundos e importa tu lista desde Excel.' },
   { icon: Ic.leads,     tone: s.tBrand,   title: 'Pipeline de ventas', text: 'De nuevo a cotizado y cerrado. Cada oportunidad con su monto, su historial y el siguiente paso.' },
-  { icon: WhatsAppGlyph, tone: s.tWa,     title: 'WhatsApp dentro del CRM', text: 'Atiende desde el número de tu tienda. Cada conversación queda ligada a su contacto y a su lead.' },
-  { icon: Ic.megaphone, tone: s.tMagenta, title: 'Campañas que cuidan tu número', text: 'Envía plantillas aprobadas por Meta con límites y pausas automáticas para evitar bloqueos.' },
+  { icon: Ic.grid,      tone: s.tAmber,   title: 'Lo que toca hoy', text: 'Al abrir, tu equipo ve a quién darle seguimiento, qué cotizaciones esperan respuesta y qué recordatorios tiene.' },
+  { icon: Ic.users,     tone: s.tMagenta, title: 'Tu equipo, cada quien con su usuario', text: 'Dueño, administrador y vendedor: cada quien ve y hace lo que le corresponde, y ves quién atiende a cada cliente.' },
   { icon: Ic.flask,     tone: s.tTeal,    title: 'Fórmulas de color', text: 'Consulta fórmulas de color convertidas a mililitros para igualar colores sin errores.' },
-  { icon: Ic.bell,      tone: s.tAmber,   title: 'Recordatorios y avisos', text: 'Notificaciones en tu celular para que ningún seguimiento se quede pendiente.' },
+  { icon: Ic.bell,      tone: s.tWa,      title: 'Recordatorios y avisos', text: 'Notificaciones en tu celular para que ningún seguimiento se quede pendiente.' },
 ]
 
 const STEPS = [
-  { title: 'Crea tu cuenta', text: 'Con tu correo, en menos de un minuto. Sin tarjeta.' },
-  { title: 'Configura tu sucursal', text: 'Nombre, logo y herramientas. El asistente te guía paso a paso.' },
-  { title: 'Invita a tu equipo', text: 'Manda a cada vendedor su enlace por WhatsApp y a vender.' },
+  { title: 'Pide tu invitación', text: 'Acordamos contigo el plan, damos de alta tu tienda y te mandamos tu enlace.' },
+  { title: 'Configura tu sucursal', text: 'Nombre, logo y catálogos. El asistente te guía paso a paso.' },
+  { title: 'Invita a tu equipo', text: 'Manda a cada vendedor su enlace por WhatsApp o correo y a vender.' },
 ]
 
 const SECURITY = [
   { icon: Ic.layers, title: 'Datos separados por tienda', text: 'Cada consulta se filtra por tu tienda en el servidor. El navegador nunca entra directo a la base de datos.' },
-  { icon: Ic.key,    title: 'Credenciales cifradas', text: 'Los tokens de tu WhatsApp se guardan cifrados con AES-256 y nunca regresan al navegador.' },
+  { icon: Ic.key,    title: 'Tu contraseña es solo tuya', text: 'La creas tú con tu enlace de invitación; nadie más la conoce, ni nosotros.' },
   { icon: Ic.users,  title: 'Roles y permisos', text: 'Dueño, administrador y vendedor: cada quien ve y hace solo lo que le corresponde.' },
   { icon: Ic.link,   title: 'Accesos bajo tu control', text: 'Invitaciones con enlace que vence y la opción de desactivar a quien ya no trabaje contigo.' },
 ]
@@ -70,10 +63,9 @@ const SECURITY = [
 const FAQ = [
   { q: '¿Cómo empiezo?', a: 'Pide tu invitación. Acordamos contigo el plan, damos de alta tu tienda y te mandamos un enlace para que crees tu contraseña. Después tú invitas a tu equipo.' },
   { q: '¿Cómo se paga?', a: 'El precio se acuerda con cada tienda y se paga por mes, por transferencia o en efectivo. Si un pago vence, tu información se conserva y tu equipo puede consultarla; para seguir registrando solo hay que renovar.' },
-  { q: '¿Puedo usar el WhatsApp de mi tienda?', a: 'Sí. Se conecta con WhatsApp Business Platform, la API oficial de Meta, usando el número de tu sucursal. Desde Configuración te guiamos paso a paso.' },
   { q: '¿Cuántas personas pueden usarlo?', a: `El plan Profesional incluye hasta ${MAX_USERS} usuarios por tienda, con roles de dueño, administrador y vendedor.` },
   { q: '¿Otras tiendas pueden ver mis clientes?', a: 'No. Cada tienda tiene su propia información y solo la ve su equipo. Ninguna otra tienda puede acceder a ella.' },
-  { q: 'Tengo varias sucursales, ¿cómo funciona?', a: 'Puedes dar de alta varias sucursales con la misma cuenta y cambiar entre ellas con un clic. Cada una tiene su equipo, su WhatsApp y sus datos.' },
+  { q: 'Tengo varias sucursales, ¿cómo funciona?', a: 'Puedes dar de alta varias sucursales con la misma cuenta y cambiar entre ellas con un clic. Cada una tiene su equipo y sus datos.' },
   { q: '¿Funciona en el celular?', a: 'Sí. Funciona en cualquier navegador y puedes instalarlo como app en tu celular para recibir avisos de recordatorios y mensajes.' },
 ]
 
@@ -111,7 +103,7 @@ export default function LandingPage() {
               <span className={s.eyebrow}><span className={s.eyebrowDot} />Para tiendas de pintura</span>
               <h1 className={s.h1}>El CRM hecho para tiendas <span className={s.spectrumText}>de pintura</span></h1>
               <p className={s.lead}>
-                Contactos, cotizaciones, WhatsApp y fórmulas de color en un solo lugar. Tu equipo sabe a quién darle
+                Contactos, cotizaciones, agenda y fórmulas de color en un solo lugar. Tu equipo sabe a quién darle
                 seguimiento hoy y tú ves cómo va la venta de tu sucursal.
               </p>
               <div className={s.heroCtas}>
@@ -139,8 +131,7 @@ export default function LandingPage() {
                     <span className={`${s.winNav} ${s.winNavOn}`}><Ic.grid />Dashboard</span>
                     <span className={s.winNav}><Ic.contacts />Contactos</span>
                     <span className={s.winNav}><Ic.leads />Leads</span>
-                    <span className={s.winNav}><WhatsAppGlyph />WhatsApp<b>3</b></span>
-                    <span className={s.winNav}><Ic.bell />Recordatorios</span>
+                    <span className={s.winNav}><Ic.bell />Agenda<b>3</b></span>
                     <span className={s.winNav}><Ic.flask />Fórmulas</span>
                   </div>
                   <div className={s.winMain}>
@@ -172,11 +163,11 @@ export default function LandingPage() {
 
               <div className={`${s.float} ${s.chat}`}>
                 <div className={s.chatHead}>
-                  <span className={s.waBadge}><WhatsAppGlyph /></span>
-                  <div><strong>Karen López</strong><small>en línea</small></div>
+                  <span className={`${s.waBadge} ${s.todayBadge}`}><Ic.bell /></span>
+                  <div><strong>Para hoy</strong><small>3 seguimientos</small></div>
                 </div>
-                <p className={s.msgIn}>Hola, ¿tienen vinílica en color arena? Necesito 2 cubetas</p>
-                <p className={s.msgOut}>¡Claro! Ya tengo tu fórmula, te paso el precio y te aparto el material <span className={s.ticks}>✓✓</span></p>
+                <p className={s.msgIn}>11:00 · Llamar a Karen López para confirmar su cotización de vinílica arena</p>
+                <p className={s.msgIn}>13:30 · Enviar precio a Constructora Ríos</p>
                 <div className={s.chatLinked}><Ic.link />Ligado a su lead · $4,850</div>
               </div>
 
@@ -200,7 +191,7 @@ export default function LandingPage() {
           <div className={`${s.wrap} ${s.stripGrid}`}>
             <div className={s.stat}><strong>A tu medida</strong><span>precio acordado con cada tienda</span></div>
             <div className={s.stat}><strong>{MAX_USERS} usuarios</strong><span>por tienda en el plan Profesional</span></div>
-            <div className={s.stat}><strong>API oficial</strong><span>de WhatsApp Business de Meta</span></div>
+            <div className={s.stat}><strong>Tus datos</strong><span>separados y protegidos por tienda</span></div>
             <div className={s.stat}><strong>100% web</strong><span>y se instala como app en tu celular</span></div>
           </div>
         </section>
@@ -213,7 +204,7 @@ export default function LandingPage() {
               <h2 className={s.h2}>Todo lo que pasa en el mostrador, ordenado</h2>
               <p className={s.sub}>
                 Pensado para cómo vende una tienda de pinturas: muchos clientes, cotizaciones que van y vienen y
-                conversaciones por WhatsApp todo el día.
+                seguimientos todo el día.
               </p>
             </div>
             <div className={s.features}>
@@ -235,12 +226,11 @@ export default function LandingPage() {
               <span className={s.kicker}>Tu sucursal, a tu manera</span>
               <h2 className={s.h2}>Cada tienda configura lo suyo</h2>
               <p className={s.sub}>
-                El nombre y logo de tu tienda, solo las herramientas que tu equipo usa y tus propios catálogos.
+                El nombre y logo de tu tienda, tus propios catálogos y tu equipo con sus permisos.
               </p>
               <ul className={s.bullets}>
                 {[
                   'Logo y datos de tu sucursal',
-                  'Activa o apaga WhatsApp, campañas y fórmulas',
                   'Segmentos y canales a la medida de tu tienda',
                   'Equipo con roles: dueño, administrador y vendedor',
                   '¿Varias sucursales? Cámbiate entre ellas con un clic',
@@ -249,10 +239,10 @@ export default function LandingPage() {
             </div>
             <div className={s.panels} aria-hidden="true">
               <div className={s.panel}>
-                <div className={s.panelHead}><strong>Herramientas</strong><small>{DEMO_STORE}</small></div>
-                <div className={s.toggleRow}><span className={`${s.tIcon} ${s.tWa}`}><WhatsAppGlyph /></span><span>WhatsApp<small>Bandeja ligada a contactos</small></span><i className={`${s.toggle} ${s.on}`} /></div>
-                <div className={s.toggleRow}><span className={`${s.tIcon} ${s.tMagenta}`}><Ic.megaphone /></span><span>Campañas<small>Plantillas con reglas anti-bloqueo</small></span><i className={`${s.toggle} ${s.on}`} /></div>
-                <div className={s.toggleRow}><span className={`${s.tIcon} ${s.tTeal}`}><Ic.flask /></span><span>Fórmulas<small>Igualación de colores en mL</small></span><i className={s.toggle} /></div>
+                <div className={s.panelHead}><strong>Catálogos</strong><small>{DEMO_STORE}</small></div>
+                <div className={s.toggleRow}><span className={`${s.tIcon} ${s.tCyan}`}><Ic.contacts /></span><span>Segmentos<small>Hogar, constructor, arquitecto, pintor…</small></span></div>
+                <div className={s.toggleRow}><span className={`${s.tIcon} ${s.tMagenta}`}><Ic.megaphone /></span><span>Canales<small>Visita en tienda, recomendación, Facebook…</small></span></div>
+                <div className={s.toggleRow}><span className={`${s.tIcon} ${s.tTeal}`}><Ic.flask /></span><span>Fórmulas<small>Igualación de colores en mL</small></span></div>
               </div>
               <div className={`${s.panel} ${s.panelTeam}`}>
                 <div className={s.panelHead}><strong>Equipo</strong><small>3 de {MAX_USERS} usuarios</small></div>

@@ -23,8 +23,9 @@ Cada etapa dice qué se implementa, qué cambia y si necesita migración de base
 | Pilotos | 2 negocios conocidos, aparte de la tienda familiar. |
 | Facturación (CFDI) | Se emite fuera del sistema. En cada pago solo se anota si pidió factura y su número. |
 | Soporte | Botón "Ayuda" con WhatsApp y correo. Sin tickets ni chat interno. |
-| WhatsApp (Bandeja, Campañas, Resultados) | **Se queda dentro de la aplicación** (decisión del 15 de octubre, revisa la anterior de sacarlo). Activo solo en la tienda IPESA Lomas de Angelópolis. En las demás tiendas nace apagado y solo el dueño lo enciende desde `/admin`, como **instalación asistida** (servicio que se cobra aparte): el cliente nunca lo activa solo. Sin botón `wa.me` en Leads ni Contactos. |
-| Bot de IA | Sigue fuera del MVP. La rama `feature/bot-prueba` no se fusiona por ahora. Cuando se retome, será un complemento de WhatsApp con su propio tope de gasto. |
+| WhatsApp (Bandeja, Campañas, Resultados) | **Exclusivo de la tienda IPESA Lomas de Angelópolis** (decisión final del 15 de octubre; reemplaza la de "instalación asistida"). **No se ofrece a tiendas nuevas**: nacen sin WhatsApp ni Campañas y nadie los enciende desde la app. El código se queda para IPESA. Sin botón `wa.me` en Leads ni Contactos. |
+| Herramientas por tienda | **Sin interruptores**: cada tienda tiene siempre lo básico (Contactos, Leads, Agenda, Fórmulas). Se quitó Configuración → Herramientas y el paso del asistente. |
+| Bot de IA | Fuera del producto. La rama `feature/bot-prueba` se borró (commit `ce77a8b`, recuperable un tiempo). |
 
 ## Etapas
 
@@ -105,12 +106,12 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 - **Probado:** 8 pruebas nuevas (alta con invitación y deshacer si falla, enlace nuevo solo sin dueño, registro cerrado, sin tienda no se abre otra, contacto, conteos) y las 29 anteriores; en el navegador, páginas públicas sin "gratis", validación de "Nueva tienda" y pantallas de resultado y ficha con respuestas simuladas (no se creó ninguna tienda real).
 - **Pendiente del dueño:** configurar `NEXT_PUBLIC_CONTACT_WHATSAPP` y `NEXT_PUBLIC_CONTACT_EMAIL` en Vercel (sin ellas `/registro` muestra un texto genérico).
 
-### Etapa 6. WhatsApp como instalación asistida
-- **Qué se implementa:** el encendido de WhatsApp y Campañas pasa a `/admin`, solo para el dueño. En Configuración, la tienda cliente ve "Disponible con instalación asistida" y cómo pedirla, sin interruptor. En `/admin`, por tienda, una lista de verificación de la instalación: negocio verificado, número registrado, webhook activo, plantillas aprobadas, prueba enviada. Más una guía corta de instalación con los datos que se pegan en Configuración → WhatsApp (Phone Number ID, WABA ID, token y App Secret; ya se guardan por tienda, cifrados, sin variables de entorno).
-- **Qué cambia:** Configuración → Herramientas, `/bienvenida` (el paso de WhatsApp), los textos de venta y el README. Tu tienda IPESA conserva todo encendido. Nada se borra.
-- **Migración:** la lista de verificación necesita guardarse por tienda; se confirma al diseñarla (si se evita, se guarda dentro de las notas).
-- **Descartado:** botón "Escribir por WhatsApp" con `wa.me`.
-- **Detectado en la etapa 2:** hoy toda tienda nueva nace con WhatsApp y Campañas **encendidos**, tanto en el código (`DEFAULT_MODULES` en `lib/stores.ts`) como en el valor por defecto de la columna `stores.modules`. Hay que cambiar ambos a apagado, y `normalizeModules` para que un módulo sin valor cuente como apagado.
+### Etapa 6. WhatsApp solo para IPESA y sin interruptores ✅ (15 de octubre de 2026, en la rama `feature/mvp-saas`)
+- **Cambio de plan:** se descartó la "instalación asistida" (interruptores en el panel, lista de 5 pasos, sección Instalaciones). WhatsApp y Campañas quedan **solo para IPESA**.
+- **Qué se hizo:** las tiendas nuevas nacen sin WhatsApp ni Campañas (`DEFAULT_MODULES`; una tienda sin valor guardado queda sin WhatsApp). Se quitó Configuración → Herramientas y el paso "Elige las herramientas" del asistente (ahora: sucursal → logo → equipo). `PATCH /api/store` ya no acepta cambios de módulos (403) y las credenciales de WhatsApp (`/api/store/whatsapp`) exigen el módulo encendido. Sin WhatsApp en `/inicio` (funciones, imagen de la app, preguntas, datos), el panel de login, la descripción del sitio y del manifiesto, Plan (solo lo muestra a quien lo tiene) y términos/privacidad (solo como condicional). En tu panel, "WhatsApp conectado" solo aparece en la tienda que lo tiene. Novedades: "Configuración más simple" (lo ven los administradores de IPESA).
+- **IPESA no cambia:** tiene sus módulos guardados como encendidos (verificado en la base); conserva WhatsApp, Campañas, Resultados y su pestaña de conexión.
+- **Migración:** no (se escribió una y se descartó sin aplicarse). El valor por omisión de `stores.modules` en la base sigue con WhatsApp encendido, pero no se usa: el código siempre manda los módulos al crear una tienda.
+- **Probado:** 3 pruebas nuevas (módulos de tiendas nuevas e IPESA, la tienda no cambia módulos, credenciales con módulo apagado) y las 37 anteriores; en el navegador, Configuración de IPESA sin Herramientas y con WhatsApp funcionando, y páginas públicas sin ofrecer WhatsApp.
 
 ### Etapa 7. Ciclo de vida de la cuenta
 - **Qué se implementa:** exportación a CSV de contactos y leads; solo lectura 90 días tras cancelar o vencer; borrado definitivo al terminar, con aviso previo.
@@ -129,14 +130,11 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 
 ## Después del MVP
 - Cobro automático con Mercado Pago o Stripe.
-- Bot de IA como complemento de WhatsApp (modo sugerencia en la Bandeja, con tope de gasto por tienda).
-- Embedded Signup de Meta, para que la instalación de WhatsApp sea casi de un clic.
 - Facturación CFDI integrada.
 - Verificación en dos pasos para la cuenta del dueño.
 - Dos planes (Básico y Pro).
 
 ## Riesgos que no hay que perder de vista
-- WhatsApp dentro del producto: cada instalación depende de trámites de Meta (verificación, número, plantillas). Cobrarla como servicio aparte y no prometer plazos.
 - Vercel Hobby prohíbe el uso comercial: pasar a Pro antes de cobrar.
 - Supabase gratis: 500 MB para todas las tiendas y sin respaldos diarios automáticos.
 - Aislamiento entre tiendas: es lo que más daña la reputación si falla (etapa 1).

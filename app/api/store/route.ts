@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, invalidateMemberships, requireStore } from '@/lib/supabase-server'
 import { STORE_PROFILE_SCHEMA, publicStore } from '@/lib/storeServer'
-import { STORE_MODULES, normalizeModules } from '@/lib/stores'
 import { jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 
 // GET /api/store — perfil de la tienda activa
@@ -12,9 +11,10 @@ export async function GET() {
 }
 
 /**
- * PATCH /api/store — dueño/admin: datos de la tienda, módulos activos y
- * "terminé la configuración inicial". El estado, plan y fechas de pago solo
- * los cambia el administrador de la plataforma.
+ * PATCH /api/store — dueño/admin: datos de la tienda y "terminé la
+ * configuración inicial". Los módulos (WhatsApp, Campañas, Fórmulas) ya no se
+ * cambian desde la tienda; el estado, plan y fechas de pago solo los cambia
+ * el administrador de la plataforma.
  */
 export async function PATCH(req: NextRequest) {
   const ctx = await requireStore({ admin: true })
@@ -26,16 +26,7 @@ export async function PATCH(req: NextRequest) {
   if (!parsed.ok) return jsonError(parsed.error)
   const updates: Record<string, unknown> = { ...parsed.data }
 
-  if (body.modules !== undefined) {
-    if (!body.modules || typeof body.modules !== 'object') return jsonError('Módulos inválidos')
-    const incoming = body.modules as Record<string, unknown>
-    if (Object.keys(incoming).some(k => !(STORE_MODULES as readonly string[]).includes(k) || typeof incoming[k] !== 'boolean')) {
-      return jsonError('Módulos inválidos')
-    }
-    const modules = { ...normalizeModules(ctx.store.modules), ...(incoming as Record<string, boolean>) }
-    if (!modules.whatsapp) modules.campaigns = false   // campañas dependen de WhatsApp
-    updates.modules = modules
-  }
+  if (body.modules !== undefined) return jsonError('Las herramientas de la tienda no se pueden cambiar', 403)
   if (body.onboardingCompleted === true && !ctx.store.onboarding_completed_at) {
     updates.onboarding_completed_at = new Date().toISOString()
   }

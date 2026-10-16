@@ -5,10 +5,11 @@ recordatorios con notificaciones push, fórmulas de igualación de color y una b
 **WhatsApp Business** integrada al CRM (chat, plantillas y campañas). Se instala como PWA
 en el celular.
 
-Es **multi-tienda (SaaS)**: cada tienda se registra sola, prueba 14 días gratis y tiene
-su propio equipo, logo, herramientas, catálogos y número de WhatsApp. La información de
-cada tienda está aislada de las demás. La tienda original (la que existía antes de la
-versión multi-tienda) conserva todos sus datos.
+Es **multi-tienda (SaaS)**: cada tienda se da de alta por invitación y tiene su propio
+equipo, logo y catálogos. La información de cada tienda está aislada de las demás. La
+tienda original (la que existía antes de la versión multi-tienda) conserva todos sus datos
+y es la **única con WhatsApp y Campañas**: no se ofrecen a tiendas nuevas (nacen con esos
+módulos apagados y no hay interruptores en la app).
 
 ## Marca
 
@@ -83,10 +84,9 @@ En Supabase → **Authentication**:
 | La tienda descubre el producto y pide una invitación | `/` (sin sesión) o `/inicio` → `/registro` (WhatsApp o correo) |
 | Tú das de alta la tienda (precio acordado) e invitas a su dueño | Panel del dueño → Tiendas → "Nueva tienda" |
 | El dueño crea su contraseña con el enlace (vence en 7 días) | `/invitacion/<token>` → correo → `/auth/confirm` |
-| Configura su sucursal (logo, herramientas, equipo) | `/bienvenida` |
+| Configura su sucursal (logo, equipo) | `/bienvenida` |
 | Tú registras su primer pago (o una cortesía) y la tienda pasa a **Activa** | Ficha de la tienda en el panel |
 | Invita a su equipo con un enlace personal (vence en 7 días) | Configuración → Equipo → `/invitacion/<token>` |
-| Conecta su número de WhatsApp Business | Configuración → WhatsApp |
 | Si un pago vence queda en **solo consulta** hasta renovar | Configuración → Plan |
 
 - **Alta solo por invitación** (sin prueba gratis): `/registro` solo explica cómo pedir la

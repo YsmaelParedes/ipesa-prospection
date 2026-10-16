@@ -7,7 +7,6 @@ import { useSession } from '@/lib/profile'
 import { ROLE_LABELS, STATUS_LABELS, type StoreModule } from '@/lib/stores'
 import { Ico, Spinner, WhatsAppGlyph, cx } from './ui'
 import { StoreTab } from './StoreTab'
-import { ModulesTab } from './ModulesTab'
 import { CatalogsTab } from './CatalogsTab'
 import { TeamTab } from './TeamTab'
 import { WhatsAppTab } from './WhatsAppTab'
@@ -15,14 +14,13 @@ import { PlanTab, STATUS_BADGE } from './PlanTab'
 import { AccountTab } from './AccountTab'
 import s from './configuracion.module.css'
 
-type TabId = 'tienda' | 'herramientas' | 'catalogos' | 'equipo' | 'whatsapp' | 'plan' | 'cuenta'
+type TabId = 'tienda' | 'catalogos' | 'equipo' | 'whatsapp' | 'plan' | 'cuenta'
 const TABS: { id: TabId; label: string; hint: string; icon: (p: React.SVGProps<SVGSVGElement>) => React.ReactElement; admin?: boolean; module?: StoreModule }[] = [
   { id: 'tienda',       label: 'Tienda',       hint: 'Datos y logo',            icon: Ico.store, admin: true },
-  { id: 'herramientas', label: 'Herramientas', hint: 'Módulos activos',         icon: Ico.grid, admin: true },
   { id: 'catalogos',    label: 'Catálogos',    hint: 'Segmentos y canales',     icon: Ico.tag },
   { id: 'equipo',       label: 'Equipo',       hint: 'Usuarios e invitaciones', icon: Ico.users, admin: true },
   { id: 'whatsapp',     label: 'WhatsApp',     hint: 'Conexión y respuestas',   icon: WhatsAppGlyph, admin: true, module: 'whatsapp' },
-  { id: 'plan',         label: 'Plan',         hint: 'Prueba y suscripción',    icon: Ico.card, admin: true },
+  { id: 'plan',         label: 'Plan',         hint: 'Suscripción y pagos',     icon: Ico.card, admin: true },
   { id: 'cuenta',       label: 'Mi cuenta',    hint: 'Perfil, avisos y contraseña', icon: Ico.user },
 ]
 
@@ -88,7 +86,6 @@ function Settings() {
 
         <div className={s.content} key={tab}>
           {tab === 'tienda'       && <StoreTab store={store} />}
-          {tab === 'herramientas' && <ModulesTab store={store} />}
           {tab === 'catalogos'    && <CatalogsTab canEdit={isAdmin} />}
           {tab === 'equipo'       && <TeamTab store={store} isOwner={!!session.isOwner} />}
           {tab === 'whatsapp'     && <WhatsAppTab isOwner={!!session.isOwner} />}

@@ -12,12 +12,12 @@ export const STATUS_BADGE: Record<string, string> = {
 
 const INCLUDED = [
   'Contactos, leads y recordatorios',
-  'Bandeja de WhatsApp ligada al CRM',
-  'Campañas con reglas anti-bloqueo',
   'Fórmulas de color en mL',
   'Notificaciones en el celular',
   'Soporte para configurar tu tienda',
 ]
+// Solo la tienda original los tiene; no se ofrecen a tiendas nuevas
+const WHATSAPP_INCLUDED = ['Bandeja de WhatsApp ligada al CRM', 'Campañas con reglas anti-bloqueo']
 
 export function PlanTab({ store }: { store: ClientStore }) {
   const [toast, showToast] = useToast()
@@ -96,7 +96,7 @@ export function PlanTab({ store }: { store: ClientStore }) {
 
       <Panel icon={Ico.check} tone="tTeal" title={`Incluido en el plan ${store.planLabel}`}>
         <ul className={s.features}>
-          {INCLUDED.map(f => <li key={f}><Ico.check />{f}</li>)}
+          {[...INCLUDED, ...(store.modules.whatsapp ? WHATSAPP_INCLUDED : [])].map(f => <li key={f}><Ico.check />{f}</li>)}
           <li><Ico.check />Hasta {store.maxUsers} usuarios con roles</li>
         </ul>
       </Panel>

@@ -1,7 +1,7 @@
 {
   "name": "CRM Pinturas",
   "short_name": "CRM Pinturas",
-  "description": "CRM para tiendas de pintura: contactos, leads, WhatsApp y fórmulas de color",
+  "description": "CRM para tiendas de pintura: contactos, leads, agenda y fórmulas de color",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
