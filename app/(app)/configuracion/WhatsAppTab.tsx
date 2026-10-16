@@ -58,7 +58,7 @@ function ConnectionPanel() {
       {conn.connected && (
         <div className={s.kvs}>
           <div className={s.kv}><small>Calidad</small><strong><span className={cx(s.badge, quality.cls)} style={{ padding: '2px 9px' }}>{quality.label}</span></strong></div>
-          <div className={s.kv}><small>Límite de Meta</small><strong>{tierLabel(health?.messagingLimitTier)}</strong></div>
+          <div className={s.kv}><small>Límite de envíos</small><strong>{tierLabel(health?.messagingLimitTier)}</strong></div>
         </div>
       )}
       {conn.connected && health?.qualityRating && health.qualityRating !== 'GREEN' && health.qualityRating !== 'UNKNOWN' && (
@@ -73,7 +73,7 @@ function ConnectionPanel() {
       )}
       {conn.connected && health?.canSendMessage === 'LIMITED' && !!health.healthNotes?.length && (
         <div style={{ marginTop: 14 }}>
-          <Note kind="warn">Aviso de Meta: {health.healthNotes.join(' ')}</Note>
+          <Note kind="warn">{health.healthNotes.join(' ')}</Note>
         </div>
       )}
       {conn.connected && !conn.receivesMessages && (
