@@ -11,6 +11,7 @@ Cada etapa dice qué se implementa, qué cambia y si necesita migración de base
 | Modelo de ingreso | Renta mensual. No se vende el código. |
 | Quién entra | Solo por invitación desde `/admin`. `/registro` se cierra o queda como lista de espera. |
 | Prueba gratis | **Sin prueba gratis.** La tienda nace sin acceso hasta registrar su primer pago. Los pilotos reciben un pago de cortesía. |
+| Límites por cuenta | **Una sola tienda por cuenta** (nadie abre sucursales; otra sucursal se da de alta aparte desde el panel). Plan **Profesional: 3 usuarios** = el dueño (único administrador) + 2 vendedores. Cada vendedor ve solo sus leads y su agenda; el dueño ve todo; los contactos son de toda la tienda. IPESA va en el plan **Interno** (sin límite práctico, con administradores). Decisión del 15 de octubre. |
 | Planes y precio | **Sin precio general** (decisión del 15 de octubre). Cada tienda tiene su **precio mensual acordado**, que se negocia en la visita y se captura al invitarla. Un solo plan ("Profesional", límite de usuarios) sin pantalla de Planes. |
 | Venta | En frío, visitando tiendas. Sin pagos en línea: todo pago se registra a mano en el panel. |
 | Cuenta del dueño | La misma cuenta para `/admin` y para la tienda IPESA. Al iniciar sesión va directo a `/admin`; "Abrir mi tienda" pasa a IPESA. Más adelante, verificación en dos pasos. |

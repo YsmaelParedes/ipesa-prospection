@@ -39,6 +39,9 @@ export async function POST(req: NextRequest) {
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
   const role = body?.role === 'admin' ? 'admin' : 'employee'
   if (!EMAIL_RE.test(email) || email.length > 254) return jsonError('Escribe un correo válido')
+  if (role === 'admin' && !planOf(ctx.store.plan).allowAdmins) {
+    return jsonError('Tu plan incluye un solo administrador: el dueño. Invita a tu equipo como vendedores.', 403)
+  }
   if (role === 'admin' && !ctx.isOwner) return jsonError('Solo el dueño puede invitar administradores', 403)
 
   try {

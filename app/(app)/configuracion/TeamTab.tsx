@@ -114,7 +114,7 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
             placeholder="correo@ejemplo.com" aria-label="Correo de la persona" autoComplete="off" />
           <div className={s.seg} role="radiogroup" aria-label="Rol">
             <button type="button" role="radio" aria-checked={role === 'employee'} className={cx(role === 'employee' && s.segOn)} onClick={() => setRole('employee')}>Vendedor</button>
-            {isOwner && <button type="button" role="radio" aria-checked={role === 'admin'} className={cx(role === 'admin' && s.segOn)} onClick={() => setRole('admin')}>Administrador</button>}
+            {isOwner && store.allowAdmins && <button type="button" role="radio" aria-checked={role === 'admin'} className={cx(role === 'admin' && s.segOn)} onClick={() => setRole('admin')}>Administrador</button>}
           </div>
           <button type="submit" className="btn btn-primary" disabled={inviting || !email.trim()}>
             <Ico.link style={{ width: 14, height: 14 }} />{inviting ? 'Creando…' : 'Crear invitación'}
@@ -122,7 +122,7 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
         </form>
         <p className={s.hint}>
           {role === 'employee'
-            ? <><strong>Vendedor:</strong> registra contactos, leads y recordatorios, y atiende WhatsApp.</>
+            ? <><strong>Vendedor:</strong> entra con su propio usuario y ve solo sus leads y su agenda; los contactos son de toda la tienda{store.modules.whatsapp ? ', y atiende WhatsApp' : ''}.</>
             : <><strong>Administrador:</strong> además ve el trabajo de todo el equipo y configura la tienda.</>}
         </p>
         {error && <div className={s.error}>{error}</div>}
@@ -165,7 +165,7 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
                         onChange={e => act(m.user_id, () => api('/api/store/members', send('PATCH', { userId: m.user_id, role: e.target.value })), 'Rol actualizado')}
                       >
                         <option value="employee">Vendedor</option>
-                        {(isOwner || m.role === 'admin') && <option value="admin" disabled={!isOwner}>Administrador</option>}
+                        {((isOwner && store.allowAdmins) || m.role === 'admin') && <option value="admin" disabled={!isOwner || !store.allowAdmins}>Administrador</option>}
                       </select>
                     ) : (
                       <span className={cx(s.badge, ROLE_BADGE[m.role])}>{ROLE_LABELS[m.role]}</span>

@@ -33,8 +33,10 @@ Cloud API y Web Push, y el aislamiento entre tiendas.
 - **Solo consulta** cuando vence la prueba o el pago: las escrituras responden `402`.
 - **Alta solo por invitación**: `/api/auth/register` está cerrado (403). Como la llave pública
   de Supabase permite crear cuentas directo (y las invitaciones lo necesitan), una cuenta sin
-  tienda no puede abrir una: `POST /api/stores` exige ser dueño de otra tienda o administrador
-  de la plataforma. Las tiendas nuevas nacen "Por activar" (solo lectura).
+  tienda no puede abrir una: `POST /api/stores` está cerrado (403; una sola tienda por cuenta,
+  solo el panel del dueño crea tiendas). Las tiendas nuevas nacen "Por activar" (solo lectura).
+  El límite de usuarios y de administradores del plan se valida en el servidor al invitar,
+  nombrar administradores y reactivar usuarios.
 - **Panel del dueño** (`/admin`, `/api/platform/*`): solo usuarios en `platform_admins`. El
   layout de `/admin` lo comprueba en el servidor y responde 404 a cualquier otra cuenta; cada
   ruta de `/api/platform` lo vuelve a validar. Los pagos (`store_payments`) y la bitácora

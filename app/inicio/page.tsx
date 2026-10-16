@@ -42,7 +42,7 @@ const FEATURES = [
   { icon: Ic.contacts,  tone: s.tCyan,    title: 'Contactos y segmentos', text: 'Hogar, constructor, arquitecto, pintor o empresa. Encuentra a cualquier cliente en segundos e importa tu lista desde Excel.' },
   { icon: Ic.leads,     tone: s.tBrand,   title: 'Pipeline de ventas', text: 'De nuevo a cotizado y cerrado. Cada oportunidad con su monto, su historial y el siguiente paso.' },
   { icon: Ic.grid,      tone: s.tAmber,   title: 'Lo que toca hoy', text: 'Al abrir, tu equipo ve a quién darle seguimiento, qué cotizaciones esperan respuesta y qué recordatorios tiene.' },
-  { icon: Ic.users,     tone: s.tMagenta, title: 'Tu equipo, cada quien con su usuario', text: 'Dueño, administrador y vendedor: cada quien ve y hace lo que le corresponde, y ves quién atiende a cada cliente.' },
+  { icon: Ic.users,     tone: s.tMagenta, title: 'Tu equipo, cada quien con su usuario', text: 'Cada vendedor trabaja sus propios leads y su agenda; tú, como dueño, ves los de todos y quién atiende a cada cliente.' },
   { icon: Ic.flask,     tone: s.tTeal,    title: 'Fórmulas de color', text: 'Consulta fórmulas de color convertidas a mililitros para igualar colores sin errores.' },
   { icon: Ic.bell,      tone: s.tWa,      title: 'Recordatorios y avisos', text: 'Notificaciones en tu celular para que ningún seguimiento se quede pendiente.' },
 ]
@@ -56,16 +56,16 @@ const STEPS = [
 const SECURITY = [
   { icon: Ic.layers, title: 'Datos separados por tienda', text: 'Cada consulta se filtra por tu tienda en el servidor. El navegador nunca entra directo a la base de datos.' },
   { icon: Ic.key,    title: 'Tu contraseña es solo tuya', text: 'La creas tú con tu enlace de invitación; nadie más la conoce, ni nosotros.' },
-  { icon: Ic.users,  title: 'Roles y permisos', text: 'Dueño, administrador y vendedor: cada quien ve y hace solo lo que le corresponde.' },
+  { icon: Ic.users,  title: 'Roles y permisos', text: 'Dueño y vendedores: cada vendedor ve solo sus leads y su agenda; el dueño configura la tienda y ve todo.' },
   { icon: Ic.link,   title: 'Accesos bajo tu control', text: 'Invitaciones con enlace que vence y la opción de desactivar a quien ya no trabaje contigo.' },
 ]
 
 const FAQ = [
   { q: '¿Cómo empiezo?', a: 'Pide tu invitación. Acordamos contigo el plan, damos de alta tu tienda y te mandamos un enlace para que crees tu contraseña. Después tú invitas a tu equipo.' },
   { q: '¿Cómo se paga?', a: 'El precio se acuerda con cada tienda y se paga por mes, por transferencia o en efectivo. Si un pago vence, tu información se conserva y tu equipo puede consultarla; para seguir registrando solo hay que renovar.' },
-  { q: '¿Cuántas personas pueden usarlo?', a: `El plan Profesional incluye hasta ${MAX_USERS} usuarios por tienda, con roles de dueño, administrador y vendedor.` },
+  { q: '¿Cuántas personas pueden usarlo?', a: `El plan Profesional incluye hasta ${MAX_USERS} usuarios por tienda: el dueño y ${MAX_USERS - 1} vendedores, cada uno con su propio acceso y sus propios leads.` },
   { q: '¿Otras tiendas pueden ver mis clientes?', a: 'No. Cada tienda tiene su propia información y solo la ve su equipo. Ninguna otra tienda puede acceder a ella.' },
-  { q: 'Tengo varias sucursales, ¿cómo funciona?', a: 'Puedes dar de alta varias sucursales con la misma cuenta y cambiar entre ellas con un clic. Cada una tiene su equipo y sus datos.' },
+  { q: 'Tengo varias sucursales, ¿cómo funciona?', a: 'Cada cuenta es una sucursal. Si tienes otra, la damos de alta aparte, con su propio equipo y sus datos.' },
   { q: '¿Funciona en el celular?', a: 'Sí. Funciona en cualquier navegador y puedes instalarlo como app en tu celular para recibir avisos de recordatorios y mensajes.' },
 ]
 
@@ -232,8 +232,8 @@ export default function LandingPage() {
                 {[
                   'Logo y datos de tu sucursal',
                   'Segmentos y canales a la medida de tu tienda',
-                  'Equipo con roles: dueño, administrador y vendedor',
-                  '¿Varias sucursales? Cámbiate entre ellas con un clic',
+                  `Tu equipo: tú y ${MAX_USERS - 1} vendedores, cada uno con su usuario`,
+                  'Cada vendedor con sus propios leads y su agenda',
                 ].map(b => <li key={b}><span className={s.bulletIcon}><Ic.check /></span>{b}</li>)}
               </ul>
             </div>
@@ -247,7 +247,7 @@ export default function LandingPage() {
               <div className={`${s.panel} ${s.panelTeam}`}>
                 <div className={s.panelHead}><strong>Equipo</strong><small>3 de {MAX_USERS} usuarios</small></div>
                 <div className={s.memberRow}><span className={`${s.av} ${s.avBrand}`}>AM</span><span>Ana Martínez</span><em className={s.roleOwner}>Dueño</em></div>
-                <div className={s.memberRow}><span className={`${s.av} ${s.avCyan}`}>LH</span><span>Luis Herrera</span><em className={s.roleAdmin}>Administrador</em></div>
+                <div className={s.memberRow}><span className={`${s.av} ${s.avCyan}`}>LH</span><span>Luis Herrera</span><em>Vendedor</em></div>
                 <div className={s.memberRow}><span className={`${s.av} ${s.avAmber}`}>SR</span><span>Sofía Ramos</span><em>Vendedor</em></div>
               </div>
             </div>

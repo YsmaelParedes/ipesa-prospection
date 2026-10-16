@@ -21,6 +21,8 @@ export type ClientStore = {
   plan: string
   planLabel: string
   maxUsers: number
+  /** El plan permite nombrar administradores además del dueño */
+  allowAdmins: boolean
   trialEndsAt: string | null
   trialDaysLeft: number | null
   paidUntil: string | null

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   getServerSupabase, getStoreMembers, invalidateStoreMembers, requireStore, type StoreContext,
 } from '@/lib/supabase-server'
-import type { StoreRole } from '@/lib/stores'
+import { planOf, type StoreRole } from '@/lib/stores'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 
 /**
@@ -60,11 +60,20 @@ export async function PATCH(req: NextRequest) {
   const updates: Record<string, unknown> = {}
   if (body.role !== undefined) {
     if (body.role !== 'admin' && body.role !== 'employee') return jsonError('Rol inválido')
+    if (body.role === 'admin' && !planOf(ctx.store.plan).allowAdmins) {
+      return jsonError('Tu plan incluye un solo administrador: el dueño.', 403)
+    }
     if (body.role === 'admin' && !ctx.isOwner) return jsonError('Solo el dueño puede nombrar administradores', 403)
     updates.role = body.role
   }
   if (body.status !== undefined) {
     if (body.status !== 'active' && body.status !== 'disabled') return jsonError('Estado inválido')
+    // Reactivar a alguien ocupa un lugar del plan
+    if (body.status === 'active' && target.status !== 'active') {
+      const { maxUsers, label } = planOf(ctx.store.plan)
+      const active = (await getStoreMembers(ctx.storeId)).filter(m => m.status === 'active').length
+      if (active >= maxUsers) return jsonError(`Tu plan ${label} permite hasta ${maxUsers} usuarios. Desactiva o quita a alguien primero.`, 403)
+    }
     updates.status = body.status
   }
   if (!Object.keys(updates).length) return jsonError('Nada que actualizar')

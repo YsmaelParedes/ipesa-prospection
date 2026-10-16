@@ -333,10 +333,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const navItems     = NAV_ITEMS.filter(withModule)
   const toolItems    = TOOL_ITEMS.filter(withModule)
   const readonly     = store?.access === 'readonly'
-  // El dueño puede abrir otra sucursal; el menú aparece si hay a dónde cambiar o algo que agregar.
-  // El dueño de la plataforma vuelve desde aquí a su panel (/admin).
-  const canAddStore  = !!session?.isOwner
-  const hasStoreMenu = !!session && (session.stores.length > 1 || canAddStore || session.platformAdmin)
+  // Una sola tienda por cuenta: el menú aparece si hay a dónde cambiar (alguien en varias tiendas)
+  // o para que el dueño de la plataforma vuelva a su panel (/admin).
+  const hasStoreMenu = !!session && (session.stores.length > 1 || session.platformAdmin)
   const trialLeft    = store?.status === 'trial' && !readonly ? store.trialDaysLeft : null
   const showFab      = !readonly && pathname in FAB_ROUTES
 
@@ -377,7 +376,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 onClick={() => hasStoreMenu && setStoreMenuOpen(o => !o)}
                 aria-expanded={hasStoreMenu ? storeMenuOpen : undefined}
                 aria-haspopup={hasStoreMenu ? 'menu' : undefined}
-                title={hasStoreMenu ? 'Cambiar o agregar sucursal' : store.name}
+                title={hasStoreMenu ? 'Cambiar de tienda' : store.name}
               >
                 <Icon.store className="store-switch-icon" />
                 <span className="store-switch-name">{store.name}</span>
@@ -396,11 +395,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       <small>{ROLE_LABELS[s.role]}</small>
                     </button>
                   ))}
-                  {canAddStore && (
-                    <Link href="/bienvenida?nueva=1" role="menuitem" className="store-menu-item store-menu-add" onClick={() => setStoreMenuOpen(false)}>
-                      <span><Icon.plus />Agregar sucursal</span>
-                    </Link>
-                  )}
                 </div>
               )}
             </div>

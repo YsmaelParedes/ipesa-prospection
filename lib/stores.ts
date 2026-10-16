@@ -38,9 +38,18 @@ export const ROLE_LABELS: Record<StoreRole, string> = {
   owner: 'Dueño', admin: 'Administrador', employee: 'Vendedor',
 }
 
-/** Planes de referencia (el cobro por ahora es manual desde el panel de la plataforma). */
-export const PLANS: Record<string, { label: string; maxUsers: number }> = {
-  profesional: { label: 'Profesional', maxUsers: 15 },
+/**
+ * Planes (el precio se acuerda con cada tienda y se cobra a mano desde el panel).
+ *  · maxUsers: usuarios activos de la tienda, contando al dueño.
+ *  · allowAdmins: si el dueño puede nombrar administradores. Sin ellos, el dueño
+ *    es el único que configura la tienda y ve los leads de todos; cada vendedor
+ *    ve solo los suyos (los contactos son de toda la tienda).
+ * Profesional = dueño + 2 vendedores. Interno = la tienda propia (IPESA), sin
+ * límite práctico; lo asigna el dueño de la plataforma desde la ficha.
+ */
+export const PLANS: Record<string, { label: string; maxUsers: number; allowAdmins: boolean }> = {
+  profesional: { label: 'Profesional', maxUsers: 3, allowAdmins: false },
+  interno:     { label: 'Interno', maxUsers: 50, allowAdmins: true },
 }
 export const DEFAULT_PLAN = 'profesional'
 export const planOf = (plan: string) => PLANS[plan] ?? PLANS[DEFAULT_PLAN]

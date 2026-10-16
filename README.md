@@ -92,13 +92,13 @@ En Supabase → **Authentication**:
 - **Alta solo por invitación** (sin prueba gratis): `/registro` solo explica cómo pedir la
   invitación y `/api/auth/register` responde 403. Una tienda nueva nace **"Por activar"**
   (`status = 'pending'`): su dueño puede entrar y configurarla, pero queda en solo lectura
-  hasta su primer pago o cortesía. Una cuenta sin tienda no puede abrir una
-  (`POST /api/stores` solo para quien ya es dueño de una tienda, que agrega sucursal, o para
-  el dueño de la plataforma). Contacto para pedir invitación: `NEXT_PUBLIC_CONTACT_WHATSAPP`
+  hasta su primer pago o cortesía. Nadie abre tiendas por su cuenta (`POST /api/stores`
+  responde 403): solo el panel del dueño las crea. Contacto para pedir invitación: `NEXT_PUBLIC_CONTACT_WHATSAPP`
   y `NEXT_PUBLIC_CONTACT_EMAIL`.
-- **Roles por tienda**: *dueño* (todo, incluido nombrar administradores y desconectar
-  WhatsApp), *administrador* (configura la tienda y ve el trabajo de todos) y *vendedor*.
-  Una misma cuenta puede pertenecer a varias tiendas y cambiar entre ellas desde el menú.
+- **Roles por tienda**: *dueño* (todo, incluido desconectar WhatsApp), *administrador*
+  (configura la tienda y ve el trabajo de todos; solo en el plan Interno) y *vendedor* (ve
+  solo sus leads y su agenda). Si una cuenta pertenece a varias tiendas (por invitación),
+  cambia entre ellas desde el menú.
 - **Solo consulta**: con la prueba o el pago vencidos (3 días de gracia) el equipo puede ver
   y exportar, pero no registrar ni enviar; la API responde `402 STORE_READONLY`.
 - **Administradores de la plataforma**: filas en la tabla `platform_admins`
@@ -116,8 +116,14 @@ En Supabase → **Authentication**:
   como estaba. `/admin/pagos` muestra lo cobrado por mes; el Resumen, cobrado, ingreso
   mensual, por cobrar y adeudo. Todo queda en la bitácora `platform_events`. "Sin
   vencimiento" (tienda propia o acuerdo especial) es una acción aparte.
-- **Planes**: `lib/stores.ts` (`PLANS`, `TRIAL_DAYS`, `PAYMENT_GRACE_DAYS`): un solo plan
-  (límite de usuarios), sin precio; el precio se acuerda con cada tienda.
+- **Planes**: `lib/stores.ts` (`PLANS`, `PAYMENT_GRACE_DAYS`), sin precio (se acuerda con cada
+  tienda). **Profesional** (por omisión): 3 usuarios = el dueño, único administrador, y 2
+  vendedores; cada vendedor ve solo sus leads y su agenda, los contactos son de toda la
+  tienda. **Interno** (la tienda propia): sin límite práctico y con administradores; se asigna
+  en la ficha de la tienda del panel. Las invitaciones, nombrar administradores y reactivar
+  usuarios respetan el plan.
+- **Una sola tienda por cuenta**: `POST /api/stores` está cerrado y no hay "Agregar sucursal";
+  otra sucursal se da de alta aparte desde el panel del dueño.
 
 ## WhatsApp
 

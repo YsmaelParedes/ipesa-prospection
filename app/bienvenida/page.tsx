@@ -16,8 +16,9 @@ import s from './bienvenida.module.css'
 
 /**
  * Asistente de alta de una tienda: datos de la sucursal → logo → equipo →
- * listo (las herramientas no se eligen: cada tienda tiene las básicas). También sirve para agregar otra sucursal
- * (/bienvenida?nueva=1). Cada paso guarda en la API, que valida permisos.
+ * listo (las herramientas no se eligen: cada tienda tiene las básicas). La
+ * tienda ya existe (la da de alta el panel del dueño; una sola por cuenta).
+ * Cada paso guarda en la API, que valida permisos.
  */
 
 const STEPS = [
@@ -107,18 +108,17 @@ function Wizard() {
     // Viene de confirmar su correo tras aceptar una invitación: de vuelta a ella
     const invite = !current && pendingInvite()
     if (invite) { window.location.replace(`/invitacion/${invite}`); return }
-    if (current && !addingStore) {
+    // Una sola tienda por cuenta: ya no se agregan sucursales desde aquí
+    if (current) {
       if (current.onboardingCompleted || !session.isAdmin) { window.location.replace('/'); return }
       setStore(current)
       setProfile(profileOf(current))
       setModules(current.modules)
       setStep(1)
-    } else if (!current) {
-      setStep(NO_STORE)
     } else {
-      setStep(0)
+      setStep(NO_STORE)
     }
-  }, [session, addingStore, step])
+  }, [session, step])
 
   // Cada paso empieza arriba (en celular el formulario anterior pudo quedar abajo)
   useEffect(() => {
@@ -172,7 +172,7 @@ function Wizard() {
               )}
               {step === 2 && store && (
                 <TeamStep
-                  store={store} canInviteAdmins={isOwner} invites={invites} locked={store.access === 'readonly'}
+                  store={store} canInviteAdmins={isOwner && store.allowAdmins} invites={invites} locked={store.access === 'readonly'}
                   onInvite={inv => setInvites(list => [inv, ...list.filter(i => i.email !== inv.email)])}
                   onBack={() => setStep(1)} onNext={() => setStep(DONE)}
                 />

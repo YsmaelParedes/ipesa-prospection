@@ -44,6 +44,7 @@ export function publicStore(store: StoreRow) {
     plan: store.plan,
     planLabel: planOf(store.plan).label,
     maxUsers: planOf(store.plan).maxUsers,
+    allowAdmins: planOf(store.plan).allowAdmins,
     trialEndsAt: store.trial_ends_at,
     trialDaysLeft: trialDaysLeft(store),
     paidUntil: store.paid_until,
@@ -104,7 +105,7 @@ export async function createStore(createdBy: string, profile: Record<string, unk
     ...DEFAULT_CANALES.map(label => ({ store_id: store!.id, type: 'canal', label })),
   ]
   const { error: catalogError } = await db.from('app_config').insert(catalogs)
-  if (catalogError) console.error('[provisionStore] catálogos', catalogError.message)  // no bloquea el alta
+  if (catalogError) console.error('[createStore] catálogos', catalogError.message)  // no bloquea el alta
 
   const { error: waError } = await db.from('store_whatsapp').insert({
     store_id: store.id,
@@ -112,20 +113,7 @@ export async function createStore(createdBy: string, profile: Record<string, unk
     verify_token: randomToken(24),
     webhook_key: randomToken(18),
   })
-  if (waError) console.error('[provisionStore] whatsapp', waError.message)
+  if (waError) console.error('[createStore] whatsapp', waError.message)
 
-  return store
-}
-
-/** Sucursal nueva de un dueño que ya tiene tienda: él queda como dueño. Nace "Por activar". */
-export async function provisionStore(user: User, profile: Record<string, unknown>): Promise<StoreRow> {
-  const store = await createStore(user.id, profile)
-  const db = getServerSupabase()
-  const { error: memberError } = await db.from('store_members').insert({ store_id: store.id, user_id: user.id, role: 'owner' })
-  if (memberError) {
-    await db.from('stores').delete().eq('id', store.id)
-    throw memberError
-  }
-  invalidateMemberships(user.id)
   return store
 }
