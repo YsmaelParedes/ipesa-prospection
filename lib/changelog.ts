@@ -17,8 +17,10 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '2026-10-15',
     date: '15 de octubre, 2026',
-    title: 'Configuración más simple',
+    title: 'Descarga tu información y Configuración más simple',
     items: [
+      'Nuevo botón "Exportar" en Leads: descarga a Excel los leads que estás viendo.',
+      'En Configuración → Tienda, "Descarga tu información" baja en un solo Excel tus contactos, leads con su historial, agenda y catálogos.',
       'Configuración ya no tiene la pestaña "Herramientas": WhatsApp, Campañas y Fórmulas quedan siempre activos en tu tienda.',
     ],
   },
