@@ -1,21 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Ico, Note, Panel, Spinner, WhatsAppGlyph, api, copyText, cx, fmtDate, send, useToast } from './ui'
+import { Ico, Note, Panel, Spinner, WhatsAppGlyph, api, cx, fmtDate, send, useToast } from './ui'
 import s from './configuracion.module.css'
 import { tierLabel } from '@/lib/whatsappSafety'
 
-type Connection = {
-  connected: boolean
-  source: 'store' | 'env'
-  phoneNumberId: string | null
-  wabaId: string | null
-  displayPhone: string | null
-  hasAppSecret: boolean
-  connectedAt: string | null
-  encryptionReady: boolean
-  webhook: { url: string; verifyToken: string | null }
-}
+// Sin datos técnicos: la conexión (credenciales y webhook) la hace el asesor desde su panel
+type Connection = { connected: boolean; displayPhone: string | null; connectedAt: string | null; receivesMessages: boolean }
 type Health = {
   displayPhoneNumber?: string; verifiedName?: string; qualityRating?: string; messagingLimitTier?: string; nameStatus?: string
   canSendMessage?: string; healthNotes?: string[]
@@ -28,213 +19,69 @@ const QUALITY: Record<string, { label: string; cls: string }> = {
   UNKNOWN: { label: 'Sin datos', cls: s.bMuted },
 }
 
-/* ── Conexión ───────────────────────────────────────────────────────────── */
-function CopyField({ label, value, onCopied }: { label: string; value: string; onCopied: () => void }) {
-  return (
-    <div className={s.copyField}>
-      <label>{label}</label>
-      <input className={cx(s.input, s.mono)} readOnly value={value} onFocus={e => e.currentTarget.select()} aria-label={label} />
-      <button type="button" className="btn btn-ghost" onClick={async () => { if (await copyText(value)) onCopied() }}>
-        <Ico.copy style={{ width: 14, height: 14 }} />Copiar
-      </button>
-    </div>
-  )
-}
-
-function ConnectForm({ encryptionReady, onConnected, onCancel }: { encryptionReady: boolean; onConnected: (msg: string) => void; onCancel?: () => void }) {
-  const [f, setF]       = useState({ accessToken: '', phoneNumberId: '', wabaId: '', appSecret: '' })
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const set = (k: keyof typeof f, digits = false) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setF(prev => ({ ...prev, [k]: digits ? e.target.value.replace(/\D/g, '') : e.target.value.trim() }))
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setBusy(true)
-    try {
-      const d = await api<{ displayPhone: string | null; verifiedName: string | null }>('/api/store/whatsapp', send('PUT', f))
-      onConnected(`Conectado${d.displayPhone ? ` · ${d.displayPhone}` : ''}`)
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <form onSubmit={submit}>
-      {!encryptionReady && (
-        <div style={{ marginBottom: 14 }}>
-          <Note kind="warn">El servidor aún no tiene la llave de cifrado (<code>CREDENTIALS_ENCRYPTION_KEY</code>), así que no puede guardar credenciales. Avisa al administrador de la plataforma.</Note>
-        </div>
-      )}
-      <div className={s.formGrid}>
-        <div className={cx('field', s.span2)}>
-          <label htmlFor="wa-token">Token de acceso permanente</label>
-          <input id="wa-token" type="password" autoComplete="off" value={f.accessToken} onChange={set('accessToken')} placeholder="EAAG…" required className={s.mono} />
-          <div className="field-hint">De un usuario del sistema con permisos <code>whatsapp_business_messaging</code> y <code>whatsapp_business_management</code>.</div>
-        </div>
-        <div className="field">
-          <label htmlFor="wa-phone">Identificador del número (Phone number ID)</label>
-          <input id="wa-phone" inputMode="numeric" value={f.phoneNumberId} onChange={set('phoneNumberId', true)} placeholder="123456789012345" required className={s.mono} />
-        </div>
-        <div className="field">
-          <label htmlFor="wa-waba">Identificador de la cuenta (WABA ID)</label>
-          <input id="wa-waba" inputMode="numeric" value={f.wabaId} onChange={set('wabaId', true)} placeholder="102030405060708" required className={s.mono} />
-        </div>
-        <div className={cx('field', s.span2)}>
-          <label htmlFor="wa-secret">Clave secreta de la app (App Secret)</label>
-          <input id="wa-secret" type="password" autoComplete="off" value={f.appSecret} onChange={set('appSecret')} placeholder="32 caracteres" required maxLength={32} className={s.mono} />
-          <div className="field-hint">Con ella comprobamos que los mensajes que llegan vienen de verdad de Meta.</div>
-        </div>
-      </div>
-      {error && <div className={s.error}>{error}</div>}
-      <div className={s.formFoot}>
-        <small><Ico.lock style={{ width: 13, height: 13, verticalAlign: '-2px', marginRight: 4 }} />Se guardan cifrados y no se vuelven a mostrar.</small>
-        {onCancel && <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancelar</button>}
-        <button type="submit" className="btn btn-primary" disabled={busy || !encryptionReady}>{busy ? 'Verificando con Meta…' : 'Verificar y conectar'}</button>
-      </div>
-    </form>
-  )
-}
-
-function ConnectionPanels({ isOwner, showToast, onStatus }: { isOwner: boolean; showToast: (m: string) => void; onStatus: (connected: boolean) => void }) {
+/* ── Estado del número ──────────────────────────────────────────────────── */
+function ConnectionPanel() {
   const [conn, setConn]     = useState<Connection | null>(null)
   const [health, setHealth] = useState<Health | null>(null)
   const [error, setError]   = useState('')
-  const [editing, setEditing] = useState(false)
-  const [confirmOff, setConfirmOff] = useState(false)
-  const [busy, setBusy]     = useState(false)
 
-  const load = useCallback(async () => {
-    try {
-      const c = await api<Connection>('/api/store/whatsapp')
-      setConn(c)
-      onStatus(c.connected)
-      setHealth(c.connected ? (await api<{ health: Health | null }>('/api/whatsapp/status').catch(() => ({ health: null }))).health : null)
-    } catch (err) {
-      setError((err as Error).message)
-    }
-  }, [onStatus])
-  useEffect(() => { load() }, [load])
-
-  const disconnect = async () => {
-    setBusy(true)
-    try {
-      await api('/api/store/whatsapp', { method: 'DELETE' })
-      showToast('WhatsApp desconectado')
-      setConfirmOff(false)
-      await load()
-    } catch (err) {
-      setError((err as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
+  useEffect(() => {
+    (async () => {
+      try {
+        const c = await api<Connection>('/api/store/whatsapp')
+        setConn(c)
+        if (c.connected) setHealth((await api<{ health: Health | null }>('/api/whatsapp/status').catch(() => ({ health: null }))).health)
+      } catch (err) {
+        setError((err as Error).message)
+      }
+    })()
+  }, [])
 
   if (error) return <Note kind="danger">{error}</Note>
-  if (!conn) return <Panel icon={WhatsAppGlyph} tone="tWa" title="Conexión de WhatsApp"><Spinner /></Panel>
+  if (!conn) return <Panel icon={WhatsAppGlyph} tone="tWa" title="Tu número de WhatsApp"><Spinner /></Panel>
 
-  const envSource = conn.source === 'env'
   const quality = QUALITY[health?.qualityRating ?? 'UNKNOWN'] ?? QUALITY.UNKNOWN
-  const webhookPanel = (
-    <Panel icon={Ico.link} tone="tInk" title="Webhook para recibir mensajes" subtitle="Configúralo en tu app de Meta: WhatsApp → Configuración → Webhook. Después suscribe el campo messages.">
-      <CopyField label="URL de devolución" value={conn.webhook.url} onCopied={() => showToast('URL copiada')} />
-      {conn.webhook.verifyToken
-        ? <CopyField label="Token de verificación" value={conn.webhook.verifyToken} onCopied={() => showToast('Token copiado')} />
-        : <Note>Esta tienda usa la conexión del servidor: el token de verificación es la variable <code>WHATSAPP_WEBHOOK_VERIFY_TOKEN</code>.</Note>}
-    </Panel>
-  )
-
   return (
-    <>
-      <Panel icon={WhatsAppGlyph} tone="tWa" title="Conexión de WhatsApp" subtitle="Cada tienda usa su propio número de WhatsApp Business con la API oficial de Meta.">
-        <div className={s.waHero}>
-          <span className={cx(s.waBadge, !conn.connected && s.waBadgeOff)}><WhatsAppGlyph /></span>
-          <div className={s.waMain}>
-            <strong>{conn.connected ? (health?.displayPhoneNumber || conn.displayPhone || 'Número conectado') : 'Sin conectar'}</strong>
-            <span>
-              {conn.connected
-                ? <>{health?.verifiedName ? `${health.verifiedName} · ` : ''}{envSource ? 'Conexión del servidor' : `Conectado el ${fmtDate(conn.connectedAt, { day: 'numeric', month: 'long', year: 'numeric' })}`}</>
-                : 'Conecta el número de tu tienda para atender y enviar campañas desde el CRM.'}
-            </span>
-          </div>
-          {conn.connected && <span className={cx(s.badge, s.bActive)}><i />Activo</span>}
+    <Panel icon={WhatsAppGlyph} tone="tWa" title="Tu número de WhatsApp" subtitle="El número con el que tu tienda atiende y envía promociones desde el CRM.">
+      <div className={s.waHero}>
+        <span className={cx(s.waBadge, !conn.connected && s.waBadgeOff)}><WhatsAppGlyph /></span>
+        <div className={s.waMain}>
+          <strong>{conn.connected ? (health?.displayPhoneNumber || conn.displayPhone || 'Número conectado') : 'En configuración'}</strong>
+          <span>
+            {conn.connected
+              ? <>{health?.verifiedName ? `${health.verifiedName} · ` : ''}{conn.connectedAt ? `Conectado el ${fmtDate(conn.connectedAt, { day: 'numeric', month: 'long', year: 'numeric' })}` : 'Conectado'}</>
+              : 'Tu asesor está terminando de conectar el número de tu tienda. Te avisará cuando quede listo.'}
+          </span>
         </div>
-        {conn.connected && (
-          <div className={s.kvs}>
-            <div className={s.kv}><small>Calidad</small><strong><span className={cx(s.badge, quality.cls)} style={{ padding: '2px 9px' }}>{quality.label}</span></strong></div>
-            <div className={s.kv}><small>Límite de envíos</small><strong>{tierLabel(health?.messagingLimitTier)}</strong></div>
-            <div className={s.kv}><small>Phone number ID</small><strong className={s.mono}>{envSource ? 'Variables del servidor' : conn.phoneNumberId}</strong></div>
-            <div className={s.kv}><small>Firma de mensajes</small><strong>{conn.hasAppSecret ? 'Verificada' : 'Falta App Secret'}</strong></div>
-          </div>
-        )}
-        {conn.connected && health?.qualityRating && health.qualityRating !== 'GREEN' && health.qualityRating !== 'UNKNOWN' && (
-          <div style={{ marginTop: 14 }}>
-            <Note kind="warn">La calidad del número bajó (bloqueos, reportes o pocas lecturas). Si sigue así, Meta puede pausar tus plantillas o restringir el número: envía solo a quien aceptó recibir tus mensajes y revisa tus plantillas.</Note>
-          </div>
-        )}
-        {conn.connected && health?.canSendMessage === 'BLOCKED' && (
-          <div style={{ marginTop: 14 }}>
-            <Note kind="danger">Meta tiene bloqueado el envío desde este número. {(health.healthNotes ?? []).join(' ')}</Note>
-          </div>
-        )}
-        {conn.connected && health?.canSendMessage === 'LIMITED' && !!health.healthNotes?.length && (
-          <div style={{ marginTop: 14 }}>
-            <Note kind="warn">Aviso de Meta: {health.healthNotes.join(' ')}</Note>
-          </div>
-        )}
-        {conn.connected && !conn.hasAppSecret && (
-          <div style={{ marginTop: 14 }}>
-            <Note kind="danger">
-              Falta la clave secreta de la app: los mensajes que te escriben los clientes se rechazan hasta configurarla
-              {envSource ? <> (variable <code>WHATSAPP_APP_SECRET</code> del servidor)</> : <> (actualiza las credenciales)</>}.
-            </Note>
-          </div>
-        )}
-        {conn.connected && !envSource && isOwner && (
-          <div className={s.formFoot} style={{ marginTop: 18 }}>
-            <small>¿Cambiaste el token o el número? Actualiza las credenciales.</small>
-            {(confirmOff ? (
-              <>
-                <button className="btn btn-ghost" onClick={() => setConfirmOff(false)}>Cancelar</button>
-                <button className="btn btn-dark" onClick={disconnect} disabled={busy}>{busy ? 'Desconectando…' : 'Sí, desconectar'}</button>
-              </>
-            ) : (
-              <button className="btn btn-ghost btn-ghost-danger" onClick={() => setConfirmOff(true)}>Desconectar</button>
-            ))}
-            {!confirmOff && <button className="btn btn-primary" onClick={() => setEditing(e => !e)}>{editing ? 'Cerrar' : 'Actualizar credenciales'}</button>}
-          </div>
-        )}
-        {conn.connected && !envSource && isOwner && editing && (
-          <div style={{ marginTop: 18 }}>
-            <ConnectForm encryptionReady={conn.encryptionReady} onCancel={() => setEditing(false)}
-              onConnected={msg => { setEditing(false); showToast(msg); load() }} />
-          </div>
-        )}
-      </Panel>
-
-      {!conn.connected && !envSource && !isOwner && (
-        <Note kind="info">Solo el dueño de la tienda puede conectar el número de WhatsApp. Pídele que lo haga desde aquí mismo.</Note>
+        {conn.connected && <span className={cx(s.badge, s.bActive)}><i />Activo</span>}
+      </div>
+      {conn.connected && (
+        <div className={s.kvs}>
+          <div className={s.kv}><small>Calidad</small><strong><span className={cx(s.badge, quality.cls)} style={{ padding: '2px 9px' }}>{quality.label}</span></strong></div>
+          <div className={s.kv}><small>Límite de envíos</small><strong>{tierLabel(health?.messagingLimitTier)}</strong></div>
+        </div>
       )}
-      {!conn.connected && !envSource && isOwner && (
-        <Panel icon={Ico.bolt} tone="tAmber" title="Conecta tu número en 5 pasos" subtitle="Necesitas una cuenta de Meta Business y el número de tu tienda registrado en WhatsApp Business Platform.">
-          <ol className={s.steps}>
-            <li>En <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener noreferrer">Meta for Developers</a> crea una app de tipo <strong>Empresa</strong> y agrega el producto <strong>WhatsApp</strong>.</li>
-            <li>En <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener noreferrer">Configuración del negocio → Usuarios del sistema</a> crea un usuario administrador, asígnale la app y genera un <strong>token permanente</strong> con los permisos <code>whatsapp_business_messaging</code> y <code>whatsapp_business_management</code>.</li>
-            <li>En WhatsApp → Configuración de la API copia el <strong>identificador del número</strong> y el de la <strong>cuenta de WhatsApp Business</strong>.</li>
-            <li>En Configuración de la app → Básica copia la <strong>clave secreta de la app</strong>.</li>
-            <li>Pega todo aquí abajo y, al final, configura el webhook con los datos de la siguiente sección.</li>
-          </ol>
-          <div style={{ marginTop: 20 }}>
-            <ConnectForm encryptionReady={conn.encryptionReady} onConnected={msg => { showToast(msg); load() }} />
-          </div>
-        </Panel>
+      {conn.connected && health?.qualityRating && health.qualityRating !== 'GREEN' && health.qualityRating !== 'UNKNOWN' && (
+        <div style={{ marginTop: 14 }}>
+          <Note kind="warn">La calidad del número bajó (bloqueos, reportes o pocas lecturas). Si sigue así, Meta puede pausar tus plantillas o restringir el número: envía solo a quien aceptó recibir tus mensajes y revisa tus plantillas.</Note>
+        </div>
       )}
-
-      {webhookPanel}
-    </>
+      {conn.connected && health?.canSendMessage === 'BLOCKED' && (
+        <div style={{ marginTop: 14 }}>
+          <Note kind="danger">Meta tiene bloqueado el envío desde este número. {(health.healthNotes ?? []).join(' ')}</Note>
+        </div>
+      )}
+      {conn.connected && health?.canSendMessage === 'LIMITED' && !!health.healthNotes?.length && (
+        <div style={{ marginTop: 14 }}>
+          <Note kind="warn">{health.healthNotes.join(' ')}</Note>
+        </div>
+      )}
+      {conn.connected && !conn.receivesMessages && (
+        <div style={{ marginTop: 14 }}>
+          <Note kind="danger">Por ahora no llegan los mensajes que te escriben tus clientes. Avísale a tu asesor para que lo revise.</Note>
+        </div>
+      )}
+    </Panel>
   )
 }
 
@@ -317,58 +164,12 @@ function QuickRepliesPanel({ showToast }: { showToast: (m: string) => void }) {
   )
 }
 
-/* ── Envío de prueba ────────────────────────────────────────────────────── */
-function TestSendPanel() {
-  const [f, setF] = useState({ to: '', template: '', language: 'es_MX', bodyParam: '', headerImageUrl: '' })
-  const [sending, setSending] = useState(false)
-  const [result, setResult]   = useState<{ ok: boolean; msg: string } | null>(null)
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setF(prev => ({ ...prev, [k]: k === 'to' ? e.target.value.replace(/\D/g, '') : e.target.value }))
-    setResult(null)
-  }
-  const canSend = /^\d{10,15}$/.test(f.to) && f.template.trim().length > 0
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSending(true)
-    setResult(null)
-    try {
-      const d = await api<{ messageId: string }>('/api/whatsapp/test-send', send('POST', { ...f, template: f.template.trim() }))
-      setResult({ ok: true, msg: `Mensaje enviado (id ${d.messageId})` })
-    } catch (err) {
-      setResult({ ok: false, msg: (err as Error).message })
-    } finally {
-      setSending(false)
-    }
-  }
-
-  return (
-    <Panel icon={Ico.send} tone="tCyan" title="Envío de prueba" subtitle="Manda una plantilla aprobada a tu propio número para confirmar que todo quedó bien.">
-      <form onSubmit={submit}>
-        <div className={s.formGrid}>
-          <div className="field"><label htmlFor="t-template">Nombre de la plantilla</label><input id="t-template" value={f.template} onChange={set('template')} placeholder="saludo_tienda" /></div>
-          <div className="field"><label htmlFor="t-lang">Idioma</label><input id="t-lang" value={f.language} onChange={set('language')} placeholder="es_MX" /></div>
-          <div className="field"><label htmlFor="t-param">Variable {'{{1}}'} (opcional)</label><input id="t-param" value={f.bodyParam} onChange={set('bodyParam')} placeholder="Carlos" /></div>
-          <div className="field"><label htmlFor="t-img">Imagen de encabezado (opcional)</label><input id="t-img" value={f.headerImageUrl} onChange={set('headerImageUrl')} placeholder="https://…" /></div>
-          <div className={cx('field', s.span2)}><label htmlFor="t-to">Número destino con lada de país</label><input id="t-to" inputMode="numeric" value={f.to} onChange={set('to')} placeholder="522221234567" /></div>
-        </div>
-        {result && <Note kind={result.ok ? 'ok' : 'danger'}>{result.msg}</Note>}
-        <div className={s.formFoot}>
-          <button type="submit" className="btn btn-primary" disabled={!canSend || sending}>{sending ? 'Enviando…' : 'Enviar prueba'}</button>
-        </div>
-      </form>
-    </Panel>
-  )
-}
-
-export function WhatsAppTab({ isOwner }: { isOwner: boolean }) {
+export function WhatsAppTab() {
   const [toast, showToast] = useToast()
-  const [connected, setConnected] = useState(false)
   return (
     <>
-      <ConnectionPanels isOwner={isOwner} showToast={showToast} onStatus={setConnected} />
+      <ConnectionPanel />
       <QuickRepliesPanel showToast={showToast} />
-      {connected && <TestSendPanel />}
       {toast}
     </>
   )

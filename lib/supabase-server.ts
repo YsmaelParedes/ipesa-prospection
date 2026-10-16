@@ -58,7 +58,7 @@ export async function getSessionUser(): Promise<User | null> {
 
 // ─── Tiendas ─────────────────────────────────────────────────────────────────
 export const STORE_COLUMNS =
-  'id, slug, name, phone, email, address, city, state, logo_path, timezone, status, plan, trial_ends_at, paid_until, modules, onboarding_completed_at, created_at'
+  'id, slug, name, phone, email, address, city, state, logo_path, timezone, status, plan, trial_ends_at, paid_until, modules, onboarding_completed_at, whatsapp_requested_at, created_at'
 
 export type StoreRow = {
   id: string; slug: string; name: string
@@ -66,6 +66,8 @@ export type StoreRow = {
   logo_path: string | null; timezone: string
   status: StoreStatus; plan: string; trial_ends_at: string | null; paid_until: string | null
   modules: StoreModules; onboarding_completed_at: string | null; created_at: string
+  /** La tienda pidió activar WhatsApp ("Quiero activarlo") y aún no se activa */
+  whatsapp_requested_at: string | null
 }
 
 export type Membership = { storeId: string; role: StoreRole; store: StoreRow }

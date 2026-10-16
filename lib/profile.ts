@@ -29,6 +29,8 @@ export type ClientStore = {
   access: StoreAccess
   modules: StoreModules
   onboardingCompleted: boolean
+  /** Pidió activar WhatsApp y un asesor lo contactará */
+  whatsappRequestedAt: string | null
 }
 
 export type Session = {

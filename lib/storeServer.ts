@@ -51,6 +51,7 @@ export function publicStore(store: StoreRow) {
     access: storeAccess(store),
     modules: normalizeModules(store.modules),
     onboardingCompleted: !!store.onboarding_completed_at,
+    whatsappRequestedAt: store.whatsapp_requested_at ?? null,
   }
 }
 

@@ -5,7 +5,7 @@ import { useMemo } from 'react'
 import { fmtMoney } from '@/lib/payments'
 import {
   DAY, ago, countStores, currentMonth, expiresSoon, fmtDate, isLapsed, isOff, isPending, moneySummary, subscriptionLine,
-  usePayments, usePlatformStores, type PlatformStore,
+  usePayments, usePlatformStores, wantsWhatsApp, type PlatformStore,
 } from './data'
 import s from './admin.module.css'
 
@@ -40,6 +40,8 @@ export default function AdminHome() {
       attention: list.filter(st => isPending(st) || isLapsed(st, now) || expiresSoon(st, now))
         .sort((a, b) => rank(a, now) - rank(b, now) || dueAt(a) - dueAt(b)),
       recent: [...list].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5),
+      // Pidieron WhatsApp ("Quiero activarlo"): las más antiguas primero
+      waRequests: list.filter(wantsWhatsApp).sort((a, b) => (a.whatsapp_requested_at ?? '').localeCompare(b.whatsapp_requested_at ?? '')),
       idle: list.filter(st => !isOff(st) && !isPending(st) && !isLapsed(st, now)
         && (!st.last_activity_at || now - new Date(st.last_activity_at).getTime() > IDLE_DAYS * DAY)),
     }
@@ -74,6 +76,24 @@ export default function AdminHome() {
             <div className={cx(s.kpi, s.kAmber)}><small>Por vencer</small><strong>{counts.expiring}</strong><span>prueba ≤ 3 días o pago ≤ 7</span></div>
             <div className={cx(s.kpi, s.kRed)}><small>Solo lectura</small><strong>{counts.readonly}</strong><span>prueba o pago vencido</span></div>
           </div>
+
+          {view.waRequests.length > 0 && (
+            <section className={s.panel} style={{ marginBottom: 12 }}>
+              <div className={s.panelHead}>
+                <strong>Solicitudes de WhatsApp</strong>
+                <span>{view.waRequests.length}</span>
+              </div>
+              {view.waRequests.map(st => (
+                <StoreLink key={st.id} st={st}>
+                  <span className={s.itemMain}>
+                    <strong>{st.name}</strong>
+                    <small>{st.owner_name || st.owner_email || 'Sin dueño'} · lo pidió {ago(st.whatsapp_requested_at).toLowerCase()}</small>
+                  </span>
+                  <em className={cx(s.badge, s.bActive)}>Contactar</em>
+                </StoreLink>
+              ))}
+            </section>
+          )}
 
           <div className={s.panels}>
             <section className={s.panel}>

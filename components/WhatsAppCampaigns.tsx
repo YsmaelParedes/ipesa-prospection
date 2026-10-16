@@ -51,8 +51,7 @@ export function NumberHealthCard() {
   if (data && !data.config.connected) {
     return (
       <div className="wa-health">
-        <WaIcon.alert /> Tu tienda aún no conecta su número de WhatsApp.
-        <Link href="/configuracion?tab=whatsapp" style={{ marginLeft: 6, fontWeight: 800, color: 'var(--brand-strong)' }}>Conectarlo ahora</Link>
+        <WaIcon.clock size={14} /> Tu asesor está terminando de conectar el número de tu tienda. En cuanto quede listo podrás enviar campañas.
       </div>
     )
   }

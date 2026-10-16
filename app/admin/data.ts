@@ -16,6 +16,10 @@ export type PlatformStore = {
   members: number; contacts: number; leads: number; whatsapp_connected: boolean; last_activity_at: string | null
   /** Precio mensual acordado con la tienda (null = sin acordar) */
   monthly_price: number | null
+  /** Módulos activos (WhatsApp y Campañas los activa el panel) */
+  modules: { whatsapp?: boolean; campaigns?: boolean } | null
+  /** Pidió WhatsApp desde la tienda ("Quiero activarlo"); se limpia al activarlo */
+  whatsapp_requested_at: string | null
   /** Invitación de dueño pendiente (solo si la tienda aún no tiene dueño) */
   owner_invite: { email: string; expires_at: string; status: 'valid' | 'expired' | 'used' | 'revoked' } | null
 }
@@ -46,6 +50,10 @@ export const isOff = (st: PlatformStore) => st.status === 'suspended' || st.stat
 
 /** Tienda nueva que espera su primer pago o cortesía. */
 export const isPending = (st: Pick<PlatformStore, 'status'>) => st.status === 'pending'
+
+/** Pidió WhatsApp y aún no se le activa: un asesor debe contactarla. */
+export const wantsWhatsApp = (st: Pick<PlatformStore, 'modules' | 'whatsapp_requested_at'>) =>
+  !!st.whatsapp_requested_at && !st.modules?.whatsapp
 
 export function subscriptionLine(st: PlatformStore) {
   if (st.status === 'pending') return 'Por activar: falta su primer pago o cortesía'
