@@ -241,6 +241,10 @@ function tierOf(value: unknown): string | undefined {
   return undefined
 }
 
+// health_status también reporta llamadas (SIP), que no afectan el envío de mensajes
+const CALLING_NOTE = /\bSIP\b|\bcalling\b/i
+const DISPLAY_NAME_NOTE = /display name has not been approved/i
+
 async function phoneFields(creds: WhatsAppCreds, fields: string): Promise<any | null> {
   const { ok, data } = await graphFetch(creds, `${creds.phoneNumberId}?fields=${fields}`).catch(() => ({ ok: false, data: null }))
   return ok && data ? data : null
@@ -268,7 +272,8 @@ export async function getPhoneHealth(creds: WhatsAppCreds): Promise<PhoneHealth 
   const healthNotes = entities.flatMap(e => [
     ...(Array.isArray(e?.errors) ? e.errors.map((x: any) => [x?.error_description, x?.possible_solution].filter(Boolean).join(' ')) : []),
     ...(Array.isArray(e?.additional_info) ? e.additional_info : typeof e?.additional_info === 'string' ? [e.additional_info] : []),
-  ]).filter((n): n is string => typeof n === 'string' && !!n.trim())
+  ]).filter((n): n is string => typeof n === 'string' && !!n.trim() && !CALLING_NOTE.test(n))
+    .map(n => (DISPLAY_NAME_NOTE.test(n) ? 'Meta aún no aprueba el nombre visible del número; el límite de mensajes subirá cuando lo apruebe.' : n))
 
   return {
     displayPhoneNumber: base.display_phone_number,

@@ -20,6 +20,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.7.1',
+    date: '16 de octubre, 2026',
+    title: 'Avisos de Meta más claros',
+    items: [
+      'Los avisos de Meta sobre el número ya no incluyen los de llamadas, que no afectan el envío de mensajes, y el aviso del nombre visible pendiente aparece en español.',
+    ],
+  },
+  {
     version: '2.7.0',
     date: '16 de octubre, 2026',
     title: 'Campañas de WhatsApp con las reglas oficiales de Meta',
