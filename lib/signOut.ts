@@ -5,6 +5,12 @@
  */
 export async function signOut(redirectTo: string | null = '/login') {
   try {
+    for (let i = sessionStorage.length - 1; i >= 0; i--) {
+      const key = sessionStorage.key(i)
+      if (key?.startsWith('crm:wa-draft:')) sessionStorage.removeItem(key)
+    }
+  } catch {}
+  try {
     const reg = await navigator.serviceWorker?.getRegistration()
     const sub = await reg?.pushManager.getSubscription()
     if (sub) {

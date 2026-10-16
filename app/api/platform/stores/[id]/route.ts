@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, invalidateMemberships, requirePlatformAdmin } from '@/lib/supabase-server'
+import { getServerSupabase, requirePlatformAdmin } from '@/lib/supabase-server'
 import { logPlatformEvent } from '@/lib/platformEvents'
 import { isMoney } from '@/lib/payments'
 import { PLANS, TRIAL_DAYS } from '@/lib/stores'
@@ -77,7 +77,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { error } = await db.from('stores').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id)
   if (error) return serverError('PATCH /api/platform/stores/[id]', error, 'No se pudo actualizar la tienda')
-  invalidateMemberships()
   await Promise.all(events.map(e => logPlatformEvent(id, user.id, e.action, e.detail)))
   return NextResponse.json({ ok: true })
 }

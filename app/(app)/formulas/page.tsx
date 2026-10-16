@@ -199,7 +199,7 @@ export default function FormulasPage() {
         </div>
 
         {/* ── Columna derecha: detalle + calculadora ── */}
-        <div className="panel" style={{ padding: 20, minHeight: 400 }}>
+        <div className={`panel${selected ? '' : ' formulas-detail-panel-empty'}`} style={{ padding: 20, minHeight: 400 }}>
           {!selected ? (
             <div className="formulas-detail-empty" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 360, color: 'var(--muted)', fontSize: 13.5, textAlign: 'center' }}>
               Selecciona un color de la lista para ver su fórmula convertida a mL.

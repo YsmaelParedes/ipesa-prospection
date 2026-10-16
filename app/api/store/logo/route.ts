@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, invalidateMemberships, requireStore } from '@/lib/supabase-server'
+import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { storeLogoUrl } from '@/lib/storeServer'
 import { jsonError, serverError } from '@/lib/validation'
 
@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
     return serverError('POST /api/store/logo', updateError, 'No se pudo guardar el logo')
   }
   if (previous?.startsWith(`${ctx.storeId}/`)) await db.storage.from(BUCKET).remove([previous])
-  invalidateMemberships()
   return NextResponse.json({ logoUrl: storeLogoUrl(path) })
 }
 
@@ -55,6 +54,5 @@ export async function DELETE() {
   const { error } = await db.from('stores').update({ logo_path: null, updated_at: new Date().toISOString() }).eq('id', ctx.storeId)
   if (error) return serverError('DELETE /api/store/logo', error, 'No se pudo quitar el logo')
   if (previous?.startsWith(`${ctx.storeId}/`)) await db.storage.from(BUCKET).remove([previous])
-  invalidateMemberships()
   return NextResponse.json({ ok: true })
 }

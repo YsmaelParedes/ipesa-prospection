@@ -20,6 +20,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.6.1',
+    date: '15 de octubre, 2026',
+    title: 'Revisión de seguridad y ajustes en celular',
+    items: [
+      'Aceptar una invitación ahora respeta el límite de usuarios de tu plan, aunque se haya reactivado a alguien mientras tanto.',
+      'Los borradores de WhatsApp se separan por cuenta y tienda, y se borran al cerrar sesión.',
+      'El envío de prueba de WhatsApp cuenta para el límite diario, respeta a quien se dio de baja y queda en el historial.',
+      'En celular ya se puede hacer zoom, y las ventanas, el menú y los avisos se acomodan mejor a pantallas pequeñas.',
+      'La selección de contactos vuelve a estar disponible en celular y Fórmulas ya no deja un panel vacío al abrirse.',
+      'Los cambios de acceso se consultan al momento y los envíos simultáneos de WhatsApp respetan la cuota diaria.',
+    ],
+  },
+  {
     version: '2.6.0',
     date: '15 de octubre, 2026',
     title: 'Envía archivos por WhatsApp',

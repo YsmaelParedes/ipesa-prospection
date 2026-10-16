@@ -4,6 +4,8 @@ import {
 } from '@/lib/supabase-server'
 import { setActiveStoreCookie, storeLogoUrl } from '@/lib/storeServer'
 import { findInvitationByToken, invitationStatus, maskEmail, passwordProblem, siteOrigin } from '@/lib/invitations'
+import { rpcUserError } from '@/lib/platformEvents'
+import { PLANS } from '@/lib/stores'
 import { jsonError, readJson, serverError } from '@/lib/validation'
 
 type Ctx = { params: Promise<{ token: string }> }
@@ -95,17 +97,12 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       userId = signUp.user.id
     }
 
-    // Marcar como usada de forma atómica (evita aceptar dos veces el mismo enlace)
-    const { data: claimed, error: claimError } = await db.from('store_invitations')
-      .update({ accepted_at: new Date().toISOString(), accepted_by: userId })
-      .eq('id', inv.id).is('accepted_at', null).is('revoked_at', null)
-      .select('id')
-    if (claimError) throw claimError
-    if (!claimed?.length) return jsonError('Esta invitación ya se usó.', 410)
-
-    const { error: memberError } = await db.from('store_members')
-      .upsert({ store_id: inv.store_id, user_id: userId, role: inv.role, status: 'active' }, { onConflict: 'store_id,user_id', ignoreDuplicates: true })
-    if (memberError) throw memberError
+    // Todo o nada, con la tienda bloqueada: revisa el plan vigente (lugares,
+    // administradores, dueño único), marca la invitación y crea la membresía
+    const { error: acceptError } = await db.rpc('accept_store_invitation', { p_invitation: inv.id, p_user: userId, p_plans: PLANS })
+    const known = rpcUserError(acceptError)
+    if (known) return jsonError(known.message, known.status)
+    if (acceptError) throw acceptError
 
     invalidateStoreMembers(inv.store_id)
     await setActiveStoreCookie(inv.store_id)

@@ -31,10 +31,20 @@ export async function GET(request: NextRequest) {
     if (!error) user = data.user
     recovery = type === 'recovery'
   } else if (code) {
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    const flowId = params.get('sb_flow_id')
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code, flowId ? { flowId } : undefined)
     if (!error) user = data.user
-    // El flujo con "code" no informa el tipo: el correo de recuperación vuelve a /restablecer
-    recovery = next === RESET_PAGE
+    // Ni `next` ni redirectType (almacenado en el navegador) conceden permisos.
+    // La prueba de recuperación debe venir del JWT firmado por Supabase.
+    if (!error && data.session) {
+      const { data: verified, error: claimsError } = await supabase.auth.getClaims(data.session.access_token)
+      const methods = verified?.claims.amr
+      const now = Math.floor(Date.now() / 1000)
+      recovery = !claimsError && verified?.claims.sub === user?.id && Array.isArray(methods)
+        && methods.some(m => typeof m === 'object' && m.method === 'recovery'
+          && typeof m.timestamp === 'number' && m.timestamp <= now + 60
+          && m.timestamp > now - 15 * 60)
+    }
   }
   if (!user) redirect('/login?error=enlace')
   if (recovery) await grantPasswordReset(user.id)

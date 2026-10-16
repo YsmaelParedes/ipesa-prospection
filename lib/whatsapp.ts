@@ -8,6 +8,7 @@
  *   WHATSAPP_GRAPH_VERSION        opcional, versión de Graph API (default v21.0)
  */
 import { createHmac, timingSafeEqual } from 'node:crypto'
+import { readBoundedBody } from './boundedBody'
 
 export const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0'
 
@@ -174,18 +175,29 @@ export async function markWhatsAppRead(creds: WhatsAppCreds, waMessageId: string
  * temporal (≈5 min) que a su vez exige el token, así que la app hace de
  * proxy: el navegador nunca ve el token.
  */
+/** Tope de lo que el servidor descarga por archivo (los videos de WhatsApp llegan hasta 16 MB). */
+const MAX_MEDIA_DOWNLOAD_BYTES = 16 * 1024 * 1024
+
 export async function downloadWhatsAppMedia(creds: WhatsAppCreds, mediaId: string): Promise<{ body: ArrayBuffer; mime: string } | null> {
   const meta = await graphFetch(creds, encodeURIComponent(mediaId)).catch(() => null)
   const url = meta?.ok ? meta.data?.url as string | undefined : undefined
   // La URL debe ser de Meta: nunca seguir una URL arbitraria con el token.
   if (!url || !/^https:\/\/[a-z0-9.-]+\.(fbsbx|facebook|whatsapp)\.(com|net)\//i.test(url)) return null
+  if (Number(meta?.data?.file_size) > MAX_MEDIA_DOWNLOAD_BYTES) return null
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${creds.token}` },
     cache: 'no-store',
+    redirect: 'error',
     signal: AbortSignal.timeout(20_000),
   }).catch(() => null)
   if (!res?.ok) return null
-  return { body: await res.arrayBuffer(), mime: res.headers.get('content-type') || meta?.data?.mime_type || 'application/octet-stream' }
+  if (Number(res.headers.get('content-length')) > MAX_MEDIA_DOWNLOAD_BYTES) {
+    await res.body?.cancel().catch(() => {})
+    return null
+  }
+  const body = await readBoundedBody(res.body, MAX_MEDIA_DOWNLOAD_BYTES)
+  if (!body) return null
+  return { body: body.buffer as ArrayBuffer, mime: res.headers.get('content-type') || meta?.data?.mime_type || 'application/octet-stream' }
 }
 
 export type PhoneHealth = {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse, after } from 'next/server'
+import { readBoundedBody } from '@/lib/boundedBody'
 import { verifyWebhookSignature } from '@/lib/whatsapp'
 import { findEnvStoreForPhone } from '@/lib/storeWhatsApp'
 import { notifyStoreTeam, processChange, verifyTokenMatches, type InboundNotification } from '@/lib/whatsappWebhook'
@@ -31,7 +32,9 @@ export async function GET(req: NextRequest) {
  * así que se rechaza (falla cerrado).
  */
 export async function POST(req: NextRequest) {
-  const raw = await req.text()
+  const bytes = await readBoundedBody(req.body, 1024 * 1024)
+  if (!bytes) return NextResponse.json({ error: 'Evento demasiado grande' }, { status: 413 })
+  const raw = new TextDecoder().decode(bytes)
 
   const appSecret = process.env.WHATSAPP_APP_SECRET
   if (!appSecret) {

@@ -63,7 +63,9 @@ export type InboundNotification = { phone: string; title: string; text: string }
 
 /** Comparación en tiempo constante para el token de verificación del webhook. */
 export function verifyTokenMatches(received: string, expected: string): boolean {
-  return !!expected && received.length === expected.length && timingSafeEqual(Buffer.from(received), Buffer.from(expected))
+  const given = Buffer.from(received)
+  const wanted = Buffer.from(expected)
+  return wanted.length > 0 && given.length === wanted.length && timingSafeEqual(given, wanted)
 }
 
 /**

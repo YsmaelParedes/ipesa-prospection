@@ -83,19 +83,8 @@ export type StoreContext = {
   memberships: Membership[]
 }
 
-// Membresías por usuario: se consultan en cada petición; se cachean 10 s por
-// instancia para no repetir la consulta en ráfagas (la bandeja hace varias).
-const membershipCache = new Map<string, { at: number; list: Membership[] }>()
-const MEMBERSHIP_TTL = 10_000
-
-export function invalidateMemberships(uid?: string) {
-  if (uid) membershipCache.delete(uid)
-  else membershipCache.clear()
-}
-
+// Permisos y suscripción vigentes en cada petición, también entre instancias.
 export async function getMemberships(uid: string): Promise<Membership[]> {
-  const hit = membershipCache.get(uid)
-  if (hit && Date.now() - hit.at < MEMBERSHIP_TTL) return hit.list
   const { data, error } = await getServerSupabase()
     .from('store_members')
     .select(`store_id, role, created_at, stores!inner(${STORE_COLUMNS})`)
@@ -108,8 +97,6 @@ export async function getMemberships(uid: string): Promise<Membership[]> {
     role: m.role as StoreRole,
     store: { ...m.stores, modules: normalizeModules(m.stores.modules) } as StoreRow,
   }))
-  if (membershipCache.size > 2000) membershipCache.clear()
-  membershipCache.set(uid, { at: Date.now(), list })
   return list
 }
 
@@ -229,5 +216,4 @@ export async function getUserNameMap(storeId: string): Promise<Map<string, strin
 export function invalidateStoreMembers(storeId?: string) {
   if (storeId) directoryCache.delete(storeId)
   else directoryCache.clear()
-  invalidateMemberships()
 }

@@ -3,7 +3,7 @@
  */
 import { cookies } from 'next/headers'
 import type { User } from '@supabase/supabase-js'
-import { ACTIVE_STORE_COOKIE, STORE_COLUMNS, getServerSupabase, invalidateMemberships, type StoreContext, type StoreRow } from './supabase-server'
+import { ACTIVE_STORE_COOKIE, STORE_COLUMNS, getServerSupabase, type StoreContext, type StoreRow } from './supabase-server'
 import { randomToken } from './crypto'
 import {
   DEFAULT_CANALES, DEFAULT_MODULES, DEFAULT_PLAN, DEFAULT_SEGMENTS,

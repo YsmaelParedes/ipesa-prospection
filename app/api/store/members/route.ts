@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   getServerSupabase, getStoreMembers, invalidateStoreMembers, requireStore, type StoreContext,
 } from '@/lib/supabase-server'
-import { planOf, type StoreRole } from '@/lib/stores'
+import { PLANS, planOf, type StoreRole } from '@/lib/stores'
+import { rpcUserError } from '@/lib/platformEvents'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 
 /**
@@ -14,14 +15,6 @@ function canManage(ctx: StoreContext, targetRole: StoreRole) {
   if (targetRole === 'owner') return false
   if (ctx.isOwner) return true
   return ctx.isAdmin && targetRole === 'employee'
-}
-
-/** Las invitaciones pendientes que emitió alguien dejan de valer cuando pierde el acceso o el rol. */
-async function revokeInvitationsFrom(storeId: string, userId: string) {
-  const { error } = await getServerSupabase().from('store_invitations')
-    .update({ revoked_at: new Date().toISOString() })
-    .eq('store_id', storeId).eq('invited_by', userId).is('accepted_at', null).is('revoked_at', null)
-  if (error) console.error('[store/members] revocar invitaciones', error.message)
 }
 
 // GET /api/store/members — dueño/admin
@@ -68,22 +61,20 @@ export async function PATCH(req: NextRequest) {
   }
   if (body.status !== undefined) {
     if (body.status !== 'active' && body.status !== 'disabled') return jsonError('Estado inválido')
-    // Reactivar a alguien ocupa un lugar del plan
-    if (body.status === 'active' && target.status !== 'active') {
-      const { maxUsers, label } = planOf(ctx.store.plan)
-      const active = (await getStoreMembers(ctx.storeId)).filter(m => m.status === 'active').length
-      if (active >= maxUsers) return jsonError(`Tu plan ${label} permite hasta ${maxUsers} usuarios. Desactiva o quita a alguien primero.`, 403)
-    }
+    // El cupo, incluidas invitaciones vigentes, se comprueba dentro de la transacción.
     updates.status = body.status
   }
   if (!Object.keys(updates).length) return jsonError('Nada que actualizar')
 
-  const { error } = await getServerSupabase().from('store_members').update(updates)
-    .eq('store_id', ctx.storeId).eq('user_id', target.user_id)
+  // Revalida rol y cupo bajo el mismo bloqueo que aceptar invitaciones.
+  // La revocación de invitaciones emitidas forma parte de esta transacción.
+  const { error } = await getServerSupabase().rpc('manage_store_member', {
+    p_store: ctx.storeId, p_actor: ctx.uid, p_target: target.user_id,
+    p_role: updates.role ?? null, p_status: updates.status ?? null, p_remove: false, p_plans: PLANS,
+  })
+  const known = rpcUserError(error)
+  if (known) return jsonError(known.message, known.status)
   if (error) return serverError('PATCH /api/store/members', error, 'No se pudo actualizar el usuario')
-  if (updates.status === 'disabled' || (target.role === 'admin' && updates.role === 'employee')) {
-    await revokeInvitationsFrom(ctx.storeId, target.user_id)
-  }
   invalidateStoreMembers(ctx.storeId)
   return NextResponse.json({ ok: true })
 }
@@ -99,10 +90,13 @@ export async function DELETE(req: NextRequest) {
   if (target.user_id === ctx.uid) return jsonError('No puedes quitarte a ti mismo')
   if (!canManage(ctx, target.role)) return jsonError('No tienes permiso para quitar a este usuario', 403)
 
-  const { error } = await getServerSupabase().from('store_members').delete()
-    .eq('store_id', ctx.storeId).eq('user_id', target.user_id)
+  const { error } = await getServerSupabase().rpc('manage_store_member', {
+    p_store: ctx.storeId, p_actor: ctx.uid, p_target: target.user_id,
+    p_role: null, p_status: null, p_remove: true, p_plans: PLANS,
+  })
+  const known = rpcUserError(error)
+  if (known) return jsonError(known.message, known.status)
   if (error) return serverError('DELETE /api/store/members', error, 'No se pudo quitar al usuario')
-  await revokeInvitationsFrom(ctx.storeId, target.user_id)
   invalidateStoreMembers(ctx.storeId)
   return NextResponse.json({ ok: true })
 }

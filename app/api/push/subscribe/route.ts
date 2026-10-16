@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireUser } from '@/lib/supabase-server'
 import { jsonError, readJson, serverError } from '@/lib/validation'
-
-function validEndpoint(v: unknown): v is string {
-  if (typeof v !== 'string' || v.length > 2048) return false
-  try { return new URL(v).protocol === 'https:' } catch { return false }
-}
+import { validPushEndpoint as validEndpoint, validPushKeys } from '@/lib/pushEndpoint'
 
 // GET /api/push/subscribe?endpoint=… — preferencias de este dispositivo
 export async function GET(req: NextRequest) {
@@ -32,8 +28,7 @@ export async function POST(req: NextRequest) {
   const body = await readJson(req)
   const keys = body?.keys as { p256dh?: unknown; auth?: unknown } | undefined
   if (!body || !validEndpoint(body.endpoint)) return jsonError('Suscripción inválida')
-  if (typeof keys?.p256dh !== 'string' || keys.p256dh.length > 256) return jsonError('Clave p256dh inválida')
-  if (typeof keys?.auth !== 'string' || keys.auth.length > 64) return jsonError('Clave auth inválida')
+  if (!keys || !validPushKeys(keys.p256dh, keys.auth)) return jsonError('Claves de suscripción inválidas')
 
   const supabase = getServerSupabase()
   const row: Record<string, unknown> = { endpoint: body.endpoint, p256dh: keys.p256dh, auth: keys.auth, user_id: user.id }

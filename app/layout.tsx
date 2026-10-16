@@ -37,8 +37,6 @@ export const viewport: Viewport = {
   themeColor: '#E50A26',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   // Permite usar env(safe-area-inset-*) en la barra inferior del iPhone
   viewportFit: 'cover',
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { readBoundedBody } from './boundedBody'
 
 /**
  * Validación de entrada para API routes. `parseFields` hace dos cosas a la
@@ -17,7 +18,11 @@ export function jsonError(error: string, status = 400) {
 /** Lee el body como objeto JSON sin lanzar; null si no es un objeto válido. */
 export async function readJson(req: Request): Promise<Record<string, unknown> | null> {
   try {
-    const body = await req.json()
+    const maxBytes = 2 * 1024 * 1024
+    if (Number(req.headers.get('content-length')) > maxBytes) return null
+    const bytes = await readBoundedBody(req.body, maxBytes)
+    if (!bytes) return null
+    const body = JSON.parse(new TextDecoder().decode(bytes))
     return body && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : null
   } catch {
     return null

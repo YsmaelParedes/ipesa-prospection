@@ -113,7 +113,7 @@ En Supabase → **Authentication**:
   `record_store_payment` guarda el pago y extiende `paid_until` en la misma transacción (se
   suma a lo pagado si sigue vigente). Un pago no se borra: se **anula**
   (`void_store_payment`, solo el más reciente vigente de cada tienda) y la vigencia regresa a
-  como estaba. `/admin/pagos` muestra lo cobrado por mes; el Resumen, cobrado, ingreso
+  como estaba, salvo que la tienda se haya suspendido o cancelado después. `/admin/pagos` muestra lo cobrado por mes; el Resumen, cobrado, ingreso
   mensual, por cobrar y adeudo. Todo queda en la bitácora `platform_events`. "Sin
   vencimiento" (tienda propia o acuerdo especial) es una acción aparte.
 - **Planes**: `lib/stores.ts` (`PLANS`, `PAYMENT_GRACE_DAYS`), sin precio (se acuerda con cada

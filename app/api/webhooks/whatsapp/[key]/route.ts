@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse, after } from 'next/server'
+import { readBoundedBody } from '@/lib/boundedBody'
 import { verifyWebhookSignature } from '@/lib/whatsapp'
 import { credsFromRow, findStoreByWebhookKey } from '@/lib/storeWhatsApp'
 import { notifyStoreTeam, processChange, verifyTokenMatches, type InboundNotification } from '@/lib/whatsappWebhook'
@@ -25,7 +26,9 @@ export async function GET(req: NextRequest, { params }: Ctx) {
 }
 
 export async function POST(req: NextRequest, { params }: Ctx) {
-  const raw = await req.text()
+  const bytes = await readBoundedBody(req.body, 1024 * 1024)
+  if (!bytes) return NextResponse.json({ error: 'Evento demasiado grande' }, { status: 413 })
+  const raw = new TextDecoder().decode(bytes)
   const row = await findStoreByWebhookKey((await params).key)
   if (!row || row.credentials_source !== 'store') return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 

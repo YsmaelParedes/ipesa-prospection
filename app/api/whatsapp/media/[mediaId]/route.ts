@@ -31,7 +31,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ med
     headers: {
       'Content-Type': inline ? file.mime : 'application/octet-stream',
       'Content-Disposition': inline ? 'inline' : `attachment; filename="whatsapp-${mediaId}"`,
-      'Cache-Control': 'private, max-age=86400, immutable',
+      'Cache-Control': 'private, no-store',
       'Content-Security-Policy': "default-src 'none'; sandbox",
       'X-Content-Type-Options': 'nosniff',
     },

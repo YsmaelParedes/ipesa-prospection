@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { isPlatformAdmin } from '@/lib/supabase-server'
+import { readJson } from '@/lib/validation'
 
 /**
  * In-memory sliding-window rate limiter for the login endpoint.
@@ -56,12 +57,8 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  let body: Record<string, unknown>
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'Cuerpo de solicitud inválido' }, { status: 400 })
-  }
+  const body = await readJson(req)
+  if (!body) return NextResponse.json({ error: 'Cuerpo de solicitud inválido' }, { status: 400 })
 
   const { email, password } = body
 

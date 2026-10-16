@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, invalidateMemberships, requireStore } from '@/lib/supabase-server'
+import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { STORE_PROFILE_SCHEMA, publicStore } from '@/lib/storeServer'
 import { jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 
@@ -38,6 +38,5 @@ export async function PATCH(req: NextRequest) {
     .eq('id', ctx.storeId)
   if (error) return serverError('PATCH /api/store', error, 'No se pudo guardar la tienda')
 
-  invalidateMemberships()
   return NextResponse.json({ ok: true })
 }

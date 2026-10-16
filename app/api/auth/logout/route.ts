@@ -19,5 +19,8 @@ export async function POST(req: NextRequest) {
   await supabase.auth.signOut()
   // La tienda activa es una preferencia del navegador: se olvida al salir
   res.cookies.delete(ACTIVE_STORE_COOKIE)
+  res.cookies.delete('crm_pw_reset')
+  res.headers.set('Cache-Control', 'no-store')
+  res.headers.set('Clear-Site-Data', '"cache"')
   return res
 }

@@ -93,7 +93,7 @@ a { color: inherit; text-decoration: none; }
 
 .app {
   display: grid;
-  grid-template-columns: 252px 1fr;
+  grid-template-columns: 252px minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -282,7 +282,6 @@ a { color: inherit; text-decoration: none; }
 }
 .btn-ghost:hover:not(:disabled) { background: var(--paper); }
 
-.btn-lg { padding: 12px 20px; font-size: 14.5px; border-radius: 12px; }
 .btn-block { width: 100%; }
 
 .btn-icon {
@@ -700,6 +699,9 @@ a { color: inherit; text-decoration: none; }
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 540px;
+  max-height: calc(100dvh - 48px);
+  display: flex;
+  flex-direction: column;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   animation: pop 0.2s cubic-bezier(.2,.8,.2,1);
@@ -709,7 +711,9 @@ a { color: inherit; text-decoration: none; }
 .modal-head { padding: 20px 24px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
 .modal-head h3 { margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
 .modal-head .modal-close { margin-left: auto; color: var(--muted); }
-.modal-body { padding: 20px 24px; max-height: 70vh; overflow-y: auto; }
+.modal-body { padding: 20px 24px; max-height: 70vh; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.modal-head, .modal-foot { flex-shrink: 0; }
+.modal-card > form { display: flex; flex-direction: column; min-height: 0; }
 .modal-foot { padding: 14px 24px; border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; background: var(--paper); }
 
 .field { margin-bottom: 14px; }
@@ -745,7 +749,6 @@ a { color: inherit; text-decoration: none; }
   padding: 3px 9px; border-radius: 999px; font-weight: 700;
 }
 
-.paint-stripe { height: 4px; width: 44px; border-radius: 4px; background: var(--spectrum); }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -821,7 +824,9 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 960px) {
   .app { grid-template-columns: 1fr; }
   .sidebar { display: flex; position: fixed; top: 0; left: 0; bottom: 0; width: 284px; height: 100vh; z-index: 45; transform: translateX(-100%); transition: transform 0.24s cubic-bezier(.2,.8,.2,1); box-shadow: 0 24px 60px -20px rgba(0,0,0,0.4); padding-top: calc(22px + env(safe-area-inset-top)); }
-  .sidebar.open { transform: translateX(0); }
+  /* Oculto (fuera del orden de tabulación) solo cuando termina de salir */
+  .sidebar { visibility: hidden; height: 100dvh; max-width: calc(100vw - 24px); transition: transform 0.24s cubic-bezier(.2,.8,.2,1), visibility 0s linear 0.24s; }
+  .sidebar.open { transform: translateX(0); visibility: visible; transition: transform 0.24s cubic-bezier(.2,.8,.2,1), visibility 0s; }
   .sidebar-scrim.open { display: block; }
   .menu-btn { display: inline-flex; }
   .topbar { padding: 13px 16px 12px; gap: 10px; }
@@ -843,7 +848,7 @@ a { color: inherit; text-decoration: none; }
   .bottom-nav { display: flex; }
   .fab { display: flex; }
   .modal { padding: 0; align-items: flex-end; }
-  .modal-card { max-width: 100%; border-radius: 22px 22px 0 0; animation: sheet 0.26s cubic-bezier(.2,.8,.2,1); }
+  .modal-card { max-width: 100%; max-height: calc(100dvh - env(safe-area-inset-top)); border-radius: 22px 22px 0 0; animation: sheet 0.26s cubic-bezier(.2,.8,.2,1); }
   @keyframes sheet { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   .modal-body { max-height: 65vh; }
   .modal-card::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 999px; background: var(--line-strong); margin: 10px auto 0; }
@@ -881,9 +886,10 @@ a { color: inherit; text-decoration: none; }
   /* Ocultar fecha en mobile para ahorrar espacio */
   .table tbody td[data-label="Fecha"] { display: none; }
 
-  /* ── Tabla de contactos: td:first-child = checkbox → ocultar; nombre = 2ª col ── */
-  .contacts-table .table tbody td:first-child { display: none; padding: 0; margin: 0; border: none; }
-  .contacts-table .table tbody td:nth-child(2) { padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px dashed var(--line-strong); justify-content: flex-start; }
+  /* ── Tabla de contactos: selección visible y táctil; nombre = 2ª col ── */
+  .contacts-table .table tbody tr { position: relative; }
+  .contacts-table .table tbody td:first-child { display: flex; position: absolute; top: 8px; right: 8px; min-height: 44px; padding: 0; margin: 0; border: none; cursor: pointer; }
+  .contacts-table .table tbody td:nth-child(2) { padding-bottom: 10px; padding-right: 42px; margin-bottom: 10px; border-bottom: 1px dashed var(--line-strong); justify-content: flex-start; }
   .contacts-table .table tbody td:nth-child(2)::before { content: none; } /* nombre sin label */
   .contacts-table .table tbody td:not(:first-child):not(:nth-child(2))::before { content: attr(data-label); font-size: 10.5px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; flex-shrink: 0; min-width: 56px; }
   .contacts-table .table tbody td[data-label="Registro"] { display: none; }
@@ -931,7 +937,7 @@ a { color: inherit; text-decoration: none; }
 }
 .notif-panel {
   position: absolute; top: calc(100% + 10px); right: 0;
-  width: 352px; max-height: 440px; overflow-y: auto;
+  width: min(352px, calc(100vw - 28px)); max-height: min(440px, calc(100dvh - 90px)); overflow-y: auto;
   background: var(--card); border: 1px solid var(--line);
   border-radius: var(--radius); box-shadow: var(--shadow-lg);
   z-index: 60; animation: pop 0.18s cubic-bezier(.2,.8,.2,1);
@@ -1022,7 +1028,7 @@ a { color: inherit; text-decoration: none; }
   .formulas-grid { grid-template-columns: 1fr; gap: 0; }
   /* En mobile, elegir un color reemplaza la lista por el detalle a pantalla completa */
   .formulas-list.is-hidden { display: none; }
-  .formulas-detail-empty { display: none; }
+  .formulas-detail-panel-empty { display: none; }
   .formulas-back { display: inline-flex; }
   /* La lista fluye con el scroll de la página en vez de tener su propio scroll interno */
   .formulas-results { max-height: none; overflow-y: visible; }
@@ -1123,8 +1129,6 @@ a { color: inherit; text-decoration: none; }
 .auth-link { color: var(--brand-strong); font-weight: 600; }
 .auth-link:hover { text-decoration: underline; }
 .auth-link.strong { font-weight: 800; }
-.auth-check { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--ink-3); line-height: 1.5; cursor: pointer; }
-.auth-check input { width: 17px; height: 17px; margin-top: 2px; accent-color: var(--brand); flex-shrink: 0; }
 
 .auth-submit {
   margin-top: 4px; width: 100%; padding: 14px 18px; border-radius: 12px; border: none; cursor: pointer;

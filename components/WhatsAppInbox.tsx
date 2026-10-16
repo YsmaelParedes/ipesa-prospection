@@ -15,6 +15,7 @@ import { MAX_CAPTION, MAX_SEND_BYTES, SEND_ACCEPT, SEND_TYPES, fmtSize, sendMime
 import { loadCatalogs, whatsappChannel, type Catalogs } from '@/lib/catalogs'
 import { isOpenLead } from '@/lib/crm'
 import { notifyDataChanged } from '@/lib/crmEvents'
+import { useSession } from '@/lib/profile'
 import type { NoWhatsApp } from '@/lib/campaignKinds'
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -579,7 +580,16 @@ function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onSendFile, o
   onOpenTemplate: (force?: boolean) => void
   noWhatsApp: NoWhatsApp | null
 }) {
-  const [draft, setDraft]       = useState('')
+  const session = useSession()
+  const draftKey = session?.store ? `crm:wa-draft:${session.user.id}:${session.store.id}:${phone}` : null
+  const [draftState, setDraftState] = useState<{ key: string | null; value: string }>({ key: null, value: '' })
+  const draft = draftState.key === draftKey ? draftState.value : ''
+  function setDraft(value: string | ((current: string) => string)) {
+    setDraftState(current => ({
+      key: draftKey,
+      value: typeof value === 'function' ? value(current.key === draftKey ? current.value : '') : value,
+    }))
+  }
   const [sending, setSending]   = useState(false)
   // Archivo adjunto (el texto del cuadro se manda como su comentario)
   const [file, setFile]         = useState<File | null>(null)
@@ -610,14 +620,17 @@ function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onSendFile, o
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const quickRef = useRef<HTMLDivElement>(null)
 
-  // Borrador por conversación (se conserva al cambiar de chat)
-  const draftKey = `crm:wa-draft:${phone}`
+  // Borrador por usuario, tienda y conversación (se conserva al cambiar de chat).
   useEffect(() => {
-    try { setDraft(sessionStorage.getItem(draftKey) ?? '') } catch {}
+    if (!draftKey) return
+    let value = ''
+    try { value = sessionStorage.getItem(draftKey) ?? '' } catch {}
+    setDraftState({ key: draftKey, value })
   }, [draftKey])
   useEffect(() => {
+    if (!draftKey || draftState.key !== draftKey) return
     try { draft ? sessionStorage.setItem(draftKey, draft) : sessionStorage.removeItem(draftKey) } catch {}
-  }, [draft, draftKey])
+  }, [draft, draftKey, draftState.key])
 
   // Altura automática del textarea
   useLayoutEffect(() => {

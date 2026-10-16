@@ -1,6 +1,6 @@
 # Seguridad — CRM Pinturas
 
-**Última auditoría:** 2 de octubre de 2026 (multi-tienda / SaaS)
+**Última revisión estática:** 16 de octubre de 2026 (código y metadatos de Supabase; pruebas visuales y build final pendientes).
 **Alcance:** rutas de `app/api/*`, `proxy.ts`, páginas y componentes, configuración (Next.js
 y Vercel), dependencias, base de datos, Auth y Storage de Supabase, integración con WhatsApp
 Cloud API y Web Push, y el aislamiento entre tiendas.
@@ -41,7 +41,10 @@ Cloud API y Web Push, y el aislamiento entre tiendas.
   layout de `/admin` lo comprueba en el servidor y responde 404 a cualquier otra cuenta; cada
   ruta de `/api/platform` lo vuelve a validar. Los pagos (`store_payments`) y la bitácora
   (`platform_events`) solo los toca el servidor: `anon` y `authenticated` no tienen permisos
-  sobre las tablas ni sobre `record_store_payment` / `void_store_payment`.
+  sobre las tablas ni sobre `record_store_payment` / `void_store_payment` /
+  `accept_store_invitation`. Aceptar una invitación es una sola transacción con la tienda
+  bloqueada: revisa el plan vigente (lugares, administradores, dueño único), marca el enlace y
+  crea la membresía.
 - **Contraseñas**: cambiarla desde la app exige la actual; desde un enlace de recuperación se
   permite durante 15 minutos con una cookie firmada (HMAC) ligada a ese usuario. Al cambiarla
   se cierran las demás sesiones.
@@ -89,8 +92,16 @@ acceso. Hallazgos y correcciones:
 | 7 | Baja | El cron de recordatorios avisaba a usuarios que ya no estaban en la tienda o de tiendas suspendidas; cerrar sesión no daba de baja las notificaciones del dispositivo. | El cron solo avisa a miembros activos de tiendas vigentes; cerrar sesión elimina la suscripción push del dispositivo. |
 | 8 | Baja | Borrar respuestas rápidas no respetaba el modo solo consulta; abrir un chat desde un enlace externo lo marcaba como leído. | `write` en esa ruta; marcar como leído requiere un encabezado que solo manda la bandeja. |
 
-Pendiente aceptado: las membresías se guardan en caché hasta 10 s por instancia del servidor,
-así que quitar a alguien puede tardar esos segundos en surtir efecto en todas las instancias.
+Las membresías y el estado de la suscripción se consultan en cada petición, sin caché de
+autorización entre peticiones. Aceptar invitaciones, cambiar roles, reactivar y eliminar
+miembros comparten un bloqueo de tienda en la base. La aceptación verifica también el
+correo confirmado y los permisos vigentes de quien emitió la invitación.
+
+Las pruebas y campañas de WhatsApp reservan su cuota y su registro antes de llamar a Meta.
+Las peticiones paralelas comparten el límite; los errores de red con resultado incierto
+conservan la reserva. El proxy multimedia y los cuerpos JSON/webhook tienen límites de bytes.
+Los destinos push se restringen a proveedores de navegadores tanto al registrar como al enviar.
+Los borradores de chat pertenecen al usuario, tienda y teléfono; se eliminan al cerrar sesión.
 
 ## Hallazgos y correcciones (2026-10-02)
 
@@ -118,9 +129,10 @@ teléfonos que partía una misma conversación de WhatsApp en dos.
 0. **Multi-tienda**: configurar `CREDENTIALS_ENCRYPTION_KEY` (`openssl rand -base64 32`),
    `NEXT_PUBLIC_SITE_URL` y **`WHATSAPP_APP_SECRET`** (sin él, el webhook de la tienda
    original ahora rechaza los mensajes) en Vercel; SMTP propio, *Site URL*, *Redirect URLs*,
-   plantillas de correo y *Secure password change* en Supabase Auth (ver README); y aplicar
-   `supabase/migrations/20261003120100_multi_store_finalize.sql` en cuanto se despliegue el
-   código nuevo.
+   plantillas de correo y *Secure password change* en Supabase Auth (ver README).
+   Las migraciones de multi-tienda, pagos, invitaciones y la corrección
+   `20261016161647_audit_membership_quotas_reference_indexes.sql` ya se observaron aplicadas
+   en Supabase el 16 de octubre de 2026. Los cambios locales de la app requieren despliegue.
 1. **Configurar `WHATSAPP_APP_SECRET` en Vercel** (Meta → tu app → Configuración → Básica →
    Clave secreta). Desde la versión multi-tienda el webhook falla cerrado: mientras falte, los
    mensajes entrantes de la tienda original se rechazan.

@@ -24,12 +24,6 @@ export type StoreModules = Record<StoreModule, boolean>
  */
 export const DEFAULT_MODULES: StoreModules = { whatsapp: false, campaigns: false, formulas: true }
 
-export const MODULE_INFO: Record<StoreModule, { label: string; description: string }> = {
-  whatsapp:  { label: 'WhatsApp',  description: 'Bandeja de conversaciones ligada a contactos y leads.' },
-  campaigns: { label: 'Campañas',  description: 'Envío de plantillas aprobadas a varios contactos con reglas anti-bloqueo.' },
-  formulas:  { label: 'Fórmulas',  description: 'Igualación de colores con cantidades en mL.' },
-}
-
 export const STATUS_LABELS: Record<StoreStatus, string> = {
   pending: 'Por activar', trial: 'Prueba gratis', active: 'Activa', suspended: 'Suspendida', cancelled: 'Cancelada',
 }

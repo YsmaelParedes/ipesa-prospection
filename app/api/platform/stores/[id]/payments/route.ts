@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, invalidateMemberships, requirePlatformAdmin } from '@/lib/supabase-server'
+import { getServerSupabase, requirePlatformAdmin } from '@/lib/supabase-server'
 import { rpcUserError } from '@/lib/platformEvents'
 import { MAX_PAYMENT_MONTHS, PAYMENT_METHODS, isISODate, isMoney } from '@/lib/payments'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
@@ -43,6 +43,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (known) return jsonError(known.message, known.status)
   if (error) return serverError('POST /api/platform/stores/[id]/payments', error, 'No se pudo registrar el pago')
 
-  invalidateMemberships()  // el acceso de la tienda cambia (solo lectura → completo)
   return NextResponse.json({ payment: data }, { status: 201 })
 }

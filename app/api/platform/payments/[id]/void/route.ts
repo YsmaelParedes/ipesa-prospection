@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, invalidateMemberships, requirePlatformAdmin } from '@/lib/supabase-server'
+import { getServerSupabase, requirePlatformAdmin } from '@/lib/supabase-server'
 import { rpcUserError } from '@/lib/platformEvents'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 
@@ -25,6 +25,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (known) return jsonError(known.message, known.status)
   if (error) return serverError('POST /api/platform/payments/[id]/void', error, 'No se pudo anular el pago')
 
-  invalidateMemberships()
   return NextResponse.json({ ok: true, restored: !!data?.restored })
 }
