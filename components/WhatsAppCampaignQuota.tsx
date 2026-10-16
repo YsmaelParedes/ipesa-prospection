@@ -3,38 +3,62 @@
 import { useCallback, useEffect, useState } from 'react'
 import { campaignEtaLabel } from '@/lib/whatsappSafety'
 
-export type CampaignQuota = { sentToday: number; limit: number; remaining: number }
+/** Límite real de Meta. `limit`/`remaining` null = nivel sin límite. */
+export type CampaignQuota = {
+  used: number
+  limit: number | null
+  remaining: number | null
+  tier: string | null
+  canSendMessage: string | null   // health_status de Meta: AVAILABLE | LIMITED | BLOCKED
+  healthNotes: string[]
+}
 
-/** Cuota diaria restante de plantillas — para avisar antes de enviar (el límite lo hace cumplir el servidor). */
+/** Personas que aún se pueden contactar hoy — para avisar antes de enviar (el límite lo hace cumplir el servidor). */
 export function useWhatsAppCampaignQuota() {
   const [quota, setQuota] = useState<CampaignQuota | null>(null)
   const refetch = useCallback(() => {
     fetch('/api/whatsapp/campaigns/send')
       .then(r => r.json())
-      .then(d => { if (d && typeof d.remaining === 'number') setQuota(d) })
+      .then(d => { if (d && typeof d.used === 'number') setQuota(d) })
       .catch(() => {})
   }, [])
   useEffect(refetch, [refetch])
   return { quota, refetch }
 }
 
+/** ¿La selección supera lo que Meta aún permite hoy? */
+export const isOverQuota = (quota: CampaignQuota | null, count: number) =>
+  !!quota && quota.remaining !== null && count > quota.remaining
+
+const fmt = (n: number) => n.toLocaleString('es-MX')
+
 export function CampaignQuotaNote({ quota, selectedCount }: { quota: CampaignQuota | null; selectedCount: number }) {
   if (!quota) return null
-  const overDaily = selectedCount > quota.remaining
-  const pct = Math.min(100, Math.round((quota.sentToday / Math.max(1, quota.limit)) * 100))
+  const over = isOverQuota(quota, selectedCount)
+  const blocked = quota.canSendMessage === 'BLOCKED'
+  const pct = quota.limit ? Math.min(100, Math.round((quota.used / quota.limit) * 100)) : 0
 
   return (
-    <div className={`wa-quota ${overDaily ? 'over' : ''}`}>
+    <div className={`wa-quota ${over || blocked ? 'over' : ''}`}>
       <div className="wa-quota-top">
-        <span>Cuota de hoy</span>
-        <strong>{quota.remaining} de {quota.limit} disponibles</strong>
+        <span>Personas a las que puedes escribir hoy</span>
+        <strong>{quota.remaining === null ? 'Sin límite' : `${fmt(quota.remaining)} de ${fmt(quota.limit ?? 0)}`}</strong>
       </div>
-      <div className="wa-quota-bar"><div style={{ width: `${pct}%` }} /></div>
-      {selectedCount > 0 && !overDaily && (
-        <div className="wa-quota-note">Enviar a {selectedCount} tomará {campaignEtaLabel(selectedCount)} (pausa de ~3 s entre cada uno para cuidar el número).</div>
+      {quota.limit !== null && <div className="wa-quota-bar"><div style={{ width: `${pct}%` }} /></div>}
+      <div className="wa-quota-note">
+        Es el límite de Meta para tu número: cuenta personas distintas en 24 h, no mensajes. Quien te escribió en las últimas 24 h no cuenta.
+      </div>
+      {blocked && (
+        <div className="wa-quota-note bad">Meta tiene bloqueado el envío desde este número. {quota.healthNotes.join(' ')}</div>
       )}
-      {overDaily && (
-        <div className="wa-quota-note bad">Supera la cuota diaria restante ({quota.remaining}). Reduce la selección o espera a mañana.</div>
+      {!blocked && quota.canSendMessage === 'LIMITED' && quota.healthNotes.length > 0 && (
+        <div className="wa-quota-note bad">Aviso de Meta: {quota.healthNotes.join(' ')}</div>
+      )}
+      {selectedCount > 0 && !over && !blocked && (
+        <div className="wa-quota-note">Enviar a {fmt(selectedCount)} tomará {campaignEtaLabel(selectedCount)}.</div>
+      )}
+      {over && (
+        <div className="wa-quota-note bad">Supera lo que Meta permite hoy ({fmt(quota.remaining ?? 0)}). Reduce la selección o espera a que se libere el límite (24 h móviles).</div>
       )}
     </div>
   )

@@ -9,7 +9,7 @@ export type FailureKind =
   | 'marketing_limit'  // 131049: tope de mensajes de marketing por persona (temporal)
   | 'opt_out'          // 131050: pidió no recibir marketing
   | 'rate_limit'       // 131056 / 130429: demasiado rápido
-  | 'quality'          // 131048: calidad baja del número
+  | 'quality'          // 131048 / 131031 / 368 / 131064: número o cuenta restringidos por Meta
   | 'template'         // variables, imagen o plantilla inválidas
   | 'token'            // el acceso a WhatsApp venció
   | 'other'
@@ -29,7 +29,7 @@ export const FAILURE_KINDS: Record<FailureKind, FailureKindInfo> = {
   },
   marketing_limit: {
     title: 'Límite de marketing de Meta por persona',
-    hint: 'Es temporal: Meta no entrega a quien ya recibió muchos mensajes de marketing. Puedes volver a intentarlo en unos días.',
+    hint: 'Es temporal: Meta no entrega marketing a quien ya recibió muchos mensajes. Meta pide esperar al menos 24 h antes de reenviárselo (la app lo omite ese tiempo).',
     retry: true,
   },
   opt_out: {
@@ -43,8 +43,8 @@ export const FAILURE_KINDS: Record<FailureKind, FailureKindInfo> = {
     retry: true,
   },
   quality: {
-    title: 'Meta limitó el envío por la calidad del número',
-    hint: 'Pausa las campañas unos días y revisa la calidad del número.',
+    title: 'Meta restringió el número o la cuenta',
+    hint: 'Suele deberse a bloqueos o reportes de spam. Revisa la calidad y los avisos en el administrador de WhatsApp de Meta antes de volver a enviar.',
     retry: false,
   },
   template: {

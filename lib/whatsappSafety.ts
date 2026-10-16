@@ -1,46 +1,61 @@
 /**
- * Reglas de envío para campañas de WhatsApp — evitan que Meta baje la
- * calificación de calidad del número o restrinja el envío, aunque la
- * plantilla ya esté aprobada. Un número que no ha completado la
- * verificación de negocio arranca en el nivel más bajo de límite de
- * mensajes (250 clientes únicos/24h) y ese límite solo sube si la calidad
- * se mantiene alta — mandar todo de golpe sin pausas ni tope es lo que
- * más rápido tira esa calificación.
+ * Reglas de envío de WhatsApp tomadas de la documentación oficial de Meta
+ * (developers.facebook.com/documentation/business-messaging/whatsapp/…):
+ *  · messaging-limits: el límite es de PERSONAS ÚNICAS a las que se escribe
+ *    fuera de la ventana de atención en 24 h móviles. Lo fija Meta por
+ *    portafolio (250 → 2,000 → 10,000 → 100,000 → ilimitado) y se lee en vivo.
+ *  · throughput: 80 mensajes/s por número (error 130429). A una misma
+ *    persona, 1 cada 6 s (error 131056); reintentar a los 4^X segundos.
+ *  · per-user-limits: con el error 131049 hay que esperar al menos 24 h
+ *    antes de reenviarle una plantilla de marketing.
+ *  · error-codes: 131050 = se dio de baja del marketing, no reintentar.
  * Compartido por cliente y servidor (sin dependencias de Node).
  */
 
-// Pausa entre cada envío dentro de una campaña (ms), con jitter para que el
-// patrón no se vea perfectamente robótico. El cliente manda un contacto por
-// petición y espera esto entre una y otra — así la función del servidor
-// nunca queda esperando varios minutos (sin riesgo de timeout) y la UI
-// puede mostrar una barra de progreso real en vez de un solo spinner ciego.
-export const CAMPAIGN_SEND_DELAY_MS  = 3000
-export const CAMPAIGN_SEND_JITTER_MS = 800
+// Nivel de Meta → personas únicas por 24 h (null = sin límite). TIER_50 y
+// TIER_1K son niveles anteriores que aún pueden aparecer en cuentas viejas.
+export const TIER_LIMITS: Record<string, number | null> = {
+  TIER_50: 50, TIER_250: 250, TIER_1K: 1000, TIER_2K: 2000,
+  TIER_10K: 10000, TIER_100K: 100000, TIER_UNLIMITED: null,
+}
 
-// Tope de plantillas enviadas por día (ventana móvil de 24h). Conservador
-// mientras la verificación de negocio en Meta siga pendiente — se puede
-// subir una vez que el número lleve semanas con buena calidad y/o la
-// verificación esté aprobada.
-export const CAMPAIGN_DAILY_LIMIT = 200
+// Nivel inicial oficial de un portafolio nuevo: se usa si Meta no responde.
+export const FALLBACK_MESSAGING_LIMIT = 250
 
-// No repetir la misma plantilla a la misma persona en este periodo: los
-// envíos repetidos son la causa #1 de bloqueos/reportes.
-export const TEMPLATE_REPEAT_DAYS = 7
+/** Texto corto del nivel para la UI. */
+export function tierLabel(tier: string | null | undefined): string {
+  if (!tier) return '—'
+  if (!(tier in TIER_LIMITS)) return tier
+  const limit = TIER_LIMITS[tier]
+  return limit === null ? 'Sin límite' : `${limit.toLocaleString('es-MX')} personas/día`
+}
+
+// 131049: esperar al menos 24 h antes de reenviar una plantilla de marketing.
+export const MARKETING_RETRY_HOURS = 24
+
+// Envío de campañas: el navegador manda lotes y el servidor los envía con
+// poca concurrencia, muy por debajo de los 80 mensajes/s de Meta.
+export const CAMPAIGN_BATCH_SIZE  = 20
+export const CAMPAIGN_CONCURRENCY = 4
+
+// Errores de Meta que afectan a todo el número, la cuenta o la plantilla:
+// seguir enviando solo acumula fallos, así que la campaña se detiene.
+// 131048 número restringido · 131031/368 cuenta restringida · 131064 límite por
+// mala clasificación de plantillas · 132015 plantilla pausada · 190 token.
+export const STOP_CAMPAIGN_CODES = [131048, 131031, 368, 131064, 132015, 190]
 
 // Ventana de atención al cliente de Meta: texto libre solo se puede enviar
 // dentro de las 24 h siguientes al último mensaje del cliente.
 export const CUSTOMER_WINDOW_MS = 24 * 60 * 60 * 1000
 
-/** Pausa aleatoria entre CAMPAIGN_SEND_DELAY_MS y +CAMPAIGN_SEND_JITTER_MS */
-export function campaignDelayMs(): number {
-  return CAMPAIGN_SEND_DELAY_MS + Math.floor(Math.random() * CAMPAIGN_SEND_JITTER_MS)
-}
+// Tiempo aproximado por mensaje (petición a Meta + registro), para estimar.
+const APPROX_MS_PER_MESSAGE = 400
 
 export const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
 
 /** Tiempo estimado de una campaña (texto corto para la UI). */
 export function campaignEtaLabel(count: number): string {
-  const sec = Math.round(count * (CAMPAIGN_SEND_DELAY_MS + CAMPAIGN_SEND_JITTER_MS / 2) / 1000)
+  const sec = Math.max(1, Math.round(count * APPROX_MS_PER_MESSAGE / CAMPAIGN_CONCURRENCY / 1000))
   return sec < 60 ? `~${sec}s` : `~${Math.ceil(sec / 60)} min`
 }
 

@@ -4,11 +4,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Avatar, TipoChip } from '@/components/CrmUI'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
-import { useWhatsAppCampaignQuota, CampaignQuotaNote } from '@/components/WhatsAppCampaignQuota'
+import { useWhatsAppCampaignQuota, CampaignQuotaNote, isOverQuota } from '@/components/WhatsAppCampaignQuota'
 import { useCampaignSend, CampaignConfirmPanel, CampaignProgressPanel, CampaignResultsPanel } from '@/components/WhatsAppCampaignSend'
 import { WaIcon } from '@/components/WhatsAppUI'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
-import { TEMPLATE_REPEAT_DAYS } from '@/lib/whatsappSafety'
+import { MARKETING_RETRY_HOURS, tierLabel } from '@/lib/whatsappSafety'
 import { PERSON_STATES, PERSON_STATE_ORDER, type PersonState } from '@/lib/campaignKinds'
 
 type Contact = { id: string; name: string; phone: string; segment?: string | null; wa_opt_out?: boolean }
@@ -18,24 +18,23 @@ export type CampaignPreset = { template: string; contactIds: string[]; label: st
 
 type Health = {
   config: { connected: boolean; source: 'store' | 'env'; businessAccount: boolean; appSecret: boolean }
-  health: { displayPhoneNumber?: string; verifiedName?: string; qualityRating?: string; messagingLimitTier?: string } | null
+  health: { displayPhoneNumber?: string; verifiedName?: string; qualityRating?: string; messagingLimitTier?: string; canSendMessage?: string; healthNotes?: string[] } | null
 }
 
-type Stats = { recentRecipients: Record<string, string[]>; states?: Record<string, PersonState> }
+type Stats = { marketingHold: string[]; states?: Record<string, PersonState> }
 
 /** Filtro "Historial": cómo le fue a cada contacto con las campañas ('never' = nunca se le ha enviado una). */
 type History = 'all' | 'never' | PersonState
 const historyLabel = (h: Exclude<History, 'all'>) => (h === 'never' ? 'Sin campañas todavía' : PERSON_STATES[h].label)
 
+// Calidad según las reacciones de los clientes (bloqueos, reportes, lecturas). Desde
+// oct-2025 Meta ya no baja el límite por calidad, pero con calidad baja sostenida
+// puede pausar plantillas o restringir el número.
 const QUALITY: Record<string, { label: string; tone: 'good' | 'warn' | 'bad' | 'muted'; tip: string }> = {
-  GREEN:   { label: 'Alta',  tone: 'good', tip: 'Calidad alta: puedes seguir enviando campañas con normalidad.' },
-  YELLOW:  { label: 'Media', tone: 'warn', tip: 'Calidad media: baja la frecuencia y envía solo a quien realmente le interese.' },
-  RED:     { label: 'Baja',  tone: 'bad',  tip: 'Calidad baja: pausa las campañas unos días para evitar que Meta restrinja el número.' },
+  GREEN:   { label: 'Alta',  tone: 'good', tip: 'Calidad alta: puedes seguir enviando campañas con normalidad. Es requisito para que Meta suba tu límite.' },
+  YELLOW:  { label: 'Media', tone: 'warn', tip: 'Calidad media: algunos clientes bloquearon o reportaron mensajes. Envía solo a quien aceptó recibirlos y espera tus mensajes.' },
+  RED:     { label: 'Baja',  tone: 'bad',  tip: 'Calidad baja: Meta puede pausar tus plantillas o restringir el número si sigue así. Revisa a quién le envías y el contenido de tus plantillas.' },
   UNKNOWN: { label: 'Sin datos', tone: 'muted', tip: 'Meta aún no tiene suficiente historial para calificar el número.' },
-}
-const TIERS: Record<string, string> = {
-  TIER_50: '50 clientes/día', TIER_250: '250 clientes/día', TIER_1K: '1,000 clientes/día',
-  TIER_10K: '10,000 clientes/día', TIER_100K: '100,000 clientes/día', TIER_UNLIMITED: 'Sin límite',
 }
 
 let healthPromise: Promise<Health | null> | null = null
@@ -61,18 +60,22 @@ export function NumberHealthCard() {
     return <div className="wa-health"><WaIcon.alert /> No se pudo consultar la calidad del número en Meta (revisa el token en Configuración → WhatsApp).</div>
   }
   const q = QUALITY[data.health.qualityRating ?? 'UNKNOWN'] ?? QUALITY.UNKNOWN
+  const status = data.health.canSendMessage
+  const notes = data.health.healthNotes ?? []
   return (
-    <div className={`wa-health tone-${q.tone}`}>
+    <div className={`wa-health tone-${status === 'BLOCKED' ? 'bad' : q.tone}`}>
       <div className="wa-health-main">
         <span className="wa-health-dot" />
         <div>
           <div className="wa-health-title">Calidad del número: <strong>{q.label}</strong></div>
           <div className="wa-health-tip">{q.tip}</div>
+          {status === 'BLOCKED' && <div className="wa-health-tip"><strong>Meta tiene bloqueado el envío desde este número.</strong> {notes.join(' ')}</div>}
+          {status === 'LIMITED' && notes.length > 0 && <div className="wa-health-tip"><strong>Aviso de Meta:</strong> {notes.join(' ')}</div>}
         </div>
       </div>
       <div className="wa-health-meta">
         {data.health.displayPhoneNumber && <span>{data.health.displayPhoneNumber}</span>}
-        {data.health.messagingLimitTier && <span>Límite de Meta: {TIERS[data.health.messagingLimitTier] ?? data.health.messagingLimitTier}</span>}
+        {data.health.messagingLimitTier && <span>Límite de Meta: {tierLabel(data.health.messagingLimitTier)}</span>}
       </div>
     </div>
   )
@@ -96,7 +99,6 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
   const [history, setHistory]     = useState<History>('all')
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [selection, setSelection] = useState<WhatsAppTemplateSelection | null>(null)
-  const [skipRecent, setSkipRecent] = useState(true)
   const [stats, setStats]         = useState<Stats | null>(null)
   const { quota, refetch: refetchQuota } = useWhatsAppCampaignQuota()
   const { phase, total, done, sent, failed, skipped, outcomes, stopReason, askConfirm, backToForm, run, cancel, reset } = useCampaignSend()
@@ -111,7 +113,7 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
       .then(r => r.json())
       .then(d => setSegmentos((d.items ?? []).map((i: { label: string }) => i.label)))
       .catch(() => {})
-    fetch('/api/whatsapp/campaigns/stats').then(r => r.json()).then(d => { if (d.recentRecipients) setStats(d) }).catch(() => {})
+    fetch('/api/whatsapp/campaigns/stats').then(r => r.json()).then(d => { if (d.marketingHold) setStats(d) }).catch(() => {})
   }, [])
 
   // Reintento: al cargar los contactos se preselecciona a quienes no recibieron el mensaje
@@ -124,17 +126,18 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
     onPresetApplied?.()
   }, [retry, loading, contacts, onPresetApplied])
 
-  // Quienes ya recibieron la plantilla elegida en los últimos días
-  const recentPhones = useMemo(
-    () => new Set(selection?.templateName ? (stats?.recentRecipients[selection.templateName] ?? []) : []),
-    [stats, selection?.templateName],
+  // Meta pidió esperar 24 h antes de reenviarles marketing (error 131049); no aplica a plantillas de servicio
+  const marketing = selection?.category !== 'UTILITY' && selection?.category !== 'AUTHENTICATION'
+  const holdPhones = useMemo(
+    () => new Set(marketing ? (stats?.marketingHold ?? []) : []),
+    [stats, marketing],
   )
   const historyOf = (c: Contact): Exclude<History, 'all'> =>
     c.wa_opt_out ? 'opt_out' : stats?.states?.[normalizePhone(c.phone)] ?? 'never'
   const blockedReason = (c: Contact): string | null => {
     if (c.wa_opt_out) return 'Dado de baja'
     if (historyOf(c) === 'no_whatsapp') return 'Sin WhatsApp'
-    if (skipRecent && recentPhones.has(normalizePhone(c.phone))) return `Ya la recibió (${TEMPLATE_REPEAT_DAYS} días)`
+    if (holdPhones.has(normalizePhone(c.phone))) return `Meta pidió esperar ${MARKETING_RETRY_HOURS} h`
     return null
   }
 
@@ -168,7 +171,7 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
       return next.size === prev.size ? prev : next
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recentPhones, skipRecent, contacts])
+  }, [holdPhones, contacts])
 
   const toggle = (c: Contact) => {
     if (blockedReason(c)) return
@@ -192,15 +195,15 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
   const selectedContacts = contacts.filter(c => checkedIds.has(c.id))
   const eligibleCount = filtered.filter(c => !blockedReason(c)).length
   const exampleName = (selectedContacts[0]?.name || 'Cliente').trim().split(/\s+/)[0]
-  const overQuota = !!quota && selectedContacts.length > quota.remaining
-  const canSend = !!selection?.ready && selectedContacts.length > 0 && !overQuota
+  const overQuota = isOverQuota(quota, selectedContacts.length)
+  const canSend = !!selection?.ready && selectedContacts.length > 0 && !overQuota && quota?.canSendMessage !== 'BLOCKED'
 
   const handleConfirmed = async () => {
     if (!selection) return
-    await run(selectedContacts.map(c => ({ id: c.id, name: c.name, phone: c.phone })), selection, { skipRecent })
+    await run(selectedContacts.map(c => ({ id: c.id, name: c.name, phone: c.phone })), selection)
     setRetry(null)
     refetchQuota()
-    fetch('/api/whatsapp/campaigns/stats').then(r => r.json()).then(d => { if (d.recentRecipients) setStats(d) }).catch(() => {})
+    fetch('/api/whatsapp/campaigns/stats').then(r => r.json()).then(d => { if (d.marketingHold) setStats(d) }).catch(() => {})
   }
 
   if (phase !== 'idle') {
@@ -231,7 +234,7 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
           <div>
             <strong>Reintento de «{retry.label}»</strong>
             <span>
-              {checkedIds.size === 0 ? 'Ninguno de los contactos se puede volver a elegir (ya la recibieron o se dieron de baja).' : `${checkedIds.size} contacto${checkedIds.size !== 1 ? 's' : ''} elegido${checkedIds.size !== 1 ? 's' : ''}. Revisa la plantilla y confirma el envío.`}
+              {checkedIds.size === 0 ? 'Ninguno de los contactos se puede volver a elegir (se dieron de baja, no tienen WhatsApp o Meta pidió esperar).' : `${checkedIds.size} contacto${checkedIds.size !== 1 ? 's' : ''} elegido${checkedIds.size !== 1 ? 's' : ''}. Revisa la plantilla y confirma el envío.`}
             </span>
             {selection?.templateName && selection.templateName !== retry.template && (
               <em>La plantilla elegida ahora es «{selection.templateName.replace(/_/g, ' ')}», no la del reintento.</em>
@@ -265,10 +268,6 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
                 ))}
               </select>
             </div>
-            <label className="wa-check-row">
-              <input type="checkbox" checked={skipRecent} onChange={e => setSkipRecent(e.target.checked)} />
-              <span>Omitir a quien ya recibió esta plantilla en los últimos {TEMPLATE_REPEAT_DAYS} días</span>
-            </label>
             {noWhatsAppCount > 0 && (
               <div className="wa-nowa-note">
                 <WaIcon.ban size={13} />

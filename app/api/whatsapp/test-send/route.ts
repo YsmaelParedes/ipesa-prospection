@@ -3,13 +3,13 @@ import { requireStore } from '@/lib/supabase-server'
 import { sanitizeTemplateParam, sendWhatsAppTemplate, type WhatsAppTemplateComponent } from '@/lib/whatsapp'
 import { jsonError, readJson, serverError } from '@/lib/validation'
 import { WHATSAPP_NOT_CONNECTED, getStoreWhatsAppCreds } from '@/lib/storeWhatsApp'
-import { finishTemplateSend, reserveTemplateSend } from '@/lib/whatsappQuota'
+import { finishTemplateSend, getMessagingLimit, reserveTemplateSend } from '@/lib/whatsappQuota'
 import { contactForPhone } from '@/lib/whatsappInbox'
 import { normalizePhone } from '@/lib/phone'
 
 // POST /api/whatsapp/test-send — envía una plantilla a un número de prueba
 // (dueño/admin, para verificar que la integración de Meta quedó bien configurada).
-// Cuenta para el límite diario, respeta las bajas y queda en el historial.
+// Cuenta para el límite de Meta, respeta las bajas y queda en el historial.
 export async function POST(req: NextRequest) {
   const ctx = await requireStore({ admin: true, module: 'whatsapp', write: true })
   if (ctx instanceof Response) return ctx
@@ -40,14 +40,15 @@ export async function POST(req: NextRequest) {
     const phone = normalizePhone(to)
     const contact = /^\d{10}$/.test(phone) ? await contactForPhone(ctx.storeId, phone) : null
     if (contact?.wa_opt_out) return jsonError('Ese número pidió no recibir mensajes (dado de baja)', 409)
+    const { limit } = await getMessagingLimit(ctx.storeId, creds)
     const reserved = await reserveTemplateSend(ctx, {
       phone: /^\d{10}$/.test(phone) ? phone : to, template: template.trim(), contactId: contact?.id ?? null,
-      // Una prueba explícita puede repetirse; comparte consentimiento, cuota e historial.
-      body: `[Plantilla de prueba: ${template.trim()}]`, skipRecent: false,
+      // Una prueba comparte consentimiento, límite de Meta e historial con las campañas.
+      body: `[Plantilla de prueba: ${template.trim()}]`, limit, marketing: true,
     })
     if (!reserved.ok) return jsonError(reserved.error, reserved.status === 200 ? 409 : reserved.status)
     const result = await sendWhatsAppTemplate(creds, to, template.trim(), lang, components)
-    await finishTemplateSend(reserved.id, ctx.storeId, result)
+    await finishTemplateSend(reserved.id, ctx.storeId, result, contact?.id ?? null)
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 502 })
     return NextResponse.json({ success: true, messageId: result.messageId })
   } catch (error) {

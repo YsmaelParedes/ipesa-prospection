@@ -1,15 +1,21 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { campaignDelayMs, campaignEtaLabel, wait } from '@/lib/whatsappSafety'
+import { CAMPAIGN_BATCH_SIZE, campaignEtaLabel } from '@/lib/whatsappSafety'
 import type { WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
 import type { CampaignQuota } from '@/components/WhatsAppCampaignQuota'
 
 export type CampaignTarget = { id: string; name: string; phone: string | null }
-export type CampaignOutcome = { contactId: string; name: string; ok: boolean; skipped?: boolean; error?: string }
+export type CampaignOutcome = { contactId: string; name: string; ok: boolean; skipped?: boolean; held?: boolean; error?: string }
 export type CampaignPhase = 'idle' | 'confirm' | 'sending' | 'results'
 
-/** Orquesta confirmar → enviar uno por uno con pausa → resultados (Contactos y WhatsApp › Campañas). */
+type BatchResult = { contactId?: string; ok: boolean; skipped?: boolean; held?: boolean; error?: string; note?: string }
+
+/**
+ * Orquesta confirmar → enviar → resultados (Contactos y WhatsApp › Campañas).
+ * Se manda por lotes: el servidor envía cada lote con poca concurrencia,
+ * dentro de los límites de velocidad de Meta, sin pausas artificiales.
+ */
 export function useCampaignSend() {
   const [phase, setPhase]       = useState<CampaignPhase>('idle')
   const [total, setTotal]       = useState(0)
@@ -21,46 +27,48 @@ export function useCampaignSend() {
   const askConfirm = () => setPhase('confirm')
   const backToForm = () => setPhase('idle')
 
-  const run = async (targets: CampaignTarget[], selection: WhatsAppTemplateSelection, { skipRecent = true } = {}) => {
+  const run = async (targets: CampaignTarget[], selection: WhatsAppTemplateSelection) => {
     cancelRef.current = false
     setPhase('sending'); setTotal(targets.length); setDone(0); setOutcomes([]); setStopReason('')
     const out: CampaignOutcome[] = []
+    const nameOf = new Map(targets.map(t => [t.id, t.name]))
 
-    for (let i = 0; i < targets.length; i++) {
+    for (const t of targets) {
+      if (!t.phone) out.push({ contactId: t.id, name: t.name, ok: false, skipped: true, error: 'Sin teléfono registrado' })
+    }
+    const sendable = targets.filter(t => t.phone)
+    setDone(out.length); setOutcomes([...out])
+
+    for (let i = 0; i < sendable.length; i += CAMPAIGN_BATCH_SIZE) {
       if (cancelRef.current) { setStopReason('Envío detenido por ti. Los contactos restantes no recibieron nada.'); break }
-      const t = targets[i]
-      let sentToMeta = false
-      if (!t.phone) {
-        out.push({ contactId: t.id, name: t.name, ok: false, skipped: true, error: 'Sin teléfono registrado' })
-      } else {
-        try {
-          const r = await fetch('/api/whatsapp/campaigns/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contactId: t.id, template: selection.templateName, language: selection.language,
-              headerImageUrl: selection.savedImageUrl || undefined, personalize: selection.personalize,
-              bodyPreview: selection.bodyPreview, bodyParams: selection.bodyParams, skipRecent,
-            }),
-          })
-          const d = await r.json().catch(() => ({}))
-          if (r.status === 429) {
-            // Tope diario alcanzado: no tiene caso seguir intentando
-            out.push({ contactId: t.id, name: t.name, ok: false, error: d.error })
-            setStopReason(d.error || 'Se alcanzó el límite diario de envíos.')
-            setDone(i + 1); setOutcomes([...out])
-            break
+      const batch = sendable.slice(i, i + CAMPAIGN_BATCH_SIZE)
+      let stop = ''
+      try {
+        const r = await fetch('/api/whatsapp/campaigns/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipients: batch.map(t => ({ contactId: t.id })),
+            template: selection.templateName, language: selection.language, category: selection.category,
+            headerImageUrl: selection.savedImageUrl || undefined, personalize: selection.personalize,
+            bodyPreview: selection.bodyPreview, bodyParams: selection.bodyParams,
+          }),
+        })
+        const d = await r.json().catch(() => ({}))
+        if (!r.ok) {
+          stop = d.error || 'No se pudo enviar el lote.'
+        } else {
+          for (const o of (d.results ?? []) as BatchResult[]) {
+            const id = o.contactId ?? ''
+            out.push({ contactId: id, name: nameOf.get(id) ?? '', ok: o.ok, skipped: !!o.skipped, held: !!o.held, error: o.error ?? (o.held ? o.note : undefined) })
           }
-          sentToMeta = r.ok && !d.skipped
-          out.push({ contactId: t.id, name: t.name, ok: r.ok && d.ok !== false, skipped: !!d.skipped, error: d.error })
-        } catch {
-          out.push({ contactId: t.id, name: t.name, ok: false, error: 'Error de red' })
+          stop = d.stop || ''
         }
+      } catch {
+        stop = 'Error de red: revisa tu conexión. Los contactos restantes no recibieron nada.'
       }
-      setDone(i + 1)
-      setOutcomes([...out])
-      // La pausa solo aplica si de verdad se envió algo a Meta
-      if (sentToMeta && !cancelRef.current && i < targets.length - 1) await wait(campaignDelayMs())
+      setDone(out.length); setOutcomes([...out])
+      if (stop) { setStopReason(stop); break }
     }
 
     setPhase('results')
@@ -93,10 +101,10 @@ export function CampaignConfirmPanel({
         <div><span>Plantilla</span><strong>{selection?.templateName.replace(/_/g, ' ') ?? '—'}</strong></div>
         <div><span>Contactos</span><strong>{targetCount}</strong></div>
         <div><span>Tiempo estimado</span><strong>{campaignEtaLabel(targetCount)}</strong></div>
-        {quota && <div><span>Cuota restante hoy</span><strong>{quota.remaining} de {quota.limit}</strong></div>}
+        {quota && <div><span>Límite de Meta hoy</span><strong>{quota.remaining === null ? 'Sin límite' : `${quota.remaining.toLocaleString('es-MX')} de ${(quota.limit ?? 0).toLocaleString('es-MX')} personas`}</strong></div>}
       </div>
       <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 10, lineHeight: 1.5 }}>
-        Se enviará a los números reales de estos contactos, con una pausa de ~3 s entre cada uno para cuidar la calidad del número. Esta acción no se puede deshacer.
+        Se enviará a los números reales de estos contactos, respetando los límites de velocidad de Meta. Esta acción no se puede deshacer.
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
         <button className="btn btn-ghost" onClick={onCancel}>Cancelar</button>
@@ -121,7 +129,7 @@ export function CampaignProgressPanel({ total, done, sent, failed, skipped, onCa
         <span>{sent} enviados{skipped ? ` · ${skipped} omitidos` : ''}{failed ? ` · ${failed} fallidos` : ''}</span>
       </div>
       <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 10 }}>
-        No cierres esta pestaña — se envía con una pausa entre cada mensaje para cuidar el número.
+        No cierres esta pestaña hasta que termine el envío.
       </div>
       {onCancel && <button className="btn btn-ghost" style={{ marginTop: 14 }} onClick={onCancel}>Detener envío</button>}
     </div>
@@ -134,6 +142,7 @@ export function CampaignResultsPanel({ sent, skipped, failed, outcomes, stopReas
   onViewResults?: () => void
 }) {
   const problems = outcomes.filter(o => !o.ok)
+  const held = outcomes.filter(o => o.ok && o.held).length
   return (
     <div>
       <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Resultado del envío</div>
@@ -143,6 +152,11 @@ export function CampaignResultsPanel({ sent, skipped, failed, outcomes, stopReas
         <div className={failed ? 'bad' : ''}><strong>{failed}</strong><span>fallidos</span></div>
       </div>
       {stopReason && <div className="wa-warn" style={{ marginTop: 12 }}>{stopReason}</div>}
+      {held > 0 && (
+        <div className="wa-muted-box" style={{ marginTop: 12 }}>
+          {held === 1 ? '1 mensaje quedó retenido' : `${held} mensajes quedaron retenidos`} por Meta para evaluar la calidad de la plantilla. Meta los entrega en cuanto termina (normalmente en menos de una hora); si la plantilla recibe malas reacciones, la pausa y no se entregan.
+        </div>
+      )}
       {problems.length > 0 && (
         <div className="wa-problems">
           {problems.map((o, i) => (

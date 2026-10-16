@@ -1075,9 +1075,9 @@ function TemplateSendModal({ phone, name, force = false, onClose, onSent }: { ph
       const r = await fetch('/api/whatsapp/campaigns/send', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone, template: selection.templateName, language: selection.language,
+          phone, template: selection.templateName, language: selection.language, category: selection.category,
           headerImageUrl: selection.savedImageUrl || undefined, personalize: selection.personalize,
-          bodyPreview: selection.bodyPreview, bodyParams: selection.bodyParams, skipRecent: false, force,
+          bodyPreview: selection.bodyPreview, bodyParams: selection.bodyParams, force,
         }),
       })
       const d = await r.json().catch(() => ({}))

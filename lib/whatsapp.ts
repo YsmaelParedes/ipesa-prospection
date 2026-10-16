@@ -31,6 +31,8 @@ export type WhatsAppTemplateComponent = {
 export type WhatsAppSendResult = {
   ok: boolean
   messageId?: string
+  /** `held_for_quality_assessment`: Meta retiene la plantilla para medir su calidad (template pacing). */
+  messageStatus?: string
   error?: string
   code?: number
 }
@@ -39,17 +41,21 @@ export type WhatsAppSendResult = {
 /**
  * Errores frecuentes de Meta traducidos a algo accionable. El texto original
  * de Meta va en inglés y es críptico ("(#131047) Re-engagement message").
- * https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes
+ * https://developers.facebook.com/documentation/business-messaging/whatsapp/support/error-codes
  */
 export const FRIENDLY_ERRORS: Record<number, string> = {
   131047: 'Pasaron más de 24 h desde el último mensaje del cliente: solo se puede enviar una plantilla aprobada.',
   131026: 'El mensaje no se pudo entregar (el número no tiene WhatsApp o no aceptó los términos recientes).',
-  131049: 'Meta no entregó esta plantilla para cuidar la experiencia del usuario (límite de mensajes de marketing por persona). Intenta más adelante.',
-  131050: 'El cliente pidió dejar de recibir mensajes de marketing de este número.',
+  131049: 'Meta no entregó esta plantilla porque la persona alcanzó su límite de mensajes de marketing. Meta pide esperar al menos 24 h antes de reenviársela.',
+  131050: 'El cliente se dio de baja de los mensajes de marketing de tu negocio. Meta pide no volver a enviárselos.',
   131051: 'Tipo de mensaje no soportado.',
   131056: 'Demasiados mensajes al mismo número en poco tiempo. Espera un momento.',
   130429: 'Se alcanzó el límite de velocidad de envío de Meta. Espera unos minutos.',
-  131048: 'Meta limitó el envío por baja calidad del número (muchos bloqueos o reportes). Pausa las campañas.',
+  131048: 'Meta restringió el envío desde este número (por bloqueos o reportes de spam). Revisa la calidad en el administrador de WhatsApp.',
+  131031: 'Meta restringió o desactivó la cuenta de WhatsApp Business por una infracción de políticas.',
+  368:    'Meta restringió o desactivó la cuenta de WhatsApp Business por una infracción de políticas.',
+  131064: 'Meta limitó los envíos de la cuenta por plantillas mal clasificadas. Se libera solo al terminar el periodo de sanción.',
+  132015: 'Meta pausó esta plantilla por baja calidad. Edítala en Meta y vuelve a enviarla cuando esté aprobada.',
   132000: 'El número de variables no coincide con la plantilla aprobada.',
   132001: 'La plantilla no existe o no está aprobada en ese idioma.',
   132012: 'El formato de las variables de la plantilla no es válido.',
@@ -84,10 +90,24 @@ async function postMessage(creds: WhatsAppCreds, payload: Record<string, unknown
       const raw  = data?.error?.error_data?.details || data?.error?.message || `Error HTTP ${status}`
       return { ok: false, code, error: friendlyWhatsAppError(code, raw) }
     }
-    return { ok: true, messageId: data?.messages?.[0]?.id }
+    return { ok: true, messageId: data?.messages?.[0]?.id, messageStatus: data?.messages?.[0]?.message_status }
   } catch (error: any) {
     return { ok: false, error: error?.name === 'TimeoutError' ? 'Meta tardó demasiado en responder' : 'Error de red al contactar la API de WhatsApp' }
   }
+}
+
+// Límite de velocidad (130429) y de mensajes a la misma persona (131056):
+// Meta pide reintentar a los 4^X segundos (1 s, 4 s, 16 s…).
+const RETRY_CODES = new Set([130429, 131056])
+const MAX_RETRIES = 2
+
+async function postWithBackoff(creds: WhatsAppCreds, payload: Record<string, unknown>): Promise<WhatsAppSendResult> {
+  let result = await postMessage(creds, payload)
+  for (let x = 0; x < MAX_RETRIES && !result.ok && result.code && RETRY_CODES.has(result.code); x++) {
+    await new Promise(r => setTimeout(r, 4 ** x * 1000))
+    result = await postMessage(creds, payload)
+  }
+  return result
 }
 
 /**
@@ -101,7 +121,7 @@ export function sendWhatsAppTemplate(
   languageCode = 'es_MX',
   components?: WhatsAppTemplateComponent[],
 ): Promise<WhatsAppSendResult> {
-  return postMessage(creds, {
+  return postWithBackoff(creds, {
     to,
     type: 'template',
     template: {
@@ -114,7 +134,7 @@ export function sendWhatsAppTemplate(
 
 /** Texto libre — solo dentro de las 24 h desde el último mensaje del cliente. */
 export function sendWhatsAppText(creds: WhatsAppCreds, to: string, body: string): Promise<WhatsAppSendResult> {
-  return postMessage(creds, { to, type: 'text', text: { body, preview_url: true } })
+  return postWithBackoff(creds, { to, type: 'text', text: { body, preview_url: true } })
 }
 
 /**
@@ -151,7 +171,7 @@ export function sendWhatsAppMedia(
   creds: WhatsAppCreds, to: string, kind: 'image' | 'video' | 'document', mediaId: string,
   opts: { caption?: string; filename?: string } = {},
 ): Promise<WhatsAppSendResult> {
-  return postMessage(creds, {
+  return postWithBackoff(creds, {
     to,
     type: kind,
     [kind]: {
@@ -204,23 +224,60 @@ export type PhoneHealth = {
   displayPhoneNumber?: string
   verifiedName?: string
   qualityRating?: string       // GREEN | YELLOW | RED | UNKNOWN
-  messagingLimitTier?: string  // TIER_250 | TIER_1K | TIER_10K | TIER_100K | TIER_UNLIMITED
+  messagingLimitTier?: string  // TIER_250 | TIER_2K | TIER_10K | TIER_100K | TIER_UNLIMITED
   nameStatus?: string
+  /** health_status de Meta: AVAILABLE | LIMITED | BLOCKED */
+  canSendMessage?: string
+  /** Motivos de Meta cuando el estado es LIMITED o BLOCKED. */
+  healthNotes?: string[]
 }
 
-/** Calidad del número y nivel de mensajería — clave para no ser restringido por Meta. */
+/** Primer valor TIER_* de la respuesta (Meta lo devuelve como texto; se tolera un objeto). */
+function tierOf(value: unknown): string | undefined {
+  if (typeof value === 'string') return /^TIER_/.test(value) ? value : undefined
+  if (value && typeof value === 'object') {
+    for (const v of Object.values(value)) { const t = tierOf(v); if (t) return t }
+  }
+  return undefined
+}
+
+async function phoneFields(creds: WhatsAppCreds, fields: string): Promise<any | null> {
+  const { ok, data } = await graphFetch(creds, `${creds.phoneNumberId}?fields=${fields}`).catch(() => ({ ok: false, data: null }))
+  return ok && data ? data : null
+}
+
+/**
+ * Calidad, nivel de mensajería y estado de salud del número. Cada dato va en
+ * su propia consulta: si una versión de Graph no conoce un campo, el resto
+ * sigue funcionando.
+ *  · whatsapp_business_manager_messaging_limit: nivel del portafolio
+ *    (messaging_limit_tier quedó obsoleto y solo es respaldo).
+ *  · health_status: AVAILABLE / LIMITED / BLOCKED (support/health-status).
+ */
 export async function getPhoneHealth(creds: WhatsAppCreds): Promise<PhoneHealth | null> {
-  const { ok, data } = await graphFetch(
-    creds,
-    `${creds.phoneNumberId}?fields=display_phone_number,verified_name,quality_rating,messaging_limit_tier,name_status`,
-  ).catch(() => ({ ok: false, data: null }))
-  if (!ok || !data) return null
+  const [base, limit, health] = await Promise.all([
+    phoneFields(creds, 'display_phone_number,verified_name,quality_rating,name_status'),
+    phoneFields(creds, 'whatsapp_business_manager_messaging_limit'),
+    phoneFields(creds, 'health_status'),
+  ])
+  if (!base) return null
+  let tier = tierOf(limit?.whatsapp_business_manager_messaging_limit)
+  if (!tier) tier = tierOf((await phoneFields(creds, 'messaging_limit_tier'))?.messaging_limit_tier)
+
+  const entities: any[] = Array.isArray(health?.health_status?.entities) ? health.health_status.entities : []
+  const healthNotes = entities.flatMap(e => [
+    ...(Array.isArray(e?.errors) ? e.errors.map((x: any) => [x?.error_description, x?.possible_solution].filter(Boolean).join(' ')) : []),
+    ...(Array.isArray(e?.additional_info) ? e.additional_info : typeof e?.additional_info === 'string' ? [e.additional_info] : []),
+  ]).filter((n): n is string => typeof n === 'string' && !!n.trim())
+
   return {
-    displayPhoneNumber: data.display_phone_number,
-    verifiedName:       data.verified_name,
-    qualityRating:      data.quality_rating,
-    messagingLimitTier: data.messaging_limit_tier,
-    nameStatus:         data.name_status,
+    displayPhoneNumber: base.display_phone_number,
+    verifiedName:       base.verified_name,
+    qualityRating:      base.quality_rating,
+    messagingLimitTier: tier,
+    nameStatus:         base.name_status,
+    canSendMessage:     health?.health_status?.can_send_message,
+    healthNotes:        healthNotes.length ? [...new Set(healthNotes)] : undefined,
   }
 }
 

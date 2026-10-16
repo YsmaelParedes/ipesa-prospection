@@ -5,9 +5,8 @@ import { credsFromRow, getStoreWhatsAppRow } from '@/lib/storeWhatsApp'
 
 /**
  * GET /api/whatsapp/status (dueño/admin) — si la tienda tiene WhatsApp
- * conectado + salud del número en Meta: calificación de calidad y nivel de
- * mensajería. Si la calidad baja a YELLOW/RED hay que pausar campañas antes
- * de que Meta restrinja el número.
+ * conectado + salud del número en Meta: calificación de calidad, nivel de
+ * mensajería y health_status (AVAILABLE / LIMITED / BLOCKED).
  */
 export async function GET() {
   const ctx = await requireStore({ admin: true, module: 'whatsapp' })

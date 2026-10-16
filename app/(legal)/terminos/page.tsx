@@ -94,7 +94,7 @@ const sections: LegalSection[] = [
         <li>Si tu tienda tiene conectado WhatsApp: la conexión usa WhatsApp Business Platform de Meta y está sujeta a sus términos y políticas, incluidas la Política de WhatsApp Business y la Política de Comercio.</li>
         <li>Solo debes escribir a personas que te hayan dado su consentimiento para recibir mensajes de tu tienda, y eres responsable del contenido de tus mensajes y plantillas.</li>
         <li>Meta puede cobrar directamente a tu cuenta por las conversaciones o mensajes según sus tarifas vigentes.</li>
-        <li>Las reglas anti-bloqueo de las campañas reducen el riesgo, pero Meta puede limitar o suspender un número por decisiones propias; esas decisiones no dependen de nosotros.</li>
+        <li>Las campañas aplican los límites y reglas que publica Meta (límite de personas por día, bajas y esperas que Meta indica), pero Meta puede limitar o suspender un número por decisiones propias; esas decisiones no dependen de nosotros.</li>
       </ul>
     ),
   },

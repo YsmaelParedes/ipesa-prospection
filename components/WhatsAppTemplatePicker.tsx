@@ -19,6 +19,8 @@ export type WhatsAppTemplateSelection = {
 }
 
 const CATEGORY_LABEL: Record<string, string> = { MARKETING: 'Marketing', UTILITY: 'Servicio', AUTHENTICATION: 'Autenticación' }
+// Calidad de la plantilla según Meta (templates/template-quality)
+const QUALITY_LABEL: Record<string, string> = { GREEN: 'calidad alta', YELLOW: 'calidad media', RED: 'calidad baja' }
 
 // Plantillas compartidas entre todos los selectores abiertos de la sesión
 let templatesPromise: Promise<{ templates: WhatsAppTemplateDef[]; error: string }> | null = null
@@ -146,13 +148,17 @@ export function WhatsAppTemplatePicker({
           <select value={templateKey} onChange={e => setTemplateKey(e.target.value)}>
             {templates.map(t => (
               <option key={`${t.name}|${t.language}`} value={`${t.name}|${t.language}`}>
-                {t.label}{t.category ? ` · ${CATEGORY_LABEL[t.category] ?? t.category}` : ''}{t.unsupported ? ' (no compatible)' : ''}
+                {t.label}{t.category ? ` · ${CATEGORY_LABEL[t.category] ?? t.category}` : ''}{t.quality && QUALITY_LABEL[t.quality] ? ` · ${QUALITY_LABEL[t.quality]}` : ''}{t.unsupported ? ' (no compatible)' : ''}
               </option>
             ))}
           </select>
         )}
         {templatesError && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4 }}>⚠️ {templatesError}</div>}
       </div>
+
+      {template?.quality === 'RED' && !template.unsupported && (
+        <div className="wa-warn">Meta califica esta plantilla con calidad baja (bloqueos, reportes o pocas lecturas). Puede pausarla y detener los envíos: considera mejorarla o usar otra.</div>
+      )}
 
       {template?.unsupported && (
         <div className="wa-warn">Esta plantilla no se puede enviar desde la app: {template.unsupported.toLowerCase()}. Elige otra o envíala desde el administrador de WhatsApp de Meta.</div>

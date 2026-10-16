@@ -36,6 +36,7 @@ function toDef(t: any): WhatsAppTemplateDef {
     footer: footer?.text,
     buttonLabel: buttons[0]?.text,
     unsupported,
+    quality: typeof t.quality_score?.score === 'string' ? t.quality_score.score : undefined,
   }
 }
 
@@ -57,7 +58,11 @@ export async function GET() {
   }
 
   try {
-    const { ok, status, data } = await graphFetch(creds, `${encodeURIComponent(creds.wabaId)}/message_templates?fields=name,status,language,category,components&limit=200`)
+    // quality_score (GREEN/YELLOW/RED/UNKNOWN, ver templates/template-quality) va
+    // aparte del resto: si Meta no lo acepta, las plantillas se cargan sin él.
+    const path = (fields: string) => `${encodeURIComponent(creds.wabaId!)}/message_templates?fields=${fields}&limit=200`
+    let { ok, status, data } = await graphFetch(creds, path('name,status,language,category,components,quality_score'))
+    if (!ok) ({ ok, status, data } = await graphFetch(creds, path('name,status,language,category,components')))
     if (!ok) {
       console.error('[GET /api/whatsapp/templates]', data?.error?.message ?? status)
       return NextResponse.json({ error: `Meta respondió con error ${status} al consultar plantillas`, templates: [] })

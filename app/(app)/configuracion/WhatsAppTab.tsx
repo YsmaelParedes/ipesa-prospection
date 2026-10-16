@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Ico, Note, Panel, Spinner, WhatsAppGlyph, api, copyText, cx, fmtDate, send, useToast } from './ui'
 import s from './configuracion.module.css'
+import { tierLabel } from '@/lib/whatsappSafety'
 
 type Connection = {
   connected: boolean
@@ -15,7 +16,10 @@ type Connection = {
   encryptionReady: boolean
   webhook: { url: string; verifyToken: string | null }
 }
-type Health = { displayPhoneNumber?: string; verifiedName?: string; qualityRating?: string; messagingLimitTier?: string; nameStatus?: string }
+type Health = {
+  displayPhoneNumber?: string; verifiedName?: string; qualityRating?: string; messagingLimitTier?: string; nameStatus?: string
+  canSendMessage?: string; healthNotes?: string[]
+}
 
 const QUALITY: Record<string, { label: string; cls: string }> = {
   GREEN:   { label: 'Alta', cls: s.bActive },
@@ -23,11 +27,6 @@ const QUALITY: Record<string, { label: string; cls: string }> = {
   RED:     { label: 'Baja', cls: s.bDanger },
   UNKNOWN: { label: 'Sin datos', cls: s.bMuted },
 }
-const TIERS: Record<string, string> = {
-  TIER_50: '50 clientes/día', TIER_250: '250 clientes/día', TIER_1K: '1,000 clientes/día',
-  TIER_10K: '10,000 clientes/día', TIER_100K: '100,000 clientes/día', TIER_UNLIMITED: 'Sin límite',
-}
-const tierLabel = (tier?: string) => (tier ? TIERS[tier] ?? tier : '—')
 
 /* ── Conexión ───────────────────────────────────────────────────────────── */
 function CopyField({ label, value, onCopied }: { label: string; value: string; onCopied: () => void }) {
@@ -173,7 +172,17 @@ function ConnectionPanels({ isOwner, showToast, onStatus }: { isOwner: boolean; 
         )}
         {conn.connected && health?.qualityRating && health.qualityRating !== 'GREEN' && health.qualityRating !== 'UNKNOWN' && (
           <div style={{ marginTop: 14 }}>
-            <Note kind="warn">La calidad del número bajó. Pausa las campañas y revisa las plantillas antes de que Meta limite el número.</Note>
+            <Note kind="warn">La calidad del número bajó (bloqueos, reportes o pocas lecturas). Si sigue así, Meta puede pausar tus plantillas o restringir el número: envía solo a quien aceptó recibir tus mensajes y revisa tus plantillas.</Note>
+          </div>
+        )}
+        {conn.connected && health?.canSendMessage === 'BLOCKED' && (
+          <div style={{ marginTop: 14 }}>
+            <Note kind="danger">Meta tiene bloqueado el envío desde este número. {(health.healthNotes ?? []).join(' ')}</Note>
+          </div>
+        )}
+        {conn.connected && health?.canSendMessage === 'LIMITED' && !!health.healthNotes?.length && (
+          <div style={{ marginTop: 14 }}>
+            <Note kind="warn">Aviso de Meta: {health.healthNotes.join(' ')}</Note>
           </div>
         )}
         {conn.connected && !conn.hasAppSecret && (

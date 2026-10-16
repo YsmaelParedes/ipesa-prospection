@@ -15,4 +15,5 @@ export type WhatsAppTemplateDef = {
   footer?: string
   buttonLabel?: string
   unsupported?: string         // motivo si la app no puede llenarla (p. ej. variables en encabezado/botón)
+  quality?: string             // calidad en Meta: GREEN | YELLOW | RED | UNKNOWN
 }

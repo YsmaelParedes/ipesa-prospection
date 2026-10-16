@@ -8,6 +8,7 @@ import { getServerSupabase } from './supabase-server'
 import { friendlyWhatsAppError } from './whatsapp'
 import { fmtPhone, normalizePhone, phoneVariants } from './phone'
 import { isOptOutMessage } from './whatsappSafety'
+import { markOptOut } from './whatsappQuota'
 import { configureWebPush, sendPushToSubscriptions } from './push'
 
 type Inbound = { text: string; mediaId?: string; mediaType?: string; mime?: string; optOutCandidate?: string }
@@ -82,11 +83,16 @@ export async function processChange(storeId: string, value: any): Promise<Inboun
     const now = new Date().toISOString()
     if (status.status === 'failed') {
       const err = status.errors?.[0]
-      await supabase.from('whatsapp_messages').update({
+      const code = Number.isInteger(err?.code) ? err.code as number : null
+      const { data: failed } = await supabase.from('whatsapp_messages').update({
         status: 'failed',
-        error_message: friendlyWhatsAppError(err?.code, err?.error_data?.details || err?.title || err?.message || 'Error de entrega'),
+        error_message: friendlyWhatsAppError(code ?? undefined, err?.error_data?.details || err?.title || err?.message || 'Error de entrega'),
+        error_code: code,
         updated_at: now,
-      }).eq('store_id', storeId).eq('wa_message_id', status.id)
+      }).eq('store_id', storeId).eq('wa_message_id', status.id).select('contact_id')
+      // 131050: se dio de baja del marketing; Meta pide no volver a enviarle
+      const contactId = failed?.[0]?.contact_id
+      if (code === 131050 && contactId) await markOptOut(storeId, contactId)
     } else if (STATUS_RANK[status.status]) {
       await supabase.from('whatsapp_messages')
         .update({ status: status.status, updated_at: now })

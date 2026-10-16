@@ -12,7 +12,7 @@ import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEve
 import { fmtDue, isOverdue } from '@/lib/datetime'
 import { normText } from '@/lib/searchIndex'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
-import { useWhatsAppCampaignQuota, CampaignQuotaNote } from '@/components/WhatsAppCampaignQuota'
+import { useWhatsAppCampaignQuota, CampaignQuotaNote, isOverQuota } from '@/components/WhatsAppCampaignQuota'
 import { useCampaignSend, CampaignConfirmPanel, CampaignProgressPanel, CampaignResultsPanel } from '@/components/WhatsAppCampaignSend'
 import { StatusTicks, WindowBadge, fmtTime, mediaCaption } from '@/components/WhatsAppUI'
 
@@ -801,8 +801,8 @@ function WhatsAppCampaignModal({
   const optedOut = chosen.length - selectedContacts.length
   const exampleName = (selectedContacts[0]?.name || 'Cliente').trim().split(/\s+/)[0]
 
-  const overQuota = !!quota && selectedContacts.length > quota.remaining
-  const canSend = !!selection?.ready && selectedContacts.length > 0 && !overQuota
+  const overQuota = isOverQuota(quota, selectedContacts.length)
+  const canSend = !!selection?.ready && selectedContacts.length > 0 && !overQuota && quota?.canSendMessage !== 'BLOCKED'
   const busy = phase === 'sending'
 
   const handleConfirmed = async () => {
@@ -835,7 +835,7 @@ function WhatsAppCampaignModal({
               <div className="wa-quota" style={{ marginTop: 14 }}>
                 Se enviará a <strong>{selectedContacts.length}</strong> contacto{selectedContacts.length !== 1 ? 's' : ''} seleccionado{selectedContacts.length !== 1 ? 's' : ''}.
                 {optedOut > 0 && <> Se omiten <strong>{optedOut}</strong> que pidieron no recibir campañas.</>}
-                {' '}Quien ya recibió esta plantilla en los últimos 7 días también se omite automáticamente.
+                {' '}También se omite a quien Meta pidió no reenviarle marketing por 24 h y a quien no tiene WhatsApp.
               </div>
               <CampaignQuotaNote quota={quota} selectedCount={selectedContacts.length} />
             </>

@@ -224,7 +224,7 @@ export default function DashboardPage() {
             <div className="today-wa-stats">
               <div><strong className={wa.unreadConversations ? 'hot' : ''}>{wa.unreadConversations}</strong><span>sin leer</span></div>
               <div><strong>{wa.inboundToday}</strong><span>recibidos hoy</span></div>
-              {data?.isAdmin && <div><strong>{wa.templates24h}<small>/{wa.dailyLimit}</small></strong><span>plantillas 24 h</span></div>}
+              {data?.isAdmin && <div><strong>{wa.people24h ?? 0}{wa.dailyLimit != null && <small>/{wa.dailyLimit.toLocaleString('es-MX')}</small>}</strong><span>personas 24 h</span></div>}
             </div>
           </Link>
         )}

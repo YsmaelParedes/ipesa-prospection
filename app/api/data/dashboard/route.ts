@@ -3,13 +3,26 @@ import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-
 import { ownLeadsFilter } from '@/lib/leads'
 import { WON, isOpenLead } from '@/lib/crm'
 import { serverError } from '@/lib/validation'
-import { CAMPAIGN_DAILY_LIMIT } from '@/lib/whatsappSafety'
+import { getStoreWhatsAppCreds } from '@/lib/storeWhatsApp'
+import { getMessagingLimit, uniqueRecipientsOutsideWindow24h } from '@/lib/whatsappQuota'
 
 const ACTIVITY_LABELS: Record<string, string> = {
   call: 'Llamada', email: 'Correo', whatsapp: 'WhatsApp', quote: 'Cotización',
   meeting: 'Reunión', visit: 'Visita', note: 'Nota',
 }
 const DAY = 24 * 60 * 60 * 1000
+
+/** Personas contactadas fuera de la ventana en 24 h y límite real de Meta (null = sin límite). */
+async function whatsappUsage(storeId: string): Promise<{ used: number; limit: number | null } | null> {
+  try {
+    const creds = await getStoreWhatsAppCreds(storeId)
+    if (!creds) return null
+    const [used, { limit }] = await Promise.all([uniqueRecipientsOutsideWindow24h(storeId), getMessagingLimit(storeId, creds)])
+    return { used, limit }
+  } catch {
+    return null
+  }
+}
 
 /**
  * Inicio de día/mes en México (UTC-6 todo el año desde 2022) como instante
@@ -38,7 +51,6 @@ export async function GET() {
   try {
     const supabase = getServerSupabase()
     const { startOfToday, startOfMonth, startOfLastMonth } = mexicoBoundaries()
-    const since24h = new Date(Date.now() - DAY).toISOString()
     const since14d = new Date(Date.now() - 14 * DAY).toISOString()
 
     // Admin: leads de toda la tienda (supervisión). Vendedor: solo los suyos (+ legacy).
@@ -63,7 +75,7 @@ export async function GET() {
       { data: activitiesData },
       { count: waUnread },
       { count: waInboundToday },
-      { count: waTemplates24h },
+      waUsage,
       names,
     ] = await Promise.all([
       contactsCount(),
@@ -76,8 +88,7 @@ export async function GET() {
       activitiesQuery,
       supabase.from('whatsapp_threads').select('phone', { count: 'exact', head: true }).eq('store_id', storeId).gt('unread', 0),
       supabase.from('whatsapp_messages').select('id', { count: 'exact', head: true }).eq('store_id', storeId).eq('direction', 'inbound').gte('created_at', startOfToday),
-      supabase.from('whatsapp_messages').select('id', { count: 'exact', head: true }).eq('store_id', storeId)
-        .eq('direction', 'outbound').not('template_name', 'is', null).neq('status', 'failed').gte('created_at', since24h),
+      isAdmin && ctx.store.modules.whatsapp ? whatsappUsage(storeId) : Promise.resolve(null),
       isAdmin ? getUserNameMap(storeId).catch(() => new Map<string, string>()) : Promise.resolve(null),
     ])
     if (leadsError) throw leadsError
@@ -170,8 +181,8 @@ export async function GET() {
       whatsapp: {
         unreadConversations: waUnread || 0,
         inboundToday:        waInboundToday || 0,
-        templates24h:        waTemplates24h || 0,
-        dailyLimit:          CAMPAIGN_DAILY_LIMIT,
+        people24h:           waUsage?.used ?? 0,
+        dailyLimit:          waUsage?.limit ?? null,
       },
       byChannel,
       bySegment,

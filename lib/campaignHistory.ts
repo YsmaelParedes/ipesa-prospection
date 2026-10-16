@@ -2,7 +2,7 @@
  * Historial de campañas de WhatsApp, armado a partir de los mensajes de
  * plantilla que ya guarda la app (whatsapp_messages): no hay tabla de
  * campañas. Un envío = los mensajes de una misma plantilla separados por
- * menos de BATCH_GAP_MS (la campaña manda uno cada ~3 s). Solo servidor.
+ * menos de BATCH_GAP_MS (una campaña se envía en pocos minutos). Solo servidor.
  */
 import { fetchPaged } from './paged'
 import { getServerSupabase } from './supabase-server'
@@ -44,14 +44,20 @@ const KIND_BY_CODE: Record<number, FailureKind> = {
   131049: 'marketing_limit',
   131050: 'opt_out',
   131056: 'rate_limit', 130429: 'rate_limit',
-  131048: 'quality',
-  132000: 'template', 132001: 'template', 132012: 'template', 131009: 'template', 100: 'template',
+  131048: 'quality', 131031: 'quality', 368: 'quality', 131064: 'quality',
+  132000: 'template', 132001: 'template', 132012: 'template', 131009: 'template', 132015: 'template', 100: 'template',
   190: 'token',
 }
 
 // El webhook guarda el texto ya traducido (FRIENDLY_ERRORS), no el código:
 // se recupera el código a partir de ese texto.
-const CODE_BY_TEXT = new Map<string, number>(Object.entries(FRIENDLY_ERRORS).map(([code, text]) => [text, Number(code)]))
+const CODE_BY_TEXT = new Map<string, number>([
+  ...Object.entries(FRIENDLY_ERRORS).map(([code, text]) => [text, Number(code)] as [string, number]),
+  // Textos anteriores (2.6.x) que siguen guardados en mensajes viejos
+  ['Meta no entregó esta plantilla para cuidar la experiencia del usuario (límite de mensajes de marketing por persona). Intenta más adelante.', 131049],
+  ['El cliente pidió dejar de recibir mensajes de marketing de este número.', 131050],
+  ['Meta limitó el envío por baja calidad del número (muchos bloqueos o reportes). Pausa las campañas.', 131048],
+])
 
 // Títulos en inglés que Meta manda sin código (así quedaron guardados algunos envíos viejos)
 const CODE_BY_META_TITLE: [RegExp, number][] = [

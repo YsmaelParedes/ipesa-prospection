@@ -114,6 +114,15 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 
   const creds = await getStoreWhatsAppCreds(ctx.storeId)
   if (!creds) return jsonError(WHATSAPP_NOT_CONNECTED, 409)
+
+  // Fuera de la ventana de 24 h Meta solo acepta plantillas (error 131047)
+  const { data: lastInbound } = await getServerSupabase().from('whatsapp_messages').select('created_at')
+    .eq('store_id', ctx.storeId).eq('phone', phone).eq('direction', 'inbound')
+    .order('created_at', { ascending: false }).limit(1).maybeSingle()
+  if (!isWindowOpen(lastInbound?.created_at)) {
+    return jsonError('Pasaron más de 24 h desde el último mensaje del cliente: solo se puede enviar una plantilla aprobada.', 409)
+  }
+
   const result = await sendWhatsAppText(creds, toWhatsAppNumber(phone), text)
   if (!result.ok) return NextResponse.json({ error: result.error, code: result.code }, { status: 502 })
 

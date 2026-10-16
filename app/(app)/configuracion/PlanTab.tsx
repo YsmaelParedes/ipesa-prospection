@@ -17,7 +17,7 @@ const INCLUDED = [
   'Soporte para configurar tu tienda',
 ]
 // Solo la tienda original los tiene; no se ofrecen a tiendas nuevas
-const WHATSAPP_INCLUDED = ['Bandeja de WhatsApp ligada al CRM', 'Campañas con reglas anti-bloqueo']
+const WHATSAPP_INCLUDED = ['Bandeja de WhatsApp ligada al CRM', 'Campañas con las reglas oficiales de Meta']
 
 export function PlanTab({ store }: { store: ClientStore }) {
   const [toast, showToast] = useToast()

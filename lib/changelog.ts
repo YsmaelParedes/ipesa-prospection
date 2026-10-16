@@ -20,6 +20,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.7.0',
+    date: '16 de octubre, 2026',
+    title: 'Campañas de WhatsApp con las reglas oficiales de Meta',
+    items: [
+      'El límite de envíos ahora es el real de Meta para tu número (hoy 2,000 personas al día), y sube solo cuando Meta te asigna un nivel mayor.',
+      'El límite cuenta personas distintas en 24 h, no mensajes. Quien te escribió en las últimas 24 h no cuenta.',
+      'Las campañas se envían mucho más rápido: sin la pausa de 3 segundos entre mensajes, dentro de los límites de velocidad de Meta.',
+      'Ya no se omite a quien recibió la misma plantilla en los últimos 7 días. Solo se omite 24 h a quien Meta pidió no reenviarle marketing por ahora.',
+      'Si un cliente se da de baja del marketing desde WhatsApp, se marca solo y no recibe más campañas.',
+      'Si Meta bloquea el número o pausa una plantilla, la campaña se detiene y te dice por qué. El selector de plantillas muestra la calidad de cada una.',
+    ],
+  },
+  {
     version: '2.6.1',
     date: '15 de octubre, 2026',
     title: 'Revisión de seguridad y ajustes en celular',

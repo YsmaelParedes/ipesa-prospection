@@ -168,9 +168,18 @@ Qué hace la sección **WhatsApp** del CRM:
   servidor lo omite (también en envíos desde Contactos) y la Bandeja lo marca y pide
   confirmación ("Intentar de todos modos"). No se borra porque puede ser un teléfono fijo.
   Vuelve a estar disponible solo si el cliente escribe o si un mensaje se le entrega.
-- **Reglas anti-bloqueo**: pausa de ~3 s entre envíos, tope de 200 plantillas por día, no
-  repetir la misma plantilla a la misma persona en 7 días, y baja automática cuando el
-  cliente escribe "BAJA", "STOP" o toca "Detener promociones".
+- **Reglas de envío según la documentación oficial de Meta** (`lib/whatsappSafety.ts`):
+  - **Límite real de Meta**: personas únicas contactadas fuera de la ventana de 24 h en 24 h
+    móviles. El nivel (250, 2,000, 10,000, 100,000 o ilimitado) se lee en vivo de
+    `whatsapp_business_manager_messaging_limit` y lo aplica la reserva atómica
+    `reserve_whatsapp_template`. Quien escribió en las últimas 24 h no cuenta.
+  - **Velocidad**: sin pausas artificiales. Se envía por lotes con poca concurrencia (Meta
+    permite 80 mensajes/s por número) y se reintenta a los 4^X s ante 130429/131056.
+  - **131049** (límite de marketing por persona): se omite a esa persona 24 h.
+    **131050** o "BAJA", "STOP", "Detener promociones": baja automática.
+  - Se consulta `health_status`: con BLOCKED no se envía. La campaña se detiene ante errores
+    que afectan a todo el número o la plantilla (131048, 131031, 368, 131064, 132015, 190).
+  - El selector muestra la calidad de cada plantilla y avisa si Meta la califica como baja.
 - Notificación push al equipo cuando llega un mensaje (se puede desactivar por dispositivo).
 - Enviar archivos desde el chat (clip 📎): fotos JPG/PNG, PDF, Word, Excel, PowerPoint, texto y
   video MP4 de hasta 4 MB (el límite lo pone Vercel: 4.5 MB por petición), con comentario
