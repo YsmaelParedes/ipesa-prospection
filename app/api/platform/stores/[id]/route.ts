@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requirePlatformAdmin } from '@/lib/supabase-server'
 import { logPlatformEvent } from '@/lib/platformEvents'
 import { isMoney } from '@/lib/payments'
-import { PLANS, TRIAL_DAYS } from '@/lib/stores'
+import { PLANS, TRIAL_DAYS, normalizeModules } from '@/lib/stores'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -11,7 +11,7 @@ const DAY = 24 * 60 * 60 * 1000
  * PATCH /api/platform/stores/[id] — administración manual de una tienda.
  * { action: 'activate' } (sin vencimiento: tienda propia o acuerdo especial) ·
  * { action: 'extend_trial', days } · { action: 'suspend' } · { action: 'cancel' } ·
- * { plan } · { notes } · { monthlyPrice }
+ * { plan } · { notes } · { monthlyPrice } · { whatsapp: boolean } (WhatsApp y Campañas)
  * Extender la vigencia pagada se hace registrando un pago
  * (POST /api/platform/stores/[id]/payments), para que quede en el historial.
  * Todo queda en la bitácora (platform_events).
@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!body) return jsonError('Cuerpo de solicitud inválido')
 
   const db = getServerSupabase()
-  const { data: store } = await db.from('stores').select('id, status, trial_ends_at, paid_until, plan, monthly_price').eq('id', id).maybeSingle()
+  const { data: store } = await db.from('stores').select('id, status, trial_ends_at, paid_until, plan, monthly_price, modules, whatsapp_requested_at').eq('id', id).maybeSingle()
   if (!store) return jsonError('Tienda no encontrada', 404)
 
   const now = Date.now()
@@ -72,6 +72,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     updates.monthly_price = price
     events.push({ action: 'price', detail: { monthly_price: price, prev_monthly_price: store.monthly_price } })
+  }
+  if (body.whatsapp !== undefined) {
+    if (typeof body.whatsapp !== 'boolean') return jsonError('Valor de WhatsApp inválido')
+    // WhatsApp y Campañas van juntos; solo el panel los cambia (la tienda no tiene interruptores)
+    updates.modules = { ...normalizeModules(store.modules), whatsapp: body.whatsapp, campaigns: body.whatsapp }
+    if (body.whatsapp) updates.whatsapp_requested_at = null
+    events.push({ action: body.whatsapp ? 'whatsapp_on' : 'whatsapp_off', detail: { requested_at: store.whatsapp_requested_at } })
   }
   if (!Object.keys(updates).length) return jsonError('Nada que actualizar')
 

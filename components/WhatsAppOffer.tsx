@@ -1,0 +1,133 @@
+'use client'
+
+import { useState } from 'react'
+import { Avatar } from '@/components/CrmUI'
+import { WaIcon } from '@/components/WhatsAppUI'
+import { invalidateSession, useSession } from '@/lib/profile'
+
+const BENEFITS = [
+  { icon: <WaIcon.chat size={18} />,      title: 'Todos los chats en un solo lugar', text: 'Tu equipo atiende el WhatsApp de la tienda desde el CRM, sin pasarse el celular.' },
+  { icon: <WaIcon.megaphone size={18} />, title: 'Promociones a tus clientes',       text: 'Envía ofertas y avisos a los clientes que elijas, con un clic.' },
+  { icon: <WaIcon.user size={18} />,      title: 'Cada chat ligado a su cliente',     text: 'Ves su historial y sus cotizaciones mientras le respondes.' },
+]
+
+const STEPS = [
+  { title: 'Lo solicitas',        text: 'Con el botón de abajo.' },
+  { title: 'Un asesor lo configura', text: 'Lo conecta con el número de tu tienda. Tú no haces nada técnico.' },
+  { title: 'Empiezas a atender',   text: 'Tus chats aparecen aquí mismo.' },
+]
+
+// Conversaciones de ejemplo para la vista previa (no son datos reales)
+const SAMPLE = [
+  { name: 'Juan Pérez',  text: '¿Tienen vinílica blanca en cubeta?', time: '10:24', unread: 2 },
+  { name: 'Ana López',   text: 'Gracias, paso hoy por la cotización',  time: '9:58',  unread: 0 },
+  { name: 'Carlos Ruiz', text: '¿Me pueden igualar este color?',       time: 'Ayer',  unread: 1 },
+]
+
+/**
+ * WhatsApp "Por activar": presentación del servicio para una tienda que aún
+ * no lo tiene. El dueño/admin lo solicita y queda el aviso en el panel de la
+ * plataforma; la activación la hace un asesor (la tienda no puede activarlo).
+ */
+export function WhatsAppOffer() {
+  const session = useSession()
+  const store = session?.store
+  const canRequest = !!session?.isAdmin
+  const [requestedAt, setRequestedAt] = useState<string | null>(null)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
+  const requested = requestedAt ?? store?.whatsappRequestedAt ?? null
+
+  const request = async () => {
+    setSending(true); setError('')
+    try {
+      const r = await fetch('/api/store/whatsapp-request', { method: 'POST' })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { setError(d.error || 'No se pudo enviar la solicitud. Intenta de nuevo.'); return }
+      setRequestedAt(d.requestedAt ?? new Date().toISOString())
+      invalidateSession()
+    } catch {
+      setError('Error de red. Revisa tu conexión e intenta de nuevo.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  if (!canRequest) {
+    return (
+      <div className="wa-card wa-empty">
+        <span className="wa-empty-icon"><WaIcon.whatsapp size={34} /></span>
+        <div className="wa-empty-title">WhatsApp aún no está activo en tu tienda</div>
+        <div>Cuando el dueño de la tienda lo active, aquí verás los chats de tus clientes.</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="wa-offer">
+      <section className="wa-offer-hero">
+        <div className="wa-offer-copy">
+          <span className="wa-offer-status"><i />Aún no está configurado</span>
+          <h2>Atiende y vende por WhatsApp desde tu CRM</h2>
+          <ul className="wa-offer-benefits">
+            {BENEFITS.map(b => (
+              <li key={b.title}>
+                <span className="wa-offer-ico">{b.icon}</span>
+                <span><strong>{b.title}</strong>{b.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Vista previa decorativa de la bandeja */}
+        <div className="wa-offer-preview" aria-hidden="true">
+          <div className="wa-offer-preview-head"><WaIcon.whatsapp size={16} /> Conversaciones</div>
+          {SAMPLE.map(c => (
+            <div className="wa-conv" key={c.name}>
+              <Avatar name={c.name} size={36} />
+              <span className="wa-conv-main">
+                <span className="wa-conv-top">
+                  <span className="wa-conv-name">{c.name}</span>
+                  <span className={`wa-conv-time ${c.unread ? 'unread' : ''}`}>{c.time}</span>
+                </span>
+                <span className="wa-conv-bottom">
+                  <span className="wa-conv-preview"><span className="wa-ellipsis">{c.text}</span></span>
+                  {c.unread > 0 && <span className="wa-unread">{c.unread}</span>}
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="wa-offer-steps">
+        <h3>¿Cómo se activa?</h3>
+        <ol>
+          {STEPS.map((st, i) => (
+            <li key={st.title}>
+              <span className="wa-offer-num">{i + 1}</span>
+              <span><strong>{st.title}</strong>{st.text}</span>
+            </li>
+          ))}
+        </ol>
+
+        <div className="wa-offer-foot">
+          {requested ? (
+            <div className="wa-offer-done" role="status">
+              <WaIcon.check size={18} />
+              <span><strong>Solicitud enviada</strong>Un asesor te contactará pronto para dejarlo listo.</span>
+            </div>
+          ) : (
+            <>
+              <button className="btn btn-primary wa-offer-btn" onClick={request} disabled={sending}>
+                <WaIcon.whatsapp size={17} /> {sending ? 'Enviando…' : 'Quiero activarlo'}
+              </button>
+              <span className="wa-offer-note">Servicio con costo adicional; tu asesor te comparte el precio.</span>
+            </>
+          )}
+          {error && <div className="wa-form-error">{error}</div>}
+        </div>
+      </section>
+    </div>
+  )
+}

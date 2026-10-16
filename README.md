@@ -7,9 +7,13 @@ en el celular.
 
 Es **multi-tienda (SaaS)**: cada tienda se da de alta por invitación y tiene su propio
 equipo, logo y catálogos. La información de cada tienda está aislada de las demás. La
-tienda original (la que existía antes de la versión multi-tienda) conserva todos sus datos
-y es la **única con WhatsApp y Campañas**: no se ofrecen a tiendas nuevas (nacen con esos
-módulos apagados y no hay interruptores en la app).
+tienda original (la que existía antes de la versión multi-tienda) conserva todos sus datos.
+**WhatsApp y Campañas son un servicio adicional**: las tiendas nuevas nacen con esos módulos
+apagados y no hay interruptores en la app. El dueño o admin ve WhatsApp como **"Por activar"**
+(menú y Configuración) con una presentación del servicio y el botón "Quiero activarlo"
+(`POST /api/store/whatsapp-request` → `stores.whatsapp_requested_at`). La solicitud aparece
+en el panel /admin (Resumen y Tiendas), donde un asesor activa WhatsApp y Campañas desde la
+ficha de la tienda (`PATCH /api/platform/stores/[id]` con `{ whatsapp }`).
 
 ## Marca
 

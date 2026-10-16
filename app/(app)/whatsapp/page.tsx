@@ -6,6 +6,7 @@ import WhatsAppInbox from '@/components/WhatsAppInbox'
 import { WhatsAppCampaigns, type CampaignPreset } from '@/components/WhatsAppCampaigns'
 import { WhatsAppCampaignResults } from '@/components/WhatsAppCampaignHistory'
 import { WaIcon } from '@/components/WhatsAppUI'
+import { WhatsAppOffer } from '@/components/WhatsAppOffer'
 import { useSession } from '@/lib/profile'
 
 type Tab = 'bandeja' | 'campanas' | 'resultados'
@@ -19,6 +20,11 @@ export default function WhatsAppPage() {
   const [tab, setTab] = useState<Tab>('bandeja')
   const [retry, setRetry] = useState<CampaignPreset | null>(null)
   const current: Tab = campaigns ? tab : 'bandeja'
+
+  // Tienda sin WhatsApp: presentación del servicio ("Por activar")
+  if (session?.store && !session.store.modules.whatsapp) {
+    return <div className="wa-page"><WhatsAppOffer /></div>
+  }
 
   return (
     <div className="wa-page">

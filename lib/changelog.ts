@@ -20,6 +20,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.8.0',
+    date: '16 de octubre, 2026',
+    title: 'WhatsApp para tu tienda',
+    items: [
+      'Si tu tienda aún no tiene WhatsApp, el dueño lo ve en el menú y en Configuración como "Por activar", con lo que puedes hacer con él.',
+      'Con el botón "Quiero activarlo" envías tu solicitud y un asesor te contacta para dejarlo listo con el número de tu tienda, sin que hagas nada técnico.',
+    ],
+  },
+  {
     version: '2.7.1',
     date: '16 de octubre, 2026',
     title: 'Avisos de Meta más claros',

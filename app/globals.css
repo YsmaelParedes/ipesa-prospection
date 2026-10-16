@@ -1047,6 +1047,10 @@ a { color: inherit; text-decoration: none; }
   background: #25D366; color: #fff; font-size: 10px; font-weight: 800; line-height: 17px; text-align: center;
   box-shadow: 0 0 0 2px var(--ink);
 }
+/* WhatsApp sin activar: etiqueta gris en el menú y un punto gris en el celular */
+.nav-item .nav-count.off { background: var(--paper-2); color: var(--muted); font-weight: 600; font-size: 10.5px; }
+.bottom-nav .bn-badge.off { min-width: 9px; width: 9px; height: 9px; padding: 0; top: 7px; left: calc(50% + 8px); background: var(--muted-2); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 /* ============================================================
    LAYOUT DE ALTURA COMPLETA (páginas tipo app: WhatsApp)
@@ -1538,6 +1542,45 @@ a { color: inherit; text-decoration: none; }
 .wa-health-tip { font-size: 12px; }
 .wa-health-meta { display: flex; gap: 8px; flex-wrap: wrap; }
 .wa-health-meta span { font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); color: var(--ink-2); }
+
+/* ── WhatsApp "Por activar": presentación del servicio ── */
+.wa-offer { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-bottom: 4px; }
+.wa-offer-hero, .wa-offer-steps { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); flex-shrink: 0; }
+.wa-offer-hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 28px; padding: 28px; align-items: center; }
+.wa-offer-status {
+  display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px; border-radius: 999px;
+  background: var(--paper-2); color: var(--ink-3); font-size: 12px; font-weight: 700;
+}
+.wa-offer-status i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2); }
+.wa-offer-copy h2 { font-family: var(--font-display); font-size: 26px; line-height: 1.15; letter-spacing: -0.02em; margin: 14px 0 18px; color: var(--ink); text-wrap: balance; }
+.wa-offer-benefits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.wa-offer-benefits li { display: flex; gap: 12px; align-items: flex-start; font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+.wa-offer-benefits strong, .wa-offer-steps li strong, .wa-offer-done strong { display: block; color: var(--ink); font-size: 14px; }
+.wa-offer-ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: #DCF5E3; color: #1B9E4B; flex-shrink: 0; }
+.wa-offer-preview {
+  border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--card);
+  opacity: .62; filter: saturate(.75); pointer-events: none; user-select: none; box-shadow: var(--shadow);
+}
+.wa-offer-preview-head { display: flex; align-items: center; gap: 7px; padding: 12px 14px; border-bottom: 1px solid var(--line); font-family: var(--font-display); font-weight: 700; font-size: 14px; color: #1B9E4B; }
+.wa-offer-preview .wa-conv:last-child { border-bottom: none; }
+.wa-offer-steps { padding: 22px 28px 24px; }
+.wa-offer-steps h3 { font-family: var(--font-display); font-size: 17px; margin: 0 0 14px; }
+.wa-offer-steps ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.wa-offer-steps li { display: flex; gap: 11px; align-items: flex-start; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.wa-offer-num { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: #fff; font-weight: 800; font-size: 13px; flex-shrink: 0; }
+.wa-offer-foot { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.wa-offer-btn { background: #1B9E4B; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 6px 14px -8px rgba(27, 158, 75, 0.75); }
+.wa-offer-btn:hover:not(:disabled) { background: #168541; }
+.wa-offer-note { font-size: 12.5px; color: var(--muted); }
+.wa-offer-done { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; background: var(--success-soft); color: var(--success); font-size: 13px; line-height: 1.45; }
+.wa-offer-done span { color: var(--ink-3); }
+.wa-offer .wa-form-error { width: 100%; margin: 0; }
+@media (max-width: 960px) {
+  .wa-offer-hero { grid-template-columns: 1fr; padding: 22px 18px; gap: 20px; }
+  .wa-offer-steps { padding: 20px 18px; }
+  .wa-offer-steps ol { grid-template-columns: 1fr; }
+  .wa-offer-copy h2 { font-size: 22px; }
+}
 
 /* ── Resultados ── */
 .wa-results-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

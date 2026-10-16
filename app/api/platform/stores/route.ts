@@ -16,20 +16,24 @@ export async function GET() {
   const db = getServerSupabase()
   const [overview, prices, invites] = await Promise.all([
     db.rpc('platform_store_overview'),
-    db.from('stores').select('id, monthly_price'),
+    db.from('stores').select('id, monthly_price, modules, whatsapp_requested_at'),
     db.from('store_invitations').select('store_id, email, expires_at, accepted_at, revoked_at')
       .eq('role', 'owner').is('accepted_at', null).is('revoked_at', null).order('created_at', { ascending: false }),
   ])
   const error = overview.error ?? prices.error ?? invites.error
   if (error) return serverError('GET /api/platform/stores', error, 'No se pudieron cargar las tiendas')
-  const priceOf = new Map((prices.data ?? []).map(p => [p.id as string, p.monthly_price === null ? null : Number(p.monthly_price)]))
+  const extraOf = new Map((prices.data ?? []).map(p => [p.id as string, {
+    monthly_price: p.monthly_price === null ? null : Number(p.monthly_price),
+    modules: p.modules ?? null,
+    whatsapp_requested_at: p.whatsapp_requested_at ?? null,
+  }]))
   const inviteOf = new Map<string, OwnerInvite>()
   for (const i of invites.data ?? []) {
     if (!inviteOf.has(i.store_id)) inviteOf.set(i.store_id, { email: i.email, expires_at: i.expires_at, status: invitationStatus(i) })
   }
   const stores = (overview.data ?? []).map((st: { id: string; owner_email: string | null }) => ({
     ...st,
-    monthly_price: priceOf.get(st.id) ?? null,
+    ...(extraOf.get(st.id) ?? { monthly_price: null, modules: null, whatsapp_requested_at: null }),
     owner_invite: st.owner_email ? null : inviteOf.get(st.id) ?? null,
   }))
   return NextResponse.json({ stores }, { headers: { 'Cache-Control': 'no-store' } })

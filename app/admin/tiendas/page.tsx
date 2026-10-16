@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { fmtMoney, isMoney } from '@/lib/payments'
 import { PLANS, STATUS_LABELS, planOf, storeAccess, type StoreStatus } from '@/lib/stores'
 import {
-  ago, countStores, expiresSoon, fmtDate as fmt, isLapsed, isOff, isPending, subscriptionLine, usePayments, usePlatformStores, type PlatformStore,
+  ago, countStores, expiresSoon, fmtDate as fmt, isLapsed, isOff, isPending, subscriptionLine, usePayments, usePlatformStores, wantsWhatsApp, type PlatformStore,
 } from '../data'
 import { PaymentForm, PaymentRow } from '../payments-ui'
 import { NewStoreModal, OwnerInviteBlock } from '../stores-ui'
@@ -132,6 +132,7 @@ function StoresList() {
                     <em className={cx(s.badge, STATUS_CLS[st.status])}>{STATUS_LABELS[st.status]}</em>
                     {isLapsed(st) && <em className={cx(s.badge, s.bDanger)}>Solo lectura</em>}
                     {expiresSoon(st) && <em className={cx(s.badge, s.bWarn)}>Por vencer</em>}
+                    {wantsWhatsApp(st) && <em className={cx(s.badge, s.bActive)}>Pidió WhatsApp</em>}
                   </span>
                   <small>{subscriptionLine(st)}</small>
                 </span>
@@ -167,7 +168,8 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
   const [notes, setNotes]   = useState(store.platform_notes ?? '')
   const [busy, setBusy]     = useState('')
   const [msg, setMsg]       = useState<{ ok: boolean; text: string } | null>(null)
-  const [confirm, setConfirm] = useState<'suspend' | 'cancel' | 'unlimited' | null>(null)
+  const [confirm, setConfirm] = useState<'suspend' | 'cancel' | 'unlimited' | 'wa_off' | null>(null)
+  const waActive = !!store.modules?.whatsapp
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -263,6 +265,34 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
                   {Object.entries(PLANS).map(([id, p]) => <option key={id} value={id}>{p.label} · {p.maxUsers} usuarios</option>)}
                 </select>
                 <button className="btn btn-ghost" disabled={!!busy || plan === store.plan} onClick={() => patch('plan', { plan }, 'Plan actualizado')}>Guardar</button>
+              </div>
+            </div>
+            <div className={s.action}>
+              <div>
+                <strong>WhatsApp y Campañas</strong>
+                <small>
+                  {waActive
+                    ? `Activo${store.whatsapp_connected ? ' · número conectado' : ' · falta conectar el número en Configuración → WhatsApp de la tienda'}.`
+                    : store.whatsapp_requested_at
+                      ? `Lo solicitó el ${fmt(store.whatsapp_requested_at)}: contacta a la tienda para ofrecérselo.`
+                      : 'No lo ha solicitado. La tienda lo ve como "Por activar".'}
+                </small>
+              </div>
+              <div className={s.actionCtl}>
+                {!waActive ? (
+                  <button className="btn btn-ghost" disabled={!!busy} onClick={() => patch('wa', { whatsapp: true }, 'WhatsApp y Campañas activados')}>
+                    {busy === 'wa' ? 'Guardando…' : 'Activar'}
+                  </button>
+                ) : confirm === 'wa_off' ? (
+                  <>
+                    <button className="btn btn-ghost" onClick={() => setConfirm(null)}>No</button>
+                    <button className="btn btn-dark" disabled={!!busy} onClick={() => patch('wa', { whatsapp: false }, 'WhatsApp y Campañas desactivados')}>
+                      {busy === 'wa' ? 'Guardando…' : 'Sí, desactivar'}
+                    </button>
+                  </>
+                ) : (
+                  <button className="btn btn-ghost btn-ghost-danger" onClick={() => setConfirm('wa_off')}>Desactivar</button>
+                )}
               </div>
             </div>
             <div className={s.action}>

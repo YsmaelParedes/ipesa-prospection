@@ -318,8 +318,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const currentTitle = TITLE_MAP[pathname] ?? { t: APP_NAME, s: '' }
   const isActive     = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   const fill         = FILL_ROUTES.some(r => pathname.startsWith(r))
-  // Menú según los módulos activos de la tienda (mientras carga, todo visible)
-  const withModule   = (it: NavItem) => !it.module || !store || store.modules[it.module]
+  // Menú según los módulos activos de la tienda (mientras carga, todo visible).
+  // WhatsApp apagado se le muestra al dueño/admin como "Por activar" para ofrecerlo.
+  const waOff        = !!store && !store.modules.whatsapp
+  const withModule   = (it: NavItem) => !it.module || !store || store.modules[it.module] || (it.id === 'whatsapp' && !!session?.isAdmin)
   const navItems     = NAV_ITEMS.filter(withModule)
   const toolItems    = TOOL_ITEMS.filter(withModule)
   const readonly     = store?.access === 'readonly'
@@ -331,10 +333,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   // Lo que toca hoy (vencidos + hoy): contador de la campana y de Agenda
   const dueCount = reminders.filter(r => isDueToday(r.fecha_recordatorio, now)).length
-  const badgeFor = (id: string) =>
+  const badgeFor = (id: string): { n: number; cls: string } | null =>
     id === 'whatsapp' && waUnread > 0 ? { n: waUnread, cls: 'wa' }
     : id === 'agenda' && dueCount > 0 ? { n: dueCount, cls: 'due' }
     : null
+  const pendingSetup = (id: string) => id === 'whatsapp' && waOff
 
   const navLink = (it: NavItem) => {
     const Ic = it.icon
@@ -344,6 +347,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <Ic className="nav-icon" />
         <span>{it.label}</span>
         {badge && <span className={`nav-count ${badge.cls}`}>{badge.n > 99 ? '99+' : badge.n}</span>}
+        {pendingSetup(it.id) && <span className="nav-count off">Por activar</span>}
       </Link>
     )
   }
@@ -572,6 +576,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <Ic />
               <span>{it.label}</span>
               {badge && <span className={`bn-badge ${badge.cls}`}>{badge.n > 99 ? '99+' : badge.n}</span>}
+              {pendingSetup(it.id) && <span className="bn-badge off" title="Por activar"><span className="sr-only">Por activar</span></span>}
             </Link>
           )
         })}
