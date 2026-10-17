@@ -18,6 +18,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.10.0',
+    date: '16 de octubre, 2026',
+    title: 'Pantalla clara cuando algo falla',
+    items: [
+      'Si algo falla dentro de la app, ahora ves un mensaje claro con el botón "Reintentar" en lugar de una pantalla en blanco.',
+      'Al equipo de Matices le llega un aviso al momento para revisarlo, sin que tengas que reportarlo.',
+      'Nueva página de presentación de Matices, con una demostración de la app que puedes recorrer.',
+    ],
+  },
+  {
     version: '2.9.0',
     date: '16 de octubre, 2026',
     title: 'Nuevo nombre y logo: Matices',

@@ -127,3 +127,23 @@ export function usePlatformStores() {
   const query = useCachedQuery<{ stores: PlatformStore[] }>('/api/platform/stores')
   return { stores: query.data?.stores ?? null, error: query.error?.message ?? '', reload: query.reload }
 }
+
+/** Error de producción agrupado (la misma falla suma 1 al contador). */
+export type PlatformError = {
+  id: number
+  source: 'server' | 'client' | 'cron' | 'webhook' | 'render' | 'whatsapp' | 'test'
+  context: string
+  message: string
+  count: number
+  first_seen_at: string
+  last_seen_at: string
+  resolved_at: string | null
+  store_id: string | null
+  store_name: string | null
+}
+
+/** Errores de los últimos 14 días (/api/platform/errors); `reload` los vuelve a pedir. */
+export function useRecentErrors() {
+  const query = useCachedQuery<{ errors: PlatformError[] }>('/api/platform/errors')
+  return { errors: query.data?.errors ?? null, error: query.error?.message ?? '', reload: query.reload }
+}

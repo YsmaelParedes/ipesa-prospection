@@ -3,6 +3,7 @@ import { getAuthClient } from '@/lib/supabase-server'
 import { EMAIL_RE, siteOrigin } from '@/lib/invitations'
 import { clientIp, rateLimit } from '@/lib/rateLimit'
 import { jsonError, readJson } from '@/lib/validation'
+import { reportError } from '@/lib/errorReport'
 
 // POST /api/auth/recover { email } — envía el enlace para restablecer la contraseña
 export async function POST(req: NextRequest) {
@@ -17,7 +18,11 @@ export async function POST(req: NextRequest) {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${siteOrigin(req.nextUrl.origin)}/auth/confirm?next=/restablecer`,
   })
-  if (error) console.error('[POST /api/auth/recover]', error.message)
+  if (error) {
+    console.error('[POST /api/auth/recover]', error.message)
+    // Un límite de correos no es una falla; el envío de correo que no funciona, sí
+    if (!/rate limit/i.test(error.message) && error.status !== 429) reportError({ source: 'server', context: 'POST /api/auth/recover', error })
+  }
   // Misma respuesta exista o no la cuenta (no revelar qué correos están registrados)
   return NextResponse.json({ ok: true })
 }

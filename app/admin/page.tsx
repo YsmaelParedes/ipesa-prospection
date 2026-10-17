@@ -7,6 +7,7 @@ import {
   DAY, ago, countStores, currentMonth, expiresSoon, fmtDate, isLapsed, isOff, isPending, moneySummary, subscriptionLine,
   usePayments, usePlatformStores, wantsWhatsApp, type PlatformStore,
 } from './data'
+import { ErrorsPanel } from './errors-ui'
 import s from './admin.module.css'
 
 /**
@@ -76,6 +77,8 @@ export default function AdminHome() {
             <div className={cx(s.kpi, s.kAmber)}><small>Por vencer</small><strong>{counts.expiring}</strong><span>prueba ≤ 3 días o pago ≤ 7</span></div>
             <div className={cx(s.kpi, s.kRed)}><small>Solo lectura</small><strong>{counts.readonly}</strong><span>prueba o pago vencido</span></div>
           </div>
+
+          <ErrorsPanel />
 
           {view.waRequests.length > 0 && (
             <section className={s.panel} style={{ marginBottom: 12 }}>

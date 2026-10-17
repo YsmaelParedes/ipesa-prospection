@@ -3,7 +3,7 @@
 // Estrategia: cache mínimo (solo recursos PWA esenciales + página offline).
 // Next.js ya versiona sus bundles JS/CSS con content-hash en los URLs,
 // así que no es necesario cachearlos aquí — hacerlo solo acumula basura.
-const CACHE_NAME = 'crm-v9'
+const CACHE_NAME = 'crm-v10'
 
 const PRECACHE = ['/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/badge-96.png']
 
@@ -62,6 +62,7 @@ self.addEventListener('push', e => {
   let p = { title: 'Matices', body: 'Tienes un aviso pendiente', url: '/recordatorios', tag: '' }
   try { if (e.data) p = { ...p, ...e.data.json() } } catch {}
   const chat = p.url.startsWith('/whatsapp')
+  const admin = p.url.startsWith('/admin')  // avisos de errores para el dueño de la plataforma
 
   e.waitUntil(
     self.registration.showNotification(p.title, {
@@ -78,7 +79,7 @@ self.addEventListener('push', e => {
       timestamp: Date.now(),
       data:      { url: p.url },
       actions: [
-        { action: 'open',  title: chat ? 'Abrir chat' : 'Ver agenda' },
+        { action: 'open',  title: chat ? 'Abrir chat' : admin ? 'Ver errores' : 'Ver agenda' },
         { action: 'close', title: 'Cerrar' },
       ],
     })

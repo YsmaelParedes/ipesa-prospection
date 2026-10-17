@@ -3,6 +3,7 @@ import { getAuthClient } from '@/lib/supabase-server'
 import { EMAIL_RE, siteOrigin } from '@/lib/invitations'
 import { clientIp, rateLimit } from '@/lib/rateLimit'
 import { jsonError, readJson } from '@/lib/validation'
+import { reportError } from '@/lib/errorReport'
 
 // POST /api/auth/resend { email } — reenvía el correo para confirmar la cuenta
 export async function POST(req: NextRequest) {
@@ -19,7 +20,10 @@ export async function POST(req: NextRequest) {
     email,
     options: { emailRedirectTo: `${siteOrigin(req.nextUrl.origin)}/auth/confirm?next=/bienvenida` },
   })
-  if (error) console.error('[POST /api/auth/resend]', error.message)
+  if (error) {
+    console.error('[POST /api/auth/resend]', error.message)
+    if (!/rate limit/i.test(error.message) && error.status !== 429) reportError({ source: 'server', context: 'POST /api/auth/resend', error })
+  }
   // Misma respuesta exista o no la cuenta (no revelar qué correos están registrados)
   return NextResponse.json({ ok: true })
 }

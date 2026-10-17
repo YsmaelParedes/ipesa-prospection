@@ -1,7 +1,8 @@
 import { getServerSupabase } from './supabase-server'
 import type { StoreContext } from './supabase-server'
 import { getPhoneHealth, type PhoneHealth, type WhatsAppCreds, type WhatsAppSendResult } from './whatsapp'
-import { FALLBACK_MESSAGING_LIMIT, MARKETING_RETRY_HOURS, TIER_LIMITS } from './whatsappSafety'
+import { FALLBACK_MESSAGING_LIMIT, MARKETING_RETRY_HOURS, STOP_CAMPAIGN_CODES, TIER_LIMITS } from './whatsappSafety'
+import { reportError } from './errorReport'
 
 export type MessagingLimit = {
   /** Personas únicas por 24 h fuera de la ventana; null = sin límite. */
@@ -97,6 +98,10 @@ export async function finishTemplateSend(id: string, storeId: string, result: Wh
   }).eq('id', id).eq('store_id', storeId)
   if (error) console.error('[whatsapp/finalizar-envío]', error.message)
   if (result.code === 131050 && contactId) await markOptOut(storeId, contactId)
+  // Un error que afecta a todo el número o la plantilla (token vencido, cuenta restringida…) lo debe saber el dueño de la plataforma
+  if (!result.ok && result.code && STOP_CAMPAIGN_CODES.includes(result.code)) {
+    reportError({ source: 'whatsapp', context: `Meta ${result.code} al enviar plantilla`, error: new Error(result.error ?? `Error ${result.code}`), storeId })
+  }
 }
 
 /** 131050: el cliente se dio de baja del marketing y Meta pide no reintentar. */

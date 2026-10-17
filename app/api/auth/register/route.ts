@@ -3,6 +3,7 @@ import { getAuthClient } from '@/lib/supabase-server'
 import { EMAIL_RE, passwordProblem, siteOrigin } from '@/lib/invitations'
 import { clientIp, rateLimit } from '@/lib/rateLimit'
 import { jsonError, readJson } from '@/lib/validation'
+import { reportError } from '@/lib/errorReport'
 
 /**
  * POST /api/auth/register — CERRADO: las cuentas se crean solo por invitación
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
     if (msg.includes('sending') && msg.includes('email')) return jsonError('No pudimos enviar el correo de confirmación. Intenta más tarde.', 502)
     if (msg.includes('password')) return jsonError('Esa contraseña no cumple los requisitos de seguridad (prueba una más larga, sin palabras comunes).')
     console.error('[POST /api/auth/register]', error.message)
+    reportError({ source: 'server', context: 'POST /api/auth/register', error })
     return jsonError('No se pudo crear la cuenta. Intenta de nuevo.', 500)
   }
 

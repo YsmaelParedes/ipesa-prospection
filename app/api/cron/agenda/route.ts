@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { configureWebPush } from '@/lib/push'
 import { authorizeCron, sendMorningAgenda } from '@/lib/reminderPush'
+import { reportError } from '@/lib/errorReport'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,7 @@ export async function GET(req: NextRequest) {
   }
   if (!configureWebPush()) {
     console.error('[cron/agenda] VAPID keys no configuradas')
+    reportError({ source: 'cron', context: 'cron/agenda', error: new Error('VAPID keys no configuradas') })
     return NextResponse.json({ error: 'VAPID keys no configuradas.' }, { status: 500 })
   }
 
@@ -27,6 +29,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(result)
   } catch (error: any) {
     console.error('[cron/agenda]', error?.message ?? error)
+    reportError({ source: 'cron', context: 'cron/agenda', error })
     return NextResponse.json({ error: 'Error al enviar el resumen' }, { status: 500 })
   }
 }

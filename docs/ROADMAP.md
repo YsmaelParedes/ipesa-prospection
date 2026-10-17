@@ -1,6 +1,6 @@
 # Hoja de ruta: CRM como producto de renta mensual
 
-Estado: **decisiones cerradas el 15 de octubre de 2026**. Nada de esto se ha construido todavía.
+Estado: **decisiones cerradas el 15 de octubre de 2026** y ajustadas el 16. Etapas 1 a 7 y 10 hechas; faltan la 8 (listo para vender) y la 9 (pilotos).
 Cada etapa dice qué se implementa, qué cambia y si necesita migración de base de datos
 (las migraciones solo se aplican con visto bueno explícito del dueño).
 
@@ -20,12 +20,12 @@ Cada etapa dice qué se implementa, qué cambia y si necesita migración de base
 | Si un cliente cancela o no paga | Queda en **solo lectura indefinidamente** y puede descargar toda su información en Excel. **Sin borrado automático** (decisión del 15 de octubre): se borra solo si el dueño de la tienda lo pide por escrito. Consta en términos y privacidad. |
 | Respaldos y hosting | Vercel Pro (US$20) y Supabase Pro (US$25) con el primer cliente de paga. Antes, respaldo manual mensual. |
 | Fórmulas Vinipesa y Vintek | Se quedan, como módulo opcional por tienda, para poder quitarlas si hay un reclamo. Revisar derechos de marca antes de cobrar. |
-| Nombre y dominio | Se definen antes del piloto. El nombre queda centralizado en un solo archivo. |
+| Nombre y dominio | **Nombre: Matices** (decidido el 16 de octubre; en `lib/brand.ts`, `public/manifest.json` y `public/sw.js`). **Dominio: pendiente**, antes del piloto. |
 | Pilotos | 2 negocios conocidos, aparte de la tienda familiar. |
 | Facturación (CFDI) | Se emite fuera del sistema. En cada pago solo se anota si pidió factura y su número. |
 | Soporte | Botón "Ayuda" con WhatsApp y correo. Sin tickets ni chat interno. |
-| WhatsApp (Bandeja, Campañas, Resultados) | **Exclusivo de la tienda IPESA Lomas de Angelópolis** (decisión final del 15 de octubre; reemplaza la de "instalación asistida"). **No se ofrece a tiendas nuevas**: nacen sin WhatsApp ni Campañas y nadie los enciende desde la app. El código se queda para IPESA. Sin botón `wa.me` en Leads ni Contactos. |
-| Herramientas por tienda | **Sin interruptores**: cada tienda tiene siempre lo básico (Contactos, Leads, Agenda, Fórmulas). Se quitó Configuración → Herramientas y el paso del asistente. |
+| WhatsApp (Bandeja, Campañas, Resultados) | **Servicio adicional** (decisión del 16 de octubre; reemplaza la de "solo IPESA" del 15). Las tiendas nacen sin WhatsApp. El dueño/admin lo ve en el menú y en Configuración como **"Por activar"**, con una presentación del servicio y el botón "Quiero activarlo", que deja la solicitud en `/admin`. El precio no se muestra: lo comparte el asesor. **El asesor lo activa y conecta el número solo desde `/admin`** (ficha de la tienda: credenciales, 5 pasos y webhook). La tienda nunca ve datos técnicos: en Configuración → WhatsApp solo ve su número, la calidad y su límite. Los vendedores no lo ven hasta que esté activo. Sin botón `wa.me` en Leads ni Contactos. |
+| Herramientas por tienda | **Sin interruptores para la tienda**: cada tienda tiene siempre lo básico (Contactos, Leads, Agenda, Fórmulas). Se quitó Configuración → Herramientas y el paso del asistente. WhatsApp y Campañas son el servicio adicional que se enciende desde `/admin`. |
 | Bot de IA | Fuera del producto. La rama `feature/bot-prueba` se borró (commit `ce77a8b`, recuperable un tiempo). |
 
 ## Etapas
@@ -53,7 +53,7 @@ Cada etapa dice qué se implementa, qué cambia y si necesita migración de base
 Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 
 **Menores (se atienden en otras etapas):**
-- Un administrador de tienda puede encender WhatsApp y Campañas por su cuenta → etapa 6.
+- Un administrador de tienda puede encender WhatsApp y Campañas por su cuenta → resuelto en la etapa 6 (hoy solo se encienden desde `/admin`, etapa 10).
 - Registro abierto: cualquiera puede abrir hasta 3 tiendas con prueba → etapa 5.
 - La protección contra contraseñas filtradas de Supabase está apagada → activarla al pasar a Supabase Pro (etapa 8).
 - Al quitar a alguien del equipo puede conservar acceso unos 10 segundos (caché por instancia). Aceptable.
@@ -86,7 +86,7 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 ### Etapa 3. Panel `/admin` separado ✅ (15 de octubre de 2026, en la rama `feature/mvp-saas`)
 - **Qué se implementó:** el panel del dueño (`app/admin/`, `components/AdminShell.tsx`) con su propio menú: **Resumen** (totales, "Requieren atención", "Altas recientes", "Sin uso en 14 días"; cada fila abre la ficha de la tienda) y **Tiendas** (lo que era `/plataforma`, con su ficha y acciones). Abajo, "Tu tienda" abre la tienda IPESA.
 - **Qué cambió:** al iniciar sesión el dueño entra a `/admin` (la ruta de login devuelve su inicio); "Plataforma" salió del menú de la tienda; en la tienda, el selector de sucursal tiene "Panel del dueño" para volver; `/plataforma` redirige a `/admin/tiendas`; `/admin` responde 404 a cualquier cuenta que no sea administradora de la plataforma (validado en el servidor).
-- **Mockup aprobado** el 15 de octubre. Pagos, Planes con precio y las cifras de dinero llegan en la etapa 4; Instalaciones, en la etapa 6.
+- **Mockup aprobado** el 15 de octubre. Pagos, Planes con precio y las cifras de dinero llegan en la etapa 4. (La sección "Instalaciones" que se planeó para la etapa 6 se descartó; la activación de WhatsApp vive en la ficha de cada tienda, etapa 10.)
 - **Probado:** compilación, 4 pruebas nuevas (inicio de sesión del dueño y de otras cuentas, cálculos del Resumen) y las 16 anteriores; en el navegador, Resumen, ficha desde el Resumen, ida y vuelta panel ↔ tienda, celular y redirecciones sin sesión.
 - **Migración:** no. Sin entrada en Novedades: el cambio solo lo ve el dueño de la plataforma y las Novedades las leen todas las tiendas.
 
@@ -108,9 +108,10 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 - **Pendiente del dueño:** configurar `NEXT_PUBLIC_CONTACT_WHATSAPP` y `NEXT_PUBLIC_CONTACT_EMAIL` en Vercel (sin ellas `/registro` muestra un texto genérico).
 
 ### Etapa 6. WhatsApp solo para IPESA y sin interruptores ✅ (15 de octubre de 2026, en la rama `feature/mvp-saas`)
+> **Reemplazada en parte por la etapa 10 (16 de octubre):** WhatsApp ya no es exclusivo de IPESA; se ofrece como servicio adicional y lo activa el asesor desde `/admin`. Lo de "sin interruptores para la tienda" sigue vigente.
 - **Cambio de plan:** se descartó la "instalación asistida" (interruptores en el panel, lista de 5 pasos, sección Instalaciones). WhatsApp y Campañas quedan **solo para IPESA**.
 - **Qué se hizo:** las tiendas nuevas nacen sin WhatsApp ni Campañas (`DEFAULT_MODULES`; una tienda sin valor guardado queda sin WhatsApp). Se quitó Configuración → Herramientas y el paso "Elige las herramientas" del asistente (ahora: sucursal → logo → equipo). `PATCH /api/store` ya no acepta cambios de módulos (403) y las credenciales de WhatsApp (`/api/store/whatsapp`) exigen el módulo encendido. Sin WhatsApp en `/inicio` (funciones, imagen de la app, preguntas, datos), el panel de login, la descripción del sitio y del manifiesto, Plan (solo lo muestra a quien lo tiene) y términos/privacidad (solo como condicional). En tu panel, "WhatsApp conectado" solo aparece en la tienda que lo tiene. Novedades: "Configuración más simple" (lo ven los administradores de IPESA).
-- **IPESA no cambia:** tiene sus módulos guardados como encendidos (verificado en la base); conserva WhatsApp, Campañas, Resultados y su pestaña de conexión.
+- **IPESA no cambia:** tiene sus módulos guardados como encendidos (verificado en la base); conserva WhatsApp, Campañas y Resultados. (Desde la etapa 10 la conexión técnica ya no está en su Configuración: vive en `/admin`.)
 - **Migración:** no (se escribió una y se descartó sin aplicarse). El valor por omisión de `stores.modules` en la base sigue con WhatsApp encendido, pero no se usa: el código siempre manda los módulos al crear una tienda.
 - **Probado:** 3 pruebas nuevas (módulos de tiendas nuevas e IPESA, la tienda no cambia módulos, credenciales con módulo apagado) y las 37 anteriores; en el navegador, Configuración de IPESA sin Herramientas y con WhatsApp funcionando, y páginas públicas sin ofrecer WhatsApp.
 
@@ -120,8 +121,16 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 - **Corregido de paso:** Contactos, Leads (y su próximo seguimiento) y Agenda leían como máximo 1000 filas (límite de Supabase por consulta); una tienda más grande se veía y exportaba incompleta. Ahora leen todas las páginas (`lib/paged.ts`). IPESA tiene 575 contactos, así que no le afectaba todavía.
 - **Migración:** no.
 
+### Etapa 10. WhatsApp como servicio, nuevo nombre y avisos de errores ✅ (16 de octubre de 2026)
+- **Límites oficiales de Meta (2.7.0):** se quitaron las reglas propias (tope de 200 al día, pausa de 3 s, no repetir en 7 días). El límite es el que Meta asigna al número (personas únicas fuera de la ventana de 24 h, se lee en vivo; IPESA tiene 2,000). Se espera 24 h tras el error 131049, la baja 131050 se marca sola, y la campaña se detiene si Meta bloquea el número o pausa la plantilla. Migración `whatsapp_meta_messaging_limits` (columnas `error_code` y `outside_window`, nueva `reserve_whatsapp_template`).
+- **WhatsApp "Por activar" (2.8.0):** presentación del servicio para el dueño/admin, solicitud que llega a `/admin` (`stores.whatsapp_requested_at`, migración `store_whatsapp_request`), y en la ficha de la tienda: activar o desactivar WhatsApp y Campañas, y la **conexión técnica** (credenciales, 5 pasos y webhook) que antes estaba en la Configuración de la tienda.
+- **Nombre y logo (2.9.0):** la app se llama **Matices**; nuevo símbolo de franjas en capas e íconos regenerados.
+- **Avisos de errores (2.10.0):** los errores de producción (servidor, tareas programadas, webhooks, pantallas del navegador y fallas de Meta que dejan a una tienda sin WhatsApp) se guardan agrupados en `platform_errors` y llegan como aviso al celular del dueño de la plataforma, con reglas anti-ruido (el mismo error 1 vez por hora, máximo 5 avisos cada 10 minutos). En `/admin` → Resumen, panel "Errores recientes" con aviso de prueba y botón "Resuelto". Los mensajes no guardan datos de clientes. El cliente ve una pantalla clara con "Reintentar". Migración `platform_errors` (escrita en `20261016230000_platform_errors.sql`).
+- **Base de datos (16 de octubre, aplicada a mano en el editor SQL de Supabase):** tabla y función `platform_errors` (probadas: avisos, repetidos, tope de 5 en 10 minutos, tope de errores del navegador) y se borró la versión anterior de `reserve_whatsapp_template` (tope de 200). Como se aplicaron a mano, no aparecen en el historial de migraciones de Supabase; los archivos están en `supabase/migrations/`.
+- **Portada nueva** (`/inicio`): presentación de Matices con demo interactiva.
+
 ### Etapa 8. Listo para vender
-- Nombre del producto centralizado en un archivo y dominio propio.
+- Nombre del producto centralizado en un archivo ✅ (Matices, 2.9.0) y dominio propio (pendiente).
 - Botón "Ayuda" con WhatsApp y correo.
 - Términos de uso y aviso de privacidad actualizados.
 - Fórmulas como módulo opcional por tienda.

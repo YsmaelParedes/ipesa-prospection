@@ -18,9 +18,9 @@ export const STORE_MODULES = ['whatsapp', 'campaigns', 'formulas'] as const
 export type StoreModule = typeof STORE_MODULES[number]
 export type StoreModules = Record<StoreModule, boolean>
 /**
- * Módulos de una tienda nueva. WhatsApp y Campañas son exclusivos de la tienda
- * original (IPESA, que los tiene guardados como encendidos): no se ofrecen a
- * tiendas nuevas y nadie los enciende desde la app. Ya no hay interruptores.
+ * Módulos de una tienda nueva. WhatsApp y Campañas son un servicio adicional:
+ * la tienda nace sin ellos, el dueño los ve como "Por activar" y solo el asesor
+ * los enciende desde /admin. La tienda no tiene interruptores.
  */
 export const DEFAULT_MODULES: StoreModules = { whatsapp: false, campaigns: false, formulas: true }
 

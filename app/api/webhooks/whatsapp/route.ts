@@ -3,6 +3,7 @@ import { readBoundedBody } from '@/lib/boundedBody'
 import { verifyWebhookSignature } from '@/lib/whatsapp'
 import { findEnvStoreForPhone } from '@/lib/storeWhatsApp'
 import { notifyStoreTeam, processChange, verifyTokenMatches, type InboundNotification } from '@/lib/whatsappWebhook'
+import { reportError } from '@/lib/errorReport'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
   const appSecret = process.env.WHATSAPP_APP_SECRET
   if (!appSecret) {
     console.error('[webhook/whatsapp] WHATSAPP_APP_SECRET no está configurado: se rechazan los eventos hasta configurarlo')
+    reportError({ source: 'webhook', context: 'webhook/whatsapp', error: new Error('WHATSAPP_APP_SECRET no está configurado: se rechazan los eventos') })
     return NextResponse.json({ error: 'Webhook sin configurar' }, { status: 503 })
   }
   if (!verifyWebhookSignature(raw, req.headers.get('x-hub-signature-256'), appSecret)) {
@@ -67,6 +69,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     // Igual responder 200: un 500 solo haría que Meta reintente el mismo lote.
     console.error('[POST /api/webhooks/whatsapp]', error?.message ?? error)
+    reportError({ source: 'webhook', context: 'webhook/whatsapp', error })
   }
 
   if (pending.some(p => p.items.length)) after(() => Promise.all(pending.map(p => notifyStoreTeam(p.storeId, p.items))))
