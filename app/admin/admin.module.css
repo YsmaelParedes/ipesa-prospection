@@ -198,3 +198,12 @@ button.tr:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--brand
   .waCopy { flex-wrap: wrap; }
   .waCopy label { width: 100%; }
 }
+
+/* ── Errores recientes (Resumen) ── */
+.errStatus { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 16px 12px; font-size: 12.5px; color: var(--muted); }
+.errStatus strong { color: var(--ink-3); }
+.errStatus .btn { padding: 5px 11px; font-size: 12.5px; }
+.errStatus .errMsg { flex-basis: 100%; font-weight: 600; }
+.errRow { display: flex; align-items: center; gap: 10px; padding: 11px 16px; border-top: 1px solid var(--line); }
+.errRowDone { opacity: .55; }
+.errCount { min-width: 24px; padding: 1px 7px; border-radius: 999px; background: var(--danger-soft); color: var(--danger); font-size: 11.5px; font-weight: 800; text-align: center; }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { readBoundedBody } from './boundedBody'
+import { reportError } from './errorReport'
 
 /**
  * Validación de entrada para API routes. `parseFields` hace dos cosas a la
@@ -114,9 +115,10 @@ export function parseFields(
   return { ok: true, data }
 }
 
-/** Log de servidor + respuesta genérica (no filtra detalles internos al cliente). */
+/** Log de servidor + aviso al dueño de la plataforma + respuesta genérica (no filtra detalles internos al cliente). */
 export function serverError(context: string, err: unknown, message = 'Error interno del servidor') {
   const detail = err instanceof Error ? err.message : (err as { message?: string })?.message ?? err
   console.error(`[${context}]`, detail)
+  reportError({ source: 'server', context, error: err })
   return NextResponse.json({ error: message }, { status: 500 })
 }

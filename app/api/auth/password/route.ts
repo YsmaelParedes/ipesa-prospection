@@ -5,6 +5,7 @@ import { passwordProblem } from '@/lib/invitations'
 import { clearPasswordReset, hasPasswordReset } from '@/lib/passwordReset'
 import { rateLimit } from '@/lib/rateLimit'
 import { jsonError, readJson } from '@/lib/validation'
+import { reportError } from '@/lib/errorReport'
 
 /** Comprueba la contraseña actual con un cliente aparte (no toca las cookies de la sesión). */
 async function currentPasswordIsValid(email: string, password: string): Promise<boolean> {
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
     if (msg.includes('different from the old')) return jsonError('La nueva contraseña debe ser distinta a la anterior')
     if (msg.includes('weak') || msg.includes('pwned') || msg.includes('password')) return jsonError('Esa contraseña no cumple los requisitos de seguridad. Prueba con otra.')
     console.error('[POST /api/auth/password]', error.message)
+    reportError({ source: 'server', context: 'POST /api/auth/password', error })
     return jsonError('No se pudo cambiar la contraseña', 500)
   }
   if (fromRecovery) await clearPasswordReset()

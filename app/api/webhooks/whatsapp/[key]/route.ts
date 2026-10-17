@@ -3,6 +3,7 @@ import { readBoundedBody } from '@/lib/boundedBody'
 import { verifyWebhookSignature } from '@/lib/whatsapp'
 import { credsFromRow, findStoreByWebhookKey } from '@/lib/storeWhatsApp'
 import { notifyStoreTeam, processChange, verifyTokenMatches, type InboundNotification } from '@/lib/whatsappWebhook'
+import { reportError } from '@/lib/errorReport'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     }
   } catch (error: any) {
     console.error('[POST /api/webhooks/whatsapp/[key]]', error?.message ?? error)
+    reportError({ source: 'webhook', context: 'webhook/whatsapp/tienda', error, storeId: row.store_id })
   }
 
   if (items.length) after(() => notifyStoreTeam(row.store_id, items))

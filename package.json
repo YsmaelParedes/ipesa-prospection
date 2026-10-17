@@ -1,12 +1,12 @@
 {
   "name": "crm-pinturas",
-  "version": "2.9.0",
+  "version": "2.10.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test:cache": "node --test tests/query-cache.test.cjs tests/api-client.test.cjs tests/server-timing.test.cjs tests/dashboard-whatsapp.test.cjs",
+    "test:cache": "node --test tests/query-cache.test.cjs tests/api-client.test.cjs tests/server-timing.test.cjs tests/dashboard-whatsapp.test.cjs tests/error-report.test.cjs",
     "benchmark:api": "node scripts/benchmark-api.mjs"
   },
   "dependencies": {
