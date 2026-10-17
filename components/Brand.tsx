@@ -1,6 +1,6 @@
 import { APP_NAME, BRAND_MARK } from '@/lib/brand'
 
-/** Logo del producto: gota + nombre. El tamaño sale del font-size (del contenedor o de `className`). */
+/** Logo del producto: símbolo + nombre. El tamaño sale del font-size (del contenedor o de `className`). */
 export function BrandLogo({ className }: { className?: string }) {
   return (
     <span className={className ? `brand-wordmark ${className}` : 'brand-wordmark'}>

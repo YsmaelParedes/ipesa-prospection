@@ -1,4 +1,4 @@
-# CRM Pinturas
+# Matices
 
 CRM en la nube para **tiendas de pintura**: contactos, pipeline de leads,
 recordatorios con notificaciones push, fórmulas de igualación de color y una bandeja de
@@ -19,9 +19,9 @@ ficha de la tienda (`PATCH /api/platform/stores/[id]` con `{ whatsapp }`).
 
 - Nombre y frase: `lib/brand.ts` (`APP_NAME`, `APP_TAGLINE`). También están escritos a mano
   en `public/manifest.json` y `public/sw.js`, que son estáticos.
-- Logo: `public/brand-mark.svg` (gota de pintura con la paleta de la app) y
-  `components/Brand.tsx` (gota + nombre).
-- Íconos de la PWA y favicon: se generan desde la gota con
+- Logo: `public/brand-mark.svg` (franjas de pintura en capas con la paleta de la app) y
+  `components/Brand.tsx` (símbolo + nombre).
+- Íconos de la PWA, favicon y ícono de avisos de Android: se generan desde el símbolo con
   `node scripts/generate-brand-icons.mjs`; después sube `CACHE_NAME` en `public/sw.js`.
 - Paleta: variables de `:root` en `app/globals.css` (`--brand`, `--spectrum`, `--c-*`).
 
@@ -245,7 +245,7 @@ app/
 components/       AppShell (navegación), AdminShell (panel del dueño), AuthUI, Brand (logo), CrmUI y componentes de WhatsApp
 lib/              tiendas y planes, Supabase, cifrado, invitaciones, validación, WhatsApp y push
 proxy.ts          páginas públicas/privadas, CSRF y límite de peticiones por IP en /api
-public/           service worker, manifest, íconos de la PWA, la gota de la marca y logos de tiendas
+public/           service worker, manifest, íconos de la PWA, el símbolo de la marca y logos de tiendas
 supabase/         esquema y migraciones
 ```
 

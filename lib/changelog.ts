@@ -1,5 +1,3 @@
-import { APP_NAME } from './brand'
-
 /**
  * Notas de versión ("Novedades"). No se abren solas: se consultan con el
  * botón de la versión, abajo en el menú. La entrada más reciente va primero y
@@ -19,6 +17,16 @@ export type ChangelogEntry = {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '2.9.0',
+    date: '16 de octubre, 2026',
+    title: 'Nuevo nombre y logo: Matices',
+    items: [
+      'La app ahora se llama Matices y estrena logo: franjas de pintura de colores en capas.',
+      'El nuevo logo aparece en el menú, el ícono de la app instalada en tu celular, la pestaña del navegador y los avisos.',
+      'Si tienes la app instalada en el celular, puede tardar un poco en cambiar el ícono; abrirla de nuevo con internet lo actualiza.',
+    ],
+  },
   {
     version: '2.8.0',
     date: '16 de octubre, 2026',
@@ -153,7 +161,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: '2 de octubre, 2026',
     title: 'Nueva imagen y tu tienda en la nube',
     items: [
-      `Nueva imagen: la app ahora se llama ${APP_NAME}, el CRM para tiendas de pintura, con una gota de pintura como logo y un diseño en rojo y arcoíris de colores.`,
+      `Nueva imagen: la app ahora se llama CRM Pinturas, el CRM para tiendas de pintura, con una gota de pintura como logo y un diseño en rojo y arcoíris de colores.`,
       'Tu tienda ahora tiene su propio espacio: conserva todos sus clientes, leads y conversaciones, separados de las demás tiendas, con su logo en el menú.',
       'Configuración renovada: datos y logo de la tienda, herramientas activas, catálogos, equipo, WhatsApp y plan, cada uno en su sección.',
       'Invita a tu equipo con un enlace personal que se comparte por WhatsApp; puedes cambiar roles o desactivar accesos cuando quieras.',

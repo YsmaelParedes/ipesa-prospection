@@ -1,6 +1,6 @@
 /**
- * Genera los íconos de la app a partir de public/brand-mark.svg (la gota de
- * pintura). Volver a correrlo si cambia la marca:
+ * Genera los íconos de la app a partir de public/brand-mark.svg (las franjas
+ * de pintura). Volver a correrlo si cambia la marca:
  *
  *   node scripts/generate-brand-icons.mjs
  *
@@ -18,7 +18,7 @@ const WHITE = { r: 255, g: 255, b: 255, alpha: 1 }
 const mark = (px) =>
   sharp(svg, { density: Math.ceil((72 * px * 2) / 64) }).resize(px, px).png().toBuffer()
 
-/** Gota centrada sobre blanco ocupando `scale` del lado; con 0.66 queda dentro de la zona segura de los íconos "maskable". */
+/** Símbolo centrado sobre blanco ocupando `scale` del lado; con 0.66 queda dentro de la zona segura de los íconos "maskable". */
 async function onWhite(size, scale) {
   const px = Math.round(size * scale)
   const offset = Math.round((size - px) / 2)
@@ -49,10 +49,25 @@ function ico(images) {
   return Buffer.concat([header, ...entries, ...images.map(i => i.png)])
 }
 
+/** Silueta blanca sobre transparente: Android usa solo la forma como ícono pequeño de los avisos. */
+async function badge(size, scale) {
+  const px = Math.round(size * scale)
+  const offset = Math.round((size - px) / 2)
+  const shape = await sharp({ create: { width: size, height: size, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+    .composite([{ input: await mark(px), left: offset, top: offset }])
+    .png()
+    .toBuffer()
+  return sharp({ create: { width: size, height: size, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } } })
+    .composite([{ input: shape, blend: 'dest-in' }])
+    .png()
+    .toBuffer()
+}
+
 writeFileSync('public/icon-512.png', await onWhite(512, 0.66))
 writeFileSync('public/icon-192.png', await onWhite(192, 0.66))
 writeFileSync('public/apple-touch-icon.png', await onWhite(180, 0.7))
 const favicon = await Promise.all([16, 32, 48].map(async size => ({ size, png: await mark(size) })))
 writeFileSync('app/favicon.ico', ico(favicon))
+writeFileSync('public/badge-96.png', await badge(96, 0.8))
 
-console.log('Íconos generados: public/icon-192.png, public/icon-512.png, public/apple-touch-icon.png, app/favicon.ico')
+console.log('Íconos generados: public/icon-192.png, public/icon-512.png, public/apple-touch-icon.png, public/badge-96.png, app/favicon.ico')

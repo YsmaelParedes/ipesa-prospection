@@ -1,4 +1,4 @@
-# Seguridad — CRM Pinturas
+# Seguridad — Matices
 
 **Última revisión estática:** 16 de octubre de 2026 (código y metadatos de Supabase; pruebas visuales y build final pendientes).
 **Alcance:** rutas de `app/api/*`, `proxy.ts`, páginas y componentes, configuración (Next.js
