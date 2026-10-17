@@ -1,5 +1,8 @@
 'use client'
 
+import { apiFetch } from '@/lib/apiClient'
+
+
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -188,7 +191,7 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
     setBusy(key)
     setMsg(null)
     try {
-      const r = await fetch(`/api/platform/stores/${store.id}`, {
+      const r = await apiFetch(`/api/platform/stores/${store.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       })
       const d = await r.json().catch(() => ({}))

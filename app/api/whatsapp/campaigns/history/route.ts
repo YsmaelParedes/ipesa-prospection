@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStore } from '@/lib/supabase-server'
 import { loadCampaignSummaries } from '@/lib/campaignHistory'
@@ -8,7 +9,7 @@ import { serverError } from '@/lib/validation'
  * Cada envío de plantillas por separado, con cuántos mensajes se leyeron,
  * entregaron, siguen pendientes o no se entregaron (y por qué).
  */
-export async function GET(req: NextRequest) {
+async function GETImpl(req: NextRequest) {
   const ctx = await requireStore({ admin: true, module: 'campaigns' })
   if (ctx instanceof Response) return ctx
 
@@ -20,3 +21,5 @@ export async function GET(req: NextRequest) {
     return serverError('GET /api/whatsapp/campaigns/history', error, 'Error al obtener el historial de campañas')
   }
 }
+
+export const GET = withServerTiming(GETImpl)

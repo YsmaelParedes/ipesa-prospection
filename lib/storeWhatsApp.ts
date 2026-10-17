@@ -52,7 +52,8 @@ export function credsFromRow(row: StoreWhatsAppRow): WhatsAppCreds | null {
 }
 
 export async function getStoreWhatsAppRow(storeId: string): Promise<StoreWhatsAppRow | null> {
-  const { data } = await getServerSupabase().from('store_whatsapp').select(COLUMNS).eq('store_id', storeId).maybeSingle()
+  const { data, error } = await getServerSupabase().from('store_whatsapp').select(COLUMNS).eq('store_id', storeId).maybeSingle()
+  if (error) throw error
   return (data as StoreWhatsAppRow | null) ?? null
 }
 

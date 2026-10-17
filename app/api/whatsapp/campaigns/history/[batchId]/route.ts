@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextResponse } from 'next/server'
 import { requireStore } from '@/lib/supabase-server'
 import { loadCampaignDetail } from '@/lib/campaignHistory'
@@ -7,7 +8,7 @@ import { jsonError, serverError } from '@/lib/validation'
  * GET /api/whatsapp/campaigns/history/:batchId (solo admin)
  * Detalle de una campaña: cada destinatario con su estado y, si falló, el motivo.
  */
-export async function GET(_req: Request, { params }: { params: Promise<{ batchId: string }> }) {
+async function GETImpl(_req: Request, { params }: { params: Promise<{ batchId: string }> }) {
   const ctx = await requireStore({ admin: true, module: 'campaigns' })
   if (ctx instanceof Response) return ctx
 
@@ -20,3 +21,5 @@ export async function GET(_req: Request, { params }: { params: Promise<{ batchId
     return serverError('GET /api/whatsapp/campaigns/history/:batchId', error, 'Error al obtener la campaña')
   }
 }
+
+export const GET = withServerTiming(GETImpl)

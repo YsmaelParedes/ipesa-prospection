@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { downloadWhatsAppMedia } from '@/lib/whatsapp'
@@ -10,7 +11,7 @@ import { jsonError } from '@/lib/validation'
 const INLINE_TYPES = /^(image\/(jpeg|png|webp|gif)|audio\/(ogg|mpeg|mp4|aac|amr|opus)|video\/(mp4|3gpp)|application\/pdf)(;|$)/i
 
 // GET /api/whatsapp/media/[mediaId] — proxy autenticado de multimedia entrante
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ mediaId: string }> }) {
+async function GETImpl(_req: NextRequest, { params }: { params: Promise<{ mediaId: string }> }) {
   const ctx = await requireStore({ module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
 
@@ -37,3 +38,5 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ med
     },
   })
 }
+
+export const GET = withServerTiming(GETImpl)

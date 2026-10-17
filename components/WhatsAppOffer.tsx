@@ -1,5 +1,8 @@
 'use client'
 
+import { apiFetch } from '@/lib/apiClient'
+
+
 import { useState } from 'react'
 import { Avatar } from '@/components/CrmUI'
 import { WaIcon } from '@/components/WhatsAppUI'
@@ -41,7 +44,7 @@ export function WhatsAppOffer() {
   const request = async () => {
     setSending(true); setError('')
     try {
-      const r = await fetch('/api/store/whatsapp-request', { method: 'POST' })
+      const r = await apiFetch('/api/store/whatsapp-request', { method: 'POST' })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) { setError(d.error || 'No se pudo enviar la solicitud. Intenta de nuevo.'); return }
       setRequestedAt(d.requestedAt ?? new Date().toISOString())

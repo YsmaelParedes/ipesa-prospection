@@ -1,5 +1,8 @@
 'use client'
 
+import { apiFetch } from '@/lib/apiClient'
+
+
 import { useRef, useState } from 'react'
 import { CAMPAIGN_BATCH_SIZE, campaignEtaLabel } from '@/lib/whatsappSafety'
 import type { WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
@@ -44,7 +47,7 @@ export function useCampaignSend() {
       const batch = sendable.slice(i, i + CAMPAIGN_BATCH_SIZE)
       let stop = ''
       try {
-        const r = await fetch('/api/whatsapp/campaigns/send', {
+        const r = await apiFetch('/api/whatsapp/campaigns/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -1,3 +1,4 @@
+import { databaseFetch, measure } from './serverTiming'
 import { createServerClient } from '@supabase/ssr'
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
@@ -21,7 +22,7 @@ export function getServerSupabase(): SupabaseClient {
   if (serviceClient) return serviceClient
   const key = process.env.SUPABASE_SERVICE_KEY
   if (!key) throw new Error('SUPABASE_SERVICE_KEY no está configurada en el entorno')
-  serviceClient = createClient(SUPABASE_URL, key, { auth: { persistSession: false, autoRefreshToken: false } })
+  serviceClient = createClient(SUPABASE_URL, key, { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: databaseFetch } })
   return serviceClient
 }
 
@@ -49,7 +50,7 @@ export function displayNameOf(user: Pick<User, 'user_metadata' | 'email'>): stri
 export async function getSessionUser(): Promise<User | null> {
   try {
     const client = await getAuthClient()
-    const { data: { user }, error } = await client.auth.getUser()
+    const { data: { user }, error } = await measure('auth', () => client.auth.getUser())
     return error || !user ? null : user
   } catch {
     return null
@@ -162,7 +163,7 @@ export async function requireStore(opts: RequireStoreOptions = {}): Promise<Stor
   if (!user) return unauthorizedResponse()
   let ctx: StoreContext | null
   try {
-    ctx = await resolveStoreContext(user)
+    ctx = await measure('store', () => resolveStoreContext(user))
   } catch (error) {
     console.error('[requireStore]', error)
     return Response.json({ error: 'Error al cargar la tienda' }, { status: 500 })

@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import {
   displayNameOf, getServerSupabase, getSessionUser, invalidateStoreMembers, isPlatformAdmin,
@@ -10,7 +11,7 @@ import { jsonError, readJson, serverError } from '@/lib/validation'
  * GET /api/me — quién soy, en qué tienda estoy y qué puedo hacer.
  * Sin tienda todavía → { store: null } y el cliente manda al alta de tienda.
  */
-export async function GET() {
+async function GETImpl() {
   const user = await getSessionUser()
   if (!user) return unauthorizedResponse()
   try {
@@ -38,3 +39,5 @@ export async function PATCH(req: NextRequest) {
   invalidateStoreMembers()
   return NextResponse.json({ ok: true, name })
 }
+
+export const GET = withServerTiming(GETImpl)

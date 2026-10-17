@@ -1,5 +1,8 @@
 'use client'
 
+import { useQueryEffect } from '@/lib/useCachedQuery'
+
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { APP_NAME } from '@/lib/brand'
 import type { ClientStore } from '@/lib/profile'
@@ -50,13 +53,14 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
         api<{ members: Member[] }>('/api/store/members'),
         api<{ invitations: Invitation[] }>('/api/store/invitations'),
       ])
+      setLoadErr('')
       setMembers(m.members)
       setInvites(i.invitations)
     } catch (err) {
       setLoadErr((err as Error).message)
     }
   }, [])
-  useEffect(() => { load() }, [load])
+  useQueryEffect(() => { load() }, [load])
 
   const createInvite = async (target: string, targetRole: 'employee' | 'admin') => {
     const data = await api<{ link: string; invitation: { email: string } }>('/api/store/invitations', send('POST', { email: target, role: targetRole }))

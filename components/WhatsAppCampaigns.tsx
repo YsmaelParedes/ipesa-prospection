@@ -1,5 +1,12 @@
 'use client'
 
+import { useQueryEffect } from '@/lib/useCachedQuery'
+
+
+import { apiFetch } from '@/lib/apiClient'
+import { loadCatalogs } from '@/lib/catalogs'
+
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Avatar, TipoChip } from '@/components/CrmUI'
@@ -37,16 +44,14 @@ const QUALITY: Record<string, { label: string; tone: 'good' | 'warn' | 'bad' | '
   UNKNOWN: { label: 'Sin datos', tone: 'muted', tip: 'Meta aún no tiene suficiente historial para calificar el número.' },
 }
 
-let healthPromise: Promise<Health | null> | null = null
 function loadHealth() {
-  healthPromise ??= fetch('/api/whatsapp/status').then(r => (r.ok ? r.json() : null)).catch(() => null)
-  return healthPromise
+  return apiFetch('/api/whatsapp/status').then(r => (r.ok ? r.json() : null)).catch(() => null)
 }
 
 /** Calificación de calidad y nivel de mensajería del número en Meta. */
 export function NumberHealthCard() {
   const [data, setData] = useState<Health | null | undefined>(undefined)
-  useEffect(() => { loadHealth().then(setData) }, [])
+  useQueryEffect(() => { loadHealth().then(setData) }, [])
   if (data === undefined) return <div className="wa-health"><span className="wa-spinner sm" /> Consultando el estado del número en Meta…</div>
   if (data && !data.config.connected) {
     return (
@@ -102,17 +107,16 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
   const { quota, refetch: refetchQuota } = useWhatsAppCampaignQuota()
   const { phase, total, done, sent, failed, skipped, outcomes, stopReason, askConfirm, backToForm, run, cancel, reset } = useCampaignSend()
 
-  useEffect(() => {
-    fetch('/api/data/contacts')
+  useQueryEffect(() => {
+    apiFetch('/api/data/contacts')
       .then(r => r.json())
       .then(d => setContacts((d.contacts || []).filter((c: Contact) => normalizePhone(c.phone).length === 10)))
       .catch(() => {})
       .finally(() => setLoading(false))
-    fetch('/api/data/config?type=segment')
-      .then(r => r.json())
-      .then(d => setSegmentos((d.items ?? []).map((i: { label: string }) => i.label)))
+    loadCatalogs()
+      .then(d => setSegmentos(d.segments))
       .catch(() => {})
-    fetch('/api/whatsapp/campaigns/stats').then(r => r.json()).then(d => { if (d.marketingHold) setStats(d) }).catch(() => {})
+    apiFetch('/api/whatsapp/campaigns/stats').then(r => r.json()).then(d => { if (d.marketingHold) setStats(d) }).catch(() => {})
   }, [])
 
   // Reintento: al cargar los contactos se preselecciona a quienes no recibieron el mensaje
@@ -202,7 +206,7 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
     await run(selectedContacts.map(c => ({ id: c.id, name: c.name, phone: c.phone })), selection)
     setRetry(null)
     refetchQuota()
-    fetch('/api/whatsapp/campaigns/stats').then(r => r.json()).then(d => { if (d.marketingHold) setStats(d) }).catch(() => {})
+    apiFetch('/api/whatsapp/campaigns/stats').then(r => r.json()).then(d => { if (d.marketingHold) setStats(d) }).catch(() => {})
   }
 
   if (phase !== 'idle') {

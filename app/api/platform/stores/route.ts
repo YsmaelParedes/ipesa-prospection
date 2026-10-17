@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requirePlatformAdmin } from '@/lib/supabase-server'
 import { EMAIL_RE, createInvitation, invitationStatus } from '@/lib/invitations'
@@ -10,7 +11,7 @@ type OwnerInvite = { email: string; expires_at: string; status: string }
 
 // GET /api/platform/stores — todas las tiendas con su dueño, uso, precio acordado
 // y, si aún no tienen dueño, su invitación de dueño pendiente (solo plataforma)
-export async function GET() {
+async function GETImpl() {
   const user = await requirePlatformAdmin()
   if (user instanceof Response) return user
   const db = getServerSupabase()
@@ -78,3 +79,5 @@ export async function POST(req: NextRequest) {
     return serverError('POST /api/platform/stores', error, 'No se pudo crear la tienda')
   }
 }
+
+export const GET = withServerTiming(GETImpl)

@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCachedQuery } from '@/lib/useCachedQuery'
+
+
 import { storeAccess, trialDaysLeft, type StoreStatus } from '@/lib/stores'
 import type { StorePayment } from '@/lib/payments'
 
@@ -115,44 +117,13 @@ export function currentMonth(now = new Date()) {
 
 /** Pagos de un mes (`{ month: 'YYYY-MM' }`) o de una tienda (`{ store: id }`). */
 export function usePayments(filter: { month: string } | { store: string } | null) {
-  const [payments, setPayments] = useState<StorePayment[] | null>(null)
-  const [error, setError]       = useState('')
-  const qs = !filter ? null : 'month' in filter ? `month=${filter.month}` : `store=${filter.store}`
-
-  const reload = useCallback(async () => {
-    if (!qs) return
-    try {
-      const r = await fetch(`/api/platform/payments?${qs}`, { cache: 'no-store' })
-      const d = await r.json().catch(() => ({}))
-      if (!r.ok) throw new Error(d.error || 'No se pudieron cargar los pagos')
-      setPayments(d.payments)
-      setError('')
-    } catch (e) {
-      setError((e as Error).message)
-    }
-  }, [qs])
-  useEffect(() => { setPayments(null); reload() }, [reload])
-
-  return { payments, error, reload }
+  const qs = !filter ? null : 'month' in filter ? 'month=' + encodeURIComponent(filter.month) : 'store=' + encodeURIComponent(filter.store)
+  const query = useCachedQuery<{ payments: StorePayment[] }>(qs ? '/api/platform/payments?' + qs : null)
+  return { payments: query.data?.payments ?? null, error: query.error?.message ?? '', reload: query.reload }
 }
 
 /** Lista de tiendas; `reload` la vuelve a pedir (después de guardar un cambio). */
 export function usePlatformStores() {
-  const [stores, setStores] = useState<PlatformStore[] | null>(null)
-  const [error, setError]   = useState('')
-
-  const reload = useCallback(async () => {
-    try {
-      const r = await fetch('/api/platform/stores', { cache: 'no-store' })
-      const d = await r.json().catch(() => ({}))
-      if (!r.ok) throw new Error(d.error || 'No se pudieron cargar las tiendas')
-      setStores(d.stores)
-      setError('')
-    } catch (e) {
-      setError((e as Error).message)
-    }
-  }, [])
-  useEffect(() => { reload() }, [reload])
-
-  return { stores, error, reload }
+  const query = useCachedQuery<{ stores: PlatformStore[] }>('/api/platform/stores')
+  return { stores: query.data?.stores ?? null, error: query.error?.message ?? '', reload: query.reload }
 }

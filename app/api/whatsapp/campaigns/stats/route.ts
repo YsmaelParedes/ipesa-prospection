@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { fetchPaged } from '@/lib/campaignHistory'
@@ -14,7 +15,7 @@ import { serverError } from '@/lib/validation'
  * cada número con las campañas (`states`; los "sin WhatsApp" no se pueden
  * elegir). Los resultados de cada campaña están en /api/whatsapp/campaigns/history.
  */
-export async function GET() {
+async function GETImpl() {
   const ctx = await requireStore({ admin: true, module: 'campaigns' })
   if (ctx instanceof Response) return ctx
 
@@ -40,3 +41,5 @@ export async function GET() {
     return serverError('GET /api/whatsapp/campaigns/stats', error, 'Error al obtener los envíos recientes')
   }
 }
+
+export const GET = withServerTiming(GETImpl)

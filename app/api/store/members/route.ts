@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import {
   getServerSupabase, getStoreMembers, invalidateStoreMembers, requireStore, type StoreContext,
@@ -18,7 +19,7 @@ function canManage(ctx: StoreContext, targetRole: StoreRole) {
 }
 
 // GET /api/store/members — dueño/admin
-export async function GET() {
+async function GETImpl() {
   const ctx = await requireStore({ admin: true })
   if (ctx instanceof Response) return ctx
   try {
@@ -100,3 +101,5 @@ export async function DELETE(req: NextRequest) {
   invalidateStoreMembers(ctx.storeId)
   return NextResponse.json({ ok: true })
 }
+
+export const GET = withServerTiming(GETImpl)

@@ -1,5 +1,8 @@
 'use client'
 
+import { useQueryRefresh } from '@/lib/useCachedQuery'
+import { cachedQueryData } from '@/lib/apiClient'
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { usePathname, useRouter } from 'next/navigation'
@@ -36,7 +39,12 @@ export default function GlobalSearch() {
   const inputRef = useRef<HTMLInputElement>(null)
   const sheetInputRef = useRef<HTMLInputElement>(null)
 
-  const ensureIndex = useCallback(() => { loadSearchIndex().then(setIndex) }, [])
+  useQueryRefresh(['/api/data/contacts', '/api/data/leads'], () => {
+    if (!index) return
+    if (!cachedQueryData('/api/data/contacts') || !cachedQueryData('/api/data/leads')) setIndex(null)
+    loadSearchIndex().then(setIndex).catch(() => {})
+  })
+  const ensureIndex = useCallback(() => { loadSearchIndex().then(setIndex).catch(() => {}) }, [])
 
   // Cerrar al navegar
   useEffect(() => { setOpen(false); setSheet(false); setQ('') }, [pathname])

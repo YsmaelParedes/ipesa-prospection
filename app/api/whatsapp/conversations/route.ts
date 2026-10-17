@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { contactsForPhones } from '@/lib/whatsappInbox'
@@ -13,7 +14,7 @@ const PAGE = 100
  * CRM vinculado, no leídos, estado de la ventana de 24 h y si Meta reportó que
  * el número no tiene WhatsApp.
  */
-export async function GET(req: NextRequest) {
+async function GETImpl(req: NextRequest) {
   const ctx = await requireStore({ module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
 
@@ -82,3 +83,5 @@ export async function GET(req: NextRequest) {
     return serverError('GET /api/whatsapp/conversations', error, 'Error al obtener conversaciones')
   }
 }
+
+export const GET = withServerTiming(GETImpl)

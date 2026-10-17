@@ -1,5 +1,11 @@
 'use client'
 
+import { useDataReady, useQueryEffect } from '@/lib/useCachedQuery'
+
+
+import { cachedQueryData, apiFetch } from '@/lib/apiClient'
+
+
 import { Suspense, useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -72,9 +78,9 @@ function buildWhatsApp(phone: string, name: string, description: string, amount:
 function useWhatsAppWindow(phone: string | null | undefined, enabled: boolean) {
   const [open, setOpen] = useState(false)
   const p = normalizePhone(phone || '')
-  useEffect(() => {
+  useQueryEffect(() => {
     if (!enabled || p.length !== 10) return
-    fetch(`/api/whatsapp/conversations/${p}?preview=1&limit=1`)
+    apiFetch(`/api/whatsapp/conversations/${p}?preview=1&limit=1`)
       .then(r => (r.ok ? r.json() : null))
       .then(d => setOpen(!!d?.windowOpen))
       .catch(() => {})
@@ -138,8 +144,9 @@ function LeadsContent() {
   const isAdmin      = !!session?.isAdmin
   const readonly     = session?.store?.access === 'readonly'
 
-  const [leads, setLeads]       = useState<any[]>([])
-  const [loading, setLoading]   = useState(true)
+  const [leads, setLeads]       = useState<any[]>(() => cachedQueryData('/api/data/leads')?.leads ?? [])
+  const [loading, setLoading]   = useState(() => !cachedQueryData('/api/data/leads'))
+  useDataReady(loading, 'leads')
   const [view, setView]         = useState<'tabla' | 'kanban'>('tabla')
   const [tab, setTab]           = useState<Tab>('abiertos')
   const [canalF, setCanalF]     = useState('Todos')
@@ -154,7 +161,7 @@ function LeadsContent() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch('/api/data/leads')
+      const r = await apiFetch('/api/data/leads')
       const d = await r.json()
       const list: any[] = d.leads || []
       setLeads(list)
@@ -164,7 +171,7 @@ function LeadsContent() {
     } catch {} finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useQueryEffect(() => { load() }, [load])
   useDataChanged(['lead', 'reminder'], load)
 
   /* Abrir el lead indicado en la URL (?id=…), p. ej. desde el buscador, WhatsApp o Contactos */
@@ -212,7 +219,7 @@ function LeadsContent() {
   const filtersOn = canalF !== 'Todos' || segF !== 'Todos' || ownerF !== 'Todos' || !!search.trim()
 
   const updateEstado = async (id: string, estado: string) => {
-    const r = await fetch(`/api/data/leads/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado }) })
+    const r = await apiFetch(`/api/data/leads/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado }) })
     if (!r.ok) { showToast('No se pudo cambiar el estado'); return }
     setLeads(prev => prev.map(l => l.id === id ? { ...l, estado } : l))
     setSelected((s: any) => s?.id === id ? { ...s, estado } : s)
@@ -442,7 +449,7 @@ function ActivitiesTab({ lead, storeName, readonly, waModule, onPatched, toast }
   const sendQuoteFromCrm = async (text: string) => {
     setSendingQuote(true)
     try {
-      const r = await fetch(`/api/whatsapp/conversations/${normalizePhone(lead.phone)}`, {
+      const r = await apiFetch(`/api/whatsapp/conversations/${normalizePhone(lead.phone)}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body: text }),
       })
       const d = await r.json().catch(() => ({}))
@@ -454,13 +461,13 @@ function ActivitiesTab({ lead, storeName, readonly, waModule, onPatched, toast }
 
   const loadActivities = useCallback(async () => {
     try {
-      const r = await fetch(`/api/data/activities?lead_id=${lead.id}`)
+      const r = await apiFetch(`/api/data/activities?lead_id=${lead.id}`)
       const d = await r.json()
       setActivities(d.activities || [])
     } catch {} finally { setLoading(false) }
   }, [lead.id])
 
-  useEffect(() => { loadActivities() }, [loadActivities])
+  useQueryEffect(() => { loadActivities() }, [loadActivities])
   useEffect(() => { if (active) setTimeout(() => descRef.current?.focus(), 60) }, [active])
 
   const resetForm = () => {
@@ -475,7 +482,7 @@ function ActivitiesTab({ lead, storeName, readonly, waModule, onPatched, toast }
     setSaving(true); setSaveError('')
     try {
       const amount = form.amount ? Number(form.amount) : null
-      const res = await fetch('/api/data/activities', {
+      const res = await apiFetch('/api/data/activities', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lead_id: lead.id, type: active,
@@ -495,7 +502,7 @@ function ActivitiesTab({ lead, storeName, readonly, waModule, onPatched, toast }
         if (markQuoted && lead.estado !== 'Cotizado' && isOpenLead(lead.estado)) patch.estado = 'Cotizado'
         if (useAsValue && amount && Number(lead.monto) !== amount) patch.monto = amount
         if (Object.keys(patch).length) {
-          const r = await fetch(`/api/data/leads/${lead.id}`, {
+          const r = await apiFetch(`/api/data/leads/${lead.id}`, {
             method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
           })
           if (r.ok) onPatched(patch)
@@ -519,13 +526,13 @@ function ActivitiesTab({ lead, storeName, readonly, waModule, onPatched, toast }
   }
 
   const handleDelete = async (id: string) => {
-    const r = await fetch(`/api/data/activities/${id}`, { method: 'DELETE' })
+    const r = await apiFetch(`/api/data/activities/${id}`, { method: 'DELETE' })
     if (r.ok) { setActivities(prev => prev.filter(a => a.id !== id)); notifyDataChanged('activity') }
   }
 
   const scheduleNext = async (when: QuickWhen) => {
     const t = getAType(nextStep ?? 'note')
-    const r = await fetch('/api/data/reminders', {
+    const r = await apiFetch('/api/data/reminders', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         lead_id: lead.id, lead_name: lead.name, type: t.next, priority: 'medium',
@@ -704,13 +711,13 @@ function RemindersTab({ lead, readonly, onCount }: { lead: any; readonly: boolea
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`/api/data/reminders?lead_id=${lead.id}`)
+      const r = await apiFetch(`/api/data/reminders?lead_id=${lead.id}`)
       const d = await r.json()
       setReminders(d.reminders || [])
     } catch { setReminders([]) }
   }, [lead.id])
 
-  useEffect(() => { load() }, [load])
+  useQueryEffect(() => { load() }, [load])
   useDataChanged(['reminder'], load)
 
   const pending   = (reminders ?? []).filter(r => !r.completado).sort((a, b) => a.fecha_recordatorio.localeCompare(b.fecha_recordatorio))
@@ -718,11 +725,11 @@ function RemindersTab({ lead, readonly, onCount }: { lead: any; readonly: boolea
   useEffect(() => { if (reminders) onCount(pending.length) }, [reminders, pending.length, onCount])
 
   const patch = async (id: string, body: Record<string, unknown>) => {
-    const r = await fetch(`/api/data/reminders/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const r = await apiFetch(`/api/data/reminders/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     if (r.ok) notifyDataChanged('reminder')
   }
   const remove = async (id: string) => {
-    const r = await fetch(`/api/data/reminders/${id}`, { method: 'DELETE' })
+    const r = await apiFetch(`/api/data/reminders/${id}`, { method: 'DELETE' })
     if (r.ok) notifyDataChanged('reminder')
   }
 
@@ -813,7 +820,7 @@ function LeadDetail({
     setSaving(true); setSaveError('')
     try {
       const body = { ...editForm, monto: editForm.monto ? Number(editForm.monto) : null, notas: editForm.notas.trim() || null }
-      const r = await fetch(`/api/data/leads/${lead.id}`, {
+      const r = await apiFetch(`/api/data/leads/${lead.id}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
       })
       const upd = await r.json().catch(() => ({}))
@@ -826,7 +833,7 @@ function LeadDetail({
 
   const handleDeleteLead = async () => {
     setDeleting(true)
-    const r = await fetch(`/api/data/leads/${lead.id}`, { method: 'DELETE' })
+    const r = await apiFetch(`/api/data/leads/${lead.id}`, { method: 'DELETE' })
     if (r.ok) onDeleted(lead.id)
     else { setDeleting(false); toast('No se pudo eliminar el lead') }
   }

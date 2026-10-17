@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextResponse } from 'next/server'
 import { requireStore } from '@/lib/supabase-server'
 import { GRAPH_VERSION, getPhoneHealth } from '@/lib/whatsapp'
@@ -8,7 +9,7 @@ import { credsFromRow, getStoreWhatsAppRow } from '@/lib/storeWhatsApp'
  * conectado + salud del número en Meta: calificación de calidad, nivel de
  * mensajería y health_status (AVAILABLE / LIMITED / BLOCKED).
  */
-export async function GET() {
+async function GETImpl() {
   const ctx = await requireStore({ admin: true, module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
 
@@ -23,3 +24,5 @@ export async function GET() {
   const health = creds ? await getPhoneHealth(creds) : null
   return NextResponse.json({ config, health, graphVersion: GRAPH_VERSION }, { headers: { 'Cache-Control': 'no-store' } })
 }
+
+export const GET = withServerTiming(GETImpl)

@@ -1,5 +1,11 @@
 'use client'
 
+import { useDataReady, useQueryEffect } from '@/lib/useCachedQuery'
+
+
+import { cachedQueryData, apiFetch } from '@/lib/apiClient'
+
+
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { normalizePhone } from '@/lib/phone'
@@ -156,9 +162,10 @@ function RemGroup({ label, color, items, contactsById, readonly, onComplete, onD
 export default function AgendaPage() {
   const session  = useSession()
   const readonly = session?.store?.access === 'readonly'
-  const [reminders, setReminders] = useState<Reminder[]>([])
-  const [leads,     setLeads]     = useState<LeadContact[]>([])
-  const [loading,   setLoading]   = useState(true)
+  const [reminders, setReminders] = useState<Reminder[]>(() => cachedQueryData('/api/data/reminders')?.reminders ?? [])
+  const [leads,     setLeads]     = useState<LeadContact[]>(() => cachedQueryData('/api/data/leads')?.leads ?? [])
+  const [loading,   setLoading]   = useState(() => !cachedQueryData('/api/data/reminders') || !cachedQueryData('/api/data/leads'))
+  useDataReady(loading, 'recordatorios')
   const [tab,       setTab]       = useState<'pending' | 'done'>('pending')
   const [typeFilter,setTypeFilter]= useState<string>('all')
   const [toast,     setToast]     = useState('')
@@ -167,7 +174,7 @@ export default function AgendaPage() {
 
   const load = useCallback(async () => {
     try {
-      const [remRes, leadsRes] = await Promise.all([fetch('/api/data/reminders'), fetch('/api/data/leads')])
+      const [remRes, leadsRes] = await Promise.all([apiFetch('/api/data/reminders'), apiFetch('/api/data/leads')])
       const remData   = await remRes.json()
       const leadsData = await leadsRes.json()
       setReminders(remData.reminders || [])
@@ -175,11 +182,11 @@ export default function AgendaPage() {
     } catch {} finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useQueryEffect(() => { load() }, [load])
   useDataChanged(['reminder', 'lead'], load)
 
   const mutate = async (url: string, init: RequestInit, okMsg: string) => {
-    const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...init }).catch(() => null)
+    const r = await apiFetch(url, { headers: { 'Content-Type': 'application/json' }, ...init }).catch(() => null)
     if (!r?.ok) {
       const d = await r?.json().catch(() => ({}))
       showToast(d?.error || 'No se pudo guardar. Intenta de nuevo.')

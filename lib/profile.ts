@@ -1,11 +1,12 @@
 /**
  * Sesión en el navegador: usuario, tienda activa, rol y módulos (de
- * /api/me). Se memoiza durante la vida de la pestaña; invalidateSession()
+ * /api/me). Se comparte durante 60 segundos; invalidateSession()
  * la vuelve a pedir (cambio de tienda, de nombre, de configuración).
  * Solo decide qué se MUESTRA: cada ruta de la API vuelve a validar todo.
  */
 import { useEffect, useState } from 'react'
 import type { StoreAccess, StoreModules, StoreRole, StoreStatus } from './stores'
+import { broadcastSessionChange, setQueryContext } from './apiClient'
 
 export type ClientStore = {
   id: string
@@ -45,31 +46,56 @@ export type Session = {
 
 const EVENT = 'crm:session-changed'
 let sessionPromise: Promise<Session | null> | null = null
+let sessionValue: Session | null | undefined
+let sessionAt = 0
+let sessionGeneration = 0
+let consumers = 0
+let stopRefresh: (() => void) | undefined
 
 export function loadSession(): Promise<Session | null> {
+  if (sessionValue !== undefined && Date.now() - sessionAt < 60_000) return Promise.resolve(sessionValue)
   if (!sessionPromise) {
+    const generation = sessionGeneration
     sessionPromise = fetch('/api/me', { cache: 'no-store' })
-      .then(r => (r.ok ? r.json() as Promise<Session> : null))
-      .catch(() => { sessionPromise = null; return null })
+      .then(async r => {
+        if (!r.ok && r.status !== 401) throw new Error('No se pudo comprobar la sesión')
+        const value: Session | null = r.ok ? await r.json() : null
+        if (generation !== sessionGeneration) return loadSession()
+        sessionValue = value; sessionAt = Date.now()
+        setQueryContext(value)
+        window.dispatchEvent(new Event(EVENT))
+        return value
+      })
+      .finally(() => { if (generation === sessionGeneration) sessionPromise = null })
   }
   return sessionPromise
 }
 
 /** Vuelve a pedir la sesión y avisa a los componentes montados. */
-export function invalidateSession() {
+export function invalidateSession(broadcast = true) {
+  sessionGeneration++
   sessionPromise = null
+  sessionAt = 0
+  if (broadcast) broadcastSessionChange()
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(EVENT))
 }
 
 /** undefined = cargando · null = sin sesión */
 export function useSession(): Session | null | undefined {
-  const [session, setSession] = useState<Session | null | undefined>(undefined)
+  const [session, setSession] = useState<Session | null | undefined>(() => sessionValue)
   useEffect(() => {
     let alive = true
-    const load = () => loadSession().then(s => { if (alive) setSession(s) })
+    const load = () => { void loadSession().then(s => { if (alive) setSession(s) }).catch(() => {}) }
     load()
     window.addEventListener(EVENT, load)
-    return () => { alive = false; window.removeEventListener(EVENT, load) }
+    if (++consumers === 1) {
+      const refresh = () => { if (document.visibilityState === 'visible') void loadSession().catch(() => {}) }
+      const timer = setInterval(refresh, 60_000)
+      window.addEventListener('focus', refresh)
+      document.addEventListener('visibilitychange', refresh)
+      stopRefresh = () => { clearInterval(timer); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh) }
+    }
+    return () => { alive = false; window.removeEventListener(EVENT, load); if (--consumers === 0) stopRefresh?.() }
   }, [])
   return session
 }

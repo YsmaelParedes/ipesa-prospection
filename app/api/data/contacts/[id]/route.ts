@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
@@ -5,7 +6,7 @@ import { CONTACT_COLUMNS, duplicateContactMessage, linkWhatsAppMessages, parseCo
 
 type Ctx = { params: Promise<{ id: string }> }
 
-export async function GET(_req: NextRequest, { params }: Ctx) {
+async function GETImpl(_req: NextRequest, { params }: Ctx) {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
 
@@ -64,3 +65,5 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
   if (error) return serverError('DELETE /api/data/contacts/[id]', error, 'Error al eliminar contacto')
   return NextResponse.json({ success: true })
 }
+
+export const GET = withServerTiming(GETImpl)

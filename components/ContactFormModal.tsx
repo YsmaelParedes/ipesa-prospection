@@ -1,5 +1,10 @@
 'use client'
 
+import { useQueryEffect } from '@/lib/useCachedQuery'
+
+import { apiFetch } from '@/lib/apiClient'
+
+
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useCatalogs } from '@/lib/catalogs'
@@ -38,7 +43,7 @@ export default function ContactFormModal({ initialName = '', initialPhone = '', 
   const nameRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { setTimeout(() => nameRef.current?.focus(), 80) }, [])
-  useEffect(() => { loadSearchIndex().then(i => setContacts(i.contacts)) }, [])
+  useQueryEffect(() => { loadSearchIndex().then(i => setContacts(i.contacts)).catch(() => {}) }, [])
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !saving) onClose() }
     window.addEventListener('keydown', h)
@@ -58,7 +63,7 @@ export default function ContactFormModal({ initialName = '', initialPhone = '', 
     if (!canSave) return
     setSaving(true); setError('')
     try {
-      const r = await fetch('/api/data/contacts', {
+      const r = await apiFetch('/api/data/contacts', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, name: form.name.trim(), phone: normalizePhone(form.phone) }),
       })

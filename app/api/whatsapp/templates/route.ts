@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextResponse } from 'next/server'
 import { requireStore } from '@/lib/supabase-server'
 import { countTemplateVariables, graphFetch } from '@/lib/whatsapp'
@@ -45,7 +46,7 @@ function toDef(t: any): WhatsAppTemplateDef {
  * Meta. Responde 200 con `error` (y templates: []) si falla, para que el
  * selector muestre el motivo sin romper la UI.
  */
-export async function GET() {
+async function GETImpl() {
   const ctx = await requireStore({ module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
 
@@ -75,3 +76,5 @@ export async function GET() {
     return NextResponse.json({ error: 'Error de red al consultar plantillas en Meta', templates: [] })
   }
 }
+
+export const GET = withServerTiming(GETImpl)

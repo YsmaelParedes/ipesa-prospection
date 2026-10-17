@@ -1,0 +1,962 @@
+{
+  "baseline": "0a3a3f2",
+  "profile": "desktop-1440x900-local-production",
+  "stoppedAtUserRequest": true,
+  "samples": [
+    {
+      "round": 0,
+      "route": "/",
+      "readyMs": 722.5,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 688.8999999985099,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 417.3999999985099,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 0,
+      "route": "/contactos",
+      "readyMs": 449.29999999701977,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 417,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 0,
+      "route": "/leads",
+      "readyMs": 798.7000000029802,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 777.1999999955297,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 0,
+      "route": "/recordatorios",
+      "readyMs": 981.5999999940395,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 326.59999999403954,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/leads",
+          "durationMs": 959.8000000044703,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 1,
+      "route": "/",
+      "readyMs": 532.6000000014901,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 513.8999999985099,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 336.8999999985099,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 1,
+      "route": "/contactos",
+      "readyMs": 411.19999999552965,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 393.1000000014901,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 1,
+      "route": "/leads",
+      "readyMs": 440.20000000298023,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 418.6000000014901,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 1,
+      "route": "/recordatorios",
+      "readyMs": 432.59999999403954,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 341.09999999403954,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/leads",
+          "durationMs": 405.6000000014901,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 2,
+      "route": "/",
+      "readyMs": 757.5,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 738.5,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 332.29999999701977,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 2,
+      "route": "/contactos",
+      "readyMs": 382.8999999985099,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 360.6000000014901,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 2,
+      "route": "/leads",
+      "readyMs": 418,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 403.59999999403954,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 2,
+      "route": "/recordatorios",
+      "readyMs": 632.5,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 397.79999999701977,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/leads",
+          "durationMs": 603.8999999985099,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 3,
+      "route": "/",
+      "readyMs": 798.3000000044703,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 778,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 369.5,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/whatsapp/unread",
+          "durationMs": 335.5,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 3,
+      "route": "/contactos",
+      "readyMs": 483.79999999701977,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 460.1000000014901,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 3,
+      "route": "/leads",
+      "readyMs": 432.19999999552965,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 405.5,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 3,
+      "route": "/recordatorios",
+      "readyMs": 783.2999999970198,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 770,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/leads",
+          "durationMs": 714,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 4,
+      "route": "/",
+      "readyMs": 719,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 696.2000000029802,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 456.5,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 4,
+      "route": "/contactos",
+      "readyMs": 364.20000000298023,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 337.80000000447035,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 4,
+      "route": "/leads",
+      "readyMs": 513.6000000014901,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 483,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 4,
+      "route": "/recordatorios",
+      "readyMs": 444.8999999985099,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 313.79999999701977,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/leads",
+          "durationMs": 425.8999999985099,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 5,
+      "route": "/",
+      "readyMs": 517.5,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 485.6000000014901,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 320.59999999403954,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 5,
+      "route": "/contactos",
+      "readyMs": 364.59999999403954,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 338.70000000298023,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 5,
+      "route": "/leads",
+      "readyMs": 507,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 489,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 5,
+      "route": "/recordatorios",
+      "readyMs": 721,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 686.7999999970198,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/leads",
+          "durationMs": 701.8000000044703,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 6,
+      "route": "/",
+      "readyMs": 1131,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 1106.3999999985099,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 487.29999999701977,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 6,
+      "route": "/contactos",
+      "readyMs": 3500.89999999851,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 3473.5,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/whatsapp/unread",
+          "durationMs": 911.7999999970198,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 1225.6000000014901,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 6,
+      "route": "/leads",
+      "readyMs": 837.2000000029802,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 824.7999999970198,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 6,
+      "route": "/recordatorios",
+      "readyMs": 591.6000000014901,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 499,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/leads",
+          "durationMs": 571.7999999970198,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 7,
+      "route": "/",
+      "readyMs": 552.1999999955297,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 527.2999999970198,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 366.70000000298023,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 7,
+      "route": "/contactos",
+      "readyMs": 650.3999999985099,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 632.9000000059605,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 7,
+      "route": "/leads",
+      "readyMs": 1767,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 1743.7999999970198,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 7,
+      "route": "/recordatorios",
+      "readyMs": 664.1999999955297,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 369,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/leads",
+          "durationMs": 645.7000000029802,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 8,
+      "route": "/",
+      "readyMs": 554.3999999985099,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 530.8999999985099,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 655.6999999955297,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 8,
+      "route": "/contactos",
+      "readyMs": 366.6000000014901,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 349.6000000014901,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 8,
+      "route": "/leads",
+      "readyMs": 801.1000000014901,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 770,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 8,
+      "route": "/recordatorios",
+      "readyMs": 399.69999999552965,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 323.6000000014901,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/leads",
+          "durationMs": 378.5,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 9,
+      "route": "/",
+      "readyMs": 1078.8000000044703,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 1055.2999999970198,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 317.1000000014901,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 9,
+      "route": "/contactos",
+      "readyMs": 414.5,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 396.5,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 9,
+      "route": "/leads",
+      "readyMs": 483,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 460.3999999985099,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/whatsapp/unread",
+          "durationMs": 370.20000000298023,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 9,
+      "route": "/recordatorios",
+      "readyMs": 690.3999999985099,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 462.20000000298023,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/leads",
+          "durationMs": 659.7000000029802,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 10,
+      "route": "/",
+      "readyMs": 1033.4000000059605,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 1007.8999999985099,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 361.79999999701977,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 10,
+      "route": "/contactos",
+      "readyMs": 363.3999999985099,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 348.1000000014901,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 10,
+      "route": "/leads",
+      "readyMs": 777.2000000029802,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 753.6999999955297,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 10,
+      "route": "/recordatorios",
+      "readyMs": 630.7999999970198,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 341.30000000447035,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/leads",
+          "durationMs": 617,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 11,
+      "route": "/",
+      "readyMs": 699.7000000029802,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 675.0999999940395,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 667.1000000014901,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 11,
+      "route": "/contactos",
+      "readyMs": 348.1000000014901,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 330.5,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 11,
+      "route": "/leads",
+      "readyMs": 397.30000000447035,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 384.1000000014901,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 11,
+      "route": "/recordatorios",
+      "readyMs": 416,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 331.40000000596046,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/leads",
+          "durationMs": 395.79999999701977,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 12,
+      "route": "/",
+      "readyMs": 466.8999999985099,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 442.30000000447035,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": []
+        },
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 320.1000000014901,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 12,
+      "route": "/contactos",
+      "readyMs": 379.3999999985099,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 357.29999999701977,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": []
+        }
+      ],
+      "overflow": false
+    }
+  ],
+  "done": false,
+  "error": null
+}

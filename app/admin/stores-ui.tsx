@@ -1,5 +1,8 @@
 'use client'
 
+import { apiFetch } from '@/lib/apiClient'
+
+
 import { useEffect, useState } from 'react'
 import { APP_NAME } from '@/lib/brand'
 import { isMoney } from '@/lib/payments'
@@ -16,7 +19,7 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
 async function postJson(url: string, body: unknown) {
-  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  const r = await apiFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   const d = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(d.error || 'No se pudo guardar')
   return d

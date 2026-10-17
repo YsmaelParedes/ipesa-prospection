@@ -1,6 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useDataReady, useQueryEffect, useCachedQuery } from '@/lib/useCachedQuery'
+
+
+import { cachedQueryData, apiFetch } from '@/lib/apiClient'
+
+
+import { useCallback, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Avatar, CanalChip, EstadoChip, TrendIcon, Donut, canalColor, fmtDate, segColor } from '@/components/CrmUI'
@@ -56,30 +62,32 @@ function FirstSteps({ whatsapp }: { whatsapp: boolean }) {
 export default function DashboardPage() {
   const router  = useRouter()
   const session = useSession()
-  const [data, setData]           = useState<any>(null)
-  const [loading, setLoading]     = useState(true)
+  const waUsage = useCachedQuery<{ people24h: number | null; dailyLimit: number | null }>(session?.isAdmin && session.store?.modules.whatsapp ? '/api/data/dashboard/whatsapp' : null)
+  const [data, setData]           = useState<any>(() => cachedQueryData('/api/data/dashboard?includeWhatsApp=0') ?? null)
+  const [loading, setLoading]     = useState(() => !cachedQueryData('/api/data/dashboard?includeWhatsApp=0'))
+  useDataReady(loading, 'dashboard')
   const [reminders, setReminders] = useState<Reminder[] | null>(null)
   const [now, setNow]             = useState(() => new Date())
 
   const loadDashboard = useCallback(() => {
-    fetch('/api/data/dashboard')
+    apiFetch('/api/data/dashboard?includeWhatsApp=0')
       .then(r => r.json())
       .then(setData)
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
   const loadReminders = useCallback(() => {
-    fetch('/api/data/reminders')
+    apiFetch('/api/data/reminders')
       .then(r => (r.ok ? r.json() : { reminders: [] }))
       .then(d => { setReminders((d.reminders ?? []).filter((r: Reminder) => !r.completado)); setNow(new Date()) })
       .catch(() => setReminders([]))
   }, [])
 
-  useEffect(() => { loadDashboard(); loadReminders() }, [loadDashboard, loadReminders])
+  useQueryEffect(() => { loadDashboard(); loadReminders() }, [loadDashboard, loadReminders])
   useDataChanged(['reminder', 'lead', 'contact', 'activity'], () => { loadDashboard(); loadReminders() })
 
   const completeReminder = async (id: string) => {
-    const r = await fetch(`/api/data/reminders/${id}`, {
+    const r = await apiFetch(`/api/data/reminders/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ completado: true }),
     })
     if (r.ok) { setReminders(prev => prev?.filter(x => x.id !== id) ?? null); notifyDataChanged('reminder') }
@@ -224,7 +232,7 @@ export default function DashboardPage() {
             <div className="today-wa-stats">
               <div><strong className={wa.unreadConversations ? 'hot' : ''}>{wa.unreadConversations}</strong><span>sin leer</span></div>
               <div><strong>{wa.inboundToday}</strong><span>recibidos hoy</span></div>
-              {data?.isAdmin && <div><strong>{wa.people24h ?? 0}{wa.dailyLimit != null && <small>/{wa.dailyLimit.toLocaleString('es-MX')}</small>}</strong><span>personas 24 h</span></div>}
+              {data?.isAdmin && <div><strong>{waUsage.data?.people24h ?? '—'}{waUsage.data?.dailyLimit != null && <small>/{waUsage.data.dailyLimit.toLocaleString('es-MX')}</small>}</strong><span>personas 24 h</span></div>}
             </div>
           </Link>
         )}

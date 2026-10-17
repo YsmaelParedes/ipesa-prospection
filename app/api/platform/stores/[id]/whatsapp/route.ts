@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePlatformAdmin } from '@/lib/supabase-server'
 import { logPlatformEvent } from '@/lib/platformEvents'
@@ -12,7 +13,7 @@ type Ctx = { params: Promise<{ id: string }> }
  * plataforma (el asesor). GET: estado y datos del webhook · PUT: conectar o
  * actualizar credenciales · DELETE: desconectar. Queda en la bitácora.
  */
-export async function GET(req: NextRequest, { params }: Ctx) {
+async function GETImpl(req: NextRequest, { params }: Ctx) {
   const user = await requirePlatformAdmin()
   if (user instanceof Response) return user
   const { id } = await params
@@ -51,3 +52,5 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
     return serverError('DELETE /api/platform/stores/[id]/whatsapp', error, 'No se pudo desconectar')
   }
 }
+
+export const GET = withServerTiming(GETImpl)

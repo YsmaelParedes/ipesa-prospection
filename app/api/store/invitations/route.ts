@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getStoreMembers, requireStore } from '@/lib/supabase-server'
 import { EMAIL_RE, INVITATION_COLUMNS as COLUMNS, createInvitation, invitationStatus, type InvitationRow } from '@/lib/invitations'
@@ -13,7 +14,7 @@ async function pendingInvitations(storeId: string): Promise<InvitationRow[]> {
 }
 
 // GET /api/store/invitations — pendientes (dueño/admin)
-export async function GET() {
+async function GETImpl() {
   const ctx = await requireStore({ admin: true })
   if (ctx instanceof Response) return ctx
   try {
@@ -67,3 +68,5 @@ export async function POST(req: NextRequest) {
     return serverError('POST /api/store/invitations', error, 'No se pudo crear la invitación')
   }
 }
+
+export const GET = withServerTiming(GETImpl)

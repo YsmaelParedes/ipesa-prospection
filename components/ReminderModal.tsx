@@ -1,5 +1,10 @@
 'use client'
 
+import { useQueryEffect } from '@/lib/useCachedQuery'
+
+import { apiFetch } from '@/lib/apiClient'
+
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   PRIORITY_INFO, REMINDER_PRIORITIES, REMINDER_TYPES, REMINDER_TYPE_INFO,
@@ -45,7 +50,7 @@ export default function ReminderModal({ reminder, defaults, onClose, onSaved }: 
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
   }, [onClose, saving])
-  useEffect(() => { loadSearchIndex().then(i => setLeads(i.leads)) }, [])
+  useQueryEffect(() => { loadSearchIndex().then(i => setLeads(i.leads)).catch(() => {}) }, [])
 
   const leadMatches = useMemo(() => {
     const q = normText(leadQ)
@@ -66,7 +71,7 @@ export default function ReminderModal({ reminder, defaults, onClose, onSaved }: 
       lead_name: leadId ? leadName : (subject || nota.trim()),
     }
     try {
-      const r = await fetch(editing ? `/api/data/reminders/${reminder!.id}` : '/api/data/reminders', {
+      const r = await apiFetch(editing ? `/api/data/reminders/${reminder!.id}` : '/api/data/reminders', {
         method: editing ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

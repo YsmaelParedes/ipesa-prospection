@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore, type StoreContext } from '@/lib/supabase-server'
 import {
@@ -20,7 +21,7 @@ const BLOCKED_NOTE = 'Meta tiene bloqueado el envío desde este número.'
  * `limit`/`remaining` null = nivel sin límite. `used` = personas únicas
  * contactadas fuera de la ventana de atención en 24 h (lo que cuenta Meta).
  */
-export async function GET() {
+async function GETImpl() {
   const ctx = await requireStore({ admin: true, module: 'campaigns' })
   if (ctx instanceof Response) return ctx
   try {
@@ -206,3 +207,5 @@ export async function POST(req: NextRequest) {
     return serverError('POST /api/whatsapp/campaigns/send', error, 'Error al enviar la plantilla')
   }
 }
+
+export const GET = withServerTiming(GETImpl)

@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, parseFields, readJson, serverError } from '@/lib/validation'
@@ -8,7 +9,7 @@ import { fetchPaged } from '@/lib/paged'
 // GET /api/data/leads[?contact_id=uuid]
 // Vendedor: solo sus leads (+ legacy sin user_id). Dueño/admin: todos los de la
 // tienda, con el nombre del vendedor.
-export async function GET(req: NextRequest) {
+async function GETImpl(req: NextRequest) {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
 
@@ -77,3 +78,5 @@ export async function POST(req: NextRequest) {
   if (error) return serverError('POST /api/data/leads', error, 'Error al crear lead')
   return NextResponse.json(data)
 }
+
+export const GET = withServerTiming(GETImpl)

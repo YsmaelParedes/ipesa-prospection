@@ -1,6 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCachedQuery, useQueryEffect } from '@/lib/useCachedQuery'
+
+
+import { useCallback, useState } from 'react'
 import { Ico, Note, Panel, Spinner, WhatsAppGlyph, api, cx, fmtDate, send, useToast } from './ui'
 import s from './configuracion.module.css'
 import { tierLabel } from '@/lib/whatsappSafety'
@@ -22,15 +25,16 @@ const QUALITY: Record<string, { label: string; cls: string }> = {
 /* ── Estado del número ──────────────────────────────────────────────────── */
 function ConnectionPanel() {
   const [conn, setConn]     = useState<Connection | null>(null)
-  const [health, setHealth] = useState<Health | null>(null)
+  const healthQuery = useCachedQuery<{ health: Health | null }>(conn?.connected ? '/api/whatsapp/status' : null)
+  const health = healthQuery.data?.health ?? null
   const [error, setError]   = useState('')
 
-  useEffect(() => {
+  useQueryEffect(() => {
     (async () => {
       try {
         const c = await api<Connection>('/api/store/whatsapp')
         setConn(c)
-        if (c.connected) setHealth((await api<{ health: Health | null }>('/api/whatsapp/status').catch(() => ({ health: null }))).health)
+        setError('')
       } catch (err) {
         setError((err as Error).message)
       }
@@ -100,7 +104,7 @@ function QuickRepliesPanel({ showToast }: { showToast: (m: string) => void }) {
     try { setItems((await api<{ items: QuickReply[] }>('/api/whatsapp/quick-replies')).items ?? []) }
     catch (err) { setError((err as Error).message); setItems([]) }
   }, [])
-  useEffect(() => { load() }, [load])
+  useQueryEffect(() => { load() }, [load])
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault()

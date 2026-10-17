@@ -1,28 +1,16 @@
-import { NextResponse } from 'next/server'
+import { getDashboardWhatsAppUsage } from '@/lib/dashboardWhatsApp'
+import { withServerTiming } from '@/lib/serverTiming'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
 import { ownLeadsFilter } from '@/lib/leads'
 import { WON, isOpenLead } from '@/lib/crm'
 import { serverError } from '@/lib/validation'
-import { getStoreWhatsAppCreds } from '@/lib/storeWhatsApp'
-import { getMessagingLimit, uniqueRecipientsOutsideWindow24h } from '@/lib/whatsappQuota'
 
 const ACTIVITY_LABELS: Record<string, string> = {
   call: 'Llamada', email: 'Correo', whatsapp: 'WhatsApp', quote: 'Cotización',
   meeting: 'Reunión', visit: 'Visita', note: 'Nota',
 }
 const DAY = 24 * 60 * 60 * 1000
-
-/** Personas contactadas fuera de la ventana en 24 h y límite real de Meta (null = sin límite). */
-async function whatsappUsage(storeId: string): Promise<{ used: number; limit: number | null } | null> {
-  try {
-    const creds = await getStoreWhatsAppCreds(storeId)
-    if (!creds) return null
-    const [used, { limit }] = await Promise.all([uniqueRecipientsOutsideWindow24h(storeId), getMessagingLimit(storeId, creds)])
-    return { used, limit }
-  } catch {
-    return null
-  }
-}
 
 /**
  * Inicio de día/mes en México (UTC-6 todo el año desde 2022) como instante
@@ -43,7 +31,7 @@ function mexicoBoundaries() {
   }
 }
 
-export async function GET() {
+async function GETImpl(req: NextRequest) {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
   const { isAdmin, storeId } = ctx
@@ -88,7 +76,7 @@ export async function GET() {
       activitiesQuery,
       supabase.from('whatsapp_threads').select('phone', { count: 'exact', head: true }).eq('store_id', storeId).gt('unread', 0),
       supabase.from('whatsapp_messages').select('id', { count: 'exact', head: true }).eq('store_id', storeId).eq('direction', 'inbound').gte('created_at', startOfToday),
-      isAdmin && ctx.store.modules.whatsapp ? whatsappUsage(storeId) : Promise.resolve(null),
+      req.nextUrl.searchParams.get('includeWhatsApp') !== '0' && isAdmin && ctx.store.modules.whatsapp ? getDashboardWhatsAppUsage(storeId) : Promise.resolve(null),
       isAdmin ? getUserNameMap(storeId).catch(() => new Map<string, string>()) : Promise.resolve(null),
     ])
     if (leadsError) throw leadsError
@@ -195,3 +183,5 @@ export async function GET() {
     return serverError('GET /api/data/dashboard', error, 'Error al obtener métricas')
   }
 }
+
+export const GET = withServerTiming(GETImpl)

@@ -1,3 +1,4 @@
+import { externalFetch } from './serverTiming'
 /**
  * Cliente de servidor para WhatsApp Cloud API (Meta oficial, sin BSP).
  * Cada tienda usa su propio número: todas las funciones reciben las
@@ -69,7 +70,7 @@ export function friendlyWhatsAppError(code: number | undefined, fallback: string
 }
 
 export async function graphFetch(creds: Pick<WhatsAppCreds, 'token'>, path: string, init: RequestInit = {}): Promise<{ ok: boolean; status: number; data: any }> {
-  const res = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/${path}`, {
+  const res = await externalFetch(`https://graph.facebook.com/${GRAPH_VERSION}/${path}`, {
     ...init,
     headers: { Authorization: `Bearer ${creds.token}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
     cache: 'no-store',
@@ -150,7 +151,7 @@ export async function uploadWhatsAppMedia(
     form.append('type', file.type)
     form.append('file', file, filename)
     // Sin Content-Type: fetch arma el multipart con su boundary
-    const res = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/${creds.phoneNumberId}/media`, {
+    const res = await externalFetch(`https://graph.facebook.com/${GRAPH_VERSION}/${creds.phoneNumberId}/media`, {
       method: 'POST', headers: { Authorization: `Bearer ${creds.token}` }, body: form,
       cache: 'no-store', signal: AbortSignal.timeout(30_000),
     })
@@ -204,7 +205,7 @@ export async function downloadWhatsAppMedia(creds: WhatsAppCreds, mediaId: strin
   // La URL debe ser de Meta: nunca seguir una URL arbitraria con el token.
   if (!url || !/^https:\/\/[a-z0-9.-]+\.(fbsbx|facebook|whatsapp)\.(com|net)\//i.test(url)) return null
   if (Number(meta?.data?.file_size) > MAX_MEDIA_DOWNLOAD_BYTES) return null
-  const res = await fetch(url, {
+  const res = await externalFetch(url, {
     headers: { Authorization: `Bearer ${creds.token}` },
     cache: 'no-store',
     redirect: 'error',

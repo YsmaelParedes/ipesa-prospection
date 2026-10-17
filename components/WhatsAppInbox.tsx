@@ -1,5 +1,11 @@
 'use client'
 
+import { useQueryEffect } from '@/lib/useCachedQuery'
+
+
+import { apiFetch, invalidateQueries } from '@/lib/apiClient'
+
+
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -108,7 +114,7 @@ function displayName(c: { name: string | null; profileName: string | null; phone
   return c.name || (c.profileName ? `~ ${c.profileName}` : fmtPhone(c.phone))
 }
 
-const notifyUnreadChanged = () => window.dispatchEvent(new CustomEvent('crm:wa-unread-changed'))
+const notifyUnreadChanged = () => { invalidateQueries(['/api/whatsapp/unread']); window.dispatchEvent(new CustomEvent('crm:wa-unread-changed')) }
 const fmtShortDay = (iso: string) => new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -136,7 +142,11 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
   const [newConvOpen, setNewConvOpen]     = useState(false)
   const [toast, setToast]                 = useState('')
 
+  const listRequest = useRef(0)
+  const threadRequest = useRef(0)
+  const selectedRef = useRef<string | null>(null)
   const selected = /^\d{10}$/.test(urlPhone) ? urlPhone : null
+  selectedRef.current = selected
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2600) }
 
   // Panel del CRM abierto por defecto en pantallas anchas
@@ -151,37 +161,42 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
   }, [search])
 
   const loadConversations = useCallback(async (opts: { append?: boolean } = {}) => {
+    const request = ++listRequest.current
     try {
       const params = new URLSearchParams({ filter })
       if (debounced) params.set('q', debounced)
       if (opts.append && conversations.length) params.set('before', conversations[conversations.length - 1].lastAt)
-      const r = await fetch(`/api/whatsapp/conversations?${params}`)
+      const r = await apiFetch(`/api/whatsapp/conversations?${params}`)
       const d = await r.json()
       if (!r.ok) throw new Error(d.error)
+      if (request !== listRequest.current) return
       setConversations(prev => opts.append ? [...prev, ...d.conversations] : d.conversations)
       setHasMore(!!d.hasMore)
       setListError('')
     } catch (e: any) {
+      if (request !== listRequest.current) return
       setListError(e?.message || 'No se pudieron cargar las conversaciones')
     } finally {
-      setLoadingList(false)
+      if (request === listRequest.current) setLoadingList(false)
     }
   }, [filter, debounced, conversations])
 
   // Recarga completa al cambiar filtro/búsqueda (no depende de `conversations`)
   const loadRef = useRef(loadConversations)
   loadRef.current = loadConversations
-  useEffect(() => { setLoadingList(true); loadRef.current() }, [filter, debounced])
-  useVisiblePolling(() => loadRef.current(), 15_000)
+  useQueryEffect(() => { loadRef.current() }, [filter, debounced])
+  // The shared query scheduler polls the visible inbox every 15 seconds.
 
   /* ── Hilo seleccionado ── */
   const loadThread = useCallback(async (phone: string, { silent = false } = {}) => {
+    const request = ++threadRequest.current
     if (!silent) setLoadingThread(true)
     try {
       // El encabezado pide marcar como leído (un enlace desde otro sitio no puede mandarlo)
-      const r = await fetch(`/api/whatsapp/conversations/${phone}${silent ? '?limit=60' : ''}`, { headers: { 'x-crm-read': '1' } })
+      const r = await apiFetch(`/api/whatsapp/conversations/${phone}${silent ? '?limit=60' : ''}`, { headers: { 'x-crm-read': '1' } })
       const d = await r.json()
       if (!r.ok) throw new Error(d.error)
+      if (request !== threadRequest.current || selectedRef.current !== phone) return
       setThread(prev => {
         if (silent && prev?.phone === phone) {
           return { ...prev, ...d, messages: mergeMessages(prev.messages, d.messages) }
@@ -193,13 +208,13 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
         notifyUnreadChanged()
       }
     } catch {
-      if (!silent) setThread({ phone, messages: [], contact: null, leads: [], profileName: null, lastInboundAt: null, noWhatsApp: null })
+      if (!silent && request === threadRequest.current && selectedRef.current === phone) setThread({ phone, messages: [], contact: null, leads: [], profileName: null, lastInboundAt: null, noWhatsApp: null })
     } finally {
-      if (!silent) setLoadingThread(false)
+      if (!silent && request === threadRequest.current) setLoadingThread(false)
     }
   }, [])
 
-  useEffect(() => {
+  useQueryEffect(() => {
     if (selected) loadThread(selected)
     else setThread(null)
   }, [selected, loadThread])
@@ -446,7 +461,7 @@ function ChatView({
     nearBottom.current = true
     setThread(prev => prev && prev.phone === phone ? { ...prev, messages: [...prev.messages, tmp] } : prev)
     try {
-      const r = await fetch(`/api/whatsapp/conversations/${phone}`, {
+      const r = await apiFetch(`/api/whatsapp/conversations/${phone}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ body: text }),
       })
       const d = await r.json()
@@ -469,7 +484,7 @@ function ChatView({
       const form = new FormData()
       form.append('file', file)
       if (caption) form.append('caption', caption)
-      const r = await fetch(`/api/whatsapp/conversations/${phone}/media`, { method: 'POST', body: form })
+      const r = await apiFetch(`/api/whatsapp/conversations/${phone}/media`, { method: 'POST', body: form })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) return d.error || 'No se pudo enviar el archivo'
       if (d.message) onMessageSent(d.message)
@@ -640,10 +655,10 @@ function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onSendFile, o
     el.style.height = `${Math.min(el.scrollHeight, 140)}px`
   }, [draft])
 
-  useEffect(() => {
-    if (!quickOpen || quick) return
-    fetch('/api/whatsapp/quick-replies').then(r => r.json()).then(d => setQuick(d.items ?? [])).catch(() => setQuick([]))
-  }, [quickOpen, quick])
+  useQueryEffect(() => {
+    if (!quickOpen) return
+    apiFetch('/api/whatsapp/quick-replies').then(r => r.json()).then(d => setQuick(d.items ?? [])).catch(() => setQuick([]))
+  }, [quickOpen])
 
   useEffect(() => {
     if (!quickOpen) return
@@ -805,7 +820,7 @@ function CrmPanel({ phone, thread, convo, onClose, onChanged, toast }: {
   onClose: () => void; onChanged: () => void; toast: (m: string) => void
 }) {
   const [config, setConfig] = useState<ConfigLists>({ segments: [], canales: [] })
-  useEffect(() => { loadCatalogs().then(setConfig) }, [])
+  useQueryEffect(() => { loadCatalogs().then(setConfig).catch(() => {}) }, [])
 
   const contact = thread?.contact ?? null
   const profileName = thread?.profileName ?? convo?.profileName ?? null
@@ -870,7 +885,7 @@ function SaveContactSection({ phone, profileName, config, onSaved }: {
   const save = async () => {
     setSaving(true); setError('')
     try {
-      const r = await fetch('/api/data/contacts', {
+      const r = await apiFetch('/api/data/contacts', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), phone, segment, acquisition_channel: canal }),
       })
@@ -924,7 +939,7 @@ function LeadsSection({ contact, phone, leads, config, onChanged, toast }: {
   const create = async () => {
     setSaving(true); setError('')
     try {
-      const r = await fetch('/api/data/leads', {
+      const r = await apiFetch('/api/data/leads', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: contact.name, phone, email: contact.email ?? '', contact_id: contact.id,
@@ -1002,7 +1017,7 @@ function ReminderSection({ contact, leads, toast }: { contact: Contact; leads: L
   const save = async () => {
     setSaving(true); setError('')
     try {
-      const r = await fetch('/api/data/reminders', {
+      const r = await apiFetch('/api/data/reminders', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nota: nota.trim() || `Dar seguimiento por WhatsApp a ${contact.name}`,
@@ -1040,7 +1055,7 @@ function OptOutSection({ phone, optOut, onChanged, toast }: { phone: string; opt
   const toggle = async () => {
     setSaving(true)
     try {
-      const r = await fetch(`/api/whatsapp/conversations/${phone}`, {
+      const r = await apiFetch(`/api/whatsapp/conversations/${phone}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ optOut: !optOut }),
       })
       if (r.ok) { toast(optOut ? 'Volverá a recibir campañas' : 'Ya no recibirá campañas'); notifyDataChanged('contact'); onChanged() }
@@ -1072,7 +1087,7 @@ function TemplateSendModal({ phone, name, force = false, onClose, onSent }: { ph
     if (!selection?.ready) return
     setSending(true); setError('')
     try {
-      const r = await fetch('/api/whatsapp/campaigns/send', {
+      const r = await apiFetch('/api/whatsapp/campaigns/send', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone, template: selection.templateName, language: selection.language, category: selection.category,
@@ -1119,8 +1134,8 @@ function NewConversationModal({ onClose, onPick }: { onClose: () => void; onPick
   const [loading, setLoading]   = useState(true)
   const [q, setQ]               = useState('')
 
-  useEffect(() => {
-    fetch('/api/data/contacts').then(r => r.json()).then(d => setContacts(d.contacts ?? [])).catch(() => {}).finally(() => setLoading(false))
+  useQueryEffect(() => {
+    apiFetch('/api/data/contacts').then(r => r.json()).then(d => setContacts(d.contacts ?? [])).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   const digits = q.replace(/\D/g, '')

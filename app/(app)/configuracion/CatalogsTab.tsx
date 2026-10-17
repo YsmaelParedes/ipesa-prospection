@@ -1,7 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { invalidateCatalogs } from '@/lib/catalogs'
+import { useQueryEffect } from '@/lib/useCachedQuery'
+
+
+import { useCallback, useState } from 'react'
 import { Ico, Note, Panel, Spinner, api, send, useToast } from './ui'
 import s from './configuracion.module.css'
 
@@ -45,7 +47,7 @@ function CatalogPanel({ type, title, singular, subtitle, icon, tone, canEdit }: 
       setLoading(false)
     }
   }, [type])
-  useEffect(() => { load() }, [load])
+  useQueryEffect(() => { load() }, [load])
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,7 +60,6 @@ function CatalogPanel({ type, title, singular, subtitle, icon, tone, canEdit }: 
       await api('/api/data/config', send('POST', { type, label: trimmed }))
       setLabel('')
       showToast(`"${trimmed}" agregado`)
-      invalidateCatalogs()
       await load()
     } catch (err) {
       setError((err as Error).message)
@@ -72,7 +73,6 @@ function CatalogPanel({ type, title, singular, subtitle, icon, tone, canEdit }: 
     try {
       await api(`/api/data/config/${item.id}`, { method: 'DELETE' })
       showToast(`"${item.label}" eliminado`)
-      invalidateCatalogs()
     } catch (err) {
       setError((err as Error).message)
     }

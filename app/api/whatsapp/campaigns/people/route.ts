@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextResponse } from 'next/server'
 import { requireStore } from '@/lib/supabase-server'
 import { loadPeople } from '@/lib/campaignPeople'
@@ -9,7 +10,7 @@ import { serverError } from '@/lib/validation'
  * Cómo le fue a cada número con las campañas del último año: respondió, leyó,
  * no le llegó, sin WhatsApp… (Resultados → Por persona).
  */
-export async function GET() {
+async function GETImpl() {
   const ctx = await requireStore({ admin: true, module: 'campaigns' })
   if (ctx instanceof Response) return ctx
 
@@ -19,3 +20,5 @@ export async function GET() {
     return serverError('GET /api/whatsapp/campaigns/people', error, 'Error al obtener los resultados por persona')
   }
 }
+
+export const GET = withServerTiming(GETImpl)

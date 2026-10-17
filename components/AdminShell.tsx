@@ -1,7 +1,12 @@
 'use client'
 
+import { apiFetch } from '@/lib/apiClient'
+
+
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
+import Link from '@/components/CachedLink'
+import QueryBoundary from '@/components/QueryBoundary'
+import SessionScope from '@/components/SessionScope'
 import { usePathname } from 'next/navigation'
 import { BrandLogo } from '@/components/Brand'
 import { invalidateSession, useSession } from '@/lib/profile'
@@ -35,7 +40,7 @@ const NAV = [
 
 const initials = (name: string) => name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 
-export default function AdminShell({ children }: { children: React.ReactNode }) {
+function AdminShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const session  = useSession()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -52,7 +57,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const openStore = async (storeId: string) => {
     setOpening(storeId)
     if (storeId !== session?.store?.id) {
-      const r = await fetch('/api/stores/switch', {
+      const r = await apiFetch('/api/stores/switch', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storeId }),
       }).catch(() => null)
       if (!r?.ok) { setOpening(null); return }
@@ -127,8 +132,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             </div>
           </div>
         </div>
-        <div className="content">{children}</div>
+        <div className="content"><QueryBoundary>{children}</QueryBoundary></div>
       </main>
     </div>
   )
+}
+
+export default function AdminShell({ children }: { children: React.ReactNode }) {
+  return <SessionScope><AdminShellContent>{children}</AdminShellContent></SessionScope>
 }

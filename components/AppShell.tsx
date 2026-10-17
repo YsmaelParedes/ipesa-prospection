@@ -1,7 +1,13 @@
 'use client'
 
+import { apiFetch } from '@/lib/apiClient'
+
+
 import { useState, useEffect, useRef, useCallback } from 'react'
-import Link from 'next/link'
+import Link from '@/components/CachedLink'
+import { useQueryEffect } from '@/lib/useCachedQuery'
+import QueryBoundary from '@/components/QueryBoundary'
+import SessionScope from '@/components/SessionScope'
 import { usePathname, useRouter } from 'next/navigation'
 import { BrandLogo } from '@/components/Brand'
 import GlobalSearch from '@/components/GlobalSearch'
@@ -25,19 +31,6 @@ function pushStateOf(sub: PushSubscription | null): 'blocked' | 'off' | 'on' {
 
 /** Cada cuánto se vuelve a sugerir activar los avisos si alguien cerró la sugerencia. */
 const PUSH_PROMPT_SNOOZE_MS = 7 * 86_400_000
-
-/** Ejecuta `fn` cada `ms` solo con la pestaña visible (y al volver a ella). */
-function useVisibleInterval(fn: () => void, ms: number) {
-  const ref = useRef(fn)
-  ref.current = fn
-  useEffect(() => {
-    ref.current()
-    const t = setInterval(() => { if (document.visibilityState === 'visible') ref.current() }, ms)
-    const onVis = () => { if (document.visibilityState === 'visible') ref.current() }
-    document.addEventListener('visibilitychange', onVis)
-    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVis) }
-  }, [ms])
-}
 
 /* ── Iconos ── */
 type IconProps = React.SVGProps<SVGSVGElement>
@@ -102,7 +95,7 @@ const FAB_ROUTES: Record<string, 'contact' | 'lead' | 'reminder' | undefined> = 
   '/': undefined, '/contactos': 'contact', '/leads': 'lead', '/recordatorios': 'reminder',
 }
 
-export default function AppShell({ children }: { children: React.ReactNode }) {
+function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router   = useRouter()
   const session  = useSession()
@@ -176,7 +169,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const switchStore = async (storeId: string) => {
     setStoreMenuOpen(false)
     if (storeId === store?.id) return
-    const r = await fetch('/api/stores/switch', {
+    const r = await apiFetch('/api/stores/switch', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storeId }),
     })
     if (r.ok) { invalidateSession(); window.location.href = '/' }
@@ -184,12 +177,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   /* WhatsApp: conversaciones sin leer (menú + título de la pestaña) */
   const loadWaUnread = useCallback(() => {
-    fetch('/api/whatsapp/unread')
+    apiFetch('/api/whatsapp/unread')
       .then(r => (r.ok ? r.json() : null))
       .then(d => { if (d && typeof d.unread === 'number') setWaUnread(d.unread) })
       .catch(() => {})
   }, [])
-  useVisibleInterval(loadWaUnread, 30_000)
+  useQueryEffect(() => { loadWaUnread() }, [loadWaUnread])
   useEffect(() => {
     window.addEventListener('crm:wa-unread-changed', loadWaUnread)
     return () => window.removeEventListener('crm:wa-unread-changed', loadWaUnread)
@@ -216,7 +209,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         setPushState(pushStateOf(sub))
         if (!sub) return
         // Re-guardar la suscripción para garantizar que quede ligada al usuario actual
-        fetch('/api/push/subscribe', {
+        apiFetch('/api/push/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(sub.toJSON()),
@@ -262,7 +255,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   /* Recordatorios pendientes + notificación local si alguno vence ahora */
   const loadReminders = useCallback(async () => {
     try {
-      const r = await fetch('/api/data/reminders')
+      const r = await apiFetch('/api/data/reminders')
       if (!r.ok) return
       const d = await r.json()
       const pending: Reminder[] = (d.reminders || []).filter((rem: Reminder) => !rem.completado)
@@ -290,7 +283,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       }
     } catch {}
   }, [])
-  useVisibleInterval(loadReminders, 60_000)
+  useQueryEffect(() => { loadReminders() }, [loadReminders])
   useDataChanged(['reminder'], loadReminders)
 
   /* Cerrar campana con clic fuera o Escape */
@@ -304,7 +297,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [bellOpen])
 
   const completeReminder = async (id: string) => {
-    const r = await fetch(`/api/data/reminders/${id}`, {
+    const r = await apiFetch(`/api/data/reminders/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ completado: true }),
@@ -563,7 +556,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <div className="content">{children}</div>
+        <div className="content"><QueryBoundary>{children}</QueryBoundary></div>
       </main>
 
       {/* ── Bottom nav (celular) ── */}
@@ -629,4 +622,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       )}
     </div>
   )
+}
+
+export default function AppShell({ children }: { children: React.ReactNode }) {
+  return <SessionScope><AppShellContent>{children}</AppShellContent></SessionScope>
 }

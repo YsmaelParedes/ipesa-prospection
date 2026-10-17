@@ -1,9 +1,10 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 
 // GET /api/whatsapp/quick-replies — respuestas rápidas del equipo de la tienda
-export async function GET() {
+async function GETImpl() {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
 
@@ -36,3 +37,5 @@ export async function POST(req: NextRequest) {
   if (error) return serverError('POST /api/whatsapp/quick-replies', error, 'Error al guardar la respuesta rápida')
   return NextResponse.json(data?.[0] ?? {})
 }
+
+export const GET = withServerTiming(GETImpl)

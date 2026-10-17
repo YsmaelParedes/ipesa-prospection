@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, parseFields, readJson, serverError, type Schema } from '@/lib/validation'
@@ -12,7 +13,7 @@ const ACTIVITY_SCHEMA: Schema = {
 }
 
 // GET /api/data/activities?lead_id=xxx — historial de un lead al que el usuario tiene acceso
-export async function GET(req: NextRequest) {
+async function GETImpl(req: NextRequest) {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
 
@@ -48,3 +49,5 @@ export async function POST(req: NextRequest) {
   if (error) return serverError('POST /api/data/activities', error, 'Error al crear actividad')
   return NextResponse.json(data?.[0] ?? {})
 }
+
+export const GET = withServerTiming(GETImpl)

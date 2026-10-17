@@ -1,6 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useQueryEffect } from '@/lib/useCachedQuery'
+
+
+import { apiFetch } from '@/lib/apiClient'
+
+
+import { useCallback, useState } from 'react'
 import { fmtDate } from './data'
 import s from './admin.module.css'
 
@@ -52,7 +58,7 @@ function ConnectForm({ storeId, encryptionReady, onConnected, onCancel }: {
     setError('')
     setBusy(true)
     try {
-      const r = await fetch(`/api/platform/stores/${storeId}/whatsapp`, {
+      const r = await apiFetch(`/api/platform/stores/${storeId}/whatsapp`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(f),
       })
       const d = await r.json().catch(() => ({}))
@@ -106,7 +112,7 @@ export function WhatsAppConnectionBlock({ storeId, onChanged }: { storeId: strin
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`/api/platform/stores/${storeId}/whatsapp`, { cache: 'no-store' })
+      const r = await apiFetch(`/api/platform/stores/${storeId}/whatsapp`, { cache: 'no-store' })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d.error || 'No se pudo consultar la conexión')
       setConn(d)
@@ -115,7 +121,7 @@ export function WhatsAppConnectionBlock({ storeId, onChanged }: { storeId: strin
       setError((err as Error).message)
     }
   }, [storeId])
-  useEffect(() => { load() }, [load])
+  useQueryEffect(() => { load() }, [load])
 
   const connected = async (text: string) => {
     setEditing(false)
@@ -126,7 +132,7 @@ export function WhatsAppConnectionBlock({ storeId, onChanged }: { storeId: strin
   const disconnect = async () => {
     setBusy(true)
     try {
-      const r = await fetch(`/api/platform/stores/${storeId}/whatsapp`, { method: 'DELETE' })
+      const r = await apiFetch(`/api/platform/stores/${storeId}/whatsapp`, { method: 'DELETE' })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d.error || 'No se pudo desconectar')
       setConfirmOff(false)

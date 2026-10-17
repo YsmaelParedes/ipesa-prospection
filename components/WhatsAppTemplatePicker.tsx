@@ -1,5 +1,11 @@
 'use client'
 
+import { useQueryEffect } from '@/lib/useCachedQuery'
+
+
+import { apiFetch } from '@/lib/apiClient'
+
+
 import { useEffect, useMemo, useState } from 'react'
 import type { WhatsAppTemplateDef } from '@/lib/whatsappTemplates'
 
@@ -23,13 +29,11 @@ const CATEGORY_LABEL: Record<string, string> = { MARKETING: 'Marketing', UTILITY
 const QUALITY_LABEL: Record<string, string> = { GREEN: 'calidad alta', YELLOW: 'calidad media', RED: 'calidad baja' }
 
 // Plantillas compartidas entre todos los selectores abiertos de la sesión
-let templatesPromise: Promise<{ templates: WhatsAppTemplateDef[]; error: string }> | null = null
-function loadTemplates() {
-  templatesPromise ??= fetch('/api/whatsapp/templates')
+function loadTemplates(): Promise<{ templates: WhatsAppTemplateDef[]; error: string }> {
+  return apiFetch('/api/whatsapp/templates')
     .then(r => r.json())
     .then(d => ({ templates: d.templates ?? [], error: d.error ?? '' }))
-    .catch(() => { templatesPromise = null; return { templates: [], error: 'No se pudieron consultar las plantillas en Meta' } })
-  return templatesPromise
+    .catch(() => { return { templates: [], error: 'No se pudieron consultar las plantillas en Meta' } })
 }
 
 /**
@@ -73,7 +77,7 @@ export function WhatsAppTemplatePicker({
   const ready = !!template && !template.unsupported && hasImageReady && !uploadingImage && !checkingImage && !missingValue
 
   // Plantillas aprobadas en vivo desde Meta; si falla se muestra el motivo.
-  useEffect(() => {
+  useQueryEffect(() => {
     loadTemplates().then(({ templates: list, error }) => {
       setTemplates(list)
       setTemplatesError(error)
@@ -86,13 +90,18 @@ export function WhatsAppTemplatePicker({
   // Al elegir/cambiar de plantilla, revisa si ya hay una imagen guardada para ella
   useEffect(() => {
     setParams([])
-    if (!template?.hasImageHeader) { setSavedImageUrl(''); return }
-    setCheckingImage(true); setSavedImageUrl(''); setLocalPreviewUrl(''); setReplacingImage(false)
-    fetch(`/api/whatsapp/template-image?template=${encodeURIComponent(template.name)}`)
+    setSavedImageUrl(''); setLocalPreviewUrl(''); setReplacingImage(false)
+  }, [template?.name, template?.hasImageHeader])
+  useQueryEffect(() => {
+    if (!template?.hasImageHeader) { setCheckingImage(false); return }
+    let active = true
+    setCheckingImage(true)
+    apiFetch(`/api/whatsapp/template-image?template=${encodeURIComponent(template.name)}`)
       .then(r => r.json())
-      .then(d => setSavedImageUrl(d.url || ''))
+      .then(d => { if (active) setSavedImageUrl(d.url || '') })
       .catch(() => {})
-      .finally(() => setCheckingImage(false))
+      .finally(() => { if (active) setCheckingImage(false) })
+    return () => { active = false }
   }, [template?.name, template?.hasImageHeader])
 
   // Libera la URL temporal de la vista previa local
@@ -122,7 +131,7 @@ export function WhatsAppTemplatePicker({
       const fd = new FormData()
       fd.append('file', file)
       fd.append('template', template.name)
-      const r = await fetch('/api/whatsapp/template-image', { method: 'POST', body: fd })
+      const r = await apiFetch('/api/whatsapp/template-image', { method: 'POST', body: fd })
       const d = await r.json()
       if (!r.ok) { setUploadError(d.error || 'Error al subir la imagen'); return }
       setSavedImageUrl(d.url)

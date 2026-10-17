@@ -1,5 +1,10 @@
 'use client'
 
+import { useQueryEffect } from '@/lib/useCachedQuery'
+
+import { apiFetch } from '@/lib/apiClient'
+
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Avatar, EstadoChip } from '@/components/CrmUI'
@@ -34,7 +39,7 @@ export default function LeadCreateModal({ contact: fixedContact, onClose, onSave
   const [error, setError]   = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { loadSearchIndex().then(i => { setContacts(i.contacts); setLeads(i.leads) }) }, [])
+  useQueryEffect(() => { loadSearchIndex().then(i => { setContacts(i.contacts); setLeads(i.leads) }).catch(() => {}) }, [])
   useEffect(() => { if (!contact) setTimeout(() => searchRef.current?.focus(), 80) }, [contact])
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !saving && !creatingContact) onClose() }
@@ -71,7 +76,7 @@ export default function LeadCreateModal({ contact: fixedContact, onClose, onSave
     if (!contact || saving) return
     setSaving(true); setError('')
     try {
-      const r = await fetch('/api/data/leads', {
+      const r = await apiFetch('/api/data/leads', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: contact.name, phone: contact.phone, email: contact.email || '', contact_id: contact.id,

@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, parseFields, readJson, serverError } from '@/lib/validation'
@@ -14,7 +15,7 @@ const COLUMNS = 'id, user_id, lead_id, lead_name, nota, reminder_date, completad
  *   (de cualquier persona del equipo), si el usuario puede ver el lead: así la
  *   ficha muestra el mismo seguimiento que la lista. Solo su autor los edita.
  */
-export async function GET(req: NextRequest) {
+async function GETImpl(req: NextRequest) {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
 
@@ -79,3 +80,5 @@ export async function POST(req: NextRequest) {
   if (error) return serverError('POST /api/data/reminders', error, 'Error al crear recordatorio')
   return NextResponse.json(data?.[0] ? reminderToApp(data[0]) : {})
 }
+
+export const GET = withServerTiming(GETImpl)

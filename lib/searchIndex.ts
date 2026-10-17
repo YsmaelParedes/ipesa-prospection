@@ -1,3 +1,4 @@
+import { apiFetch } from '@/lib/apiClient'
 /**
  * Índice en memoria de contactos y leads para el buscador global, el
  * selector de contacto y la detección de duplicados. Se descarga la primera
@@ -16,26 +17,15 @@ export type IndexLead = {
 }
 export type SearchIndex = { contacts: IndexContact[]; leads: IndexLead[] }
 
-let cache: Promise<SearchIndex> | null = null
-let listening = false
-
 export const normText = (s: string | null | undefined) =>
   (s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
 
 export function loadSearchIndex(): Promise<SearchIndex> {
-  if (!listening && typeof window !== 'undefined') {
-    listening = true
-    window.addEventListener('crm:data-changed', e => {
-      const kind = (e as CustomEvent).detail?.kind
-      if (kind === 'contact' || kind === 'lead') cache = null
-    })
-  }
-  cache ??= Promise.all([
-    fetch('/api/data/contacts').then(r => (r.ok ? r.json() : { contacts: [] })),
-    fetch('/api/data/leads').then(r => (r.ok ? r.json() : { leads: [] })),
+  return Promise.all([
+    apiFetch('/api/data/contacts').then(r => (r.ok ? r.json() : { contacts: [] })),
+    apiFetch('/api/data/leads').then(r => (r.ok ? r.json() : { leads: [] })),
   ]).then(([c, l]) => ({ contacts: c.contacts ?? [], leads: l.leads ?? [] }))
-    .catch(() => { cache = null; return { contacts: [], leads: [] } })
-  return cache
+
 }
 
 const tokens = (text: string) => normText(text).split(/[\s.,;:()/@_-]+/).filter(Boolean)

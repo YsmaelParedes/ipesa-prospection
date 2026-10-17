@@ -1,10 +1,11 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireUser } from '@/lib/supabase-server'
 import { jsonError, readJson, serverError } from '@/lib/validation'
 import { validPushEndpoint as validEndpoint, validPushKeys } from '@/lib/pushEndpoint'
 
 // GET /api/push/subscribe?endpoint=… — preferencias de este dispositivo
-export async function GET(req: NextRequest) {
+async function GETImpl(req: NextRequest) {
   const user = await requireUser()
   if (user instanceof Response) return user
 
@@ -82,3 +83,5 @@ export async function DELETE(req: NextRequest) {
   if (error) return serverError('DELETE /api/push/subscribe', error, 'Error al eliminar suscripción')
   return NextResponse.json({ ok: true })
 }
+
+export const GET = withServerTiming(GETImpl)

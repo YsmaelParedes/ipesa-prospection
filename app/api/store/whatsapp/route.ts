@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextResponse } from 'next/server'
 import { requireStore } from '@/lib/supabase-server'
 import { credsFromRow, getStoreWhatsAppRow } from '@/lib/storeWhatsApp'
@@ -8,7 +9,7 @@ import { jsonError } from '@/lib/validation'
  * conectado. Sin datos técnicos: la conexión (credenciales y webhook) la hace
  * el asesor desde el panel de la plataforma (/api/platform/stores/[id]/whatsapp).
  */
-export async function GET() {
+async function GETImpl() {
   const ctx = await requireStore({ admin: true, module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
   const row = await getStoreWhatsAppRow(ctx.storeId)
@@ -21,3 +22,5 @@ export async function GET() {
     receivesMessages: !!creds?.appSecret,
   }, { headers: { 'Cache-Control': 'no-store' } })
 }
+
+export const GET = withServerTiming(GETImpl)

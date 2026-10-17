@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
@@ -7,7 +8,7 @@ import { fetchPaged } from '@/lib/paged'
 const MAX_BULK = 500
 
 // GET /api/data/contacts — base de contactos de la tienda (compartida por su equipo), completa
-export async function GET() {
+async function GETImpl() {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
 
@@ -93,3 +94,5 @@ export async function DELETE(req: NextRequest) {
   if (error) return serverError('DELETE /api/data/contacts', error, 'Error al eliminar contactos')
   return NextResponse.json({ success: true, deleted: ids.length })
 }
+
+export const GET = withServerTiming(GETImpl)

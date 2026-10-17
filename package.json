@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test:cache": "node --test tests/query-cache.test.cjs tests/api-client.test.cjs tests/server-timing.test.cjs tests/dashboard-whatsapp.test.cjs",
+    "benchmark:api": "node scripts/benchmark-api.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.10.3",

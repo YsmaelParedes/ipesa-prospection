@@ -1,5 +1,8 @@
 'use client'
 
+import { apiFetch } from '@/lib/apiClient'
+
+
 import { useCallback, useRef, useState } from 'react'
 import s from './configuracion.module.css'
 
@@ -9,7 +12,7 @@ export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Bool
 
 /** fetch que lanza Error con el mensaje de la API. */
 export async function api<T = any>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, init)
+  const res = await apiFetch(path, init)
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || 'Algo salió mal. Intenta de nuevo.')
   return data as T

@@ -1,6 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useQueryEffect } from '@/lib/useCachedQuery'
+
+
+import { apiFetch } from '@/lib/apiClient'
+
+
+import { useState } from 'react'
 import { currentSubscription, disableDevicePush, enableDevicePush, pushSupport, testDevicePush } from '@/lib/pushClient'
 import { Ico, Note, Panel, cx } from './ui'
 import s from './configuracion.module.css'
@@ -22,13 +28,13 @@ export function NotificationsPanel() {
   const [error, setError]       = useState('')
   const [info, setInfo]         = useState('')
 
-  useEffect(() => {
+  useQueryEffect(() => {
     const support = pushSupport()
     if (support !== 'ok') { setStatus(support); return }
     currentSubscription().then(sub => {
       if (!sub) { setStatus(Notification.permission === 'denied' ? 'blocked' : 'off'); return }
       setStatus('on')
-      fetch(`/api/push/subscribe?endpoint=${encodeURIComponent(sub.endpoint)}`)
+      apiFetch(`/api/push/subscribe?endpoint=${encodeURIComponent(sub.endpoint)}`)
         .then(r => (r.ok ? r.json() : null))
         .then(d => { if (d) setWhatsapp(d.notifyWhatsapp !== false) })
         .catch(() => {})
@@ -71,7 +77,7 @@ export function NotificationsPanel() {
     setWhatsapp(next)
     const sub = await currentSubscription()
     if (!sub) return
-    const r = await fetch('/api/push/subscribe', {
+    const r = await apiFetch('/api/push/subscribe', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ endpoint: sub.endpoint, notifyWhatsapp: next }),
     }).catch(() => null)

@@ -1,5 +1,11 @@
 'use client'
 
+import { useQueryEffect, useQueryRefresh } from '@/lib/useCachedQuery'
+
+
+import { apiFetch } from '@/lib/apiClient'
+
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 /* ══════════════════════════════════════════════════════════
@@ -77,12 +83,12 @@ export default function FormulasPage() {
   const reqRef = useRef(0)
 
   /* Catálogos disponibles */
-  useEffect(() => {
-    fetch('/api/formulas')
+  useQueryEffect(() => {
+    apiFetch('/api/formulas')
       .then(r => r.json())
       .then(d => {
         setCatalogs(d.catalogs || [])
-        if (d.catalogs?.[0]) setCatalogId(d.catalogs[0].id)
+        if (d.catalogs?.[0]) setCatalogId(current => current || d.catalogs[0].id)
       })
       .catch(() => {})
   }, [])
@@ -91,18 +97,19 @@ export default function FormulasPage() {
     if (!id) return
     const req = ++reqRef.current
     setLoading(true)
-    fetch(`/api/formulas/${id}?q=${encodeURIComponent(q)}`)
+    apiFetch(`/api/formulas/${id}?q=${encodeURIComponent(q)}`)
       .then(r => r.json())
       .then((d: CatalogResponse) => {
         if (req !== reqRef.current) return
         setResults(d.colors || [])
         setMatchCount(d.matchCount ?? 0)
       })
-      .catch(() => { if (req === reqRef.current) { setResults([]); setMatchCount(0) } })
+      .catch(() => { /* Keep the last valid colors; the shared query status reports the failure. */ })
       .finally(() => { if (req === reqRef.current) setLoading(false) })
   }, [])
 
   /* Búsqueda con debounce */
+  useQueryRefresh(catalogId ? [`/api/formulas/${catalogId}?q=${encodeURIComponent(query)}`] : [], () => runSearch(catalogId, query))
   useEffect(() => {
     if (!catalogId) return
     if (debounceRef.current) clearTimeout(debounceRef.current)

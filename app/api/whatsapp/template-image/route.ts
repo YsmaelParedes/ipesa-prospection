@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { getStoreWhatsAppRow } from '@/lib/storeWhatsApp'
@@ -32,7 +33,7 @@ async function findImage(storeId: string, template: string) {
 }
 
 // GET /api/whatsapp/template-image?template=nombre — URL pública guardada (o null)
-export async function GET(req: NextRequest) {
+async function GETImpl(req: NextRequest) {
   const ctx = await requireStore({ module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
 
@@ -85,3 +86,5 @@ export async function POST(req: NextRequest) {
     return serverError('POST /api/whatsapp/template-image', error, 'Error al subir la imagen')
   }
 }
+
+export const GET = withServerTiming(GETImpl)

@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse, after } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { markWhatsAppRead, sendWhatsAppText } from '@/lib/whatsapp'
@@ -28,7 +29,7 @@ async function phoneParam(params: Ctx['params']): Promise<string | null> {
  * `x-crm-read: 1`, marca los entrantes como leídos (también en el WhatsApp
  * del cliente).
  */
-export async function GET(req: NextRequest, { params }: Ctx) {
+async function GETImpl(req: NextRequest, { params }: Ctx) {
   const ctx = await requireStore({ module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
   const phone = await phoneParam(params)
@@ -170,3 +171,5 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (error) return serverError('PATCH /api/whatsapp/conversations/[phone]', error, 'Error al guardar la preferencia')
   return NextResponse.json({ ok: true, optOut: body.optOut })
 }
+
+export const GET = withServerTiming(GETImpl)

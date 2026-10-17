@@ -1,5 +1,11 @@
 'use client'
 
+import { useQueryEffect } from '@/lib/useCachedQuery'
+
+
+import { apiFetch } from '@/lib/apiClient'
+
+
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Avatar, TipoChip } from '@/components/CrmUI'
@@ -78,10 +84,10 @@ export function WhatsAppCampaignResults({ onRetry, onOpenChat }: {
   const [error, setError]   = useState('')
   const [openId, setOpenId] = useState<string | null>(null)
 
-  useEffect(() => {
+  useQueryEffect(() => {
     let cancelled = false
-    setList(null); setError('')
-    fetch(`/api/whatsapp/campaigns/history?days=${days}`)
+    setError('')
+    apiFetch(`/api/whatsapp/campaigns/history?days=${days}`)
       .then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d })
       .then(d => { if (!cancelled) setList(d.campaigns ?? []) })
       .catch(e => { if (!cancelled) setError(e?.message || 'No se pudo cargar el historial de campañas') })
@@ -213,9 +219,9 @@ function CampaignDetailView({ id, onBack, onRetry, onOpenChat }: {
   const [shown, setShown]   = useState(PAGE)
   const [copied, setCopied] = useState(false)
 
-  useEffect(() => {
+  useQueryEffect(() => {
     let cancelled = false
-    fetch(`/api/whatsapp/campaigns/history/${encodeURIComponent(id)}`)
+    apiFetch(`/api/whatsapp/campaigns/history/${encodeURIComponent(id)}`)
       .then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d })
       .then(d => { if (!cancelled) setData(d.campaign) })
       .catch(e => { if (!cancelled) setError(e?.message || 'No se pudo cargar la campaña') })

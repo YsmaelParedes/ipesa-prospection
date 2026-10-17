@@ -1,5 +1,11 @@
 'use client'
 
+import { useDataReady, useQueryEffect } from '@/lib/useCachedQuery'
+
+
+import { cachedQueryData, apiFetch, batchQueryChanges } from '@/lib/apiClient'
+
+
 import { Suspense, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -57,11 +63,12 @@ function ContactosContent() {
   const waModule     = !session?.store || session.store.modules.whatsapp
   const canCampaign  = isAdmin && waModule && (!session?.store || session.store.modules.campaigns)
 
-  const [contacts, setContacts]       = useState<any[]>([])
+  const [contacts, setContacts]       = useState<any[]>(() => cachedQueryData('/api/data/contacts')?.contacts ?? [])
   const [segF, setSegF]               = useState('Todos')
   const [canalF, setCanalF]           = useState('Todos')
   const [search, setSearch]           = useState(urlQuery ?? '')
-  const [loading, setLoading]         = useState(true)
+  const [loading, setLoading]         = useState(() => !cachedQueryData('/api/data/contacts'))
+  useDataReady(loading, 'contactos')
   const [selected, setSelected]       = useState<any | null>(null)
   const [showImport, setShowImport]   = useState(false)
   const [showExport, setShowExport]   = useState(false)
@@ -78,7 +85,7 @@ function ContactosContent() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch('/api/data/contacts')
+      const r = await apiFetch('/api/data/contacts')
       const d = await r.json()
       const list: any[] = d.contacts || []
       setContacts(list)
@@ -86,18 +93,18 @@ function ContactosContent() {
     } catch {} finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useQueryEffect(() => { load() }, [load])
   useDataChanged(['contact'], load)
 
   /* ?q= desde el buscador global */
   useEffect(() => { if (urlQuery !== null) setSearch(urlQuery) }, [urlQuery])
 
   /* Abrir la ficha indicada en la URL (?id=…), p. ej. desde el buscador o la bandeja de WhatsApp */
-  useEffect(() => {
+  useQueryEffect(() => {
     if (!deepId || loading) return
     const found = contacts.find(c => c.id === deepId)
     if (found) { setSelected(found); return }
-    fetch(`/api/data/contacts/${deepId}`).then(r => (r.ok ? r.json() : null)).then(c => { if (c?.id) setSelected(c) }).catch(() => {})
+    apiFetch(`/api/data/contacts/${deepId}`).then(r => (r.ok ? r.json() : null)).then(c => { if (c?.id) setSelected(c) }).catch(() => {})
   }, [deepId, loading, contacts])
 
   const closeDetail = () => {
@@ -179,7 +186,7 @@ function ContactosContent() {
     // Un request por cada 500
     for (let i = 0; i < ids.length; i += 500) {
       const chunk = ids.slice(i, i + 500)
-      const r = await fetch('/api/data/contacts', {
+      const r = await apiFetch('/api/data/contacts', {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: chunk }),
       }).catch(() => null)
       if (r?.ok) chunk.forEach(id => deleted.add(id))
@@ -430,12 +437,12 @@ function ContactDetail({ contact: c, readonly, waModule, onClose, onUpdated, onD
     const params = new URLSearchParams({ contact_id: c.id })
     if (phone.length === 10) params.set('phone', phone)
     const [l, own] = await Promise.all([
-      fetch(`/api/data/leads?${params}`).then(res => res.json()).catch(() => ({ leads: [] })),
-      fetch('/api/data/reminders').then(res => res.json()).catch(() => ({ reminders: [] })),
+      apiFetch(`/api/data/leads?${params}`).then(res => res.json()).catch(() => ({ leads: [] })),
+      apiFetch('/api/data/reminders').then(res => res.json()).catch(() => ({ reminders: [] })),
     ])
     const list: any[] = l.leads || []
     const perLead = await Promise.all(list.slice(0, 10).map(x =>
-      fetch(`/api/data/reminders?lead_id=${x.id}`).then(res => res.json()).then(d => d.reminders ?? []).catch(() => []),
+      apiFetch(`/api/data/reminders?lead_id=${x.id}`).then(res => res.json()).then(d => d.reminders ?? []).catch(() => []),
     ))
     const name = normText(c.name)
     const general = (own.reminders || []).filter((x: Reminder) => !x.lead_id && normText(x.lead_name) === name)
@@ -445,7 +452,7 @@ function ContactDetail({ contact: c, readonly, waModule, onClose, onUpdated, onD
       .sort((a: Reminder, b: Reminder) => a.fecha_recordatorio.localeCompare(b.fecha_recordatorio)))
   }, [c.id, c.name, phone])
 
-  useEffect(() => { loadFollowUp() }, [loadFollowUp])
+  useQueryEffect(() => { loadFollowUp() }, [loadFollowUp])
   useDataChanged(['lead', 'reminder'], loadFollowUp)
 
   const openLead = (leads ?? []).find(l => isOpenLead(l.estado))
@@ -457,7 +464,7 @@ function ContactDetail({ contact: c, readonly, waModule, onClose, onUpdated, onD
 
   const handleSave = async () => {
     setSaving(true); setSaveError('')
-    const r = await fetch(`/api/data/contacts/${c.id}`, {
+    const r = await apiFetch(`/api/data/contacts/${c.id}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...editForm, phone: normalizePhone(editForm.phone) }),
     })
@@ -474,13 +481,13 @@ function ContactDetail({ contact: c, readonly, waModule, onClose, onUpdated, onD
 
   const handleDelete = async () => {
     setDeleting(true)
-    const r = await fetch(`/api/data/contacts/${c.id}`, { method: 'DELETE' })
+    const r = await apiFetch(`/api/data/contacts/${c.id}`, { method: 'DELETE' })
     if (r.ok) onDeleted(c.id)
     else setDeleting(false)
   }
 
   const completeReminder = async (id: string) => {
-    const r = await fetch(`/api/data/reminders/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ completado: true }) })
+    const r = await apiFetch(`/api/data/reminders/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ completado: true }) })
     if (r.ok) notifyDataChanged('reminder')
   }
 
@@ -673,8 +680,8 @@ function ContactWhatsApp({ contact: c, readonly, onUpdated }: { contact: any; re
   const [data, setData] = useState<{ messages: any[]; lastInboundAt: string | null } | null>(null)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    fetch(`/api/whatsapp/conversations/${phone}?preview=1&limit=3`)
+  useQueryEffect(() => {
+    apiFetch(`/api/whatsapp/conversations/${phone}?preview=1&limit=3`)
       .then(r => (r.ok ? r.json() : null))
       .then(d => setData(d ? { messages: d.messages ?? [], lastInboundAt: d.lastInboundAt } : { messages: [], lastInboundAt: null }))
       .catch(() => setData({ messages: [], lastInboundAt: null }))
@@ -683,7 +690,7 @@ function ContactWhatsApp({ contact: c, readonly, onUpdated }: { contact: any; re
   const toggleOptOut = async () => {
     setSaving(true)
     try {
-      const r = await fetch(`/api/data/contacts/${c.id}`, {
+      const r = await apiFetch(`/api/data/contacts/${c.id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wa_opt_out: !c.wa_opt_out }),
       })
       if (r.ok) { const d = await r.json(); onUpdated(Array.isArray(d) ? d[0] : d) }
@@ -948,10 +955,11 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
     if (!preview) return
     setStep('importing'); setTotal(preview.valid.length); setProgress(0)
     let inserted = 0, duplicates = 0, failed = 0, done = 0
+    await batchQueryChanges(async () => {
     for (let i = 0; i < preview.valid.length; i += 200) {
       const chunk = preview.valid.slice(i, i + 200)
       try {
-        const r = await fetch('/api/data/contacts', {
+        const r = await apiFetch('/api/data/contacts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contacts: chunk }),
@@ -962,6 +970,7 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
       } catch { failed += chunk.length }
       done += chunk.length; setProgress(done)
     }
+    })
     const parts = [`${inserted} importado${inserted !== 1 ? 's' : ''}`]
     if (duplicates) parts.push(`${duplicates} ya existían`)
     if (failed) parts.push(`${failed} con error`)

@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
 import { CONTACT_COLUMNS } from '@/lib/contacts'
@@ -23,7 +24,7 @@ const PARTS = {
 } as const
 type Part = keyof typeof PARTS
 
-export async function GET(req: NextRequest) {
+async function GETImpl(req: NextRequest) {
   const ctx = await requireStore({ admin: true })
   if (ctx instanceof Response) return ctx
 
@@ -57,3 +58,5 @@ export async function GET(req: NextRequest) {
     return serverError('GET /api/data/export', error, 'No se pudo exportar la información')
   }
 }
+
+export const GET = withServerTiming(GETImpl)

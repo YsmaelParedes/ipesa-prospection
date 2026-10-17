@@ -1,6 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCachedQuery } from '@/lib/useCachedQuery'
+
+
 import { campaignEtaLabel } from '@/lib/whatsappSafety'
 
 /** Límite real de Meta. `limit`/`remaining` null = nivel sin límite. */
@@ -15,15 +17,8 @@ export type CampaignQuota = {
 
 /** Personas que aún se pueden contactar hoy — para avisar antes de enviar (el límite lo hace cumplir el servidor). */
 export function useWhatsAppCampaignQuota() {
-  const [quota, setQuota] = useState<CampaignQuota | null>(null)
-  const refetch = useCallback(() => {
-    fetch('/api/whatsapp/campaigns/send')
-      .then(r => r.json())
-      .then(d => { if (d && typeof d.used === 'number') setQuota(d) })
-      .catch(() => {})
-  }, [])
-  useEffect(refetch, [refetch])
-  return { quota, refetch }
+  const query = useCachedQuery<CampaignQuota>('/api/whatsapp/campaigns/send')
+  return { quota: query.data ?? null, refetch: () => { void query.reload().catch(() => {}) } }
 }
 
 /** ¿La selección supera lo que Meta aún permite hoy? */

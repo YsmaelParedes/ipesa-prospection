@@ -1,9 +1,13 @@
+import { broadcastContextChange, clearQueryCache } from './apiClient'
+import { invalidateSession } from './profile'
+
 /**
  * Cerrar sesión en el navegador. Antes da de baja las notificaciones push de
  * este dispositivo: en un equipo compartido, quien entre después no debe
  * recibir los avisos (nombres de clientes, mensajes) del usuario anterior.
  */
 export async function signOut(redirectTo: string | null = '/login') {
+  clearQueryCache()
   try {
     for (let i = sessionStorage.length - 1; i >= 0; i--) {
       const key = sessionStorage.key(i)
@@ -21,6 +25,8 @@ export async function signOut(redirectTo: string | null = '/login') {
     }
   } catch {}
   await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
+  invalidateSession(false)
+  broadcastContextChange()
   if (redirectTo) window.location.href = redirectTo
   else window.location.reload()
 }

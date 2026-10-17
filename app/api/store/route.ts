@@ -1,10 +1,11 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { STORE_PROFILE_SCHEMA, publicStore } from '@/lib/storeServer'
 import { jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 
 // GET /api/store — perfil de la tienda activa
-export async function GET() {
+async function GETImpl() {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
   return NextResponse.json({ store: publicStore(ctx.store) }, { headers: { 'Cache-Control': 'no-store' } })
@@ -40,3 +41,5 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ ok: true })
 }
+
+export const GET = withServerTiming(GETImpl)

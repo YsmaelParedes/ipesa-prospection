@@ -1,0 +1,1357 @@
+{
+  "measuredAt": "2026-10-16",
+  "profile": "desktop-1440x900-local-production",
+  "context": "authenticated test store, no contacts or leads, WhatsApp not connected",
+  "samples": [
+    {
+      "round": 0,
+      "route": "/",
+      "readyMs": 18.399999998509884,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 0,
+      "route": "/contactos",
+      "readyMs": 17.600000001490116,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 0,
+      "route": "/leads",
+      "readyMs": 1634.3999999985099,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 969.2999999970198,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 640.1
+            },
+            {
+              "name": "database",
+              "duration": 321.4
+            },
+            {
+              "name": "store",
+              "duration": 143.8
+            },
+            {
+              "name": "total",
+              "duration": 963.1
+            }
+          ]
+        },
+        {
+          "route": "/api/data/leads",
+          "durationMs": 1024.5,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 613.4
+            },
+            {
+              "name": "database",
+              "duration": 530.8
+            },
+            {
+              "name": "store",
+              "duration": 243.7
+            },
+            {
+              "name": "total",
+              "duration": 1011.6
+            }
+          ]
+        },
+        {
+          "route": "/api/whatsapp/unread",
+          "durationMs": 508.29999999701977,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 113.3
+            },
+            {
+              "name": "database",
+              "duration": 387.4
+            },
+            {
+              "name": "store",
+              "duration": 282.8
+            },
+            {
+              "name": "total",
+              "duration": 502.1
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 0,
+      "route": "/recordatorios",
+      "readyMs": 26.400000005960464,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 1,
+      "route": "/",
+      "readyMs": 17.799999997019768,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 1,
+      "route": "/contactos",
+      "readyMs": 15.400000005960464,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 1,
+      "route": "/leads",
+      "readyMs": 22.299999997019768,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 1,
+      "route": "/recordatorios",
+      "readyMs": 27.100000001490116,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 2,
+      "route": "/",
+      "readyMs": 17.30000000447035,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 2,
+      "route": "/contactos",
+      "readyMs": 13.600000001490116,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 2,
+      "route": "/leads",
+      "readyMs": 16.599999994039536,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 2,
+      "route": "/recordatorios",
+      "readyMs": 15,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 3,
+      "route": "/",
+      "readyMs": 18.100000001490116,
+      "requests": [
+        {
+          "route": "/api/data/dashboard/whatsapp",
+          "durationMs": 822.6000000014901,
+          "transferBytes": 336,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 267.9
+            },
+            {
+              "name": "database",
+              "duration": 241.7
+            },
+            {
+              "name": "store",
+              "duration": 117.2
+            },
+            {
+              "name": "total",
+              "duration": 512
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 3,
+      "route": "/contactos",
+      "readyMs": 17.5,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 3,
+      "route": "/leads",
+      "readyMs": 18,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 3,
+      "route": "/recordatorios",
+      "readyMs": 17.80000000447035,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 4,
+      "route": "/",
+      "readyMs": 18.399999998509884,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 4,
+      "route": "/contactos",
+      "readyMs": 19.700000002980232,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 1263.0999999940395,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 198.9
+            },
+            {
+              "name": "database",
+              "duration": 729.7
+            },
+            {
+              "name": "store",
+              "duration": 561.5
+            },
+            {
+              "name": "total",
+              "duration": 931.1
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 4,
+      "route": "/leads",
+      "readyMs": 16,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 759.2000000029802,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 401.5
+            },
+            {
+              "name": "database",
+              "duration": 511.7
+            },
+            {
+              "name": "store",
+              "duration": 162
+            },
+            {
+              "name": "total",
+              "duration": 747.4
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 4,
+      "route": "/recordatorios",
+      "readyMs": 20.200000002980232,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 713.1000000014901,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 187.5
+            },
+            {
+              "name": "database",
+              "duration": 515.5
+            },
+            {
+              "name": "store",
+              "duration": 143.5
+            },
+            {
+              "name": "total",
+              "duration": 705.1
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 5,
+      "route": "/",
+      "readyMs": 17.399999998509884,
+      "requests": [
+        {
+          "route": "/api/data/dashboard/whatsapp",
+          "durationMs": 598.4000000059605,
+          "transferBytes": 336,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 126.8
+            },
+            {
+              "name": "database",
+              "duration": 444.8
+            },
+            {
+              "name": "store",
+              "duration": 230.5
+            },
+            {
+              "name": "total",
+              "duration": 574.5
+            }
+          ]
+        },
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 651,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 150.9
+            },
+            {
+              "name": "database",
+              "duration": 2645.4
+            },
+            {
+              "name": "store",
+              "duration": 116.5
+            },
+            {
+              "name": "total",
+              "duration": 639.3
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 5,
+      "route": "/contactos",
+      "readyMs": 16.100000001490116,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 5,
+      "route": "/leads",
+      "readyMs": 16.100000001490116,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 5,
+      "route": "/recordatorios",
+      "readyMs": 15.299999997019768,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 6,
+      "route": "/",
+      "readyMs": 15.899999998509884,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 6,
+      "route": "/contactos",
+      "readyMs": 16.100000001490116,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 6,
+      "route": "/leads",
+      "readyMs": 16,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 6,
+      "route": "/recordatorios",
+      "readyMs": 28.400000005960464,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 7,
+      "route": "/",
+      "readyMs": 16.80000000447035,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 7,
+      "route": "/contactos",
+      "readyMs": 15.399999998509884,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 7,
+      "route": "/leads",
+      "readyMs": 17.100000001490116,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 7,
+      "route": "/recordatorios",
+      "readyMs": 16.19999999552965,
+      "requests": [
+        {
+          "route": "/api/me",
+          "durationMs": 821.7999999970198,
+          "transferBytes": 1055,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 257.1
+            },
+            {
+              "name": "database",
+              "duration": 1107.9
+            },
+            {
+              "name": "total",
+              "duration": 814.9
+            }
+          ]
+        },
+        {
+          "route": "/api/whatsapp/unread",
+          "durationMs": 902.5,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 129.7
+            },
+            {
+              "name": "database",
+              "duration": 765.8
+            },
+            {
+              "name": "store",
+              "duration": 399
+            },
+            {
+              "name": "total",
+              "duration": 896.9
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 8,
+      "route": "/",
+      "readyMs": 16.600000001490116,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 8,
+      "route": "/contactos",
+      "readyMs": 18.399999998509884,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 895,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 212.6
+            },
+            {
+              "name": "database",
+              "duration": 671.7
+            },
+            {
+              "name": "store",
+              "duration": 409.3
+            },
+            {
+              "name": "total",
+              "duration": 886.1
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 8,
+      "route": "/leads",
+      "readyMs": 18.69999999552965,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 633.6999999955297,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 122.8
+            },
+            {
+              "name": "database",
+              "duration": 1032.8
+            },
+            {
+              "name": "store",
+              "duration": 230.3
+            },
+            {
+              "name": "total",
+              "duration": 625.6
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 8,
+      "route": "/recordatorios",
+      "readyMs": 16.100000001490116,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 340.20000000298023,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 118.8
+            },
+            {
+              "name": "database",
+              "duration": 212.8
+            },
+            {
+              "name": "store",
+              "duration": 99.9
+            },
+            {
+              "name": "total",
+              "duration": 333.6
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 9,
+      "route": "/",
+      "readyMs": 16.799999997019768,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 727,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 138.7
+            },
+            {
+              "name": "database",
+              "duration": 2021.6
+            },
+            {
+              "name": "store",
+              "duration": 113.9
+            },
+            {
+              "name": "total",
+              "duration": 720.2
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 9,
+      "route": "/contactos",
+      "readyMs": 16.19999999552965,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 9,
+      "route": "/leads",
+      "readyMs": 14.399999998509884,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 9,
+      "route": "/recordatorios",
+      "readyMs": 19.899999998509884,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 10,
+      "route": "/",
+      "readyMs": 17.299999997019768,
+      "requests": [
+        {
+          "route": "/api/data/dashboard/whatsapp",
+          "durationMs": 424.3999999985099,
+          "transferBytes": 336,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 221.5
+            },
+            {
+              "name": "database",
+              "duration": 188.7
+            },
+            {
+              "name": "store",
+              "duration": 100.7
+            },
+            {
+              "name": "total",
+              "duration": 412.7
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 10,
+      "route": "/contactos",
+      "readyMs": 17.80000000447035,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 10,
+      "route": "/leads",
+      "readyMs": 15.899999998509884,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 10,
+      "route": "/recordatorios",
+      "readyMs": 15.600000001490116,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 11,
+      "route": "/",
+      "readyMs": 29.799999997019768,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 11,
+      "route": "/contactos",
+      "readyMs": 16.700000002980232,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 11,
+      "route": "/leads",
+      "readyMs": 16.900000005960464,
+      "requests": [
+        {
+          "route": "/api/whatsapp/unread",
+          "durationMs": 1083.3999999985099,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 476.6
+            },
+            {
+              "name": "database",
+              "duration": 283
+            },
+            {
+              "name": "store",
+              "duration": 155.8
+            },
+            {
+              "name": "total",
+              "duration": 761.4
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 11,
+      "route": "/recordatorios",
+      "readyMs": 15.100000001490116,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 12,
+      "route": "/",
+      "readyMs": 26.799999997019768,
+      "requests": [
+        {
+          "route": "/api/data/dashboard/whatsapp",
+          "durationMs": 585.1999999955297,
+          "transferBytes": 336,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 208.2
+            },
+            {
+              "name": "database",
+              "duration": 366.9
+            },
+            {
+              "name": "store",
+              "duration": 275.5
+            },
+            {
+              "name": "total",
+              "duration": 577.6
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 12,
+      "route": "/contactos",
+      "readyMs": 18.299999997019768,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 452.6000000014901,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 166.2
+            },
+            {
+              "name": "database",
+              "duration": 270.8
+            },
+            {
+              "name": "store",
+              "duration": 175.3
+            },
+            {
+              "name": "total",
+              "duration": 438.8
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 12,
+      "route": "/leads",
+      "readyMs": 23.600000001490116,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 626.2999999970198,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 115.3
+            },
+            {
+              "name": "database",
+              "duration": 739.7
+            },
+            {
+              "name": "store",
+              "duration": 167.6
+            },
+            {
+              "name": "total",
+              "duration": 616.1
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 12,
+      "route": "/recordatorios",
+      "readyMs": 16.900000005960464,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 909.3000000044703,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 111.4
+            },
+            {
+              "name": "database",
+              "duration": 790.8
+            },
+            {
+              "name": "store",
+              "duration": 546.3
+            },
+            {
+              "name": "total",
+              "duration": 903.6
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 13,
+      "route": "/",
+      "readyMs": 15.899999998509884,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 873.3999999985099,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 182.8
+            },
+            {
+              "name": "database",
+              "duration": 3155.3
+            },
+            {
+              "name": "store",
+              "duration": 220.9
+            },
+            {
+              "name": "total",
+              "duration": 866.4
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 13,
+      "route": "/contactos",
+      "readyMs": 16,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 13,
+      "route": "/leads",
+      "readyMs": 17.200000002980232,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 13,
+      "route": "/recordatorios",
+      "readyMs": 14.600000001490116,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 14,
+      "route": "/",
+      "readyMs": 28,
+      "requests": [
+        {
+          "route": "/api/data/dashboard/whatsapp",
+          "durationMs": 1835.8999999985099,
+          "transferBytes": 336,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 486.9
+            },
+            {
+              "name": "database",
+              "duration": 1335
+            },
+            {
+              "name": "store",
+              "duration": 889.5
+            },
+            {
+              "name": "total",
+              "duration": 1824.5
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 14,
+      "route": "/contactos",
+      "readyMs": 15.400000005960464,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 14,
+      "route": "/leads",
+      "readyMs": 18,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 14,
+      "route": "/recordatorios",
+      "readyMs": 15.700000002980232,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 15,
+      "route": "/",
+      "readyMs": 28.700000002980232,
+      "requests": [
+        {
+          "route": "/api/me",
+          "durationMs": 1050.5,
+          "transferBytes": 1055,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 208.5
+            },
+            {
+              "name": "database",
+              "duration": 997.7
+            },
+            {
+              "name": "total",
+              "duration": 735.6
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 15,
+      "route": "/contactos",
+      "readyMs": 16.200000002980232,
+      "requests": [
+        {
+          "route": "/api/whatsapp/unread",
+          "durationMs": 788,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 129.3
+            },
+            {
+              "name": "database",
+              "duration": 650.9
+            },
+            {
+              "name": "store",
+              "duration": 389
+            },
+            {
+              "name": "total",
+              "duration": 781.6
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 15,
+      "route": "/leads",
+      "readyMs": 17.299999997019768,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 15,
+      "route": "/recordatorios",
+      "readyMs": 17.700000002980232,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 16,
+      "route": "/",
+      "readyMs": 27.799999997019768,
+      "requests": [
+        {
+          "route": "/api/data/dashboard/whatsapp",
+          "durationMs": 1015.2999999970198,
+          "transferBytes": 336,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 472.8
+            },
+            {
+              "name": "database",
+              "duration": 529.7
+            },
+            {
+              "name": "store",
+              "duration": 250.6
+            },
+            {
+              "name": "total",
+              "duration": 1006.4
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 16,
+      "route": "/contactos",
+      "readyMs": 18.100000001490116,
+      "requests": [
+        {
+          "route": "/api/data/contacts",
+          "durationMs": 825.2999999970198,
+          "transferBytes": 315,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 100.1
+            },
+            {
+              "name": "database",
+              "duration": 717.2
+            },
+            {
+              "name": "store",
+              "duration": 444.2
+            },
+            {
+              "name": "total",
+              "duration": 818.9
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 16,
+      "route": "/leads",
+      "readyMs": 15.5,
+      "requests": [
+        {
+          "route": "/api/data/leads",
+          "durationMs": 549.7999999970198,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 109.7
+            },
+            {
+              "name": "database",
+              "duration": 834.5
+            },
+            {
+              "name": "store",
+              "duration": 111.4
+            },
+            {
+              "name": "total",
+              "duration": 543.4
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 16,
+      "route": "/recordatorios",
+      "readyMs": 15.599999994039536,
+      "requests": [
+        {
+          "route": "/api/data/reminders",
+          "durationMs": 383.3999999985099,
+          "transferBytes": 316,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 116.8
+            },
+            {
+              "name": "database",
+              "duration": 256.8
+            },
+            {
+              "name": "store",
+              "duration": 101.3
+            },
+            {
+              "name": "total",
+              "duration": 375.8
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 17,
+      "route": "/",
+      "readyMs": 20,
+      "requests": [
+        {
+          "route": "/api/data/dashboard",
+          "durationMs": 841.4000000059605,
+          "transferBytes": 780,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 109.5
+            },
+            {
+              "name": "database",
+              "duration": 2569.4
+            },
+            {
+              "name": "store",
+              "duration": 391.9
+            },
+            {
+              "name": "total",
+              "duration": 831.6
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 17,
+      "route": "/contactos",
+      "readyMs": 18.600000001490116,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 17,
+      "route": "/leads",
+      "readyMs": 17.700000002980232,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 17,
+      "route": "/recordatorios",
+      "readyMs": 12.200000002980232,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 18,
+      "route": "/",
+      "readyMs": 13.899999998509884,
+      "requests": [
+        {
+          "route": "/api/data/dashboard/whatsapp",
+          "durationMs": 446,
+          "transferBytes": 336,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 214.4
+            },
+            {
+              "name": "database",
+              "duration": 203.3
+            },
+            {
+              "name": "store",
+              "duration": 106.6
+            },
+            {
+              "name": "total",
+              "duration": 421.5
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 18,
+      "route": "/contactos",
+      "readyMs": 19.69999999552965,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 18,
+      "route": "/leads",
+      "readyMs": 16.599999994039536,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 18,
+      "route": "/recordatorios",
+      "readyMs": 18.799999997019768,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 19,
+      "route": "/",
+      "readyMs": 23.700000002980232,
+      "requests": [
+        {
+          "route": "/api/whatsapp/unread",
+          "durationMs": 746.7000000029802,
+          "transferBytes": 312,
+          "status": 200,
+          "serverTiming": [
+            {
+              "name": "auth",
+              "duration": 207.4
+            },
+            {
+              "name": "database",
+              "duration": 216.1
+            },
+            {
+              "name": "store",
+              "duration": 109.5
+            },
+            {
+              "name": "total",
+              "duration": 426.4
+            }
+          ]
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "round": 19,
+      "route": "/contactos",
+      "readyMs": 15.799999997019768,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 19,
+      "route": "/leads",
+      "readyMs": 22,
+      "requests": [],
+      "overflow": false
+    },
+    {
+      "round": 19,
+      "route": "/recordatorios",
+      "readyMs": 18.100000001490116,
+      "requests": [],
+      "overflow": false
+    }
+  ],
+  "done": true,
+  "error": null
+}

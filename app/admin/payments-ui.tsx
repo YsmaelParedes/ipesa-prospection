@@ -1,5 +1,8 @@
 'use client'
 
+import { apiFetch } from '@/lib/apiClient'
+
+
 import { useState } from 'react'
 import Link from 'next/link'
 import {
@@ -23,7 +26,7 @@ export const fmtDay = (day: string, o: Intl.DateTimeFormatOptions = { day: 'nume
   new Date(`${day}T12:00:00`).toLocaleDateString('es-MX', o)
 
 async function postJson(url: string, body: unknown) {
-  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  const r = await apiFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   const d = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(d.error || 'No se pudo guardar')
   return d

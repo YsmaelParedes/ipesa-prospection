@@ -1,3 +1,4 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requirePlatformAdmin } from '@/lib/supabase-server'
 import { monthBounds } from '@/lib/payments'
@@ -10,7 +11,7 @@ const COLUMNS = 'id, store_id, amount, method, paid_on, months, period_start, pe
  * GET /api/platform/payments?store=<id>   — pagos de una tienda (los más recientes)
  * Incluye los anulados (se muestran tachados).
  */
-export async function GET(req: NextRequest) {
+async function GETImpl(req: NextRequest) {
   const user = await requirePlatformAdmin()
   if (user instanceof Response) return user
 
@@ -32,3 +33,5 @@ export async function GET(req: NextRequest) {
   const payments = (data ?? []).map(({ stores, amount, ...p }: any) => ({ ...p, amount: Number(amount), store_name: stores?.name ?? null }))
   return NextResponse.json({ payments }, { headers: { 'Cache-Control': 'no-store' } })
 }
+
+export const GET = withServerTiming(GETImpl)

@@ -1,9 +1,10 @@
+import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireStore } from '@/lib/supabase-server'
 import { loadCatalog, searchColors } from '@/lib/formulas'
 import { jsonError, serverError } from '@/lib/validation'
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ catalogId: string }> }) {
+async function GETImpl(req: NextRequest, { params }: { params: Promise<{ catalogId: string }> }) {
   const ctx = await requireStore({ module: 'formulas' })
   if (ctx instanceof Response) return ctx
 
@@ -25,10 +26,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ cata
 
     return NextResponse.json(
       { id: catalog.id, productLine: catalog.productLine, fandeck: catalog.fandeck, colorCount: catalog.colorCount, matchCount: colors.length, colors },
-      // Datos estáticos por despliegue: se pueden reutilizar en el navegador.
-      { headers: { 'Cache-Control': 'private, max-age=600' } },
+      // La caché en memoria del cliente identifica al usuario y la tienda.
+      { headers: { 'Cache-Control': 'private, no-store' } },
     )
   } catch (error) {
     return serverError('GET /api/formulas/:catalogId', error, 'Error al obtener el catálogo')
   }
 }
+
+export const GET = withServerTiming(GETImpl)

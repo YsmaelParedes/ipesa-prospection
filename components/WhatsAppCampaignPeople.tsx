@@ -1,5 +1,11 @@
 'use client'
 
+import { useQueryEffect } from '@/lib/useCachedQuery'
+
+
+import { apiFetch } from '@/lib/apiClient'
+
+
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Avatar, TipoChip } from '@/components/CrmUI'
@@ -49,9 +55,9 @@ export function WhatsAppCampaignPeople({ onOpenChat }: { onOpenChat: (phone: str
   const [shown, setShown]   = useState(PAGE)
   const [copied, setCopied] = useState(false)
 
-  useEffect(() => {
+  useQueryEffect(() => {
     let cancelled = false
-    fetch('/api/whatsapp/campaigns/people')
+    apiFetch('/api/whatsapp/campaigns/people')
       .then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d })
       .then(d => { if (!cancelled) setPeople(d.people ?? []) })
       .catch(e => { if (!cancelled) setError(e?.message || 'No se pudieron cargar los resultados por persona') })
