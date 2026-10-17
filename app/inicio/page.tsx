@@ -1,38 +1,353 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { BrandLogo } from '@/components/Brand'
-import { ProductTour, SiteNavigation } from './showcase'
+import { APP_NAME, APP_TAGLINE } from '@/lib/brand'
+import { planOf, DEFAULT_PLAN } from '@/lib/stores'
 import s from './inicio.module.css'
 
 export const metadata: Metadata = {
-  title: 'Matices · Dale seguimiento. Dale color a tu negocio.',
-  description: 'Clientes, oportunidades, WhatsApp, agenda y fórmulas de color para tu tienda de pinturas. Explora Matices y solicita tu invitación.',
+  title: `${APP_NAME} · ${APP_TAGLINE}`,
+  description: 'Contactos, cotizaciones, agenda y fórmulas de color en un solo lugar para tu tienda de pinturas. Alta por invitación.',
 }
-const faq = [
-  ['¿Necesito saber de tecnología?', 'Entras desde tu navegador y te acompañamos con la configuración de tu tienda y los accesos de tu equipo. No necesitas instalar un sistema complicado.'],
-  ['¿Puedo importar mis contactos?', 'Sí. Puedes traer tu lista desde Excel y organizar tus contactos por segmentos y canales.'],
-  ['¿WhatsApp está incluido?', 'WhatsApp y campañas son módulos que se habilitan según lo acordado con tu tienda. La conexión se configura con tu asesor. Los envíos están sujetos a las políticas y límites de Meta.'],
-  ['¿Funciona en el celular?', 'Sí. Puedes usar el navegador o instalarla como aplicación web. Los avisos dependen de los permisos y la compatibilidad de tu dispositivo.'],
-  ['¿Cuánto cuesta y cómo empiezo?', 'El plan y el precio se acuerdan con cada tienda. Solicita tu invitación: configuramos tu sucursal y recibes un enlace para crear tu acceso.'],
-  ['¿Puedo tener varias sucursales?', 'Cada tienda tiene su equipo, configuración e información. Si tu usuario tiene acceso a varias, puedes cambiar entre ellas desde la aplicación.'],
+
+const DEMO_STORE = 'Pinturas La Paleta'
+
+/* Página de presentación: la ve quien entra a "/" sin sesión (ver proxy.ts). */
+
+type IconProps = React.SVGProps<SVGSVGElement>
+const icon = (d: React.ReactNode) => function Svg(p: IconProps) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}>{d}</svg>
+}
+const Ic = {
+  contacts: icon(<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>),
+  leads:    icon(<path d="M22 12h-4l-3 9L9 3l-3 9H2" />),
+  megaphone: icon(<><path d="m3 11 18-5v12L3 14v-3Z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></>),
+  flask:    icon(<><path d="M9 2v6.3a2 2 0 0 1-.3 1L3.5 18a2 2 0 0 0 1.7 3h13.6a2 2 0 0 0 1.7-3l-5.2-8.7a2 2 0 0 1-.3-1V2" /><path d="M7 2h10M6 14h12" /></>),
+  bell:     icon(<><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></>),
+  check:    icon(<path d="m5 13 4 4L19 7" />),
+  arrow:    icon(<path d="M5 12h14M13 6l6 6-6 6" />),
+  plus:     icon(<path d="M12 5v14M5 12h14" />),
+  store:    icon(<><path d="M3 9 4.5 4h15L21 9" /><path d="M3 9h18v1a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9Z" /><path d="M5 13v7h14v-7" /></>),
+  shield:   icon(<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-4" /></>),
+  layers:   icon(<><path d="m12 2 10 5-10 5L2 7l10-5Z" /><path d="m2 17 10 5 10-5M2 12l10 5 10-5" /></>),
+  key:      icon(<><circle cx="7.5" cy="15.5" r="5.5" /><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3" /></>),
+  users:    icon(<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" /></>),
+  link:     icon(<><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" /></>),
+  grid:     icon(<><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></>),
+}
+
+const MAX_USERS = planOf(DEFAULT_PLAN).maxUsers
+
+const FEATURES = [
+  { icon: Ic.contacts,  tone: s.tCyan,    title: 'Contactos y segmentos', text: 'Hogar, constructor, arquitecto, pintor o empresa. Encuentra a cualquier cliente en segundos e importa tu lista desde Excel.' },
+  { icon: Ic.leads,     tone: s.tBrand,   title: 'Pipeline de ventas', text: 'De nuevo a cotizado y cerrado. Cada oportunidad con su monto, su historial y el siguiente paso.' },
+  { icon: Ic.grid,      tone: s.tAmber,   title: 'Lo que toca hoy', text: 'Al abrir, tu equipo ve a quién darle seguimiento, qué cotizaciones esperan respuesta y qué recordatorios tiene.' },
+  { icon: Ic.users,     tone: s.tMagenta, title: 'Tu equipo, cada quien con su usuario', text: 'Cada vendedor trabaja sus propios leads y su agenda; tú, como dueño, ves los de todos y quién atiende a cada cliente.' },
+  { icon: Ic.flask,     tone: s.tTeal,    title: 'Fórmulas de color', text: 'Consulta fórmulas de color convertidas a mililitros para igualar colores sin errores.' },
+  { icon: Ic.bell,      tone: s.tWa,      title: 'Recordatorios y avisos', text: 'Notificaciones en tu celular para que ningún seguimiento se quede pendiente.' },
 ]
+
+const STEPS = [
+  { title: 'Pide tu invitación', text: 'Acordamos contigo el plan, damos de alta tu tienda y te mandamos tu enlace.' },
+  { title: 'Configura tu sucursal', text: 'Nombre, logo y catálogos. El asistente te guía paso a paso.' },
+  { title: 'Invita a tu equipo', text: 'Manda a cada vendedor su enlace por WhatsApp o correo y a vender.' },
+]
+
+const SECURITY = [
+  { icon: Ic.layers, title: 'Datos separados por tienda', text: 'Cada consulta se filtra por tu tienda en el servidor. El navegador nunca entra directo a la base de datos.' },
+  { icon: Ic.key,    title: 'Tu contraseña es solo tuya', text: 'La creas tú con tu enlace de invitación; nadie más la conoce, ni nosotros.' },
+  { icon: Ic.users,  title: 'Roles y permisos', text: 'Dueño y vendedores: cada vendedor ve solo sus leads y su agenda; el dueño configura la tienda y ve todo.' },
+  { icon: Ic.link,   title: 'Accesos bajo tu control', text: 'Invitaciones con enlace que vence y la opción de desactivar a quien ya no trabaje contigo.' },
+]
+
+const FAQ = [
+  { q: '¿Cómo empiezo?', a: 'Pide tu invitación. Acordamos contigo el plan, damos de alta tu tienda y te mandamos un enlace para que crees tu contraseña. Después tú invitas a tu equipo.' },
+  { q: '¿Cómo se paga?', a: 'El precio se acuerda con cada tienda y se paga por mes, por transferencia o en efectivo. Si un pago vence, tu información se conserva y tu equipo puede consultarla; para seguir registrando solo hay que renovar.' },
+  { q: '¿Cuántas personas pueden usarlo?', a: `El plan Profesional incluye hasta ${MAX_USERS} usuarios por tienda: el dueño y ${MAX_USERS - 1} vendedores, cada uno con su propio acceso y sus propios leads.` },
+  { q: '¿Otras tiendas pueden ver mis clientes?', a: 'No. Cada tienda tiene su propia información y solo la ve su equipo. Ninguna otra tienda puede acceder a ella.' },
+  { q: 'Tengo varias sucursales, ¿cómo funciona?', a: 'Cada cuenta es una sucursal. Si tienes otra, la damos de alta aparte, con su propio equipo y sus datos.' },
+  { q: '¿Funciona en el celular?', a: 'Sí. Funciona en cualquier navegador y puedes instalarlo como app en tu celular para recibir avisos de recordatorios y mensajes.' },
+]
+
 export default function LandingPage() {
-  return <div className={s.site}>
-    <a className={s.skip} href="#contenido">Saltar al contenido</a><SiteNavigation />
-    <main id="contenido">
-      <section className={s.hero}><div className={s.wrap}>
-        <div className={s.heroTop}><span className={s.eyebrow}>● HECHO PARA TIENDAS DE PINTURA</span><span>Tu negocio, con otra perspectiva.</span></div>
-        <div className={s.heroGrid}><div><h1>Vendes color.<br />Dale <em>seguimiento.</em></h1><p className={s.lead}>La próxima venta no siempre empieza con un cliente nuevo. A veces empieza con recordar a quién volver a llamar.</p><p className={s.sub}>Reúne clientes, cotizaciones y conversaciones en Matices. Tu equipo sabe qué sigue. Tú ves cómo va tu tienda.</p><div className={s.actions}><Link className={s.primary} href="/registro">Quiero Matices en mi tienda ↗</Link><a className={s.textLink} href="#producto">Explorar la app ↓</a></div><div className={s.notes}><span>✓ Configuración acompañada</span><span>✓ Celular y computadora</span></div></div>
-          <div className={s.heroArt}><div className={s.fan} aria-hidden="true"><i/><i/><i/><i/><i/></div><div className={s.opportunity}><div className={s.cardTop}><span>TU PRÓXIMA OPORTUNIDAD</span><b>En seguimiento</b></div><div className={s.customer}><span>AL</span><div><h3>Andrea López</h3><p>Renovación de casa · Cliente de ejemplo</p></div></div><div className={s.quote}><span>Cotización registrada</span><strong>$8,450<small> MXN</small></strong></div><p className={s.next}>↗ <span>El siguiente paso está claro.<br /><strong>Confirmar el color y la entrega.</strong></span></p><div className={s.tags}><span>Hogar</span><span>Vinílica interior</span><span>Seguimiento</span></div></div><div className={s.reminder}><span>↗</span><div><strong>Una conversación. Una oportunidad.</strong><small>Todo conectado con tu cliente.</small></div></div><small className={s.artNote}>MENOS PENDIENTES EN LA CABEZA. MÁS CLARIDAD EN TU TIENDA.</small></div>
-        </div></div><div className={s.colorLine}/></section>
-      <section className={s.manifesto}><div className={s.wrap}><p>Del primer «¿cuánto cuesta?»<br /><strong>al próximo «vuelvo a comprar».</strong></p><div>Clientes <b>↗</b> Seguimiento <b>↗</b> Conversaciones <b>↗</b> Ventas</div></div></section>
-      <section id="producto" className={s.section}><div className={s.wrap}><div className={s.heading}><div><span className={s.eyebrow}>01 / CONOCE MATICES</span><h2>Todo tiene su lugar.<br /><em>Y su siguiente paso.</em></h2></div><p>Así se siente tener tu tienda organizada. Explora las vistas y descubre qué puede hacer tu equipo cada día.</p></div><ProductTour /><p className={s.demoNote}>Demo ilustrativa con datos ficticios. Las funciones disponibles dependen de los módulos de tu tienda.</p></div></section>
-      <section id="como-funciona" className={`${s.section} ${s.soft}`}><div className={s.wrap}><div className={s.heading}><div><span className={s.eyebrow}>02 / DE LA CONSULTA AL SEGUIMIENTO</span><h2>Una venta no termina<br />al mandar el precio.</h2></div><p>Un proceso sencillo para que cada oportunidad tenga nombre, contexto y una próxima acción.</p></div><div className={s.steps}>{[['Conoce a tu cliente','Guarda sus datos, clasifícalo y encuentra su historial sin recorrer hojas de cálculo.','Cliente registrado'],['Registra la oportunidad','Anota lo que necesita, el monto y en qué etapa está la conversación.','Cotización en seguimiento'],['Da el siguiente paso','Programa una llamada o visita. Tu agenda te ayuda a retomar la conversación.','Recordatorio programado'],['Ve qué está funcionando','Actualiza el resultado y consulta las oportunidades y actividad de tu equipo.','Resultado registrado']].map(([title,body,tag],i)=><article key={title}><div className={s.stepNumber}>0{i+1}<span>↗</span></div><h3>{title}</h3><p>{body}</p><small>✓ {tag}</small></article>)}</div></div></section>
-      <section id="herramientas" className={s.section}><div className={s.wrap}><span className={s.eyebrow}>03 / HABLA EL IDIOMA DE TU TIENDA</span><h2>No vendes cualquier cosa.<br /><em>Tu herramienta tampoco debería.</em></h2><div className={s.tools}><article className={s.whatsapp}><span className={s.pill}>WHATSAPP + CAMPAÑAS</span><h3>La conversación continúa.<br />El contexto también.</h3><p>Atiende desde la bandeja de tu tienda. Consulta el cliente y sus oportunidades mientras conversas; organiza campañas con plantillas y segmentos.</p><div className={s.chat}><div className={s.chatHead}><span>AL</span><div><strong>Andrea López</strong><small>Cliente · Hogar</small></div><i>Ejemplo</i></div><p>¡Hola! Ya elegimos el color de la sala.<small>10:42</small></p><p>¡Qué bien, Andrea! Retomamos tu cotización y revisamos la entrega.<small>10:44 ✓✓</small></p><div className={s.chatContext}>↗ Cotización vinculada <strong>$8,450</strong></div></div><small className={s.moduleNote}>Módulo opcional. Requiere conexión del número y está sujeto a las políticas de Meta.</small></article><article className={s.formulas}><span className={s.pill}>FÓRMULAS DE COLOR</span><h3>Del color que busca<br />a la fórmula que necesitas.</h3><p>Busca por nombre o código y consulta cantidades en mililitros para el volumen que vas a preparar.</p><div className={s.swatches} aria-hidden="true"><i/><i/><i/><i/><i/></div><div className={s.formulaSearch}><small>Tu catálogo, a la mano</small><strong>Nombre o código <span>⌕</span></strong><div><span>1 litro</span><span>4 litros</span><span>19 litros</span></div></div><small className={s.moduleNote}>Catálogos disponibles según la configuración de tu tienda.</small></article></div></div></section>
-      <section id="equipo" className={s.team}><div className={`${s.wrap} ${s.teamGrid}`}><div><span className={s.eyebrow}>04 / CADA QUIEN SABE QUÉ SIGUE</span><h2>Un equipo conectado.<br /><em>Una tienda con dirección.</em></h2><p>Da a cada persona su propio acceso. Organiza responsables, consulta la actividad y mantén la información de cada tienda separada.</p><ul><li><strong>Accesos por rol</strong><span>Permisos para cada integrante de tu equipo.</span></li><li><strong>Tu propia configuración</strong><span>Logo, segmentos, canales y equipo de tu sucursal.</span></li><li><strong>Información por tienda</strong><span>Trabaja en la sucursal que tienes seleccionada.</span></li></ul></div><div className={s.teamCard}><div className={s.teamHead}><BrandLogo /><small>TIENDA DE EJEMPLO</small></div><h3>Cada persona, su siguiente paso.</h3>{[['AM','Ana Martínez','Dueña','Visión de la tienda'],['LH','Luis Herrera','Vendedor','Seguimientos y cotizaciones'],['SR','Sofía Ramos','Vendedora','Clientes y agenda']].map(([initial,name,role,task])=><div className={s.member} key={initial}><span>{initial}</span><div><strong>{name}</strong><small>{task}</small></div><em>{role}</em></div>)}<p>La operación conectada, desde el mostrador o el celular.</p></div></div></section>
-      <section id="empezar" className={s.section}><div className={s.wrap}><div className={s.heading}><div><span className={s.eyebrow}>05 / TE ACOMPAÑAMOS DESDE EL INICIO</span><h2>Tu tienda. Tu equipo.<br /><em>Tu nueva forma de trabajar.</em></h2></div><Link className={s.primary} href="/registro">Solicitar invitación ↗</Link></div><div className={s.onboarding}>{[['Platiquemos de tu tienda','Acordamos el plan y los módulos que necesitas.'],['Dejamos tu espacio listo','Configuramos tu tienda y recibes tu enlace de acceso.'],['Dale entrada a tu equipo','Invita a tus vendedores e incorpora tus contactos.']].map(([title,text],i)=><div key={title}><small>0{i+1}</small><h3>{title}</h3><p>{text}</p></div>)}</div></div></section>
-      <section id="preguntas" className={`${s.section} ${s.soft}`}><div className={`${s.wrap} ${s.faqGrid}`}><div><span className={s.eyebrow}>ANTES DE DAR EL SIGUIENTE PASO</span><h2>Resolvamos<br />tus dudas.</h2><p>Lo que necesitas saber para empezar con Matices.</p><Link className={s.textLink} href="/registro">Hablar con un asesor ↗</Link></div><div className={s.faq}>{faq.map(([q,a])=><details key={q}><summary>{q}<span aria-hidden="true">+</span></summary><p>{a}</p></details>)}</div></div></section>
-      <section className={s.final}><div className={s.wrap}><span className={s.eyebrow}>EL SIGUIENTE PASO ES TUYO</span><h2>Hay más posibilidades<br /><em>en cada cliente.</em></h2><p>Empieza a verlas con Matices.</p><Link className={s.primary} href="/registro">Quiero conocer Matices ↗</Link><small>Acceso por invitación · Plan acordado con tu tienda</small></div><div className={s.colorLine}/></section>
-    </main><footer className={s.footer}><div className={s.wrap}><div><BrandLogo /><p>Más claridad. Más seguimiento. Más Matices.</p></div><nav aria-label="Enlaces del sitio"><a href="#producto">Producto</a><a href="#como-funciona">Cómo funciona</a><a href="#preguntas">Preguntas</a><Link href="/login">Iniciar sesión</Link></nav><div className={s.footerBottom}><small>© {new Date().getFullYear()} Matices</small><div><Link href="/privacidad">Privacidad</Link><Link href="/terminos">Términos</Link></div><a href="#contenido">Volver arriba ↑</a></div></div></footer>
-  </div>
+  return (
+    <div className={s.lp}>
+      <div className="brand-line" aria-hidden="true" />
+
+      {/* ── Navegación ── */}
+      <header className={s.nav}>
+        <div className={`${s.wrap} ${s.navInner}`}>
+          <Link href="/inicio" className={s.navBrand} aria-label={`${APP_NAME}, inicio`}>
+            <BrandLogo />
+          </Link>
+          <nav className={s.navLinks} aria-label="Secciones">
+            <a href="#funciones">Funciones</a>
+            <a href="#como-funciona">Cómo funciona</a>
+            <a href="#seguridad">Seguridad</a>
+            <a href="#preguntas">Preguntas</a>
+          </nav>
+          <div className={s.navCta}>
+            <Link href="/login" className={`${s.btn} ${s.btnGhost}`}>Iniciar sesión</Link>
+            <Link href="/registro" className={`${s.btn} ${s.btnPrimary}`}>
+              <span className={s.hideXs}>Pide una invitación</span><span className={s.showXs}>Invitación</span>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        {/* ── Hero ── */}
+        <section className={s.hero}>
+          <div className={`${s.wrap} ${s.heroGrid}`}>
+            <div className={s.heroCopy}>
+              <span className={s.eyebrow}><span className={s.eyebrowDot} />Para tiendas de pintura</span>
+              <h1 className={s.h1}>El CRM hecho para tiendas <span className={s.spectrumText}>de pintura</span></h1>
+              <p className={s.lead}>
+                Contactos, cotizaciones, agenda y fórmulas de color en un solo lugar. Tu equipo sabe a quién darle
+                seguimiento hoy y tú ves cómo va la venta de tu sucursal.
+              </p>
+              <div className={s.heroCtas}>
+                <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>
+                  Quiero usarlo en mi tienda <Ic.arrow className={s.btnArrow} />
+                </Link>
+                <Link href="/login" className={`${s.btn} ${s.btnLight} ${s.btnLg}`}>Ya tengo cuenta</Link>
+              </div>
+              <div className={s.checks}>
+                <span><Ic.check />Te ayudamos a configurarlo</span>
+                <span><Ic.check />Lista en minutos</span>
+                <span><Ic.check />Celular y computadora</span>
+              </div>
+            </div>
+
+            <div className={s.visual} aria-hidden="true">
+              <div className={s.swirl}><i className={s.b1} /><i className={s.b2} /><i className={s.b3} /><i className={s.b4} /><i className={s.b5} /></div>
+
+              <div className={s.window}>
+                <div className={s.winBar}><i /><i /><i /><span>{APP_NAME}</span></div>
+                <div className={s.winBody}>
+                  <div className={s.winSide}>
+                    <BrandLogo className={s.winLogo} />
+                    <span className={s.winStore}><Ic.store />{DEMO_STORE}</span>
+                    <span className={`${s.winNav} ${s.winNavOn}`}><Ic.grid />Dashboard</span>
+                    <span className={s.winNav}><Ic.contacts />Contactos</span>
+                    <span className={s.winNav}><Ic.leads />Leads</span>
+                    <span className={s.winNav}><Ic.bell />Agenda<b>3</b></span>
+                    <span className={s.winNav}><Ic.flask />Fórmulas</span>
+                  </div>
+                  <div className={s.winMain}>
+                    <div className={s.dashHead}>
+                      <div><small>Buenos días, Ana</small><strong>Dashboard</strong></div>
+                      <span className={s.weekPill}>Esta semana</span>
+                    </div>
+                    <div className={s.kpis}>
+                      <div className={s.kpi}><small>Leads activos</small><strong>48</strong><em className={s.up}>+12% este mes</em></div>
+                      <div className={s.kpi}><small>En cotización</small><strong>$186,400</strong><em>23 oportunidades</em></div>
+                      <div className={s.kpi}><small>Cerrados</small><strong>21</strong><em className={s.up}>32% de cierre</em></div>
+                    </div>
+                    <div className={s.pipe}>
+                      <div className={s.pipeTop}><strong>Pipeline</strong><small>148 leads</small></div>
+                      <div className={s.pipeBar}><i className={s.pNuevo} /><i className={s.pSeg} /><i className={s.pCot} /><i className={s.pCer} /></div>
+                      <div className={s.pipeLegend}>
+                        <span><b className={s.pNuevo} />Nuevo</span><span><b className={s.pSeg} />Seguimiento</span>
+                        <span><b className={s.pCot} />Cotizado</span><span><b className={s.pCer} />Cerrado</span>
+                      </div>
+                    </div>
+                    <div className={s.rows}>
+                      <div className={s.row}><span className={`${s.av} ${s.avBrand}`}>KL</span><span className={s.rowName}>Karen López<small>Hogar</small></span><span className={`${s.stage} ${s.pCot}`}>Cotizado</span><strong>$4,850</strong></div>
+                      <div className={s.row}><span className={`${s.av} ${s.avAmber}`}>CR</span><span className={s.rowName}>Constructora Ríos<small>Constructor</small></span><span className={`${s.stage} ${s.pSeg}`}>Seguimiento</span><strong>$38,200</strong></div>
+                      <div className={s.row}><span className={`${s.av} ${s.avCyan}`}>AS</span><span className={s.rowName}>Arq. Andrea Solís<small>Arquitecto</small></span><span className={`${s.stage} ${s.pCer}`}>Cerrado</span><strong>$12,600</strong></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className={`${s.float} ${s.chat}`}>
+                <div className={s.chatHead}>
+                  <span className={`${s.waBadge} ${s.todayBadge}`}><Ic.bell /></span>
+                  <div><strong>Para hoy</strong><small>3 seguimientos</small></div>
+                </div>
+                <p className={s.msgIn}>11:00 · Llamar a Karen López para confirmar su cotización de vinílica arena</p>
+                <p className={s.msgIn}>13:30 · Enviar precio a Constructora Ríos</p>
+                <div className={s.chatLinked}><Ic.link />Ligado a su lead · $4,850</div>
+              </div>
+
+              <div className={`${s.float} ${s.formula}`}>
+                <div className={s.formulaHead}>
+                  <span className={s.swatch} />
+                  <div><small>Fórmula · cubeta 19 L</small><strong>Arena del desierto</strong></div>
+                </div>
+                <ul className={s.formulaList}>
+                  <li><b style={{ background: '#C99A2E' }} />Óxido amarillo<span>38 mL</span></li>
+                  <li><b style={{ background: '#A8432B' }} />Óxido rojo<span>9 mL</span></li>
+                  <li><b style={{ background: '#2B2B2B' }} />Negro<span>4 mL</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Datos rápidos ── */}
+        <section className={s.strip} aria-label="En resumen">
+          <div className={`${s.wrap} ${s.stripGrid}`}>
+            <div className={s.stat}><strong>A tu medida</strong><span>precio acordado con cada tienda</span></div>
+            <div className={s.stat}><strong>{MAX_USERS} usuarios</strong><span>por tienda en el plan Profesional</span></div>
+            <div className={s.stat}><strong>Tus datos</strong><span>separados y protegidos por tienda</span></div>
+            <div className={s.stat}><strong>100% web</strong><span>y se instala como app en tu celular</span></div>
+          </div>
+        </section>
+
+        {/* ── Funciones ── */}
+        <section id="funciones" className={s.section}>
+          <div className={s.wrap}>
+            <div className={s.center}>
+              <span className={s.kicker}>Funciones</span>
+              <h2 className={s.h2}>Todo lo que pasa en el mostrador, ordenado</h2>
+              <p className={s.sub}>
+                Pensado para cómo vende una tienda de pinturas: muchos clientes, cotizaciones que van y vienen y
+                seguimientos todo el día.
+              </p>
+            </div>
+            <div className={s.features}>
+              {FEATURES.map(f => (
+                <article key={f.title} className={s.feature}>
+                  <span className={`${s.featureIcon} ${f.tone}`}><f.icon /></span>
+                  <h3>{f.title}</h3>
+                  <p>{f.text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Configuración por tienda ── */}
+        <section className={`${s.section} ${s.sectionAlt}`}>
+          <div className={`${s.wrap} ${s.split}`}>
+            <div>
+              <span className={s.kicker}>Tu sucursal, a tu manera</span>
+              <h2 className={s.h2}>Cada tienda configura lo suyo</h2>
+              <p className={s.sub}>
+                El nombre y logo de tu tienda, tus propios catálogos y tu equipo con sus permisos.
+              </p>
+              <ul className={s.bullets}>
+                {[
+                  'Logo y datos de tu sucursal',
+                  'Segmentos y canales a la medida de tu tienda',
+                  `Tu equipo: tú y ${MAX_USERS - 1} vendedores, cada uno con su usuario`,
+                  'Cada vendedor con sus propios leads y su agenda',
+                ].map(b => <li key={b}><span className={s.bulletIcon}><Ic.check /></span>{b}</li>)}
+              </ul>
+            </div>
+            <div className={s.panels} aria-hidden="true">
+              <div className={s.panel}>
+                <div className={s.panelHead}><strong>Catálogos</strong><small>{DEMO_STORE}</small></div>
+                <div className={s.toggleRow}><span className={`${s.tIcon} ${s.tCyan}`}><Ic.contacts /></span><span>Segmentos<small>Hogar, constructor, arquitecto, pintor…</small></span></div>
+                <div className={s.toggleRow}><span className={`${s.tIcon} ${s.tMagenta}`}><Ic.megaphone /></span><span>Canales<small>Visita en tienda, recomendación, Facebook…</small></span></div>
+                <div className={s.toggleRow}><span className={`${s.tIcon} ${s.tTeal}`}><Ic.flask /></span><span>Fórmulas<small>Igualación de colores en mL</small></span></div>
+              </div>
+              <div className={`${s.panel} ${s.panelTeam}`}>
+                <div className={s.panelHead}><strong>Equipo</strong><small>3 de {MAX_USERS} usuarios</small></div>
+                <div className={s.memberRow}><span className={`${s.av} ${s.avBrand}`}>AM</span><span>Ana Martínez</span><em className={s.roleOwner}>Dueño</em></div>
+                <div className={s.memberRow}><span className={`${s.av} ${s.avCyan}`}>LH</span><span>Luis Herrera</span><em>Vendedor</em></div>
+                <div className={s.memberRow}><span className={`${s.av} ${s.avAmber}`}>SR</span><span>Sofía Ramos</span><em>Vendedor</em></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Cómo funciona ── */}
+        <section id="como-funciona" className={s.section}>
+          <div className={s.wrap}>
+            <div className={s.center}>
+              <span className={s.kicker}>Cómo funciona</span>
+              <h2 className={s.h2}>Empieza hoy, en tres pasos</h2>
+            </div>
+            <ol className={s.steps}>
+              {STEPS.map((st, i) => (
+                <li key={st.title} className={s.stepCard}>
+                  <span className={`${s.stepNum} ${s[`n${i + 1}`]}`}>{i + 1}</span>
+                  <h3>{st.title}</h3>
+                  <p>{st.text}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* ── Seguridad ── */}
+        <section id="seguridad" className={`${s.section} ${s.dark}`}>
+          <div className={`${s.wrap} ${s.secLayout}`}>
+            <div className={s.secCopy}>
+              <span className={s.kicker}>Seguridad</span>
+              <h2 className={s.h2}>La información de tu tienda es solo de tu tienda</h2>
+              <p className={s.sub}>
+                La separación por tienda está construida desde la base de datos: ni otras sucursales ni otros usuarios
+                pueden ver a tus clientes.
+              </p>
+              <div className={s.shieldArt} aria-hidden="true"><span><Ic.shield /></span></div>
+            </div>
+            <div className={s.secGrid}>
+              {SECURITY.map(it => (
+                <div key={it.title} className={s.secItem}>
+                  <span className={s.secIcon}><it.icon /></span>
+                  <h3>{it.title}</h3>
+                  <p>{it.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Preguntas ── */}
+        <section id="preguntas" className={s.section}>
+          <div className={s.wrap}>
+            <div className={s.center}>
+              <span className={s.kicker}>Preguntas frecuentes</span>
+              <h2 className={s.h2}>Lo que suelen preguntarnos</h2>
+            </div>
+            <div className={s.faq}>
+              {FAQ.map(f => (
+                <details key={f.q}>
+                  <summary>{f.q}<span className={s.plus}><Ic.plus /></span></summary>
+                  <p>{f.a}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Cierre ── */}
+        <section className={s.ctaSection}>
+          <div className={s.wrap}>
+            <div className={s.cta}>
+              <div className={s.ctaSwirl} aria-hidden="true"><i className={s.b1} /><i className={s.b2} /><i className={s.b3} /><i className={s.b4} /><i className={s.b5} /></div>
+              <div className={s.ctaInner}>
+                <h2 className={s.h2}>Tu sucursal, organizada desde hoy</h2>
+                <p className={s.sub}>Pide tu invitación: damos de alta tu tienda y te ayudamos a configurarla con tu equipo.</p>
+                <div className={s.heroCtas}>
+                  <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>Pedir invitación <Ic.arrow className={s.btnArrow} /></Link>
+                  <Link href="/login" className={`${s.btn} ${s.btnLight} ${s.btnLg}`}>Iniciar sesión</Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className={s.footer}>
+        <div className={`${s.wrap} ${s.footInner}`}>
+          <div className={s.footBrand}>
+            <BrandLogo className={s.footLogo} />
+            <span>{APP_TAGLINE}.</span>
+          </div>
+          <nav className={s.footLinks} aria-label="Enlaces">
+            <Link href="/login">Iniciar sesión</Link>
+            <Link href="/registro">Pedir invitación</Link>
+            <Link href="/terminos">Términos</Link>
+            <Link href="/privacidad">Aviso de privacidad</Link>
+          </nav>
+          <small className={s.copy}>© {new Date().getFullYear()} {APP_NAME}</small>
+        </div>
+      </footer>
+    </div>
+  )
 }

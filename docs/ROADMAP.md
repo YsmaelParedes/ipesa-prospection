@@ -127,7 +127,6 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 - **Nombre y logo (2.9.0):** la app se llama **Matices**; nuevo símbolo de franjas en capas e íconos regenerados.
 - **Avisos de errores (2.10.0):** los errores de producción (servidor, tareas programadas, webhooks, pantallas del navegador y fallas de Meta que dejan a una tienda sin WhatsApp) se guardan agrupados en `platform_errors` y llegan como aviso al celular del dueño de la plataforma, con reglas anti-ruido (el mismo error 1 vez por hora, máximo 5 avisos cada 10 minutos). En `/admin` → Resumen, panel "Errores recientes" con aviso de prueba y botón "Resuelto". Los mensajes no guardan datos de clientes. El cliente ve una pantalla clara con "Reintentar". Migración `platform_errors` (escrita en `20261016230000_platform_errors.sql`).
 - **Base de datos (16 de octubre, aplicada a mano en el editor SQL de Supabase):** tabla y función `platform_errors` (probadas: avisos, repetidos, tope de 5 en 10 minutos, tope de errores del navegador) y se borró la versión anterior de `reserve_whatsapp_template` (tope de 200). Como se aplicaron a mano, no aparecen en el historial de migraciones de Supabase; los archivos están en `supabase/migrations/`.
-- **Portada nueva** (`/inicio`): presentación de Matices con demo interactiva.
 
 ### Etapa 8. Listo para vender
 - Nombre del producto centralizado en un archivo ✅ (Matices, 2.9.0) y dominio propio (pendiente).
