@@ -15,7 +15,7 @@ export default function WhatsAppPage() {
   const session = useSession()
   const router = useRouter()
   const isAdmin = !!session?.isAdmin
-  // Las campañas son para administradores y se pueden apagar en Configuración → Herramientas
+  // Las campañas son para administradores y vienen con el servicio de WhatsApp (se activa desde /admin)
   const campaigns = isAdmin && (!session?.store || session.store.modules.campaigns)
   const [tab, setTab] = useState<Tab>('bandeja')
   const [retry, setRetry] = useState<CampaignPreset | null>(null)

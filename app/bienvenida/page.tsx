@@ -625,7 +625,7 @@ function BrandPreview({ name, logoUrl, modules, focus }: {
       <p className={s.previewNote}>
         {focus === 'name' && 'El nombre de tu sucursal aparece junto al logo, en el menú de toda la app.'}
         {focus === 'logo' && `Tu logo reemplaza al de ${APP_NAME} en el menú de tu equipo.`}
-        {focus === 'nav' && 'El menú muestra solo las herramientas que actives.'}
+        {focus === 'nav' && 'Así se verá el menú de tu equipo.'}
       </p>
     </div>
   )
