@@ -2215,3 +2215,21 @@ a.rem-subject:hover { text-decoration: underline; }
   .rem-card { flex-wrap: wrap; }
   .rem-card-actions { flex-direction: row; width: 100%; border-left: none; border-top: 1px solid var(--line); justify-content: space-between; align-items: center; padding: 8px 12px 8px 16px; }
 }
+
+/* ============================================================
+   PROTECCIÓN DE LA BASE PARA VENDEDORES (components/CopyGuard.tsx)
+   ============================================================ */
+body.copy-guard { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+body.copy-guard :is(input, textarea, [contenteditable="true"], [contenteditable=""]) { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+body.copy-guard img { -webkit-user-drag: none; }
+.copy-watermark {
+  position: fixed; inset: 0; z-index: 9990; pointer-events: none;
+  background-repeat: repeat; opacity: .045;
+}
+@media print {
+  body.copy-guard > * { display: none !important; }
+  body.copy-guard::after {
+    content: "La impresión está desactivada para tu usuario."; display: block; padding: 48px;
+    font: 600 16px system-ui, sans-serif; color: #131313; text-align: center;
+  }
+}

@@ -54,8 +54,9 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   return NextResponse.json(data)
 }
 
+// Solo dueño/administrador: los vendedores no borran contactos
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  const ctx = await requireStore({ write: true })
+  const ctx = await requireStore({ admin: true, write: true })
   if (ctx instanceof Response) return ctx
 
   const { id } = await params

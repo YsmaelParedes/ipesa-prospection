@@ -22,6 +22,7 @@ import { reminderSubject, reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
 import { fmtDue, isDueToday, isOverdue } from '@/lib/datetime'
 import { enableDevicePush, pushSupport, testDevicePush } from '@/lib/pushClient'
+import { CopyGuard } from '@/components/CopyGuard'
 
 /** Estado de los avisos push en este dispositivo. */
 function pushStateOf(sub: PushSubscription | null): 'blocked' | 'off' | 'on' {
@@ -578,6 +579,12 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
       {/* ── Crear (celular) y formularios de alta compartidos ── */}
       {showFab && <QuickCreateFab kind={FAB_ROUTES[pathname]} />}
       <QuickCreateHost />
+
+      {/* Vendedores: sin seleccionar/copiar/imprimir y con marca de agua (dueño y administradores, sin restricción) */}
+      <CopyGuard
+        active={!!store && !!session && !session.isAdmin}
+        label={[displayName || session?.user.email, store?.name].filter(Boolean).join(' · ')}
+      />
 
       {/* ── Volver arriba ── */}
       {!fill && (
