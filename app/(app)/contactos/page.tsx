@@ -61,6 +61,8 @@ function ContactosContent() {
   const session      = useSession()
   const isAdmin      = !!session?.isAdmin
   const readonly     = session?.store?.access === 'readonly'
+  // Exportar, importar, borrar y seleccionar en lote: solo dueño/administrador (el servidor también lo valida)
+  const canManage    = isAdmin && !readonly
   const waModule     = !session?.store || session.store.modules.whatsapp
   const canCampaign  = isAdmin && waModule && (!session?.store || session.store.modules.campaigns)
 
@@ -222,7 +224,7 @@ function ContactosContent() {
                     <Ico.whatsapp /> Enviar WhatsApp
                   </button>
                 )}
-                {!readonly && (
+                {canManage && (
                   <button className="btn btn-danger" onClick={() => setConfirmBulkDel(true)}>
                     <Ico.trash /> Eliminar {checkedIds.size}
                   </button>
@@ -246,8 +248,8 @@ function ContactosContent() {
             <h2>Contactos</h2>
             {!loading && <span className="count">{filtersOn ? `${filtered.length} de ${contacts.length}` : contacts.length.toLocaleString('es-MX')}</span>}
             <div className="section-actions">
-              {!readonly && <button className="btn btn-ghost" onClick={() => setShowImport(true)} title="Importar desde Excel o CSV"><Ico.upload /> <span className="hide-sm">Importar</span></button>}
-              <button className="btn btn-ghost" onClick={() => setShowExport(true)} disabled={!contacts.length} title="Exportar a Excel"><Ico.download /> <span className="hide-sm">Exportar</span></button>
+              {canManage && <button className="btn btn-ghost" onClick={() => setShowImport(true)} title="Importar desde Excel o CSV"><Ico.upload /> <span className="hide-sm">Importar</span></button>}
+              {isAdmin && <button className="btn btn-ghost" onClick={() => setShowExport(true)} disabled={!contacts.length} title="Exportar a Excel"><Ico.download /> <span className="hide-sm">Exportar</span></button>}
               {!readonly && <button className="btn btn-primary page-primary" onClick={() => openQuickCreate({ kind: 'contact' })}><Ico.plus /> Nuevo contacto</button>}
             </div>
           </>
@@ -289,17 +291,19 @@ function ContactosContent() {
                 const digits = search.replace(/\D/g, '')
                 openQuickCreate(digits.length >= 7 ? { kind: 'contact', phone: digits } : { kind: 'contact', name: search.trim() })
               }}>Crear “{search.trim()}”</button></>}</>
-            : <>Aún no tienes contactos.{!readonly && <> <button className="link-btn" onClick={() => setShowImport(true)}>Importa tu Excel</button> o <button className="link-btn" onClick={() => openQuickCreate({ kind: 'contact' })}>crea el primero</button>.</>}</>}
+            : <>Aún no tienes contactos.{!readonly && <> {canManage && <><button className="link-btn" onClick={() => setShowImport(true)}>Importa tu Excel</button> o </>}<button className="link-btn" onClick={() => openQuickCreate({ kind: 'contact' })}>{canManage ? 'crea el primero' : 'Crea el primero'}</button>.</>}</>}
         </div>
       ) : (
         <div className="table-wrap contacts-table">
           <table className="table">
             <thead>
               <tr>
-                <th style={{ width: 44, paddingRight: 0 }}>
-                  <input type="checkbox" checked={allFilteredChecked} onChange={toggleAll} title="Seleccionar todos" aria-label="Seleccionar todos"
-                    style={{ width: 15, height: 15, accentColor: 'var(--brand)', cursor: 'pointer', display: 'block', margin: '0 auto' }} />
-                </th>
+                {canManage && (
+                  <th style={{ width: 44, paddingRight: 0 }}>
+                    <input type="checkbox" checked={allFilteredChecked} onChange={toggleAll} title="Seleccionar todos" aria-label="Seleccionar todos"
+                      style={{ width: 15, height: 15, cursor: 'pointer', display: 'block', margin: '0 auto' }} />
+                  </th>
+                )}
                 <th>Nombre</th>
                 <th>Teléfono</th>
                 <th>Segmento</th>
@@ -315,10 +319,12 @@ function ContactosContent() {
                   <tr key={c.id}
                     onClick={e => { if (someChecked) toggleCheck(c.id, idx, e.shiftKey); else setSelected(c) }}
                     style={{ background: isChecked ? 'var(--brand-softer)' : undefined, userSelect: 'none' }}>
-                    <td style={{ width: 44, paddingRight: 0 }} onClick={e => { e.stopPropagation(); toggleCheck(c.id, idx, e.shiftKey) }}>
-                      <input type="checkbox" checked={isChecked} onChange={() => {}} aria-label={`Seleccionar ${c.name}`}
-                        style={{ width: 15, height: 15, accentColor: 'var(--brand)', cursor: 'pointer', display: 'block', margin: '0 auto', pointerEvents: 'none' }} />
-                    </td>
+                    {canManage && (
+                      <td style={{ width: 44, paddingRight: 0 }} onClick={e => { e.stopPropagation(); toggleCheck(c.id, idx, e.shiftKey) }}>
+                        <input type="checkbox" checked={isChecked} onChange={() => {}} aria-label={`Seleccionar ${c.name}`}
+                          style={{ width: 15, height: 15, cursor: 'pointer', display: 'block', margin: '0 auto', pointerEvents: 'none' }} />
+                      </td>
+                    )}
                     <td>
                       <div className="cell-name">
                         <Avatar name={c.name} size={32} />
@@ -351,6 +357,7 @@ function ContactosContent() {
           key={selected.id}
           contact={selected}
           readonly={readonly}
+          canDelete={canManage}
           waModule={waModule}
           onClose={closeDetail}
           onUpdated={updated => {
@@ -405,8 +412,8 @@ function countBy(list: any[], key: string): Map<string, number> {
 }
 
 /* ── Ficha del contacto ── */
-function ContactDetail({ contact: c, readonly, waModule, onClose, onUpdated, onDeleted }: {
-  contact: any; readonly: boolean; waModule: boolean
+function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onUpdated, onDeleted }: {
+  contact: any; readonly: boolean; canDelete: boolean; waModule: boolean
   onClose: () => void
   onUpdated: (c: any) => void; onDeleted: (id: string) => void
 }) {
@@ -639,7 +646,7 @@ function ContactDetail({ contact: c, readonly, waModule, onClose, onUpdated, onD
                 </div>
               </div>
 
-              {!readonly && (
+              {canDelete && (
                 confirmDel ? (
                   <div className="danger-box">
                     <div className="danger-title">¿Eliminar este contacto?</div>

@@ -243,10 +243,13 @@ function LeadsContent() {
             <button className={view === 'tabla' ? 'active' : ''} onClick={() => setView('tabla')} aria-pressed={view === 'tabla'} title="Tabla"><Ico.table /> <span className="hide-sm">Tabla</span></button>
             <button className={view === 'kanban' ? 'active' : ''} onClick={() => setView('kanban')} aria-pressed={view === 'kanban'} title="Kanban"><Ico.kanban /> <span className="hide-sm">Kanban</span></button>
           </div>
-          <button className="btn btn-ghost" onClick={() => downloadLeads(filtered, filtersOn || tab !== 'todos')} disabled={!filtered.length}
-            title="Exportar a Excel los leads que estás viendo">
-            <Ico.download /> <span className="hide-sm">Exportar</span>
-          </button>
+          {/* Exportar: solo dueño/administrador, para cuidar la base de la tienda */}
+          {isAdmin && (
+            <button className="btn btn-ghost" onClick={() => downloadLeads(filtered, filtersOn || tab !== 'todos')} disabled={!filtered.length}
+              title="Exportar a Excel los leads que estás viendo">
+              <Ico.download /> <span className="hide-sm">Exportar</span>
+            </button>
+          )}
           {!readonly && (
             <button className="btn btn-primary page-primary" onClick={() => openQuickCreate({ kind: 'lead' })}>
               <Ico.plus /> Nuevo lead

@@ -18,6 +18,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.12.0',
+    date: '17 de octubre, 2026',
+    title: 'Más cuidado con la información de tu tienda',
+    items: [
+      'Exportar a Excel, importar listas y borrar contactos ahora son solo para el dueño y los administradores.',
+      'Los vendedores siguen viendo y atendiendo a todos los clientes, pero no pueden seleccionar, copiar ni imprimir la información, y su pantalla lleva una marca de agua discreta con su nombre.',
+    ],
+  },
+  {
     version: '2.11.0',
     date: '17 de octubre, 2026',
     title: 'Listas y casillas con el diseño de Matices',

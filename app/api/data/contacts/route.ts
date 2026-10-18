@@ -28,8 +28,9 @@ async function GETImpl() {
 /**
  * POST /api/data/contacts
  *  - Un objeto → crea un contacto.
- *  - { contacts: [...] } → importación masiva (hasta 500 por petición). Los
- *    teléfonos ya registrados se omiten en vez de fallar todo el lote.
+ *  - { contacts: [...] } → importación masiva (hasta 500 por petición; solo
+ *    dueño/administrador). Los teléfonos ya registrados se omiten en vez de
+ *    fallar todo el lote.
  */
 export async function POST(req: NextRequest) {
   const ctx = await requireStore({ write: true })
@@ -40,6 +41,8 @@ export async function POST(req: NextRequest) {
   const supabase = getServerSupabase()
 
   if (Array.isArray(body.contacts)) {
+    // Importar listas: solo dueño/administrador
+    if (!ctx.isAdmin) return jsonError('Solo el dueño o un administrador puede importar contactos', 403)
     const list = body.contacts as unknown[]
     if (list.length === 0 || list.length > MAX_BULK) return jsonError(`Se permiten de 1 a ${MAX_BULK} contactos por petición`)
 
@@ -80,8 +83,9 @@ export async function POST(req: NextRequest) {
 }
 
 // DELETE /api/data/contacts — borrado masivo { ids: string[] }
+// Borrar contactos: solo dueño/administrador (los vendedores no borran la base)
 export async function DELETE(req: NextRequest) {
-  const ctx = await requireStore({ write: true })
+  const ctx = await requireStore({ admin: true, write: true })
   if (ctx instanceof Response) return ctx
 
   const body = await readJson(req)
