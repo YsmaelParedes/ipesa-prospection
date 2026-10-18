@@ -133,7 +133,7 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 - **Cobro:** suscripción mensual con Stripe Checkout; cambiar de plan, tarjeta, facturas y cancelación en el portal de Stripe. Precios en Stripe con lookup keys `galon_mensual` y `cubeta_mensual`. Webhook `/api/webhooks/stripe` → `apply_stripe_subscription` (idempotente con `stripe_events`).
 - **Reglas:** dejar de pagar o cancelar baja a Litro (no a solo lectura); solo lectura queda para suspendidas o canceladas a mano. En Litro solo entra el dueño. De Cubeta a Galón se desactivan los usuarios más recientes que sobran. Una cortesía a mano de Galón/Cubeta vence con su `paid_until` (+3 días) y baja a Litro (`store_effective_plan`).
 - **Registro abierto:** `/registro` crea la cuenta y `/bienvenida` la tienda en Litro. El alta con invitación desde `/admin` queda para casos especiales; los pagos a mano, para cortesías.
-- **Migración** `20261017120000_stripe_plans.sql`.
+- **Migración** `20261018141228_stripe_plans.sql`.
 - **Variables nuevas:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
 
 ### Etapa 8. Listo para vender

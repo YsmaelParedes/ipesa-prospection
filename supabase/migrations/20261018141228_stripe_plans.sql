@@ -105,7 +105,7 @@ create table if not exists public.stripe_events (
 );
 alter table public.stripe_events enable row level security;
 revoke all on public.stripe_events from public, anon, authenticated;
-grant select, insert, update, delete on public.stripe_events to service_role;
+grant select, insert, update on public.stripe_events to service_role;
 
 -- ── Suscripción (solo la llama el webhook de Stripe) ───────────────────────
 -- p_plan: plan del precio suscrito (galon | cubeta). El estado de Stripe
