@@ -151,6 +151,17 @@ export function OwnerChip({ value, small }: { value: string; small?: boolean }) 
   )
 }
 
+/** Color del segmento (el mismo de su etiqueta TipoChip): para los puntos de color de los desplegables. */
+export function segmentColor(value: string): string {
+  const n = norm(value)
+  if (!n) return 'var(--muted-2)'
+  if (['hogar', 'residencial', 'casa', 'particular', 'persona'].some(k => n.includes(k))) return 'var(--brand)'
+  if (['constructor', 'contratista', 'construccion', 'obra'].some(k => n.includes(k))) return 'var(--warning-fill)'
+  if (['arquitecto', 'arquitecta', 'disenador', 'diseñador', 'arq'].some(k => n.includes(k))) return 'var(--c-cyan)'
+  if (['empresa', 'comercial', 'negocio', 'corporativo', 'corporacion'].some(k => n.includes(k))) return 'var(--c-purple)'
+  return hashChip(value).color
+}
+
 /* Chip de tipo de contacto */
 export function TipoChip({ value, small }: { value: string; small?: boolean }) {
   const TIPO_MAP: Array<[string[], string]> = [
@@ -304,53 +315,32 @@ export function FilterDropdown({
       {open && pos && typeof document !== 'undefined' && createPortal(
         <div
           ref={panelRef}
-          style={{
-            position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 1000,
-            maxHeight: Math.min(360, window.innerHeight - pos.top - 16),
-            display: 'flex', flexDirection: 'column',
-            background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 14,
-            boxShadow: 'var(--shadow-lg)', overflow: 'hidden',
-          }}
+          className="sel-panel"
+          style={{ top: pos.top, left: pos.left, width: pos.width, maxHeight: Math.min(360, window.innerHeight - pos.top - 16) }}
         >
           {searchable && (
-            <div style={{ padding: 10, borderBottom: '1px solid var(--line)', flexShrink: 0 }}>
-              <input
-                autoFocus
-                value={q}
-                onChange={e => setQ(e.target.value)}
-                placeholder={searchPlaceholder}
-                style={{
-                  width: '100%', padding: '8px 10px', border: '1px solid var(--line)', borderRadius: 9,
-                  background: 'var(--paper)', fontSize: 13, outline: 'none', boxSizing: 'border-box',
-                }}
-              />
-            </div>
+            <label className="sel-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+              <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
+            </label>
           )}
-          <div style={{ overflowY: 'auto', padding: 6 }}>
-            {filtered.length === 0 && (
-              <div style={{ padding: '14px 10px', fontSize: 12.5, color: 'var(--muted)', textAlign: 'center' }}>Sin coincidencias</div>
-            )}
+          <div className="sel-list" role="listbox">
+            {filtered.length === 0 && <div className="sel-empty">Sin coincidencias</div>}
             {filtered.map(t => {
               const active = t === value
               return (
                 <button
                   key={t}
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  className={`sel-option sel-option-btn${active ? ' is-selected' : ''}`}
                   onClick={() => { onChange(t); setOpen(false); setQ('') }}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-                    width: '100%', padding: '8px 10px', borderRadius: 9, border: 'none', cursor: 'pointer',
-                    background: active ? 'var(--brand-soft)' : 'transparent',
-                    color: active ? 'var(--brand-strong)' : 'var(--ink)',
-                    fontSize: 13, fontWeight: active ? 700 : 500, textAlign: 'left',
-                  }}
-                  onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--paper)' }}
-                  onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                 >
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label(t)}</span>
-                  {countFor && (
-                    <span style={{ fontSize: 11.5, fontWeight: 700, color: active ? 'var(--brand-strong)' : 'var(--muted)', flexShrink: 0 }}>
-                      {countFor(t)}
-                    </span>
+                  <span className="sel-text"><span className="sel-label">{label(t)}</span></span>
+                  {countFor && <span className="sel-count">{countFor(t)}</span>}
+                  {active && (
+                    <svg className="sel-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7" /></svg>
                   )}
                 </button>
               )

@@ -8,6 +8,7 @@ import { apiFetch } from '@/lib/apiClient'
 
 import { useEffect, useMemo, useState } from 'react'
 import type { WhatsAppTemplateDef } from '@/lib/whatsappTemplates'
+import { Select } from '@/components/Select'
 
 const ImageIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22, color: 'var(--muted-2)' }}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
@@ -27,6 +28,7 @@ export type WhatsAppTemplateSelection = {
 const CATEGORY_LABEL: Record<string, string> = { MARKETING: 'Marketing', UTILITY: 'Servicio', AUTHENTICATION: 'Autenticación' }
 // Calidad de la plantilla según Meta (templates/template-quality)
 const QUALITY_LABEL: Record<string, string> = { GREEN: 'calidad alta', YELLOW: 'calidad media', RED: 'calidad baja' }
+const QUALITY_DOT: Record<string, string> = { GREEN: 'var(--success-fill)', YELLOW: 'var(--warning-fill)', RED: 'var(--danger)' }
 
 // Plantillas compartidas entre todos los selectores abiertos de la sesión
 function loadTemplates(): Promise<{ templates: WhatsAppTemplateDef[]; error: string }> {
@@ -154,13 +156,14 @@ export function WhatsAppTemplatePicker({
         ) : templates.length === 0 ? (
           <div style={{ fontSize: 12.5, color: 'var(--danger)' }}>No hay plantillas aprobadas disponibles.</div>
         ) : (
-          <select value={templateKey} onChange={e => setTemplateKey(e.target.value)}>
-            {templates.map(t => (
-              <option key={`${t.name}|${t.language}`} value={`${t.name}|${t.language}`}>
-                {t.label}{t.category ? ` · ${CATEGORY_LABEL[t.category] ?? t.category}` : ''}{t.quality && QUALITY_LABEL[t.quality] ? ` · ${QUALITY_LABEL[t.quality]}` : ''}{t.unsupported ? ' (no compatible)' : ''}
-              </option>
-            ))}
-          </select>
+          <Select value={templateKey} onChange={setTemplateKey} aria-label="Plantilla" searchPlaceholder="Buscar plantilla…"
+            options={templates.map(t => ({
+              value: `${t.name}|${t.language}`,
+              label: t.label,
+              hint: [t.category ? CATEGORY_LABEL[t.category] ?? t.category : '', t.quality ? QUALITY_LABEL[t.quality] ?? '' : '', t.unsupported ? 'No compatible con la app' : '']
+                .filter(Boolean).join(' · ') || undefined,
+              color: t.quality ? QUALITY_DOT[t.quality] : undefined,
+            }))} />
         )}
         {templatesError && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4 }}>⚠️ {templatesError}</div>}
       </div>

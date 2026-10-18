@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { APP_NAME } from '@/lib/brand'
 import type { ClientStore } from '@/lib/profile'
 import { ROLE_LABELS, type StoreRole } from '@/lib/stores'
+import { Select } from '@/components/Select'
 import { Ico, Note, Panel, Spinner, WhatsAppGlyph, api, avatarTone, copyText, cx, fmtDate, initialsOf, send, useToast } from './ui'
 import s from './configuracion.module.css'
 
@@ -164,13 +165,16 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
                   </div>
                   <div className={s.memberActions}>
                     {m.canManage && m.role !== 'owner' ? (
-                      <select
+                      <Select
                         className={s.select} value={m.role} disabled={busyId === m.user_id} aria-label={`Rol de ${name}`}
-                        onChange={e => act(m.user_id, () => api('/api/store/members', send('PATCH', { userId: m.user_id, role: e.target.value })), 'Rol actualizado')}
-                      >
-                        <option value="employee">Vendedor</option>
-                        {((isOwner && store.allowAdmins) || m.role === 'admin') && <option value="admin" disabled={!isOwner || !store.allowAdmins}>Administrador</option>}
-                      </select>
+                        onChange={role => act(m.user_id, () => api('/api/store/members', send('PATCH', { userId: m.user_id, role })), 'Rol actualizado')}
+                        options={[
+                          { value: 'employee', label: 'Vendedor', hint: 'Ve sus leads y su agenda' },
+                          ...(((isOwner && store.allowAdmins) || m.role === 'admin')
+                            ? [{ value: 'admin', label: 'Administrador', hint: 'Configura la tienda y ve todo', disabled: !isOwner || !store.allowAdmins }]
+                            : []),
+                        ]}
+                      />
                     ) : (
                       <span className={cx(s.badge, ROLE_BADGE[m.role])}>{ROLE_LABELS[m.role]}</span>
                     )}

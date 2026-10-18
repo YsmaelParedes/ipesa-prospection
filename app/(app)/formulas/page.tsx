@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/apiClient'
 
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Select } from '@/components/Select'
 
 /* ══════════════════════════════════════════════════════════
    TIPOS
@@ -252,14 +253,13 @@ export default function FormulasPage() {
                       onChange={e => setVolumeValue(e.target.value)}
                       style={{ width: 90, padding: '9px 10px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--card)', fontSize: 13.5, outline: 'none' }}
                     />
-                    <select
+                    <Select
                       value={volumeUnit}
-                      onChange={e => setVolumeUnit(e.target.value as VolumeUnit)}
-                      style={{ padding: '9px 10px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--card)', fontSize: 13.5, outline: 'none' }}
-                    >
-                      <option value="L">Litros</option>
-                      <option value="ml">mL</option>
-                    </select>
+                      onChange={v => setVolumeUnit(v as VolumeUnit)}
+                      aria-label="Unidad"
+                      style={{ padding: '9px 10px', borderRadius: 9, border: '1px solid var(--line)', fontSize: 13.5 }}
+                      options={[{ value: 'L', label: 'Litros' }, { value: 'ml', label: 'mL' }]}
+                    />
                   </div>
                 </div>
               </div>

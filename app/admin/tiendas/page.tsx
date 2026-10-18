@@ -14,6 +14,7 @@ import {
 import { PaymentForm, PaymentRow } from '../payments-ui'
 import { NewStoreModal, OwnerInviteBlock } from '../stores-ui'
 import { WhatsAppConnectionBlock } from '../whatsapp-ui'
+import { Select } from '@/components/Select'
 import s from '../admin.module.css'
 
 /**
@@ -268,9 +269,8 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
             <div className={s.action}>
               <div><strong>Plan</strong><small>Define el límite de usuarios.</small></div>
               <div className={s.actionCtl}>
-                <select className={s.select} value={plan} onChange={e => setPlan(e.target.value)} aria-label="Plan">
-                  {Object.entries(PLANS).map(([id, p]) => <option key={id} value={id}>{p.label} · {p.maxUsers} usuarios</option>)}
-                </select>
+                <Select className={s.select} value={plan} onChange={setPlan} aria-label="Plan"
+                  options={Object.entries(PLANS).map(([id, p]) => ({ value: id, label: p.label, hint: `${p.maxUsers} usuarios` }))} />
                 <button className="btn btn-ghost" disabled={!!busy || plan === store.plan} onClick={() => patch('plan', { plan }, 'Plan actualizado')}>Guardar</button>
               </div>
             </div>
