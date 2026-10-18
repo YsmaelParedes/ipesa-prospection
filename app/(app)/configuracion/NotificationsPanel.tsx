@@ -116,7 +116,7 @@ export function NotificationsPanel() {
           )}
           {on && (
             <label className={s.span2} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, color: 'var(--ink-2)', cursor: 'pointer' }}>
-              <input type="checkbox" checked={whatsapp} onChange={toggleWhatsapp} style={{ accentColor: '#25D366', width: 16, height: 16 }} />
+              <input type="checkbox" checked={whatsapp} onChange={toggleWhatsapp} style={{ '--check': '#25D366', width: 16, height: 16 } as React.CSSProperties} />
               Avisarme también cuando llegue un mensaje de WhatsApp
             </label>
           )}

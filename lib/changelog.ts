@@ -18,6 +18,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.11.0',
+    date: '17 de octubre, 2026',
+    title: 'Listas y casillas con el diseño de Matices',
+    items: [
+      'Las listas para elegir (segmento, canal, estado, rol, plantilla…) ahora se abren como una tarjeta con el diseño de la app: la opción elegida lleva palomita, los segmentos muestran su color y las listas largas tienen buscador.',
+      'Se pueden usar con el teclado: flechas para moverte, Enter para elegir, Escape para cerrar y escribir para saltar a una opción.',
+      'Las casillas para marcar también tienen el diseño de la app.',
+    ],
+  },
+  {
     version: '2.10.0',
     date: '16 de octubre, 2026',
     title: 'Pantalla clara cuando algo falla',

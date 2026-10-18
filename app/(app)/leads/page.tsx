@@ -9,7 +9,8 @@ import { cachedQueryData, apiFetch } from '@/lib/apiClient'
 import { Suspense, useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Avatar, CanalChip, EstadoChip, SegmentoChip, OwnerChip, FilterDropdown, fmtDate, fmtDateLong, fmtPhone, normalizePhone } from '@/components/CrmUI'
+import { Avatar, CanalChip, EstadoChip, SegmentoChip, OwnerChip, FilterDropdown, fmtDate, fmtDateLong, fmtPhone, normalizePhone, segmentColor } from '@/components/CrmUI'
+import { Select, toOptions } from '@/components/Select'
 import { useSession } from '@/lib/profile'
 import { useCatalogs } from '@/lib/catalogs'
 import { LEAD_ESTADOS, LOST, OPEN_ESTADOS, WON, isOpenLead, remTypeInfo, reminderTitle, type Reminder, type ReminderType } from '@/lib/crm'
@@ -902,15 +903,13 @@ function LeadDetail({
                 <div className="field-row">
                   <div className="field">
                     <label>Canal</label>
-                    <select value={editForm.canal} onChange={e => setEditForm(f => ({ ...f, canal: e.target.value }))}>
-                      {opt(canales, editForm.canal).map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    <Select value={editForm.canal} onChange={v => setEditForm(f => ({ ...f, canal: v }))} aria-label="Canal"
+                      options={toOptions(opt(canales, editForm.canal))} placeholder="Elegir canal" />
                   </div>
                   <div className="field">
                     <label>Segmento</label>
-                    <select value={editForm.segmento} onChange={e => setEditForm(f => ({ ...f, segmento: e.target.value }))}>
-                      {opt(segments, editForm.segmento).map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                    <Select value={editForm.segmento} onChange={v => setEditForm(f => ({ ...f, segmento: v }))} aria-label="Segmento"
+                      options={toOptions(opt(segments, editForm.segmento), segmentColor)} placeholder="Elegir segmento" />
                   </div>
                 </div>
                 <div className="field-row">

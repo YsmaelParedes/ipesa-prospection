@@ -7,7 +7,8 @@ import { apiFetch } from '@/lib/apiClient'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Avatar, EstadoChip } from '@/components/CrmUI'
+import { Avatar, EstadoChip, segmentColor } from '@/components/CrmUI'
+import { Select, toOptions } from '@/components/Select'
 import ContactFormModal from '@/components/ContactFormModal'
 import { useCatalogs } from '@/lib/catalogs'
 import { isOpenLead, type ContactLite } from '@/lib/crm'
@@ -167,17 +168,13 @@ export default function LeadCreateModal({ contact: fixedContact, onClose, onSave
               <div className="field-row">
                 <div className="field">
                   <label htmlFor="l-canal">Canal</label>
-                  <select id="l-canal" value={form.canal} onChange={e => setForm(f => ({ ...f, canal: e.target.value }))}>
-                    {!canales.includes(form.canal) && <option value={form.canal}>{form.canal || '— Elegir —'}</option>}
-                    {canales.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                  <Select id="l-canal" value={form.canal} onChange={v => setForm(f => ({ ...f, canal: v }))} placeholder="Elegir canal"
+                    options={toOptions(form.canal && !canales.includes(form.canal) ? [form.canal, ...canales] : canales)} />
                 </div>
                 <div className="field">
                   <label htmlFor="l-seg">Segmento</label>
-                  <select id="l-seg" value={form.segmento} onChange={e => setForm(f => ({ ...f, segmento: e.target.value }))}>
-                    {!segments.includes(form.segmento) && <option value={form.segmento}>{form.segmento || '— Elegir —'}</option>}
-                    {segments.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  <Select id="l-seg" value={form.segmento} onChange={v => setForm(f => ({ ...f, segmento: v }))} placeholder="Elegir segmento"
+                    options={toOptions(form.segmento && !segments.includes(form.segmento) ? [form.segmento, ...segments] : segments, segmentColor)} />
                 </div>
               </div>
               <div className="field-row">

@@ -11,6 +11,8 @@ import { useCatalogs } from '@/lib/catalogs'
 import type { ContactLite } from '@/lib/crm'
 import { findContactByPhone, loadSearchIndex, type IndexContact } from '@/lib/searchIndex'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
+import { segmentColor } from '@/components/CrmUI'
+import { Select, toOptions } from '@/components/Select'
 
 const CloseIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 17, height: 17 }}><path d="M18 6 6 18M6 6l12 12" /></svg>
 
@@ -111,17 +113,13 @@ export default function ContactFormModal({ initialName = '', initialPhone = '', 
           <div className="field-row">
             <div className="field">
               <label htmlFor="c-segment">Segmento{needSegment ? ' *' : ''}</label>
-              <select id="c-segment" value={form.segment} onChange={e => upd('segment', e.target.value)}>
-                <option value="">{segments.length ? '— Elegir —' : 'Sin segmentos'}</option>
-                {segments.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <Select id="c-segment" value={form.segment} onChange={v => upd('segment', v)} disabled={!segments.length}
+                options={toOptions(segments, segmentColor)} placeholder={segments.length ? 'Elegir segmento' : 'Sin segmentos'} />
             </div>
             <div className="field">
               <label htmlFor="c-canal">¿Cómo nos conoció?{needCanal ? ' *' : ''}</label>
-              <select id="c-canal" value={form.acquisition_channel} onChange={e => upd('acquisition_channel', e.target.value)}>
-                <option value="">{canales.length ? '— Elegir —' : 'Sin canales'}</option>
-                {canales.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <Select id="c-canal" value={form.acquisition_channel} onChange={v => upd('acquisition_channel', v)} disabled={!canales.length}
+                options={toOptions(canales)} placeholder={canales.length ? 'Elegir canal' : 'Sin canales'} />
             </div>
           </div>
           {!needSegment && !needCanal && (

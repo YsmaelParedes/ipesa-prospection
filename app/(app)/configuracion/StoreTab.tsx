@@ -6,6 +6,7 @@ import { APP_NAME } from '@/lib/brand'
 import { downloadStoreWorkbook } from '@/lib/exportData'
 import { invalidateSession, type ClientStore } from '@/lib/profile'
 import { MX_STATES } from '@/lib/mexico'
+import { Select, toOptions } from '@/components/Select'
 import { Ico, Note, Panel, api, cx, send, useToast } from './ui'
 import s from './configuracion.module.css'
 
@@ -119,10 +120,8 @@ export function StoreTab({ store }: { store: ClientStore }) {
             </div>
             <div className="field">
               <label htmlFor="st-state">Estado</label>
-              <select id="st-state" value={form.state} onChange={set('state')}>
-                <option value="">Selecciona</option>
-                {MX_STATES.map(st => <option key={st} value={st}>{st}</option>)}
-              </select>
+              <Select id="st-state" value={form.state} onChange={v => setForm(f => ({ ...f, state: v }))}
+                options={toOptions(MX_STATES)} placeholder="Selecciona" searchPlaceholder="Buscar estado…" />
             </div>
           </div>
           {error && <div className={s.error}>{error}</div>}

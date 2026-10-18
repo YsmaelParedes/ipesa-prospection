@@ -10,6 +10,7 @@ import {
   type PaymentMethod, type StorePayment,
 } from '@/lib/payments'
 import { fmtDate, type PlatformStore } from './data'
+import { Select } from '@/components/Select'
 import s from './admin.module.css'
 
 /**
@@ -94,15 +95,13 @@ export function PaymentForm({ store, onDone }: { store: PlatformStore; onDone: (
         </div>
         <div className="field">
           <label htmlFor="pay-months">Meses que cubre</label>
-          <select id="pay-months" value={months} onChange={e => changeMonths(Number(e.target.value))}>
-            {MONTH_OPTIONS.map(m => <option key={m} value={m}>{m} {m === 1 ? 'mes' : 'meses'}</option>)}
-          </select>
+          <Select id="pay-months" value={String(months)} onChange={v => changeMonths(Number(v))}
+            options={MONTH_OPTIONS.map(m => ({ value: String(m), label: `${m} ${m === 1 ? 'mes' : 'meses'}` }))} />
         </div>
         <div className="field">
           <label htmlFor="pay-method">Método</label>
-          <select id="pay-method" value={method} onChange={e => changeMethod(e.target.value as PaymentMethod)}>
-            {PAYMENT_METHODS.map(m => <option key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</option>)}
-          </select>
+          <Select id="pay-method" value={method} onChange={v => changeMethod(v as PaymentMethod)}
+            options={PAYMENT_METHODS.map(m => ({ value: m, label: PAYMENT_METHOD_LABELS[m] }))} />
         </div>
         <div className="field">
           <label htmlFor="pay-date">Fecha del pago</label>

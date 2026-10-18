@@ -9,7 +9,8 @@ import { apiFetch, invalidateQueries } from '@/lib/apiClient'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Avatar, EstadoChip, TipoChip } from '@/components/CrmUI'
+import { Avatar, EstadoChip, TipoChip, segmentColor } from '@/components/CrmUI'
+import { Select, toOptions } from '@/components/Select'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
 import {
   Linkified, MediaContent, StatusTicks, WaIcon, WindowBadge,
@@ -907,11 +908,11 @@ function SaveContactSection({ phone, profileName, config, onSaved }: {
       <div className="field-row">
         <div className="field">
           <label>Segmento</label>
-          <select value={segment} onChange={e => setSegment(e.target.value)}>{config.segments.map(s => <option key={s}>{s}</option>)}</select>
+          <Select value={segment} onChange={setSegment} aria-label="Segmento" options={toOptions(config.segments, segmentColor)} placeholder="Elegir segmento" />
         </div>
         <div className="field">
           <label>Canal</label>
-          <select value={canal} onChange={e => setCanal(e.target.value)}>{config.canales.map(s => <option key={s}>{s}</option>)}</select>
+          <Select value={canal} onChange={setCanal} aria-label="Canal" options={toOptions(config.canales)} placeholder="Elegir canal" />
         </div>
       </div>
       {error && <div className="wa-form-error">{error}</div>}
@@ -967,7 +968,7 @@ function LeadsSection({ contact, phone, leads, config, onChanged, toast }: {
           <div className="field-row">
             <div className="field">
               <label>Canal</label>
-              <select value={canal} onChange={e => setCanal(e.target.value)}>{config.canales.map(s => <option key={s}>{s}</option>)}</select>
+              <Select value={canal} onChange={setCanal} aria-label="Canal" options={toOptions(config.canales)} placeholder="Elegir canal" />
             </div>
             <div className="field">
               <label>Valor (MXN)</label>

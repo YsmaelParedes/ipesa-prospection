@@ -9,6 +9,7 @@ import { APP_NAME } from '@/lib/brand'
 import { invalidateSession, useSession, type ClientStore } from '@/lib/profile'
 import { DEFAULT_MODULES, ROLE_LABELS, planOf, type StoreModule, type StoreModules } from '@/lib/stores'
 import { MX_STATES } from '@/lib/mexico'
+import { Select, toOptions } from '@/components/Select'
 import { pendingInvite } from '@/lib/pendingInvite'
 import { requestInviteLinks } from '@/lib/legal'
 import { signOut } from '@/lib/signOut'
@@ -312,10 +313,8 @@ function StoreStep({ profile, setProfile, store, addingStore, onSaved }: {
             <label htmlFor="f-state">Estado</label>
             <div className="auth-input">
               <AuthIcon.pin className="auth-input-icon" />
-              <select id="f-state" className={s.select} value={profile.state} onChange={set('state')} required autoComplete="address-level1">
-                <option value="" disabled>Selecciona</option>
-                {MX_STATES.map(st => <option key={st} value={st}>{st}</option>)}
-              </select>
+              <Select id="f-state" className={s.select} value={profile.state} onChange={v => setProfile(p => ({ ...p, state: v }))} required
+                options={toOptions(MX_STATES)} placeholder="Selecciona" searchPlaceholder="Buscar estado…" />
             </div>
           </div>
         </div>

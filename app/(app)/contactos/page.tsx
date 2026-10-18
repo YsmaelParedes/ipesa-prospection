@@ -9,7 +9,8 @@ import { cachedQueryData, apiFetch, batchQueryChanges } from '@/lib/apiClient'
 import { Suspense, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Avatar, TipoChip, CanalChip, FilterDropdown, EstadoChip, fmtDateLong, fmtPhone, normalizePhone } from '@/components/CrmUI'
+import { Avatar, TipoChip, CanalChip, FilterDropdown, EstadoChip, fmtDateLong, fmtPhone, normalizePhone, segmentColor } from '@/components/CrmUI'
+import { Select, toOptions } from '@/components/Select'
 import { phoneDigits } from '@/components/ContactFormModal'
 import { useSession } from '@/lib/profile'
 import { useCatalogs } from '@/lib/catalogs'
@@ -538,17 +539,13 @@ function ContactDetail({ contact: c, readonly, waModule, onClose, onUpdated, onD
               <div className="field-row">
                 <div className="field">
                   <label>Segmento{segments.length ? ' *' : ''}</label>
-                  <select value={editForm.segment} onChange={e => upd('segment', e.target.value)}>
-                    <option value="">— Elegir —</option>
-                    {opt(segments, editForm.segment).map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  <Select value={editForm.segment} onChange={v => upd('segment', v)} aria-label="Segmento"
+                    options={toOptions(opt(segments, editForm.segment), segmentColor)} placeholder="Elegir segmento" />
                 </div>
                 <div className="field">
                   <label>¿Cómo nos conoció?{canales.length ? ' *' : ''}</label>
-                  <select value={editForm.acquisition_channel} onChange={e => upd('acquisition_channel', e.target.value)}>
-                    <option value="">— Elegir —</option>
-                    {opt(canales, editForm.acquisition_channel).map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  <Select value={editForm.acquisition_channel} onChange={v => upd('acquisition_channel', v)} aria-label="¿Cómo nos conoció?"
+                    options={toOptions(opt(canales, editForm.acquisition_channel))} placeholder="Elegir canal" />
                 </div>
               </div>
               <div className="field">
@@ -1015,10 +1012,9 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
                 {CAMPOS_DESTINO.map(dest => (
                   <div className="map-row" key={dest}>
                     <span className="map-label">{CAMPO_LABELS[dest]}{dest === 'name' || dest === 'phone' ? ' *' : ''}</span>
-                    <select className="map-select" value={mapping[dest] || ''} onChange={e => setMapping(m => ({ ...m, [dest]: e.target.value }))}>
-                      <option value="">— ignorar —</option>
-                      {headers.map(h => <option key={h} value={h}>{h}</option>)}
-                    </select>
+                    <Select className="map-select" value={mapping[dest] || ''} onChange={v => setMapping(m => ({ ...m, [dest]: v }))}
+                      aria-label={`Columna para ${CAMPO_LABELS[dest]}`} searchPlaceholder="Buscar columna…"
+                      options={[{ value: '', label: 'Ignorar', hint: 'Este dato no se importa' }, ...toOptions(headers)]} />
                   </div>
                 ))}
               </div>

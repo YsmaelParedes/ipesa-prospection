@@ -9,7 +9,8 @@ import { loadCatalogs } from '@/lib/catalogs'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Avatar, TipoChip } from '@/components/CrmUI'
+import { Avatar, TipoChip, segmentColor } from '@/components/CrmUI'
+import { Select, toOptions } from '@/components/Select'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
 import { useWhatsAppCampaignQuota, CampaignQuotaNote, isOverQuota } from '@/components/WhatsAppCampaignQuota'
 import { useCampaignSend, CampaignConfirmPanel, CampaignProgressPanel, CampaignResultsPanel } from '@/components/WhatsAppCampaignSend'
@@ -259,17 +260,15 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar nombre o teléfono…" />
             </label>
             <div className="wa-picker-filters">
-              <select className="wa-select" value={segmentFilter} onChange={e => setSegmentFilter(e.target.value)} aria-label="Segmento">
-                <option value="Todos">Todos los segmentos</option>
-                {segmentos.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <select className="wa-select" value={history} onChange={e => setHistory(e.target.value as History)} aria-label="Historial de campañas"
-                title="Cómo le fue a cada contacto con tus campañas anteriores">
-                <option value="all">Todo el historial</option>
-                {(['never', ...PERSON_STATE_ORDER] as const).filter(h => historyCounts.get(h) || history === h).map(h => (
-                  <option key={h} value={h}>{historyLabel(h)} ({historyCounts.get(h) ?? 0})</option>
-                ))}
-              </select>
+              <Select className="wa-select" value={segmentFilter} onChange={setSegmentFilter} aria-label="Segmento"
+                options={[{ value: 'Todos', label: 'Todos los segmentos' }, ...toOptions(segmentos, segmentColor)]} />
+              <Select className="wa-select" value={history} onChange={v => setHistory(v as History)} aria-label="Historial de campañas"
+                title="Cómo le fue a cada contacto con tus campañas anteriores"
+                options={[
+                  { value: 'all', label: 'Todo el historial' },
+                  ...(['never', ...PERSON_STATE_ORDER] as const).filter(h => historyCounts.get(h) || history === h)
+                    .map(h => ({ value: h, label: `${historyLabel(h)} (${historyCounts.get(h) ?? 0})` })),
+                ]} />
             </div>
             {noWhatsAppCount > 0 && (
               <div className="wa-nowa-note">
