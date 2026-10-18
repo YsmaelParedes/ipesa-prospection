@@ -15,7 +15,7 @@ import { createServerClient } from '@supabase/ssr'
 
 // Páginas que no requieren sesión
 const PUBLIC_PATHS    = ['/inicio', '/login', '/registro', '/recuperar', '/restablecer', '/terminos', '/privacidad']
-const PUBLIC_PREFIXES = ['/invitacion/', '/auth/']
+const PUBLIC_PREFIXES = ['/invitacion/', '/auth/', '/inicio/']  // /inicio/*: páginas del sitio de presentación
 // Con sesión no tiene sentido verlas: se manda al panel
 const GUEST_ONLY      = ['/login', '/registro', '/recuperar']
 

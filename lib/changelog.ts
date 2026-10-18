@@ -18,6 +18,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '2.13.0',
+    date: '17 de octubre, 2026',
+    title: 'Nuevo sitio de Matices',
+    items: [
+      'La página de presentación ahora es un sitio con varias secciones: Inicio, Funciones, WhatsApp, Cómo empezar y Preguntas.',
+      'Incluye una demostración de Leads que cualquiera puede usar: mover cotizaciones de etapa y ver cómo cambia la venta.',
+    ],
+  },
+  {
     version: '2.10.0',
     date: '16 de octubre, 2026',
     title: 'Pantalla clara cuando algo falla',
