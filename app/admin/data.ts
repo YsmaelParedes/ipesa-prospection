@@ -1,7 +1,7 @@
 import { useCachedQuery } from '@/lib/useCachedQuery'
 
 
-import { storeAccess, trialDaysLeft, type StoreStatus } from '@/lib/stores'
+import { PAID_SUBSCRIPTION_STATUSES, PLANS, effectivePlan, planOf, type PlanId, type StoreStatus } from '@/lib/stores'
 import type { StorePayment } from '@/lib/payments'
 
 /**
@@ -22,6 +22,11 @@ export type PlatformStore = {
   modules: { whatsapp?: boolean; campaigns?: boolean } | null
   /** Pidió WhatsApp desde la tienda ("Quiero activarlo"); se limpia al activarlo */
   whatsapp_requested_at: string | null
+  /** Suscripción de Stripe (null = sin suscripción) */
+  subscription_status: string | null
+  current_period_end: string | null
+  cancel_at_period_end: boolean
+  stripe_customer_id: string | null
   /** Invitación de dueño pendiente (solo si la tienda aún no tiene dueño) */
   owner_invite: { email: string; expires_at: string; status: 'valid' | 'expired' | 'used' | 'revoked' } | null
 }
@@ -37,76 +42,84 @@ export const ago = (iso: string | null) => {
   return d <= 0 ? 'Hoy' : d === 1 ? 'Ayer' : d < 30 ? `Hace ${d} días` : fmtDate(iso)
 }
 
-/** Con acceso completo, pero la prueba termina en ≤ 3 días o el pago vence en < 7. */
+/** Plan que aplica hoy (una cortesía vencida ya cuenta como Litro). */
+export const planNow = (st: PlatformStore, now = Date.now()): PlanId => effectivePlan(st, now)
+
+/** Paga con una suscripción de Stripe vigente (activa o reintentando el cobro). */
+export const isStripePaid = (st: PlatformStore) =>
+  (PAID_SUBSCRIPTION_STATUSES as readonly string[]).includes(st.subscription_status ?? '')
+
+/** Stripe no pudo cobrar: reintenta (past_due) o ya se rindió (unpaid). */
+export const isPastDue = (st: PlatformStore) => st.subscription_status === 'past_due' || st.subscription_status === 'unpaid'
+
+const manualPaid = (st: PlatformStore) => (st.plan === 'galon' || st.plan === 'cubeta') && !isStripePaid(st) && !!st.paid_until
+
+/** Cortesía o pago a mano de Galón/Cubeta que vence en menos de 7 días. */
 export function expiresSoon(st: PlatformStore, now = Date.now()) {
-  if (storeAccess(st, now) !== 'full') return false
-  if (st.status === 'trial') return (trialDaysLeft(st, now) ?? 99) <= 3
-  return !!st.paid_until && new Date(st.paid_until).getTime() - now < 7 * DAY
+  if (!manualPaid(st) || planNow(st, now) === 'litro') return false
+  return new Date(st.paid_until!).getTime() - now < 7 * DAY
 }
 
-/** En prueba o activa, pero ya en solo lectura (prueba o pago vencido). */
-export const isLapsed = (st: PlatformStore, now = Date.now()) =>
-  (st.status === 'trial' || st.status === 'active') && storeAccess(st, now) === 'readonly'
+/** Cortesía o pago a mano vencido: la tienda ya trabaja en Litro. */
+export const isLapsed = (st: PlatformStore, now = Date.now()) => manualPaid(st) && planNow(st, now) === 'litro'
 
 export const isOff = (st: PlatformStore) => st.status === 'suspended' || st.status === 'cancelled'
 
-/** Tienda nueva que espera su primer pago o cortesía. */
+/** Estado de antes de los planes con Stripe (ya no se crea ninguna así). */
 export const isPending = (st: Pick<PlatformStore, 'status'>) => st.status === 'pending'
 
 /** Pidió WhatsApp y aún no se le activa: un asesor debe contactarla. */
 export const wantsWhatsApp = (st: Pick<PlatformStore, 'modules' | 'whatsapp_requested_at'>) =>
   !!st.whatsapp_requested_at && !st.modules?.whatsapp
 
+/** Panel de Stripe del cliente (para revisar cobros, facturas o reembolsos). */
+export const stripeCustomerUrl = (st: PlatformStore) =>
+  st.stripe_customer_id ? `https://dashboard.stripe.com/customers/${encodeURIComponent(st.stripe_customer_id)}` : null
+
 export function subscriptionLine(st: PlatformStore) {
-  if (st.status === 'pending') return 'Por activar: falta su primer pago o cortesía'
-  const readonly = storeAccess(st) === 'readonly'
-  if (st.status === 'trial') {
-    const left = trialDaysLeft(st) ?? 0
-    return readonly ? `Prueba vencida el ${fmtDate(st.trial_ends_at)}` : `Prueba: ${left} ${left === 1 ? 'día' : 'días'} (hasta ${fmtDate(st.trial_ends_at, { day: 'numeric', month: 'short' })})`
+  if (isOff(st)) return st.status === 'suspended' ? 'Suspendida (solo lectura)' : 'Cancelada (solo lectura)'
+  const plan = planNow(st)
+  const label = PLANS[plan].label
+  if (isStripePaid(st)) {
+    if (st.subscription_status === 'past_due') return `${label} · pago fallido, Stripe reintenta el cobro`
+    if (st.cancel_at_period_end) return `${label} · se cancela el ${fmtDate(st.current_period_end)}`
+    return `${label} · Stripe, próximo cobro ${fmtDate(st.current_period_end, { day: 'numeric', month: 'short' })}`
   }
-  if (st.status === 'active') {
-    if (!st.paid_until) return 'Activa sin vencimiento'
-    return readonly ? `Pago vencido el ${fmtDate(st.paid_until)}` : `Pagada hasta ${fmtDate(st.paid_until)}`
-  }
-  return st.status === 'suspended' ? 'Suspendida' : 'Cancelada'
+  if (plan === 'interno') return 'Interno · cortesía sin vencimiento'
+  if (isLapsed(st)) return `Litro · su ${planOf(st.plan).label} a mano venció el ${fmtDate(st.paid_until)}`
+  if (st.plan === 'galon' || st.plan === 'cubeta') return st.paid_until ? `${label} a mano · hasta ${fmtDate(st.paid_until)}` : `${label} a mano · sin vencimiento`
+  return 'Litro · gratis'
 }
 
 export function countStores(list: PlatformStore[], now = Date.now()) {
-  const full = (st: PlatformStore) => storeAccess(st, now) === 'full'
+  const on = list.filter(st => !isOff(st))
+  const by = (p: PlanId) => on.filter(st => planNow(st, now) === p).length
   return {
     all: list.length,
-    pending: list.filter(isPending).length,
-    trial: list.filter(st => st.status === 'trial' && full(st)).length,
-    active: list.filter(st => st.status === 'active' && full(st)).length,
+    litro: by('litro'),
+    galon: by('galon'),
+    cubeta: by('cubeta'),
+    interno: by('interno'),
+    stripe: list.filter(isStripePaid).length,
+    pastDue: list.filter(isPastDue).length,
     expiring: list.filter(st => expiresSoon(st, now)).length,
-    readonly: list.filter(st => isLapsed(st, now)).length,
+    lapsed: list.filter(st => isLapsed(st, now)).length,
     off: list.filter(isOff).length,
   }
 }
 
 /**
- * Cifras de dinero del Resumen, con el precio acordado de cada tienda:
- *  · cobrado: pagos (no anulados) del mes que se pasa en `payments`;
- *  · ingreso mensual: tiendas activas con acceso completo;
- *  · por cobrar: activas cuyo pago vence en < 7 días;
- *  · adeudo: activas o en prueba ya en solo lectura.
- * `unpriced` cuenta las activas con vencimiento pero sin precio acordado
- * (el ingreso mensual se queda corto por ellas).
+ * Cobros a mano del Resumen (las suscripciones las cobra Stripe y se ven en
+ * su panel): lo cobrado en el mes de `payments` y lo que vence en < 7 días de
+ * las cortesías con precio acordado.
  */
 export function moneySummary(stores: PlatformStore[], payments: StorePayment[], now = Date.now()) {
-  const price = (st: PlatformStore) => st.monthly_price ?? 0
-  const sum = (list: PlatformStore[]) => list.reduce((t, st) => t + price(st), 0)
   const live = payments.filter(p => !p.voided_at)
-  const activeFull = stores.filter(st => st.status === 'active' && storeAccess(st, now) === 'full')
-  const due = activeFull.filter(st => expiresSoon(st, now))
-  const debt = stores.filter(st => isLapsed(st, now))
+  const due = stores.filter(st => expiresSoon(st, now))
   return {
     collected: live.reduce((t, p) => t + p.amount, 0),
     paymentsCount: live.length,
-    monthly: sum(activeFull),
-    unpriced: activeFull.filter(st => st.monthly_price === null && st.paid_until !== null).length,
-    dueAmount: sum(due), dueCount: due.length,
-    debtAmount: sum(debt), debtCount: debt.length,
+    dueAmount: due.reduce((t, st) => t + (st.monthly_price ?? 0), 0), dueCount: due.length,
   }
 }
 

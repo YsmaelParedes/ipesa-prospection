@@ -2,18 +2,18 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { BrandLogo } from '@/components/Brand'
 import { APP_NAME, APP_TAGLINE } from '@/lib/brand'
-import { planOf, DEFAULT_PLAN } from '@/lib/stores'
+import { PLANS } from '@/lib/stores'
 import { CtaBand, Ic, MoreLink, SectionHead } from './_ui'
 import { LeadsDemo } from './LeadsDemo'
+import { PricingCards } from './Pricing'
 import s from './inicio.module.css'
 
 export const metadata: Metadata = {
   title: `${APP_NAME} · ${APP_TAGLINE}`,
-  description: 'Contactos, cotizaciones, agenda y fórmulas de color en un solo lugar para tu tienda de pinturas. Alta por invitación.',
+  description: 'Contactos, cotizaciones, agenda y fórmulas de color en un solo lugar para tu tienda de pinturas. Empieza gratis.',
 }
 
 const DEMO_STORE = 'Pinturas La Paleta'
-const MAX_USERS = planOf(DEFAULT_PLAN).maxUsers
 
 /* Inicio del sitio de presentación: lo ve quien entra a "/" sin sesión (ver proxy.ts). */
 
@@ -23,11 +23,11 @@ const FEATURES = [
   { icon: Ic.grid,      tone: s.tAmber,   title: 'Lo que toca hoy', text: 'Al abrir, tu equipo ve a quién llamar, qué cotización espera respuesta y qué visitas tiene.', href: '/inicio/funciones#agenda' },
   { icon: Ic.users,     tone: s.tMagenta, title: 'Tu equipo y tu base, protegidos', text: 'Cada vendedor con su usuario. Exportar y borrar, solo tú.', href: '/inicio/funciones#equipo' },
   { icon: Ic.flask,     tone: s.tTeal,    title: 'Fórmulas de color', text: 'Fórmulas convertidas a mililitros para igualar colores sin errores.', href: '/inicio/funciones#formulas' },
-  { icon: Ic.chat,      tone: s.tWa,      title: 'WhatsApp en el CRM', text: 'Servicio adicional: atiende y manda promociones desde el número de tu tienda.', href: '/inicio/whatsapp' },
+  { icon: Ic.chat,      tone: s.tWa,      title: 'WhatsApp en el CRM', text: 'En el plan Cubeta: atiende y manda promociones desde el número de tu tienda.', href: '/inicio/whatsapp' },
 ]
 
 const STEPS = [
-  { title: 'Pide tu invitación', text: 'Acordamos contigo el plan, damos de alta tu tienda y te mandamos tu enlace.' },
+  { title: 'Crea tu cuenta gratis', text: 'En un minuto y sin tarjeta. Empiezas en el plan Litro.' },
   { title: 'Configura tu sucursal', text: 'Nombre, logo y catálogos. El asistente te guía paso a paso.' },
   { title: 'Invita a tu equipo', text: 'Manda a cada vendedor su enlace por WhatsApp o correo y a vender.' },
 ]
@@ -47,12 +47,12 @@ export default function LandingPage() {
             </p>
             <div className={s.heroCtas}>
               <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>
-                Quiero usarlo en mi tienda <Ic.arrow className={s.btnArrow} />
+                Crear cuenta gratis <Ic.arrow className={s.btnArrow} />
               </Link>
               <a href="#demo" className={`${s.btn} ${s.btnLight} ${s.btnLg}`}>Pruébalo aquí abajo</a>
             </div>
             <div className={s.checks}>
-              <span><Ic.check />Te ayudamos a configurarlo</span>
+              <span><Ic.check />Gratis para empezar</span>
               <span><Ic.check />Lista en minutos</span>
               <span><Ic.check />Celular y computadora</span>
             </div>
@@ -128,8 +128,8 @@ export default function LandingPage() {
       {/* ── Datos rápidos ── */}
       <section className={s.strip} aria-label="En resumen">
         <div className={`${s.wrap} ${s.stripGrid}`}>
-          <div className={s.stat}><strong>A tu medida</strong><span>precio acordado con cada tienda</span></div>
-          <div className={s.stat}><strong>{MAX_USERS} usuarios</strong><span>por tienda en el plan Profesional</span></div>
+          <div className={s.stat}><strong>Gratis</strong><span>para empezar, sin tarjeta</span></div>
+          <div className={s.stat}><strong>Hasta {PLANS.cubeta.maxUsers}</strong><span>usuarios por tienda en el plan Cubeta</span></div>
           <div className={s.stat}><strong>Tus datos</strong><span>separados y protegidos por tienda</span></div>
           <div className={s.stat}><strong>100% web</strong><span>y se instala como app en tu celular</span></div>
         </div>
@@ -181,7 +181,16 @@ export default function LandingPage() {
               </li>
             ))}
           </ol>
-          <div className={s.centerLink}><MoreLink href="/inicio/como-empezar">Planes, seguridad y requisitos</MoreLink></div>
+          <div className={s.centerLink}><MoreLink href="/inicio/como-empezar">Seguridad y requisitos</MoreLink></div>
+        </div>
+      </section>
+
+      {/* ── Precios ── */}
+      <section className={s.section}>
+        <div className={s.wrap}>
+          <SectionHead kicker="Precios" title="Empieza gratis, crece cuando quieras" sub="Pago mensual con tarjeta. Cambia o cancela cuando quieras desde tu CRM." />
+          <div style={{ marginTop: 44 }}><PricingCards /></div>
+          <div className={s.centerLink}><MoreLink href="/inicio/precios">Compara los planes</MoreLink></div>
         </div>
       </section>
 

@@ -5,6 +5,7 @@ import { isUUID, jsonError, parseFields, readJson, serverError } from '@/lib/val
 import { LEAD_SCHEMA, contactInStore, ownLeadsFilter } from '@/lib/leads'
 import { normalizePhone } from '@/lib/phone'
 import { fetchPaged } from '@/lib/paged'
+import { parsePlanLimitError, planLimitResponse } from '@/lib/planLimits'
 
 // GET /api/data/leads[?contact_id=uuid]
 // Vendedor: solo sus leads (+ legacy sin user_id). Dueño/admin: todos los de la
@@ -75,7 +76,12 @@ export async function POST(req: NextRequest) {
     .from('leads')
     .insert([{ ...parsed.data, user_id: ctx.uid, store_id: ctx.storeId }])
     .select()
-  if (error) return serverError('POST /api/data/leads', error, 'Error al crear lead')
+  if (error) {
+    // Plan Litro: la base rechaza el lead que pasa del límite
+    const hit = parsePlanLimitError(error)
+    if (hit) return planLimitResponse(hit.kind, hit.limit)
+    return serverError('POST /api/data/leads', error, 'Error al crear lead')
+  }
   return NextResponse.json(data)
 }
 

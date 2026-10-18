@@ -69,9 +69,9 @@ function Settings() {
           <p>{location || 'Agrega la ciudad y el estado de tu tienda'}</p>
         </div>
         <div className={s.storeChips}>
-          <span className={cx(s.badge, STATUS_BADGE[store.status])}>
-            <i />{STATUS_LABELS[store.status]}{store.status === 'trial' && store.access === 'full' && store.trialDaysLeft !== null ? ` · ${store.trialDaysLeft} d` : ''}
-          </span>
+          {store.access === 'readonly'
+            ? <span className={cx(s.badge, STATUS_BADGE[store.status])}><i />{STATUS_LABELS[store.status]}</span>
+            : <span className={cx(s.badge, store.plan === 'litro' ? s.bMuted : s.bActive)}><i />Plan {store.planLabel}</span>}
           {session.role && <span className={cx(s.badge, s.bMuted)}>{ROLE_LABELS[session.role]}</span>}
         </div>
       </header>
@@ -81,7 +81,7 @@ function Settings() {
           {tabs.map(t => (
             <button key={t.id} className={cx(s.navItem, tab === t.id && s.navActive)} onClick={() => go(t.id)} aria-current={tab === t.id ? 'page' : undefined}>
               <span className={s.navIcon}><t.icon /></span>
-              <span className={s.navText}><strong>{t.label}</strong><small>{t.id === 'whatsapp' && !store.modules.whatsapp ? 'Por activar' : t.hint}</small></span>
+              <span className={s.navText}><strong>{t.label}</strong><small>{t.id === 'whatsapp' && !store.modules.whatsapp ? (store.planIncludesWhatsApp ? 'Por activar' : 'En el plan Cubeta') : t.hint}</small></span>
             </button>
           ))}
         </nav>
@@ -91,7 +91,7 @@ function Settings() {
           {tab === 'catalogos'    && <CatalogsTab canEdit={isAdmin} />}
           {tab === 'equipo'       && <TeamTab store={store} isOwner={!!session.isOwner} />}
           {tab === 'whatsapp'     && (store.modules.whatsapp ? <WhatsAppTab /> : <WhatsAppOffer />)}
-          {tab === 'plan'         && <PlanTab store={store} />}
+          {tab === 'plan'         && <PlanTab store={store} isOwner={!!session.isOwner} />}
           {tab === 'cuenta'       && <AccountTab session={session} />}
         </div>
       </div>

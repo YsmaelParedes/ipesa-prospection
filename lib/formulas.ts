@@ -82,3 +82,8 @@ export function searchColors(colors: FormulaColor[], query: string, limit = 60):
   }
   return out
 }
+
+/** Códigos de color de todos los catálogos (para elegir las fórmulas de un plan con límite). */
+export function catalogCodes(): { id: string; codes: string[] }[] {
+  return loadManifest().map(entry => ({ id: entry.id, codes: loadCatalog(entry.id)?.colors.map(c => c.code) ?? [] }))
+}

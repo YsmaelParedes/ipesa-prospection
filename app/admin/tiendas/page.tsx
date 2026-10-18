@@ -7,9 +7,10 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { fmtMoney, isMoney } from '@/lib/payments'
-import { PLANS, STATUS_LABELS, planOf, storeAccess, type StoreStatus } from '@/lib/stores'
+import { PLANS, STATUS_LABELS, planOf, type PlanId, type StoreStatus } from '@/lib/stores'
 import {
-  ago, countStores, expiresSoon, fmtDate as fmt, isLapsed, isOff, isPending, subscriptionLine, usePayments, usePlatformStores, wantsWhatsApp, type PlatformStore,
+  ago, countStores, expiresSoon, fmtDate as fmt, isLapsed, isOff, isPastDue, isStripePaid, planNow, stripeCustomerUrl, subscriptionLine,
+  usePayments, usePlatformStores, wantsWhatsApp, type PlatformStore,
 } from '../data'
 import { PaymentForm, PaymentRow } from '../payments-ui'
 import { NewStoreModal, OwnerInviteBlock } from '../stores-ui'
@@ -18,19 +19,20 @@ import { Select } from '@/components/Select'
 import s from '../admin.module.css'
 
 /**
- * Panel del dueño › Tiendas: alta de tiendas por invitación ("Nueva tienda"),
- * todas las tiendas con su suscripción y, en la ficha de cada una, invitación
- * del dueño, registrar pagos, precio acordado y acciones manuales (plan, sin
- * vencimiento, suspender).
+ * Panel del dueño › Tiendas: todas las tiendas con su plan y suscripción y, en
+ * la ficha de cada una, su cliente de Stripe, cortesías (plan a mano, pagos a
+ * mano, precio acordado), WhatsApp y suspender. "Nueva tienda" da de alta una
+ * tienda con invitación para casos especiales (lo normal es que se registren solas).
  * /admin/tiendas?tienda=<id> abre directo la ficha (enlaces del Resumen y Pagos).
  */
 
 type StoreRow = PlatformStore
-type Filter = 'all' | 'pending' | 'trial' | 'active' | 'expiring' | 'readonly' | 'off'
+type Filter = 'all' | 'litro' | 'galon' | 'cubeta' | 'pastDue' | 'expiring' | 'lapsed' | 'off'
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
 
 const STATUS_CLS: Record<StoreStatus, string> = { pending: s.bPending, trial: s.bTrial, active: s.bActive, suspended: s.bDanger, cancelled: s.bMuted }
+const PLAN_CLS: Record<PlanId, string> = { litro: s.bMuted, galon: s.bTrial, cubeta: s.bActive, interno: s.bPending }
 
 export default function StoresPage() {
   return <Suspense><StoresList /></Suspense>
@@ -61,11 +63,10 @@ function StoresList() {
       const matches = !q || [st.name, st.slug, st.owner_email, st.owner_name, st.city, st.state].some(v => v?.toLowerCase().includes(q))
       if (!matches) return false
       switch (filter) {
-        case 'pending': return isPending(st)
-        case 'trial': return st.status === 'trial' && storeAccess(st) === 'full'
-        case 'active': return st.status === 'active' && storeAccess(st) === 'full'
+        case 'litro': case 'galon': case 'cubeta': return !isOff(st) && planNow(st) === filter
+        case 'pastDue': return isPastDue(st)
         case 'expiring': return expiresSoon(st)
-        case 'readonly': return isLapsed(st)
+        case 'lapsed': return isLapsed(st)
         case 'off': return isOff(st)
         default: return true
       }
@@ -73,12 +74,18 @@ function StoresList() {
   }, [stores, query, filter])
 
   const open = stores?.find(st => st.id === openId) ?? null
-  // Ya no hay pruebas gratis: "En prueba" solo aparece si queda alguna tienda así
+  // Los filtros de cortesías solo aparecen si hay alguna
   const FILTERS: { id: Filter; label: string }[] = [
-    { id: 'all', label: 'Todas' }, { id: 'pending', label: 'Por activar' }, { id: 'active', label: 'Activas' },
-    ...(counts.trial ? [{ id: 'trial' as Filter, label: 'En prueba' }] : []),
-    { id: 'expiring', label: 'Por vencer' }, { id: 'readonly', label: 'Solo lectura' }, { id: 'off', label: 'Suspendidas' },
+    { id: 'all', label: 'Todas' }, { id: 'litro', label: 'Litro' }, { id: 'galon', label: 'Galón' }, { id: 'cubeta', label: 'Cubeta' },
+    { id: 'pastDue', label: 'Pago fallido' },
+    ...(counts.expiring ? [{ id: 'expiring' as Filter, label: 'Cortesía por vencer' }] : []),
+    ...(counts.lapsed ? [{ id: 'lapsed' as Filter, label: 'Cortesía vencida' }] : []),
+    { id: 'off', label: 'Suspendidas' },
   ]
+  const FILTER_COUNT: Record<Filter, number> = {
+    all: counts.all, litro: counts.litro, galon: counts.galon, cubeta: counts.cubeta,
+    pastDue: counts.pastDue, expiring: counts.expiring, lapsed: counts.lapsed, off: counts.off,
+  }
 
   return (
     <div className={s.page}>
@@ -93,7 +100,7 @@ function StoresList() {
         <div className={s.filters} role="tablist" aria-label="Filtrar tiendas">
           {FILTERS.map(f => (
             <button key={f.id} role="tab" aria-selected={filter === f.id} className={cx(s.filter, filter === f.id && s.filterOn)} onClick={() => setFilter(f.id)}>
-              {f.label}{stores && <span>{counts[f.id]}</span>}
+              {f.label}{stores && <span>{FILTER_COUNT[f.id]}</span>}
             </button>
           ))}
         </div>
@@ -134,15 +141,18 @@ function StoresList() {
                 </span>
                 <span className={s.cellSub}>
                   <span className={s.badges}>
-                    <em className={cx(s.badge, STATUS_CLS[st.status])}>{STATUS_LABELS[st.status]}</em>
-                    {isLapsed(st) && <em className={cx(s.badge, s.bDanger)}>Solo lectura</em>}
+                    {isOff(st)
+                      ? <em className={cx(s.badge, STATUS_CLS[st.status])}>{STATUS_LABELS[st.status]}</em>
+                      : <em className={cx(s.badge, PLAN_CLS[planNow(st)])}>{PLANS[planNow(st)].label}</em>}
+                    {isPastDue(st) && <em className={cx(s.badge, s.bDanger)}>Pago fallido</em>}
+                    {isLapsed(st) && <em className={cx(s.badge, s.bPending)}>Cortesía vencida</em>}
                     {expiresSoon(st) && <em className={cx(s.badge, s.bWarn)}>Por vencer</em>}
                     {wantsWhatsApp(st) && <em className={cx(s.badge, s.bActive)}>Pidió WhatsApp</em>}
                   </span>
                   <small>{subscriptionLine(st)}</small>
                 </span>
                 <span className={s.cellUse}>
-                  <span title="Usuarios activos">{st.members}/{planOf(st.plan).maxUsers} usuarios</span>
+                  <span title="Usuarios activos">{st.members}/{planOf(planNow(st)).maxUsers} usuarios</span>
                   <span title="Contactos y leads">{st.contacts.toLocaleString('es-MX')} contactos · {st.leads.toLocaleString('es-MX')} leads</span>
                   {st.whatsapp_connected && <span className={cx(s.wa, s.waOn)}><i />WhatsApp conectado</span>}
                 </span>
@@ -175,6 +185,8 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
   const [msg, setMsg]       = useState<{ ok: boolean; text: string } | null>(null)
   const [confirm, setConfirm] = useState<'suspend' | 'cancel' | 'unlimited' | 'wa_off' | null>(null)
   const waActive = !!store.modules?.whatsapp
+  const stripePaid = isStripePaid(store)
+  const stripeUrl = stripeCustomerUrl(store)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -226,10 +238,10 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
         </div>
         <div className="modal-body">
           <div className={s.facts}>
-            <div><small>Estado</small><strong><em className={cx(s.badge, STATUS_CLS[store.status])}>{STATUS_LABELS[store.status]}</em>{isLapsed(store) && <em className={cx(s.badge, s.bDanger)}>Solo lectura</em>}</strong></div>
-            <div><small>Suscripción</small><strong>{subscriptionLine(store)}</strong></div>
+            <div><small>Estado</small><strong><em className={cx(s.badge, STATUS_CLS[store.status])}>{STATUS_LABELS[store.status]}</em>{isPastDue(store) && <em className={cx(s.badge, s.bDanger)}>Pago fallido</em>}</strong></div>
+            <div><small>Plan</small><strong>{subscriptionLine(store)}</strong>{stripeUrl && <span><a href={stripeUrl} target="_blank" rel="noopener noreferrer" className={s.panelLink}>Ver cliente en Stripe</a></span>}</div>
             <div><small>Dueño</small><strong>{store.owner_name || (store.owner_email ? '—' : 'Aún no entra')}</strong><span>{store.owner_email ?? store.owner_invite?.email}</span></div>
-            <div><small>Precio acordado</small><strong>{store.monthly_price === null ? 'Sin acordar' : `${fmtMoney(store.monthly_price)} al mes`}</strong></div>
+            <div><small>Precio acordado (a mano)</small><strong>{store.monthly_price === null ? 'Sin acordar' : `${fmtMoney(store.monthly_price)} al mes`}</strong></div>
             <div><small>Uso</small><strong>{store.members} usuarios · {store.contacts} contactos · {store.leads} leads</strong></div>
             <div><small>Alta</small><strong>{fmt(store.created_at)}</strong><span>{store.onboarding_completed_at ? 'Configuración terminada' : 'Aún configurando'}</span></div>
           </div>
@@ -256,7 +268,7 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
 
           <div className={s.actions}>
             <div className={s.action}>
-              <div><strong>Precio acordado</strong><small>Mensual, en MXN. Prellena el monto al registrar un pago.</small></div>
+              <div><strong>Precio acordado</strong><small>Solo para cobros a mano (acuerdos especiales). Mensual, en MXN; prellena el monto al registrar un pago.</small></div>
               <div className={s.actionCtl}>
                 <input className={s.input} inputMode="decimal" value={price} placeholder="Sin acordar" aria-label="Precio mensual acordado"
                   onChange={e => setPrice(e.target.value.replace(/[^\d.]/g, ''))} />
@@ -267,11 +279,16 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
               </div>
             </div>
             <div className={s.action}>
-              <div><strong>Plan</strong><small>Define el límite de usuarios.</small></div>
+              <div>
+                <strong>Plan</strong>
+                <small>{stripePaid
+                  ? 'Lo lleva la suscripción de Stripe: la tienda lo cambia desde su portal.'
+                  : 'Cortesía o acuerdo especial. Galón y Cubeta a mano vencen con el último pago registrado (sin pagos: sin vencimiento); al vencer la tienda baja a Litro.'}</small>
+              </div>
               <div className={s.actionCtl}>
-                <Select className={s.select} value={plan} onChange={setPlan} aria-label="Plan"
-                  options={Object.entries(PLANS).map(([id, p]) => ({ value: id, label: p.label, hint: `${p.maxUsers} usuarios` }))} />
-                <button className="btn btn-ghost" disabled={!!busy || plan === store.plan} onClick={() => patch('plan', { plan }, 'Plan actualizado')}>Guardar</button>
+                <Select className={s.select} value={plan} onChange={setPlan} aria-label="Plan" disabled={stripePaid}
+                  options={Object.entries(PLANS).map(([id, p]) => ({ value: id, label: p.label, hint: `${p.maxUsers} ${p.maxUsers === 1 ? 'usuario' : 'usuarios'}` }))} />
+                <button className="btn btn-ghost" disabled={!!busy || stripePaid || plan === store.plan} onClick={() => patch('plan', { plan }, 'Plan actualizado')}>Guardar</button>
               </div>
             </div>
             <div className={s.action}>
@@ -282,7 +299,9 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
                     ? `Activo${store.whatsapp_connected ? ' · número conectado' : ' · falta conectar el número (sección Conexión de WhatsApp)'}.`
                     : store.whatsapp_requested_at
                       ? `Lo solicitó el ${fmt(store.whatsapp_requested_at)}: contacta a la tienda para ofrecérselo.`
-                      : 'No lo ha solicitado. La tienda lo ve como "Por activar".'}
+                      : PLANS[planNow(store)].whatsapp
+                        ? 'No lo ha solicitado. La tienda lo ve como "Por activar".'
+                        : 'Su plan no incluye WhatsApp (solo Cubeta): aunque lo actives, la tienda no lo verá hasta cambiar a Cubeta.'}
                 </small>
               </div>
               <div className={s.actionCtl}>

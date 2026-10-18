@@ -5,7 +5,7 @@ import { jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 
 // GET /api/whatsapp/quick-replies — respuestas rápidas del equipo de la tienda
 async function GETImpl() {
-  const ctx = await requireStore()
+  const ctx = await requireStore({ module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
 
   const { data, error } = await getServerSupabase()
@@ -19,7 +19,7 @@ async function GETImpl() {
 
 // POST /api/whatsapp/quick-replies — { title, body } (dueño/admin)
 export async function POST(req: NextRequest) {
-  const ctx = await requireStore({ admin: true, write: true })
+  const ctx = await requireStore({ admin: true, write: true, module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
 
   const body = await readJson(req)

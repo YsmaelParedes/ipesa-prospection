@@ -18,6 +18,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.0.0',
+    date: '18 de octubre, 2026',
+    title: 'Planes Litro, Galón y Cubeta',
+    items: [
+      'Ahora hay tres planes: Litro (gratis), Galón (equipo de hasta 3 y sin límites) y Cubeta (todo, con WhatsApp y hasta 5 usuarios).',
+      'Puedes cambiar de plan, pagar con tarjeta, descargar tus facturas o cancelar desde Configuración → Plan.',
+      'Si bajas de plan o dejas de pagar no se borra nada: tu tienda pasa al plan Litro y sigues viendo toda tu información.',
+      'Cualquier tienda puede crear su cuenta gratis desde el sitio, sin esperar una invitación.',
+    ],
+  },
+  {
     version: '2.13.0',
     date: '17 de octubre, 2026',
     title: 'Nuevo sitio de Matices',

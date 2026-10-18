@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { APP_NAME } from '@/lib/brand'
-import { planOf, DEFAULT_PLAN } from '@/lib/stores'
+import { PLANS } from '@/lib/stores'
 import { CtaBand, Ic, PageHero } from '../_ui'
 import { LeadsDemo } from '../LeadsDemo'
 import s from '../inicio.module.css'
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: 'Contactos con segmentos, cotizaciones con seguimiento, agenda del día, equipo con permisos, fórmulas de color y avisos en el celular.',
 }
 
-const MAX_USERS = planOf(DEFAULT_PLAN).maxUsers
+const MAX_USERS = PLANS.galon.maxUsers
 
 const JUMPS = [
   ['#contactos', 'Contactos'], ['#leads', 'Cotizaciones'], ['#agenda', 'Agenda'],

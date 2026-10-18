@@ -7,7 +7,7 @@ import { serverError } from '@/lib/validation'
 async function GETImpl() {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
-  if (!ctx.store.modules.whatsapp) return NextResponse.json({ unread: 0 }, { headers: { 'Cache-Control': 'no-store' } })
+  if (!ctx.modules.whatsapp) return NextResponse.json({ unread: 0 }, { headers: { 'Cache-Control': 'no-store' } })
 
   const { count, error } = await getServerSupabase()
     .from('whatsapp_threads')

@@ -48,7 +48,8 @@ const sections: LegalSection[] = [
           <li><strong>Datos de la tienda:</strong> nombre comercial, dirección, ciudad, estado, teléfono y logotipo.</li>
           <li><strong>Datos de acceso:</strong> tu contraseña, que se guarda de forma cifrada y no podemos leer.</li>
           <li><strong>Datos técnicos y de uso:</strong> dirección IP, tipo de navegador, fechas de acceso y registros de actividad necesarios para la seguridad del servicio.</li>
-          <li><strong>Datos de facturación:</strong> los que nos compartas al activar tu plan (por ejemplo, razón social y RFC).</li>
+          <li><strong>Datos de pago:</strong> si contratas un plan de paga, Stripe recibe los datos de tu tarjeta directamente; nosotros solo conocemos el estado de tu suscripción, el plan y las fechas de cobro.</li>
+          <li><strong>Datos de facturación:</strong> los que nos compartas si pides factura (por ejemplo, razón social y RFC).</li>
         </ul>
         <p>No solicitamos datos personales sensibles.</p>
       </>
@@ -82,6 +83,7 @@ const sections: LegalSection[] = [
         <ul>
           <li><strong>Supabase</strong>: base de datos, autenticación y almacenamiento de archivos.</li>
           <li><strong>Vercel</strong>: alojamiento y ejecución de la aplicación.</li>
+          <li><strong>Stripe</strong>: cobro de los planes de paga (nombre de la tienda, correo del dueño y datos de la tarjeta, que tratamos solo a través de Stripe).</li>
           <li><strong>Meta Platforms</strong> (WhatsApp Business Platform): solo si tu tienda conecta su número, para enviar y recibir mensajes.</li>
           <li><strong>Servicios de notificaciones del navegador</strong> (por ejemplo, de Google, Apple o Mozilla): solo si activas los avisos en tu dispositivo.</li>
         </ul>
@@ -164,8 +166,8 @@ const sections: LegalSection[] = [
     title: 'Cuánto tiempo conservamos los datos',
     body: (
       <p>
-        Conservamos los datos mientras exista la cuenta de la tienda, aunque haya cancelado o su pago esté vencido
-        (en ese caso queda en solo consulta y puede descargar su información completa). Eliminamos o anonimizamos de
+        Conservamos los datos mientras exista la cuenta de la tienda, aunque haya cancelado su suscripción (en ese
+        caso pasa al plan Litro y puede descargar su información completa). Eliminamos o anonimizamos de
         forma segura la información de una tienda cuando su dueño lo solicita por escrito, salvo lo que debamos
         conservar para cumplir obligaciones legales.
       </p>

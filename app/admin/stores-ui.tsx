@@ -10,7 +10,7 @@ import { fmtDate, type PlatformStore } from './data'
 import s from './admin.module.css'
 
 /**
- * Altas por invitación en el panel del dueño: "Nueva tienda" (crea la tienda
+ * Altas con invitación en el panel del dueño (casos especiales; lo normal es el registro abierto): "Nueva tienda" (crea la tienda
  * "Por activar" y el enlace para su dueño) y la invitación del dueño en la
  * ficha (generar un enlace nuevo mientras la tienda no tenga dueño).
  */
@@ -106,7 +106,7 @@ export function NewStoreModal({ onClose, onCreated, onOpenStore }: {
           <>
             <div className="modal-body">
               <div className={cx(s.msg, s.msgOk)} style={{ marginTop: 0 }}>
-                La tienda está <strong>Por activar</strong>: su dueño puede entrar y configurarla, pero no registrar clientes hasta que registres su primer pago o una cortesía.
+                La tienda está en el plan <strong>Litro</strong> (gratis). Su dueño puede pagar Galón o Cubeta desde su tienda, o puedes darle una cortesía desde su ficha.
               </div>
               <div className={s.block} style={{ marginTop: 14 }}>
                 <div className={s.blockHead}><strong>Invitación para el dueño</strong><small>{created.ownerEmail}</small></div>
@@ -115,7 +115,7 @@ export function NewStoreModal({ onClose, onCreated, onOpenStore }: {
             </div>
             <div className="modal-foot">
               <button className="btn btn-ghost" onClick={onClose}>Cerrar</button>
-              <button className="btn btn-primary" onClick={() => onOpenStore(created.id)}>Registrar primer pago</button>
+              <button className="btn btn-primary" onClick={() => onOpenStore(created.id)}>Abrir ficha</button>
             </div>
           </>
         ) : (

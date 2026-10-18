@@ -6,7 +6,7 @@ import s from '../inicio.module.css'
 
 export const metadata: Metadata = {
   title: `WhatsApp en tu CRM · ${APP_NAME}`,
-  description: 'Atiende el WhatsApp de tu tienda desde el CRM, con cada chat ligado a su cliente y su cotización, y manda promociones con las reglas oficiales de Meta. Servicio adicional.',
+  description: 'Atiende el WhatsApp de tu tienda desde el CRM, con cada chat ligado a su cliente y su cotización, y manda promociones con las reglas oficiales de Meta. Incluido en el plan Cubeta.',
 }
 
 const POINTS = [
@@ -17,7 +17,7 @@ const POINTS = [
 ]
 
 const STEPS = [
-  { title: 'Lo solicitas', text: 'Desde tu CRM, con el botón "Quiero activarlo".' },
+  { title: 'Elige el plan Cubeta', text: 'Desde tu CRM, y luego tocas "Quiero activarlo".' },
   { title: 'Un asesor lo configura', text: 'Lo conecta con el número de tu tienda. Tú no haces nada técnico.' },
   { title: 'Empiezas a atender', text: 'Tus chats aparecen en el CRM y tu equipo responde desde ahí.' },
 ]
@@ -26,7 +26,7 @@ export default function WhatsAppPage() {
   return (
     <>
       <PageHero
-        kicker="Servicio adicional"
+        kicker="Plan Cubeta"
         title={<>Atiende y vende por <span className={s.waText}>WhatsApp</span> desde tu CRM</>}
         lead="El WhatsApp de tu tienda, conectado a tus clientes y cotizaciones. Lo dejamos listo por ti con el número de tu tienda."
       >
@@ -87,13 +87,13 @@ export default function WhatsAppPage() {
             ))}
           </ol>
           <p className={s.finePrint}>
-            Servicio con costo adicional; tu asesor te comparte el precio. WhatsApp Business Platform es de Meta y está sujeto a sus
+            Incluido en el plan Cubeta. WhatsApp Business Platform es de Meta y está sujeto a sus
             políticas; Meta puede cobrar por los mensajes según sus tarifas vigentes.
           </p>
         </div>
       </section>
 
-      <CtaBand title="Atiende WhatsApp desde tu CRM" text="Pide tu invitación y cuéntanos que quieres WhatsApp: lo configuramos con el número de tu tienda." />
+      <CtaBand title="Atiende WhatsApp desde tu CRM" text="Crea tu cuenta, cambia al plan Cubeta y lo configuramos con el número de tu tienda." />
     </>
   )
 }

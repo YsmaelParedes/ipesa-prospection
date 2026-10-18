@@ -15,11 +15,11 @@ export const LEGAL = {
   /** Solo dígitos; 10 dígitos se toman como número de México (52) */
   whatsapp: (process.env.NEXT_PUBLIC_CONTACT_WHATSAPP || '').replace(/\D/g, '') || null,
   jurisdiction: 'Puebla, Puebla',
-  updatedAt: '15 de octubre de 2026',
+  updatedAt: '18 de octubre de 2026',
 }
 
 /**
- * Enlaces para pedir una invitación (las tiendas entran solo por invitación).
+ * Enlaces para escribirnos por WhatsApp o correo (dudas, sucursales adicionales, factura).
  * null si no hay WhatsApp o correo configurado.
  */
 export function requestInviteLinks(message = `Hola, me interesa ${APP_NAME} para mi tienda de pinturas.`) {

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from '@/components/CachedLink'
 import { useQueryEffect, useQueryRefresh } from '@/lib/useCachedQuery'
 
 
@@ -82,6 +83,8 @@ export default function FormulasPage() {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const reqRef = useRef(0)
+  // Plan con límite (Litro): cuántas fórmulas de muestra tiene la tienda
+  const [formulaLimit, setFormulaLimit] = useState<number | null>(null)
 
   /* Catálogos disponibles */
   useQueryEffect(() => {
@@ -89,7 +92,10 @@ export default function FormulasPage() {
       .then(r => r.json())
       .then(d => {
         setCatalogs(d.catalogs || [])
-        if (d.catalogs?.[0]) setCatalogId(current => current || d.catalogs[0].id)
+        setFormulaLimit(typeof d.formulaLimit === 'number' ? d.formulaLimit : null)
+        // En Litro se empieza por el catálogo que sí tiene fórmulas de muestra
+        const first = (d.catalogs || []).find((c: { colorCount: number }) => c.colorCount > 0) ?? d.catalogs?.[0]
+        if (first) setCatalogId(current => current || first.id)
       })
       .catch(() => {})
   }, [])
@@ -134,6 +140,16 @@ export default function FormulasPage() {
           {activeCatalog ? `${activeCatalog.productLine} · ${activeCatalog.fandeck} · ${activeCatalog.colorCount} colores` : ''}
         </span>
       </div>
+
+      {formulaLimit !== null && (
+        <div className="plan-banner trial" role="status" style={{ margin: '0 0 12px' }}>
+          <span>
+            <strong>Plan Litro:</strong> tienes {formulaLimit} fórmulas de muestra, siempre las mismas para tu tienda.
+            Galón y Cubeta incluyen todas.
+          </span>
+          <Link href="/configuracion?tab=plan" className="plan-banner-cta">Ver planes</Link>
+        </div>
+      )}
 
       {catalogs.length > 1 && (
         <div className="status-tabs" role="tablist" aria-label="Catálogo de fórmulas">

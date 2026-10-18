@@ -128,6 +128,14 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 - **Avisos de errores (2.10.0):** los errores de producción (servidor, tareas programadas, webhooks, pantallas del navegador y fallas de Meta que dejan a una tienda sin WhatsApp) se guardan agrupados en `platform_errors` y llegan como aviso al celular del dueño de la plataforma, con reglas anti-ruido (el mismo error 1 vez por hora, máximo 5 avisos cada 10 minutos). En `/admin` → Resumen, panel "Errores recientes" con aviso de prueba y botón "Resuelto". Los mensajes no guardan datos de clientes. El cliente ve una pantalla clara con "Reintentar". Migración `platform_errors` (escrita en `20261016230000_platform_errors.sql`).
 - **Base de datos (16 de octubre, aplicada a mano en el editor SQL de Supabase):** tabla y función `platform_errors` (probadas: avisos, repetidos, tope de 5 en 10 minutos, tope de errores del navegador) y se borró la versión anterior de `reserve_whatsapp_template` (tope de 200). Como se aplicaron a mano, no aparecen en el historial de migraciones de Supabase; los archivos están en `supabase/migrations/`.
 
+### Etapa 11. Planes con Stripe (3.0.0, 18 de octubre de 2026)
+- **Planes:** Litro (gratis: 1 usuario, 50 contactos, 10 leads, 20 fórmulas de muestra, sin WhatsApp), Galón (3 usuarios, sin límites, sin WhatsApp) y Cubeta (5 usuarios con administradores, todo con WhatsApp). Interno = cortesía de IPESA. Definidos en `PLANS` (`lib/stores.ts`); los límites de contactos y leads los hace cumplir la base (`plan_quota` + trigger `enforce_plan_quota`).
+- **Cobro:** suscripción mensual con Stripe Checkout; cambiar de plan, tarjeta, facturas y cancelación en el portal de Stripe. Precios en Stripe con lookup keys `galon_mensual` y `cubeta_mensual`. Webhook `/api/webhooks/stripe` → `apply_stripe_subscription` (idempotente con `stripe_events`).
+- **Reglas:** dejar de pagar o cancelar baja a Litro (no a solo lectura); solo lectura queda para suspendidas o canceladas a mano. En Litro solo entra el dueño. De Cubeta a Galón se desactivan los usuarios más recientes que sobran. Una cortesía a mano de Galón/Cubeta vence con su `paid_until` (+3 días) y baja a Litro (`store_effective_plan`).
+- **Registro abierto:** `/registro` crea la cuenta y `/bienvenida` la tienda en Litro. El alta con invitación desde `/admin` queda para casos especiales; los pagos a mano, para cortesías.
+- **Migración** `20261017120000_stripe_plans.sql`.
+- **Variables nuevas:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
+
 ### Etapa 8. Listo para vender
 - Nombre del producto centralizado en un archivo ✅ (Matices, 2.9.0) y dominio propio (pendiente).
 - Botón "Ayuda" con WhatsApp y correo.

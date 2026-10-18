@@ -5,7 +5,7 @@
  * Solo decide qué se MUESTRA: cada ruta de la API vuelve a validar todo.
  */
 import { useEffect, useState } from 'react'
-import type { StoreAccess, StoreModules, StoreRole, StoreStatus } from './stores'
+import type { PlanId, StoreAccess, StoreModules, StoreRole, StoreStatus } from './stores'
 import { broadcastSessionChange, setQueryContext } from './apiClient'
 
 export type ClientStore = {
@@ -19,13 +19,20 @@ export type ClientStore = {
   state: string | null
   logoUrl: string | null
   status: StoreStatus
-  plan: string
+  /** Plan que aplica hoy (una cortesía vencida ya cuenta como Litro) */
+  plan: PlanId
   planLabel: string
   maxUsers: number
   /** El plan permite nombrar administradores además del dueño */
   allowAdmins: boolean
-  trialEndsAt: string | null
-  trialDaysLeft: number | null
+  /** Límites del plan (null = sin límite) */
+  limits: { contacts: number | null; leads: number | null; formulas: number | null }
+  /** El plan incluye WhatsApp y Campañas (Cubeta); además el asesor debe conectarlo */
+  planIncludesWhatsApp: boolean
+  /** Suscripción de Stripe (null = plan gratis o asignado a mano) */
+  subscription: { status: string | null; currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean } | null
+  /** Puede abrir el portal de Stripe (facturas, tarjeta, cancelar) */
+  billingPortal: boolean
   paidUntil: string | null
   access: StoreAccess
   modules: StoreModules
@@ -40,6 +47,8 @@ export type Session = {
   role?: StoreRole
   isAdmin?: boolean
   isOwner?: boolean
+  /** Plan Litro: solo entra el dueño; el resto del equipo ve un aviso */
+  ownerOnlyBlocked?: boolean
   stores: { id: string; name: string; role: StoreRole; logoUrl: string | null }[]
   platformAdmin: boolean
 }

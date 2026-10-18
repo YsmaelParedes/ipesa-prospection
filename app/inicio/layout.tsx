@@ -26,7 +26,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           <nav className={s.footCol} aria-label="Cuenta">
             <strong>Cuenta</strong>
             <Link href="/login">Iniciar sesión</Link>
-            <Link href="/registro">Pedir invitación</Link>
+            <Link href="/registro">Crear cuenta gratis</Link>
           </nav>
           <nav className={s.footCol} aria-label="Legal">
             <strong>Legal</strong>

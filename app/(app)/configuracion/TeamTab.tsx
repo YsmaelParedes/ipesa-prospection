@@ -1,5 +1,6 @@
 'use client'
 
+import Link from '@/components/CachedLink'
 import { useQueryEffect } from '@/lib/useCachedQuery'
 
 
@@ -113,6 +114,14 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
 
   return (
     <>
+      {store.maxUsers <= 1 ? (
+      <Panel icon={Ico.userPlus} title="Invitar a alguien" subtitle={`El plan ${store.planLabel} incluye solo al dueño.`}>
+        <Note kind="info">
+          Para sumar a tu equipo cambia a Galón (hasta 3 usuarios) o Cubeta (hasta 5, con administradores).{' '}
+          <Link href="/configuracion?tab=plan" className="auth-link strong">Ver planes</Link>
+        </Note>
+      </Panel>
+      ) : (
       <Panel icon={Ico.userPlus} title="Invitar a alguien" subtitle="Genera un enlace personal y compártelo por WhatsApp o correo. Vence en 7 días y solo sirve para ese correo.">
         <form className={s.inviteForm} onSubmit={submit}>
           <input className={s.input} type="email" required maxLength={254} value={email} onChange={e => { setEmail(e.target.value); setError('') }}
@@ -143,6 +152,7 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
           </div>
         )}
       </Panel>
+      )}
 
       <Panel icon={Ico.users} tone="tCyan" title="Equipo" subtitle="Quién tiene acceso a esta tienda.">
         <div className={s.seats}>

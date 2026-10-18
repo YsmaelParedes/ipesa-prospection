@@ -4,6 +4,8 @@ import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 import { CONTACT_COLUMNS, duplicateContactMessage, linkWhatsAppMessages, parseContact } from '@/lib/contacts'
 import { fetchPaged } from '@/lib/paged'
+import { parsePlanLimitError, planLimitMessage, planLimitResponse, remainingSlots } from '@/lib/planLimits'
+import { planOf } from '@/lib/stores'
 
 const MAX_BULK = 500
 
@@ -31,6 +33,8 @@ async function GETImpl() {
  *  - { contacts: [...] } → importación masiva (hasta 500 por petición; solo
  *    dueño/administrador). Los teléfonos ya registrados se omiten en vez de
  *    fallar todo el lote.
+ * En el plan Litro (máximo de contactos) la importación se recorta a los
+ * lugares que quedan; la base hace cumplir el límite de todas formas.
  */
 export async function POST(req: NextRequest) {
   const ctx = await requireStore({ write: true })
@@ -59,15 +63,44 @@ export async function POST(req: NextRequest) {
     }
     if (!rows.length) return NextResponse.json({ inserted: 0, duplicates: 0, invalid })
 
+    // Plan con límite: quitar los que ya existen y recortar a los lugares libres
+    const limit = planOf(ctx.plan).maxContacts
+    let toInsert = rows
+    let duplicates = 0
+    let overLimit = 0
+    if (limit !== null) {
+      const [{ count, error: countError }, { data: existing, error: existingError }] = await Promise.all([
+        supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('store_id', ctx.storeId),
+        supabase.from('contacts').select('phone').eq('store_id', ctx.storeId).in('phone', rows.map(r => r.phone as string)),
+      ])
+      if (countError || existingError) return serverError('POST /api/data/contacts (bulk)', countError ?? existingError, 'Error al importar contactos')
+      const known = new Set((existing ?? []).map(e => e.phone as string))
+      const fresh = rows.filter(r => !known.has(r.phone as string))
+      duplicates = rows.length - fresh.length
+      const free = remainingSlots(limit, count ?? 0) ?? fresh.length
+      toInsert = fresh.slice(0, free)
+      overLimit = fresh.length - toInsert.length
+      if (!toInsert.length) {
+        return NextResponse.json({ inserted: 0, duplicates, invalid, overLimit, limitMessage: overLimit ? planLimitMessage('contacts', limit) : undefined })
+      }
+    }
+
     const { data, error } = await supabase
       .from('contacts')
-      .upsert(rows, { onConflict: 'store_id,phone', ignoreDuplicates: true })
+      .upsert(toInsert, { onConflict: 'store_id,phone', ignoreDuplicates: true })
       .select('id, phone')
-    if (error) return serverError('POST /api/data/contacts (bulk)', error, 'Error al importar contactos')
+    if (error) {
+      const hit = parsePlanLimitError(error)
+      if (hit) return planLimitResponse(hit.kind, hit.limit)
+      return serverError('POST /api/data/contacts (bulk)', error, 'Error al importar contactos')
+    }
 
     const inserted = data?.length ?? 0
     if (inserted) await linkWhatsAppMessages(ctx.storeId, data!)
-    return NextResponse.json({ inserted, duplicates: rows.length - inserted, invalid })
+    return NextResponse.json({
+      inserted, duplicates: duplicates + toInsert.length - inserted, invalid,
+      ...(overLimit ? { overLimit, limitMessage: planLimitMessage('contacts', limit!) } : {}),
+    })
   }
 
   const parsed = parseContact(body)
@@ -76,6 +109,8 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase.from('contacts').insert([{ ...parsed.data, store_id: ctx.storeId }]).select(CONTACT_COLUMNS)
   if (error) {
     if (error.code === '23505') return jsonError(duplicateContactMessage(error.message))
+    const hit = parsePlanLimitError(error)
+    if (hit) return planLimitResponse(hit.kind, hit.limit)
     return serverError('POST /api/data/contacts', error, 'Error al crear contacto')
   }
   await linkWhatsAppMessages(ctx.storeId, data ?? [])

@@ -4,6 +4,7 @@ import { apiFetch } from '@/lib/apiClient'
 
 
 import { useState } from 'react'
+import Link from '@/components/CachedLink'
 import { Avatar } from '@/components/CrmUI'
 import { WaIcon } from '@/components/WhatsAppUI'
 import { invalidateSession, useSession } from '@/lib/profile'
@@ -15,7 +16,7 @@ const BENEFITS = [
 ]
 
 const STEPS = [
-  { title: 'Lo solicitas',        text: 'Con el botón de abajo.' },
+  { title: 'Lo solicitas',        text: 'Con el botón de abajo (incluido en el plan Cubeta).' },
   { title: 'Un asesor lo configura', text: 'Lo conecta con el número de tu tienda. Tú no haces nada técnico.' },
   { title: 'Empiezas a atender',   text: 'Tus chats aparecen aquí mismo.' },
 ]
@@ -29,13 +30,15 @@ const SAMPLE = [
 
 /**
  * WhatsApp "Por activar": presentación del servicio para una tienda que aún
- * no lo tiene. El dueño/admin lo solicita y queda el aviso en el panel de la
- * plataforma; la activación la hace un asesor (la tienda no puede activarlo).
+ * no lo tiene. Viene en el plan Cubeta: en Litro y Galón se ofrece cambiar de
+ * plan; en Cubeta el dueño/admin lo solicita, queda el aviso en el panel de la
+ * plataforma y un asesor conecta el número (la tienda no puede activarlo).
  */
 export function WhatsAppOffer() {
   const session = useSession()
   const store = session?.store
   const canRequest = !!session?.isAdmin
+  const inPlan = !!store?.planIncludesWhatsApp
   const [requestedAt, setRequestedAt] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
@@ -70,7 +73,7 @@ export function WhatsAppOffer() {
     <div className="wa-offer">
       <section className="wa-offer-hero">
         <div className="wa-offer-copy">
-          <span className="wa-offer-status"><i />Aún no está configurado</span>
+          <span className="wa-offer-status"><i />{inPlan ? 'Aún no está configurado' : 'Incluido en el plan Cubeta'}</span>
           <h2>Atiende y vende por WhatsApp desde tu CRM</h2>
           <ul className="wa-offer-benefits">
             {BENEFITS.map(b => (
@@ -115,7 +118,14 @@ export function WhatsAppOffer() {
         </ol>
 
         <div className="wa-offer-foot">
-          {requested ? (
+          {!inPlan ? (
+            <>
+              {session?.isOwner
+                ? <Link href="/configuracion?tab=plan" className="btn btn-primary wa-offer-btn"><WaIcon.whatsapp size={17} /> Cambiar a Cubeta</Link>
+                : <span className="wa-offer-note">Pídele al dueño de la tienda que cambie al plan Cubeta.</span>}
+              <span className="wa-offer-note">WhatsApp y campañas vienen en el plan Cubeta; al cambiar, un asesor conecta el número de tu tienda.</span>
+            </>
+          ) : requested ? (
             <div className="wa-offer-done" role="status">
               <WaIcon.check size={18} />
               <span><strong>Solicitud enviada</strong>Un asesor te contactará pronto para dejarlo listo.</span>
@@ -125,7 +135,7 @@ export function WhatsAppOffer() {
               <button className="btn btn-primary wa-offer-btn" onClick={request} disabled={sending}>
                 <WaIcon.whatsapp size={17} /> {sending ? 'Enviando…' : 'Quiero activarlo'}
               </button>
-              <span className="wa-offer-note">Servicio con costo adicional; tu asesor te comparte el precio.</span>
+              <span className="wa-offer-note">Incluido en tu plan Cubeta. Un asesor conecta el número de tu tienda.</span>
             </>
           )}
           {error && <div className="wa-form-error">{error}</div>}

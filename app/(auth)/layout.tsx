@@ -27,7 +27,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               <li><span className="dot d3" />Fórmulas de color convertidas a mL</li>
             </ul>
           </div>
-          <div className="auth-art-foot">Alta por invitación · Te ayudamos a configurarlo</div>
+          <div className="auth-art-foot">Empieza gratis · Cambia de plan cuando quieras</div>
         </div>
       </aside>
       <main className="auth-main">

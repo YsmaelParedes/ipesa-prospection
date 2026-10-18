@@ -4,25 +4,26 @@ import Link from 'next/link'
 import { useMemo } from 'react'
 import { fmtMoney } from '@/lib/payments'
 import {
-  DAY, ago, countStores, currentMonth, expiresSoon, fmtDate, isLapsed, isOff, isPending, moneySummary, subscriptionLine,
+  DAY, ago, countStores, currentMonth, expiresSoon, fmtDate, isLapsed, isOff, isPastDue, moneySummary, subscriptionLine,
   usePayments, usePlatformStores, wantsWhatsApp, type PlatformStore,
 } from './data'
 import { ErrorsPanel } from './errors-ui'
 import s from './admin.module.css'
 
 /**
- * Panel del dueño › Resumen: dinero del mes (cobrado, ingreso mensual
- * acordado, por cobrar, adeudo), cuántas tiendas hay y cuáles necesitan
- * algo (pago vencido, por vencer, sin uso). Cada fila abre su ficha en Tiendas.
+ * Panel del dueño › Resumen: tiendas por plan, suscripciones de Stripe y
+ * pagos fallidos, cobros a mano (cortesías y acuerdos especiales) y cuáles
+ * necesitan algo (pago fallido, cortesía vencida o por vencer, sin uso).
+ * Cada fila abre su ficha en Tiendas. Los cobros de Stripe se ven en su panel.
  */
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
 const IDLE_DAYS = 14
 
-const rank = (st: PlatformStore, now: number) => (isPending(st) ? 0 : isLapsed(st, now) ? 1 : 2)
+const rank = (st: PlatformStore, now: number) => (isPastDue(st) ? 0 : isLapsed(st, now) ? 1 : 2)
 
-/** Fecha en que vence lo que la tienda tiene pagado o en prueba. */
-const dueAt = (st: PlatformStore) => new Date((st.status === 'trial' ? st.trial_ends_at : st.paid_until) ?? 0).getTime()
+/** Fecha en que vence la cortesía o el pago a mano. */
+const dueAt = (st: PlatformStore) => new Date(st.paid_until ?? 0).getTime()
 
 function StoreLink({ st, children }: { st: PlatformStore; children: React.ReactNode }) {
   return <Link href={`/admin/tiendas?tienda=${st.id}`} className={s.item}>{children}</Link>
@@ -37,13 +38,13 @@ export default function AdminHome() {
     const now = Date.now()
     return {
       counts: countStores(list, now),
-      // Primero las que esperan su primer pago, luego las de solo lectura y al final las que vencen pronto
-      attention: list.filter(st => isPending(st) || isLapsed(st, now) || expiresSoon(st, now))
+      // Primero los pagos fallidos de Stripe, luego las cortesías vencidas y al final las que vencen pronto
+      attention: list.filter(st => isPastDue(st) || isLapsed(st, now) || expiresSoon(st, now))
         .sort((a, b) => rank(a, now) - rank(b, now) || dueAt(a) - dueAt(b)),
       recent: [...list].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5),
       // Pidieron WhatsApp ("Quiero activarlo"): las más antiguas primero
       waRequests: list.filter(wantsWhatsApp).sort((a, b) => (a.whatsapp_requested_at ?? '').localeCompare(b.whatsapp_requested_at ?? '')),
-      idle: list.filter(st => !isOff(st) && !isPending(st) && !isLapsed(st, now)
+      idle: list.filter(st => !isOff(st)
         && (!st.last_activity_at || now - new Date(st.last_activity_at).getTime() > IDLE_DAYS * DAY)),
     }
   }, [stores])
@@ -59,24 +60,24 @@ export default function AdminHome() {
       {(error || payError) && <div className={s.error}>{error || payError}</div>}
       {!stores && !error && <div className={s.center}><span className={s.spinner} /></div>}
 
-      {money && (
-        <div className={cx(s.kpis, s.kpis4)}>
-          <div className={cx(s.kpi, s.kGreen)}><small>Cobrado este mes</small><strong>{fmtMoney(money.collected)}</strong><span>{money.paymentsCount} {money.paymentsCount === 1 ? 'pago' : 'pagos'} · <Link href="/admin/pagos" className={s.panelLink}>ver</Link></span></div>
-          <div className={s.kpi}><small>Ingreso mensual</small><strong>{fmtMoney(money.monthly)}</strong><span>{money.unpriced ? `${money.unpriced} activa${money.unpriced === 1 ? '' : 's'} sin precio acordado` : 'precio acordado de las activas'}</span></div>
-          <div className={cx(s.kpi, s.kAmber)}><small>Por cobrar (7 días)</small><strong>{fmtMoney(money.dueAmount)}</strong><span>{money.dueCount} {money.dueCount === 1 ? 'tienda' : 'tiendas'} por vencer</span></div>
-          <div className={cx(s.kpi, s.kRed)}><small>Con adeudo</small><strong>{fmtMoney(money.debtAmount)}</strong><span>{money.debtCount} {money.debtCount === 1 ? 'tienda' : 'tiendas'} en solo lectura</span></div>
-        </div>
-      )}
-
       {stores && (
         <>
           <div className={s.kpis}>
-            <div className={s.kpi}><small>Tiendas</small><strong>{counts.all}</strong><span>registradas</span></div>
-            <div className={cx(s.kpi, s.kGreen)}><small>Activas</small><strong>{counts.active}</strong><span>pagando, al corriente</span></div>
-            <div className={cx(s.kpi, s.kMagenta)}><small>Por activar</small><strong>{counts.pending}</strong><span>esperan su primer pago</span></div>
-            <div className={cx(s.kpi, s.kAmber)}><small>Por vencer</small><strong>{counts.expiring}</strong><span>prueba ≤ 3 días o pago ≤ 7</span></div>
-            <div className={cx(s.kpi, s.kRed)}><small>Solo lectura</small><strong>{counts.readonly}</strong><span>prueba o pago vencido</span></div>
+            <div className={s.kpi}><small>Tiendas</small><strong>{counts.all}</strong><span>{counts.off ? `${counts.off} suspendida${counts.off === 1 ? '' : 's'}` : 'registradas'}</span></div>
+            <div className={s.kpi}><small>Litro</small><strong>{counts.litro}</strong><span>plan gratis</span></div>
+            <div className={cx(s.kpi, s.kGreen)}><small>Galón</small><strong>{counts.galon}</strong><span>de paga</span></div>
+            <div className={cx(s.kpi, s.kMagenta)}><small>Cubeta</small><strong>{counts.cubeta}</strong><span>de paga, con WhatsApp</span></div>
+            <div className={cx(s.kpi, s.kRed)}><small>Pagos fallidos</small><strong>{counts.pastDue}</strong><span>Stripe reintenta el cobro</span></div>
           </div>
+
+          {money && (
+            <div className={cx(s.kpis, s.kpis4)}>
+              <div className={cx(s.kpi, s.kGreen)}><small>Suscripciones</small><strong>{counts.stripe}</strong><span>con Stripe · <a href="https://dashboard.stripe.com/subscriptions" target="_blank" rel="noopener noreferrer" className={s.panelLink}>ver cobros</a></span></div>
+              <div className={s.kpi}><small>Cobrado a mano este mes</small><strong>{fmtMoney(money.collected)}</strong><span>{money.paymentsCount} {money.paymentsCount === 1 ? 'pago' : 'pagos'} · <Link href="/admin/pagos" className={s.panelLink}>ver</Link></span></div>
+              <div className={cx(s.kpi, s.kAmber)}><small>Cortesías por vencer</small><strong>{money.dueCount}</strong><span>{money.dueAmount ? `${fmtMoney(money.dueAmount)} acordado` : 'en los próximos 7 días'}</span></div>
+              <div className={cx(s.kpi, s.kRed)}><small>Cortesías vencidas</small><strong>{counts.lapsed}</strong><span>ya trabajan en Litro</span></div>
+            </div>
+          )}
 
           <ErrorsPanel />
 
@@ -105,17 +106,17 @@ export default function AdminHome() {
                 <span>{view.attention.length || ''}</span>
               </div>
               {view.attention.length === 0
-                ? <div className={s.panelEmpty}>Todo al corriente: ninguna tienda espera activación, debe o vence en los próximos días.</div>
+                ? <div className={s.panelEmpty}>Todo al corriente: ningún pago fallido ni cortesías vencidas o por vencer.</div>
                 : view.attention.map(st => (
                   <StoreLink key={st.id} st={st}>
                     <span className={s.itemMain}>
                       <strong>{st.name}</strong>
                       <small>{subscriptionLine(st)}{perMonth(st)}</small>
                     </span>
-                    {isPending(st)
-                      ? <em className={cx(s.badge, s.bPending)}>Por activar</em>
+                    {isPastDue(st)
+                      ? <em className={cx(s.badge, s.bDanger)}>Pago fallido</em>
                       : isLapsed(st)
-                        ? <em className={cx(s.badge, s.bDanger)}>Solo lectura</em>
+                        ? <em className={cx(s.badge, s.bPending)}>Cortesía vencida</em>
                         : <em className={cx(s.badge, s.bWarn)}>Por vencer</em>}
                   </StoreLink>
                 ))}
@@ -145,7 +146,7 @@ export default function AdminHome() {
                 <span>{view.idle.length || ''}</span>
               </div>
               {view.idle.length === 0
-                ? <div className={s.panelEmpty}>Todas las tiendas con acceso han registrado actividad en los últimos {IDLE_DAYS} días.</div>
+                ? <div className={s.panelEmpty}>Todas las tiendas han registrado actividad en los últimos {IDLE_DAYS} días.</div>
                 : view.idle.map(st => (
                   <StoreLink key={st.id} st={st}>
                     <span className={s.itemMain}>

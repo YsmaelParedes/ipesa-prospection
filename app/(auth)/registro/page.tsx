@@ -1,35 +1,84 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
-import { AuthAlert, AuthHeader, AuthIcon } from '@/components/AuthUI'
-import { APP_NAME } from '@/lib/brand'
-import { requestInviteLinks } from '@/lib/legal'
+import { AuthAlert, AuthField, AuthHeader, AuthIcon, PasswordField, ResendConfirmation, SubmitButton } from '@/components/AuthUI'
+import { PLANS } from '@/lib/stores'
 
 /**
- * Registro CERRADO: las tiendas entran solo por invitación (el panel del
- * dueño da de alta la tienda y manda el enlace a su dueño). Aquí se pide la
- * invitación por WhatsApp o correo (NEXT_PUBLIC_CONTACT_WHATSAPP / _EMAIL).
+ * Registro abierto: la cuenta nace sin tienda; al confirmar el correo,
+ * /bienvenida crea la tienda en el plan Litro (gratis) y su dueño decide
+ * después si cambia a Galón o Cubeta.
  */
+const LITRO = PLANS.litro
+
 export default function RegisterPage() {
-  const links = requestInviteLinks()
+  const [name, setName]         = useState('')
+  const [email, setEmail]       = useState('')
+  const [password, setPassword] = useState('')
+  const [accept, setAccept]     = useState(false)
+  const [loading, setLoading]   = useState(false)
+  const [error, setError]       = useState('')
+  const [sentTo, setSentTo]     = useState('')
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    if (!accept) { setError('Para continuar acepta los términos y el aviso de privacidad.'); return }
+    setLoading(true)
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, acceptTerms: accept }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setError(data.error || 'No se pudo crear la cuenta.'); return }
+      if (data.needsConfirmation) setSentTo(email.trim().toLowerCase())
+      else window.location.href = '/bienvenida'
+    } catch {
+      setError('Error de conexión. Intenta de nuevo.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (sentTo) {
+    return (
+      <div className="auth-done">
+        <div className="auth-done-icon"><AuthIcon.inbox /></div>
+        <h1 className="auth-title">Revisa tu correo</h1>
+        <p className="auth-sub">
+          Te enviamos un enlace a <strong>{sentTo}</strong> para confirmar tu cuenta. Ábrelo para configurar tu tienda.
+        </p>
+        <AuthAlert kind="info">
+          ¿No te llegó? Revisa la carpeta de spam o promociones. El enlace vence en 24 horas.
+          <ResendConfirmation email={sentTo} />
+        </AuthAlert>
+        <p className="auth-alt"><Link href="/login" className="auth-link strong">Volver a iniciar sesión</Link></p>
+      </div>
+    )
+  }
+
   return (
-    <div className="auth-done">
-      <div className="auth-done-icon"><AuthIcon.mail /></div>
-      <AuthHeader title="Alta solo por invitación" subtitle={<>Damos de alta cada tienda contigo: acordamos el plan, creamos tu tienda y te mandamos un enlace para que entres.</>} />
-
-      {links.whatsapp || links.email ? (
-        <div className="auth-form" style={{ marginTop: 18 }}>
-          {links.whatsapp && <a className="auth-submit as-link" href={links.whatsapp} target="_blank" rel="noopener noreferrer">Pedir invitación por WhatsApp</a>}
-          {links.email && <a className={links.whatsapp ? 'auth-submit as-link secondary' : 'auth-submit as-link'} href={links.email}>Pedir invitación por correo</a>}
-        </div>
-      ) : (
-        <AuthAlert kind="info">Pide tu invitación a tu asesor de {APP_NAME}.</AuthAlert>
-      )}
-
-      <AuthAlert kind="info">
-        ¿Ya recibiste tu enlace de invitación? Ábrelo: ahí creas tu contraseña. Si ya tienes cuenta, inicia sesión.
-      </AuthAlert>
-      <p className="auth-alt"><Link href="/login" className="auth-link strong">Ir a iniciar sesión</Link></p>
-    </div>
+    <>
+      <AuthHeader title="Crea la cuenta de tu tienda"
+        subtitle={<>Empieza gratis con el plan Litro: {LITRO.maxContacts} contactos y {LITRO.maxLeads} cotizaciones, sin tarjeta. Cambia de plan cuando quieras.</>} />
+      {error && <AuthAlert>{error}</AuthAlert>}
+      <form onSubmit={submit} className="auth-form">
+        <AuthField label="Tu nombre" icon={AuthIcon.user} value={name} onChange={e => setName(e.target.value)}
+          autoComplete="name" autoFocus required maxLength={60} placeholder="Nombre y apellido" />
+        <AuthField label="Correo electrónico" icon={AuthIcon.mail} type="email" value={email}
+          onChange={e => setEmail(e.target.value)} autoComplete="email" required maxLength={254} placeholder="tu@correo.com" />
+        <PasswordField label="Contraseña" value={password} onChange={setPassword} showStrength autoComplete="new-password" />
+        <label className="auth-check">
+          <input type="checkbox" checked={accept} onChange={e => setAccept(e.target.checked)} />
+          <span>Acepto los <Link href="/terminos" target="_blank" className="auth-link">términos de uso</Link> y el <Link href="/privacidad" target="_blank" className="auth-link">aviso de privacidad</Link>.</span>
+        </label>
+        <SubmitButton loading={loading}>Crear cuenta gratis</SubmitButton>
+      </form>
+      <p className="auth-alt">¿Ya tienes cuenta? <Link href="/login" className="auth-link strong">Inicia sesión</Link></p>
+      <p className="auth-fine">¿Te invitaron a una tienda? Abre el enlace de tu invitación: ahí creas tu contraseña.</p>
+    </>
   )
 }

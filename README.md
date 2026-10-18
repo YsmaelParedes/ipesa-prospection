@@ -5,10 +5,10 @@ recordatorios con notificaciones push, fórmulas de igualación de color y una b
 **WhatsApp Business** integrada al CRM (chat, plantillas y campañas). Se instala como PWA
 en el celular.
 
-Es **multi-tienda (SaaS)**: cada tienda se da de alta por invitación y tiene su propio
+Es **multi-tienda (SaaS)**: cada tienda crea su cuenta gratis, elige su plan y tiene su propio
 equipo, logo y catálogos. La información de cada tienda está aislada de las demás. La
 tienda original (la que existía antes de la versión multi-tienda) conserva todos sus datos.
-**WhatsApp y Campañas son un servicio adicional**: las tiendas nuevas nacen con esos módulos
+**WhatsApp y Campañas vienen en el plan Cubeta**: las tiendas nuevas nacen con esos módulos
 apagados y no hay interruptores en la app. El dueño o admin ve WhatsApp como **"Por activar"**
 (menú y Configuración) con una presentación del servicio y el botón "Quiero activarlo"
 (`POST /api/store/whatsapp-request` → `stores.whatsapp_requested_at`). La solicitud aparece
@@ -62,9 +62,11 @@ npm run build     # compila para producción (lo mismo que corre Vercel)
 | `VAPID_SUBJECT` | No | Contacto que se envía a los servicios de push (`mailto:…`) |
 | `NEXT_PUBLIC_LEGAL_NAME` | Para vender | Razón social o nombre del responsable en Términos y Aviso de privacidad |
 | `NEXT_PUBLIC_LEGAL_ADDRESS` | Para vender | Domicilio del responsable |
-| `NEXT_PUBLIC_CONTACT_EMAIL` | Para vender | Correo de contacto (derechos ARCO, activación de planes) |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | Para vender | Correo de contacto (derechos ARCO, facturas, sucursales adicionales) |
 | `WHATSAPP_*` | Solo tienda original | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_ACCOUNT_ID`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN` y `WHATSAPP_APP_SECRET`: el número que ya usaba la tienda original. **Sin `WHATSAPP_APP_SECRET` el webhook rechaza los mensajes entrantes.** Las tiendas nuevas capturan sus credenciales en la app |
 | `WHATSAPP_GRAPH_VERSION` | No | Versión de Graph API (por defecto `v21.0`) |
+| `STRIPE_SECRET_KEY` | Para cobrar | Llave secreta de Stripe (`sk_test_…` en pruebas, `sk_live_…` en producción). Sin ella los planes de paga dicen "Disponible pronto" |
+| `STRIPE_WEBHOOK_SECRET` | Para cobrar | Secreto de firma del webhook `https://<dominio>/api/webhooks/stripe` (`whsec_…`). Sin él se rechazan los avisos de Stripe |
 
 ## Supabase Auth (registro, confirmación y recuperación)
 
@@ -85,33 +87,40 @@ En Supabase → **Authentication**:
 
 | Paso | Dónde |
 |---|---|
-| La tienda descubre el producto y pide una invitación | `/` (sin sesión) o `/inicio` → `/registro` (WhatsApp o correo) |
-| Tú das de alta la tienda (precio acordado) e invitas a su dueño | Panel del dueño → Tiendas → "Nueva tienda" |
-| El dueño crea su contraseña con el enlace (vence en 7 días) | `/invitacion/<token>` → correo → `/auth/confirm` |
-| Configura su sucursal (logo, equipo) | `/bienvenida` |
-| Tú registras su primer pago (o una cortesía) y la tienda pasa a **Activa** | Ficha de la tienda en el panel |
+| La tienda descubre el producto y crea su cuenta gratis | `/` (sin sesión) o `/inicio` → `/registro` → correo → `/auth/confirm` |
+| Crea su tienda en el plan **Litro** y la configura (logo, catálogos) | `/bienvenida` (`POST /api/stores`, una tienda por cuenta) |
+| Cambia a **Galón** o **Cubeta** pagando con tarjeta | Configuración → Plan → Stripe Checkout |
+| Stripe confirma y el webhook cambia el plan | `/api/webhooks/stripe` → `apply_stripe_subscription` |
+| Cambia de plan, tarjeta, facturas o cancela | Configuración → Plan → portal de Stripe |
 | Invita a su equipo con un enlace personal (vence en 7 días) | Configuración → Equipo → `/invitacion/<token>` |
-| Si un pago vence queda en **solo consulta** hasta renovar | Configuración → Plan |
+| Si deja de pagar o cancela, pasa al plan **Litro** (no se borra nada) | Automático (webhook) |
 
-- **Alta solo por invitación** (sin prueba gratis): `/registro` solo explica cómo pedir la
-  invitación y `/api/auth/register` responde 403. Una tienda nueva nace **"Por activar"**
-  (`status = 'pending'`): su dueño puede entrar y configurarla, pero queda en solo lectura
-  hasta su primer pago o cortesía. Nadie abre tiendas por su cuenta (`POST /api/stores`
-  responde 403): solo el panel del dueño las crea. Contacto para pedir invitación: `NEXT_PUBLIC_CONTACT_WHATSAPP`
-  y `NEXT_PUBLIC_CONTACT_EMAIL`.
+- **Planes** (`PLANS` en `lib/stores.ts`): **Litro** gratis (solo el dueño, 50 contactos,
+  10 leads, 20 fórmulas de muestra, sin WhatsApp), **Galón** (3 usuarios, sin límites, sin
+  WhatsApp), **Cubeta** (5 usuarios con administradores, WhatsApp y campañas) e **Interno**
+  (cortesía de la tienda propia). El precio vive en Stripe (lookup keys `galon_mensual` y
+  `cubeta_mensual`). Los límites de contactos y leads los hace cumplir la base
+  (`plan_quota` + trigger `enforce_plan_quota`, mismos números que `PLANS`). En Litro, solo
+  el dueño entra (`403 PLAN_OWNER_ONLY` para el resto). Al bajar de Cubeta a Galón se
+  desactivan los usuarios más recientes que sobran y los administradores pasan a vendedores.
+- **Plan efectivo** (`effectivePlan` en TS y `store_effective_plan` en SQL): un Galón o
+  Cubeta asignado a mano vence con su `paid_until` (+3 días de gracia) y cuenta como Litro.
+  Las suscripciones de Stripe dejan `paid_until` en null.
+- **Alta con invitación desde `/admin`**: para casos especiales (otra sucursal, acuerdos);
+  la tienda nace en Litro.
 - **Roles por tienda**: *dueño* (todo lo de su tienda), *administrador*
-  (configura la tienda y ve el trabajo de todos; solo en el plan Interno) y *vendedor* (ve
+  (configura la tienda y ve el trabajo de todos; solo en Cubeta e Interno) y *vendedor* (ve
   solo sus leads y su agenda). Si una cuenta pertenece a varias tiendas (por invitación),
   cambia entre ellas desde el menú.
-- **Solo consulta**: con la prueba o el pago vencidos (3 días de gracia) el equipo puede ver
-  y exportar, pero no registrar ni enviar; la API responde `402 STORE_READONLY`.
+- **Solo consulta**: solo en tiendas suspendidas o canceladas desde el panel; el equipo puede
+  ver y exportar, pero no registrar ni enviar; la API responde `402 STORE_READONLY`.
 - **Administradores de la plataforma**: filas en la tabla `platform_admins`
   (`insert into public.platform_admins (user_id) values ('<uuid>');`). Al iniciar sesión
   entran al **panel del dueño** (`/admin`: Resumen y Tiendas), separado del CRM; desde ahí
   "Tu tienda" abre las tiendas donde son miembros, y en la tienda el selector de sucursal
   tiene "Panel del dueño" para volver. Para cualquier otra cuenta `/admin` responde 404.
   `/plataforma` redirige a `/admin/tiendas`.
-- **Pagos (cobro manual)**: no hay precio general ni pagos en línea. Cada tienda tiene su
+- **Pagos a mano (cortesías y acuerdos especiales)**: además de Stripe, una tienda puede tener
   **precio mensual acordado** (`stores.monthly_price`) y los pagos se registran a mano en su
   ficha (`/admin/tiendas`): monto, meses, método, fecha, factura y nota. La función
   `record_store_payment` guarda el pago y extiende `paid_until` en la misma transacción (se
@@ -120,12 +129,7 @@ En Supabase → **Authentication**:
   como estaba, salvo que la tienda se haya suspendido o cancelado después. `/admin/pagos` muestra lo cobrado por mes; el Resumen, cobrado, ingreso
   mensual, por cobrar y adeudo. Todo queda en la bitácora `platform_events`. "Sin
   vencimiento" (tienda propia o acuerdo especial) es una acción aparte.
-- **Planes**: `lib/stores.ts` (`PLANS`, `PAYMENT_GRACE_DAYS`), sin precio (se acuerda con cada
-  tienda). **Profesional** (por omisión): 3 usuarios = el dueño, único administrador, y 2
-  vendedores; cada vendedor ve solo sus leads y su agenda, los contactos son de toda la
-  tienda. **Interno** (la tienda propia): sin límite práctico y con administradores; se asigna
-  en la ficha de la tienda del panel. Las invitaciones, nombrar administradores y reactivar
-  usuarios respetan el plan.
+- Las invitaciones, nombrar administradores y reactivar usuarios respetan el plan efectivo.
 - **Una sola tienda por cuenta**: `POST /api/stores` está cerrado y no hay "Agregar sucursal";
   otra sucursal se da de alta aparte desde el panel del dueño.
 

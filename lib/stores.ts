@@ -1,15 +1,18 @@
 /**
  * Reglas de la plataforma multi-tienda compartidas por cliente y servidor
- * (sin dependencias de Node): estados, prueba gratis, módulos y catálogos
+ * (sin dependencias de Node): estados, planes, módulos y catálogos
  * iniciales de cada tienda nueva.
  */
 
-export const TRIAL_DAYS = 14
-/** Días de gracia después de vencer el pago antes de pasar a solo lectura. */
+/** Días de gracia de un plan de paga asignado a mano (cortesía) antes de bajar a Litro. */
 export const PAYMENT_GRACE_DAYS = 3
 const DAY = 24 * 60 * 60 * 1000
 
-/** pending = "Por activar": tienda nueva (ya no hay prueba gratis) hasta su primer pago o cortesía. */
+/**
+ * pending / trial: estados de antes de los planes con Stripe (ya no se usan;
+ * la base los acepta por compatibilidad). Solo suspended y cancelled dejan a
+ * la tienda en solo lectura.
+ */
 export type StoreStatus = 'pending' | 'trial' | 'active' | 'suspended' | 'cancelled'
 export type StoreRole = 'owner' | 'admin' | 'employee'
 export type StoreAccess = 'full' | 'readonly'
@@ -18,9 +21,10 @@ export const STORE_MODULES = ['whatsapp', 'campaigns', 'formulas'] as const
 export type StoreModule = typeof STORE_MODULES[number]
 export type StoreModules = Record<StoreModule, boolean>
 /**
- * Módulos de una tienda nueva. WhatsApp y Campañas son un servicio adicional:
- * la tienda nace sin ellos, el dueño los ve como "Por activar" y solo el asesor
- * los enciende desde /admin. La tienda no tiene interruptores.
+ * Módulos de una tienda nueva. WhatsApp y Campañas vienen en el plan Cubeta,
+ * pero además el asesor tiene que conectar el número y encenderlos desde
+ * /admin (modules.whatsapp). Lo que la tienda puede usar es la combinación de
+ * los dos: effectiveModules().
  */
 export const DEFAULT_MODULES: StoreModules = { whatsapp: false, campaigns: false, formulas: true }
 
@@ -33,49 +37,75 @@ export const ROLE_LABELS: Record<StoreRole, string> = {
 }
 
 /**
- * Planes (el precio se acuerda con cada tienda y se cobra a mano desde el panel).
- *  · maxUsers: usuarios activos de la tienda, contando al dueño.
- *  · allowAdmins: si el dueño puede nombrar administradores. Sin ellos, el dueño
- *    es el único que configura la tienda y ve los leads de todos; cada vendedor
- *    ve solo los suyos (los contactos son de toda la tienda).
- * Profesional = dueño + 2 vendedores. Interno = la tienda propia (IPESA), sin
- * límite práctico; lo asigna el dueño de la plataforma desde la ficha.
+ * Planes. El precio vive en Stripe (precios con lookup_key, lib/stripe.ts);
+ * aquí solo lo que incluye cada uno.
+ *  · maxUsers: usuarios activos de la tienda, contando al dueño (Litro: solo él).
+ *  · allowAdmins: si el dueño puede nombrar administradores.
+ *  · maxContacts / maxLeads: null = sin límite. Los mismos números están en la
+ *    función plan_quota() de la base, que los hace cumplir: cambia los dos.
+ *  · formulaLimit: fórmulas de color accesibles (null = todas).
+ *  · whatsapp: incluye WhatsApp y Campañas.
+ *  · paid: se cobra con Stripe.
+ * Interno = la tienda propia (IPESA): cortesía con todo, la asigna el dueño de
+ * la plataforma desde la ficha.
  */
-export const PLANS: Record<string, { label: string; maxUsers: number; allowAdmins: boolean }> = {
-  profesional: { label: 'Profesional', maxUsers: 3, allowAdmins: false },
-  interno:     { label: 'Interno', maxUsers: 50, allowAdmins: true },
+export type PlanId = 'litro' | 'galon' | 'cubeta' | 'interno'
+export type PlanDef = {
+  label: string; maxUsers: number; allowAdmins: boolean
+  maxContacts: number | null; maxLeads: number | null; formulaLimit: number | null
+  whatsapp: boolean; paid: boolean
 }
-export const DEFAULT_PLAN = 'profesional'
-export const planOf = (plan: string) => PLANS[plan] ?? PLANS[DEFAULT_PLAN]
+export const PLANS: Record<PlanId, PlanDef> = {
+  litro:   { label: 'Litro',   maxUsers: 1,  allowAdmins: false, maxContacts: 50,   maxLeads: 10,   formulaLimit: 20,   whatsapp: false, paid: false },
+  galon:   { label: 'Galón',   maxUsers: 3,  allowAdmins: false, maxContacts: null, maxLeads: null, formulaLimit: null, whatsapp: false, paid: true },
+  cubeta:  { label: 'Cubeta',  maxUsers: 5,  allowAdmins: true,  maxContacts: null, maxLeads: null, formulaLimit: null, whatsapp: true,  paid: true },
+  interno: { label: 'Interno', maxUsers: 50, allowAdmins: true,  maxContacts: null, maxLeads: null, formulaLimit: null, whatsapp: true,  paid: false },
+}
+/** Planes que se venden (en orden), sin la cortesía interna. */
+export const PUBLIC_PLANS = ['litro', 'galon', 'cubeta'] as const satisfies readonly PlanId[]
+export type PaidPlanId = 'galon' | 'cubeta'
+export const DEFAULT_PLAN: PlanId = 'litro'
+export const isPlanId = (v: unknown): v is PlanId => typeof v === 'string' && Object.hasOwn(PLANS, v)
+export const planOf = (plan: string) => PLANS[isPlanId(plan) ? plan : DEFAULT_PLAN]
+
+type PlanFields = { plan: string; paid_until: string | null }
+
+/**
+ * Plan que aplica hoy. Un plan de paga asignado a mano cuyo paid_until venció
+ * (más los días de gracia) cuenta como Litro; las suscripciones de Stripe dejan
+ * paid_until en null y su plan lo mantiene el webhook. Gemela de la función
+ * store_effective_plan() de la base: si cambias una, cambia la otra.
+ */
+export function effectivePlan(s: PlanFields, now = Date.now()): PlanId {
+  const plan = isPlanId(s.plan) ? s.plan : DEFAULT_PLAN
+  if ((plan === 'galon' || plan === 'cubeta') && s.paid_until
+      && new Date(s.paid_until).getTime() + PAYMENT_GRACE_DAYS * DAY <= now) return 'litro'
+  return plan
+}
+
+/** Módulos que la tienda puede usar: los que incluye su plan Y encendió el asesor. */
+export function effectiveModules(s: PlanFields & { modules: unknown }, now = Date.now()): StoreModules {
+  const m = normalizeModules(s.modules)
+  const p = PLANS[effectivePlan(s, now)]
+  return { whatsapp: m.whatsapp && p.whatsapp, campaigns: m.campaigns && p.whatsapp, formulas: m.formulas }
+}
+
+/** Estados de Stripe con los que la suscripción sigue dando el plan pagado. */
+export const PAID_SUBSCRIPTION_STATUSES = ['active', 'trialing', 'past_due'] as const
+/** Estados de Stripe con los que la suscripción terminó (la tienda baja a Litro). */
+export const ENDED_SUBSCRIPTION_STATUSES = ['canceled', 'unpaid', 'incomplete_expired'] as const
 
 export const DEFAULT_SEGMENTS = ['Hogar', 'Constructor', 'Arquitecto', 'Pintor', 'Empresa']
 export const DEFAULT_CANALES = ['WhatsApp', 'Visita en tienda', 'Recomendación', 'Facebook', 'Instagram', 'Google', 'Otro']
 
-type AccessFields = { status: StoreStatus | string; trial_ends_at: string | null; paid_until: string | null }
-
 /**
- * Qué puede hacer una tienda: 'full' o 'readonly' (por activar, prueba
- * vencida, pago vencido, suspendida o cancelada). En solo lectura el equipo puede consultar
- * y exportar su información, pero no registrar ni enviar nada.
+ * Qué puede hacer una tienda: 'full' o 'readonly'. Solo una tienda suspendida
+ * o cancelada por el dueño de la plataforma queda en solo lectura (puede
+ * consultar y exportar, pero no registrar ni enviar nada). Dejar de pagar ya no
+ * bloquea: la tienda baja al plan Litro.
  */
-export function storeAccess(s: AccessFields, now = Date.now()): StoreAccess {
-  if (s.status === 'active') {
-    return !s.paid_until || new Date(s.paid_until).getTime() + PAYMENT_GRACE_DAYS * DAY > now ? 'full' : 'readonly'
-  }
-  if (s.status === 'trial') {
-    return s.trial_ends_at && new Date(s.trial_ends_at).getTime() > now ? 'full' : 'readonly'
-  }
-  return 'readonly'
-}
-
-/** Días que le quedan a la prueba (redondeado hacia arriba); null si no está en prueba. */
-export function trialDaysLeft(s: AccessFields, now = Date.now()): number | null {
-  if (s.status !== 'trial' || !s.trial_ends_at) return null
-  return Math.max(0, Math.ceil((new Date(s.trial_ends_at).getTime() - now) / DAY))
-}
-
-export function trialEndsAt(from = Date.now()): string {
-  return new Date(from + TRIAL_DAYS * DAY).toISOString()
+export function storeAccess(s: { status: StoreStatus | string }): StoreAccess {
+  return s.status === 'suspended' || s.status === 'cancelled' ? 'readonly' : 'full'
 }
 
 /** "Pinturas La Paleta" → "pinturas-la-paleta" */

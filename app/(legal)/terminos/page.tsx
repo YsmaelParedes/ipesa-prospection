@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LEGAL } from '@/lib/legal'
-import { PAYMENT_GRACE_DAYS } from '@/lib/stores'
+import { PLANS } from '@/lib/stores'
 import { ContactEmail, LegalDoc, type LegalSection } from '../LegalDoc'
 
 export const metadata: Metadata = {
   title: `Términos de uso · ${LEGAL.product}`,
-  description: `Condiciones para usar ${LEGAL.product}: cuentas, alta por invitación, planes y pagos, información de la tienda y comunicaciones con tus clientes.`,
+  description: `Condiciones para usar ${LEGAL.product}: cuentas, planes y pagos con tarjeta, información de la tienda y comunicaciones con tus clientes.`,
 }
 
 const sections: LegalSection[] = [
@@ -50,19 +50,30 @@ const sections: LegalSection[] = [
   },
   {
     id: 'planes',
-    title: 'Alta, planes y pagos',
+    title: 'Planes y pagos',
     body: (
       <>
         <p>
-          Las tiendas se dan de alta por invitación: acordamos contigo el plan y su precio mensual, damos de alta tu
-          tienda y te enviamos un enlace para crear tu acceso. Mientras no se registre el primer pago, puedes entrar y
-          configurar tu tienda, pero no registrar información.
+          Cualquier tienda puede crear su cuenta. Toda tienda empieza en el plan <strong>Litro</strong>, gratuito, con
+          límites de uso ({PLANS.litro.maxContacts} contactos, {PLANS.litro.maxLeads} cotizaciones, {PLANS.litro.formulaLimit} fórmulas
+          de muestra y solo el usuario del dueño). Los planes <strong>Galón</strong> y <strong>Cubeta</strong> son de
+          paga y su precio vigente se muestra en el sitio y antes de pagar.
         </p>
         <p>
-          El plan se paga por mes, por transferencia, en efectivo u otra forma que acordemos; cada pago registrado
-          extiende la vigencia de tu tienda. Si un pago vence, la tienda conserva el acceso completo durante{' '}
-          {PAYMENT_GRACE_DAYS} días de gracia; después pasa a solo consulta hasta regularizarlo. Podemos suspender una
-          tienda por falta de pago o por incumplir estos términos.
+          Los planes de paga son una suscripción mensual que se cobra automáticamente con tarjeta, por adelantado, a
+          través de Stripe, nuestro procesador de pagos; no vemos ni guardamos los datos de tu tarjeta. Al cambiar de
+          plan, Stripe ajusta el cobro de forma proporcional. Si un cobro no pasa, Stripe lo reintenta durante unos días;
+          si finalmente no se cobra, la suscripción se cancela y la tienda pasa al plan Litro.
+        </p>
+        <p>
+          Al bajar de plan no se borra información: lo que pase de los límites del nuevo plan se conserva y se puede
+          consultar, pero no se pueden registrar más contactos o cotizaciones hasta quedar dentro del límite o subir de
+          plan. Si el nuevo plan incluye menos usuarios, los accesos más recientes se desactivan y el dueño puede elegir
+          a quién reactivar. WhatsApp y campañas solo están disponibles en el plan Cubeta.
+        </p>
+        <p>
+          Los precios incluyen los impuestos que se indiquen al pagar. Si necesitas factura fiscal (CFDI), pídela
+          escribiéndonos a <ContactEmail />. Podemos suspender una tienda por incumplir estos términos.
         </p>
       </>
     ),
@@ -152,9 +163,10 @@ const sections: LegalSection[] = [
     title: 'Cancelación',
     body: (
       <p>
-        Puedes cancelar el servicio en cualquier momento escribiéndonos a <ContactEmail />. Al cancelar (o si un pago
-        vence) tu tienda queda en solo consulta y su información se conserva: puedes seguir entrando y descargarla
-        completa en Excel desde Configuración → Tienda, o pedirnos una copia. No borramos la información de una tienda
+        Puedes cancelar tu suscripción en cualquier momento desde Configuración → Plan («Administrar suscripción»).
+        Conservas el plan pagado hasta el final del periodo ya cobrado y después tu tienda pasa al plan Litro; no
+        hacemos reembolsos de periodos parciales salvo que la ley lo exija. Tu información se conserva: puedes
+        descargarla completa en Excel desde Configuración → Tienda, o pedirnos una copia a <ContactEmail />. No borramos la información de una tienda
         por nuestra cuenta; la eliminamos cuando su dueño nos lo pide por escrito. También podemos terminar el servicio
         si se incumplen estos términos, avisándote previamente cuando sea posible.
       </p>
@@ -185,10 +197,10 @@ export default function TermsPage() {
       kicker="Términos de uso"
       title="Reglas claras para trabajar juntos"
       summary={[
-        'Tu tienda se da de alta por invitación y el precio se acuerda contigo; si un pago vence, queda en solo consulta.',
+        'Empiezas gratis en el plan Litro; Galón y Cubeta se pagan cada mes con tarjeta a través de Stripe.',
         'La información de tu tienda es tuya y ninguna otra tienda puede verla.',
         'Contacta solo a clientes que aceptaron recibir tus mensajes.',
-        'Puedes cancelar cuando quieras y llevarte tu información.',
+        'Puedes cancelar cuando quieras: pasas al plan Litro sin perder tu información.',
       ]}
       sections={sections}
     />

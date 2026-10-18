@@ -322,7 +322,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   // Una sola tienda por cuenta: el menú aparece si hay a dónde cambiar (alguien en varias tiendas)
   // o para que el dueño de la plataforma vuelva a su panel (/admin).
   const hasStoreMenu = !!session && (session.stores.length > 1 || session.platformAdmin)
-  const trialLeft    = store?.status === 'trial' && !readonly ? store.trialDaysLeft : null
+  // Stripe no pudo cobrar: el dueño ve el aviso para actualizar su tarjeta
+  const paymentIssue = !!session?.isOwner && !!store?.subscription && (store.subscription.status === 'past_due' || store.subscription.status === 'unpaid')
   const showFab      = !readonly && pathname in FAB_ROUTES
 
   // Lo que toca hoy (vencidos + hoy): contador de la campana y de Agenda
@@ -332,6 +333,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     : id === 'agenda' && dueCount > 0 ? { n: dueCount, cls: 'due' }
     : null
   const pendingSetup = (id: string) => id === 'whatsapp' && waOff
+  // WhatsApp viene en Cubeta: en Litro y Galón el menú lo ofrece con el nombre del plan
+  const waTag = store?.planIncludesWhatsApp ? 'Por activar' : 'Cubeta'
 
   const navLink = (it: NavItem) => {
     const Ic = it.icon
@@ -341,7 +344,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
         <Ic className="nav-icon" />
         <span>{it.label}</span>
         {badge && <span className={`nav-count ${badge.cls}`}>{badge.n > 99 ? '99+' : badge.n}</span>}
-        {pendingSetup(it.id) && <span className="nav-count off">Por activar</span>}
+        {pendingSetup(it.id) && <span className="nav-count off">{waTag}</span>}
       </Link>
     )
   }
@@ -509,19 +512,19 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
             <Icon.lock style={{ width: 16, height: 16, flexShrink: 0 }} />
             <span>
               <strong>Modo solo lectura.</strong>{' '}
-              {store.status === 'pending' ? 'Tu tienda aún no está activa' : store.status === 'trial' ? 'Terminó tu prueba gratis' : store.status === 'active' ? 'Venció el pago de tu suscripción' : `Tu tienda está ${STATUS_LABELS[store.status].toLowerCase()}`}:
-              {store.status === 'pending' ? ' se activa al registrarse su primer pago. Mientras, puedes revisarla y configurarla.' : ' puedes consultar y exportar tu información, pero no registrar cambios.'}
-            </span>
-            <Link href="/configuracion?tab=plan" className="plan-banner-cta">Activar</Link>
-          </div>
-        )}
-        {trialLeft !== null && (
-          <div className="plan-banner trial" role="status">
-            <Icon.sparkles style={{ width: 16, height: 16, flexShrink: 0 }} />
-            <span>
-              Prueba gratis: {trialLeft === 0 ? 'termina hoy' : `te ${trialLeft === 1 ? 'queda 1 día' : `quedan ${trialLeft} días`}`}.
+              Tu tienda está {STATUS_LABELS[store.status].toLowerCase()}: puedes consultar y exportar tu información, pero no registrar cambios.
             </span>
             <Link href="/configuracion?tab=plan" className="plan-banner-cta">Ver plan</Link>
+          </div>
+        )}
+        {paymentIssue && store && (
+          <div className="plan-banner readonly" role="status">
+            <Icon.lock style={{ width: 16, height: 16, flexShrink: 0 }} />
+            <span>
+              <strong>No pudimos cobrar tu plan {store.planLabel}.</strong>{' '}
+              Actualiza tu tarjeta para no perderlo; si el cobro no pasa, tu tienda vuelve al plan Litro.
+            </span>
+            <Link href="/configuracion?tab=plan" className="plan-banner-cta">Actualizar tarjeta</Link>
           </div>
         )}
 
@@ -557,7 +560,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        <div className="content"><QueryBoundary>{children}</QueryBoundary></div>
+        <div className="content"><QueryBoundary>{session?.ownerOnlyBlocked && store ? <OwnerOnlyNotice storeName={store.name} /> : children}</QueryBoundary></div>
       </main>
 
       {/* ── Bottom nav (celular) ── */}
@@ -633,4 +636,18 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return <SessionScope><AppShellContent>{children}</AppShellContent></SessionScope>
+}
+
+/** Plan Litro: solo entra el dueño. El resto del equipo ve esto en lugar de la app. */
+function OwnerOnlyNotice({ storeName }: { storeName: string }) {
+  return (
+    <div className="plan-locked" role="status">
+      <h2>Tu tienda está en el plan Litro</h2>
+      <p>
+        El plan Litro de {storeName} incluye solo al dueño. Tu información sigue guardada: en cuanto el dueño cambie a
+        Galón o Cubeta podrás volver a entrar.
+      </p>
+      <button className="btn btn-ghost" onClick={() => { invalidateSession(); window.location.reload() }}>Volver a revisar</button>
+    </div>
+  )
 }
