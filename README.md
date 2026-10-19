@@ -1,6 +1,6 @@
 # Matices
 
-CRM en la nube para **tiendas de pintura**: contactos, pipeline de leads,
+CRM en la nube para **tiendas de pintura** (producción: **https://www.matices.app**): contactos, pipeline de leads,
 recordatorios con notificaciones push, fórmulas de igualación de color y una bandeja de
 **WhatsApp Business** integrada al CRM (chat, plantillas y campañas). Se instala como PWA
 en el celular.
@@ -214,9 +214,11 @@ la pantalla de inicio (iOS 16.4+).
 | Resumen de la agenda a las 8:00 | Cron diario de Vercel → `/api/cron/agenda` (con `CRON_SECRET`) |
 | Mensaje nuevo de WhatsApp | El webhook, al guardar el mensaje |
 
-Las suscripciones son por dominio: **si cambia el dominio de la app**, actualiza la URL del
-job `crm-avisos-recordatorios` en pg_cron, borra las filas viejas de `push_subscriptions`
-(apuntan al dominio anterior) y pide al equipo que vuelva a activar los avisos.
+Las suscripciones son por dominio: **si cambia el dominio de la app**, cada persona debe
+volver a activar los avisos en el dominio nuevo. Las suscripciones del dominio anterior siguen
+llegando mientras ese dominio responda (al tocarlas abren el dominio anterior). El job
+`crm-avisos-recordatorios` de pg_cron llama a `https://crm-pinturas.vercel.app` a propósito:
+ese dominio de Vercel no depende del DNS propio; si algún día se apaga, actualiza su URL.
 
 ## Base de datos
 

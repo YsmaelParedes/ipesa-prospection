@@ -53,7 +53,7 @@ Se quitó `locale: 'es-419'`: Checkout toma el idioma del navegador.
 |----------|-------|
 | `STRIPE_SECRET_KEY` | `sk_test_…` en pruebas, `sk_live_…` en producción. Solo servidor. |
 | `STRIPE_WEBHOOK_SECRET` | `whsec_…` del endpoint de abajo (o el que imprime `stripe listen` en local). |
-| `NEXT_PUBLIC_SITE_URL` | `https://crm-pinturas.vercel.app` (ya existe; arma las URL de regreso). |
+| `NEXT_PUBLIC_SITE_URL` | `https://www.matices.app` (arma las URL de regreso). |
 
 No se necesita llave publicable: el pago es en la página de Stripe.
 
@@ -69,7 +69,7 @@ No se necesita llave publicable: el pago es en la página de Stripe.
    - actualizar la tarjeta;
    - ver facturas.
 4. **Smart Retries:** al agotar los reintentos, **cancelar la suscripción** (así la tienda baja a Litro).
-5. **Webhook:** `https://crm-pinturas.vercel.app/api/webhooks/stripe` con estos eventos:
+5. **Webhook:** `https://www.matices.app/api/webhooks/stripe` con estos eventos:
    - `checkout.session.completed`
    - `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`
    - `invoice.paid`, `invoice.payment_failed`, `invoice.payment_action_required`

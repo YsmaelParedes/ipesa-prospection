@@ -26,6 +26,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Puedes cambiar de plan, pagar con tarjeta, descargar tus facturas o cancelar desde Configuración → Plan.',
       'Si bajas de plan o dejas de pagar no se borra nada: tu tienda pasa al plan Litro y sigues viendo toda tu información.',
       'Cualquier tienda puede crear su cuenta gratis desde el sitio, sin esperar una invitación.',
+      'Matices ahora vive en www.matices.app. Entra desde ahí, vuelve a activar los avisos en cada celular y, si la tenías instalada, agrega la app otra vez desde la nueva dirección.',
     ],
   },
   {
