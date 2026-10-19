@@ -50,14 +50,24 @@ export async function POST(req: NextRequest) {
 
     const origin = siteOrigin(req.nextUrl.origin)
     const session = await stripe.checkout.sessions.create({
+      ui_mode: 'hosted_page',
       mode: 'subscription',
       customer,
+      // Necesario con automatic_tax y un cliente existente: Checkout guarda en él la dirección para calcular impuestos
+      customer_update: { address: 'auto' },
+      // Liga la suscripción con la tienda (lo usa el webhook); no quitar
       client_reference_id: ctx.storeId,
       line_items: [{ price, quantity: 1 }],
       subscription_data: { metadata: { store_id: ctx.storeId, plan } },
       metadata: { store_id: ctx.storeId, plan },
-      allow_promotion_codes: true,
-      locale: 'es-419',
+      billing_address_collection: 'auto',
+      phone_number_collection: { enabled: false },
+      automatic_tax: { enabled: true },
+      allow_promotion_codes: false,
+      payment_method_collection: 'always',
+      submit_type: 'auto',
+      integration_identifier: 'hosted_mobile_app_0002',
+      origin_context: 'mobile_app',
       success_url: `${origin}/configuracion?tab=plan&pago=ok`,
       cancel_url: `${origin}/configuracion?tab=plan`,
     })
