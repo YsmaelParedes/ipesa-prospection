@@ -1,12 +1,12 @@
 {
   "name": "crm-pinturas",
-  "version": "2.13.0",
+  "version": "3.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test:cache": "node --test tests/query-cache.test.cjs tests/api-client.test.cjs tests/server-timing.test.cjs tests/dashboard-whatsapp.test.cjs tests/error-report.test.cjs",
+    "test:cache": "node --test tests/query-cache.test.cjs tests/api-client.test.cjs tests/server-timing.test.cjs tests/dashboard-whatsapp.test.cjs tests/error-report.test.cjs tests/plans.test.cjs",
     "benchmark:api": "node scripts/benchmark-api.mjs"
   },
   "dependencies": {
@@ -16,6 +16,7 @@
     "papaparse": "^5.7.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "stripe": "^23.0.0",
     "web-push": "^3.6.7",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },

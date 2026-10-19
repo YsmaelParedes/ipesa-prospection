@@ -17,7 +17,7 @@ async function GETImpl() {
   const db = getServerSupabase()
   const [overview, prices, invites] = await Promise.all([
     db.rpc('platform_store_overview'),
-    db.from('stores').select('id, monthly_price, modules, whatsapp_requested_at'),
+    db.from('stores').select('id, monthly_price, modules, whatsapp_requested_at, subscription_status, current_period_end, cancel_at_period_end, stripe_customer_id'),
     db.from('store_invitations').select('store_id, email, expires_at, accepted_at, revoked_at')
       .eq('role', 'owner').is('accepted_at', null).is('revoked_at', null).order('created_at', { ascending: false }),
   ])
@@ -27,6 +27,10 @@ async function GETImpl() {
     monthly_price: p.monthly_price === null ? null : Number(p.monthly_price),
     modules: p.modules ?? null,
     whatsapp_requested_at: p.whatsapp_requested_at ?? null,
+    subscription_status: p.subscription_status ?? null,
+    current_period_end: p.current_period_end ?? null,
+    cancel_at_period_end: !!p.cancel_at_period_end,
+    stripe_customer_id: p.stripe_customer_id ?? null,
   }]))
   const inviteOf = new Map<string, OwnerInvite>()
   for (const i of invites.data ?? []) {
@@ -34,7 +38,7 @@ async function GETImpl() {
   }
   const stores = (overview.data ?? []).map((st: { id: string; owner_email: string | null }) => ({
     ...st,
-    ...(extraOf.get(st.id) ?? { monthly_price: null, modules: null, whatsapp_requested_at: null }),
+    ...(extraOf.get(st.id) ?? { monthly_price: null, modules: null, whatsapp_requested_at: null, subscription_status: null, current_period_end: null, cancel_at_period_end: false, stripe_customer_id: null }),
     owner_invite: st.owner_email ? null : inviteOf.get(st.id) ?? null,
   }))
   return NextResponse.json({ stores }, { headers: { 'Cache-Control': 'no-store' } })
@@ -43,8 +47,8 @@ async function GETImpl() {
 /**
  * POST /api/platform/stores — alta de una tienda desde el panel del dueño.
  * { name, city?, state?, phone?, ownerEmail, monthlyPrice? }
- * La tienda nace "Por activar" (solo lectura hasta su primer pago o cortesía)
- * y se genera el enlace de invitación para su dueño (vence en 7 días).
+ * Para casos especiales (las tiendas se registran solas en /registro): nace en
+ * Litro y se genera el enlace de invitación para su dueño (vence en 7 días).
  */
 export async function POST(req: NextRequest) {
   const user = await requirePlatformAdmin()

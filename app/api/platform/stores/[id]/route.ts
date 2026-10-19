@@ -2,16 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requirePlatformAdmin } from '@/lib/supabase-server'
 import { logPlatformEvent } from '@/lib/platformEvents'
 import { isMoney } from '@/lib/payments'
-import { PLANS, TRIAL_DAYS, normalizeModules } from '@/lib/stores'
+import { PAID_SUBSCRIPTION_STATUSES, isPlanId, normalizeModules } from '@/lib/stores'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
-
-const DAY = 24 * 60 * 60 * 1000
 
 /**
  * PATCH /api/platform/stores/[id] — administración manual de una tienda.
  * { action: 'activate' } (sin vencimiento: tienda propia o acuerdo especial) ·
- * { action: 'extend_trial', days } · { action: 'suspend' } · { action: 'cancel' } ·
- * { plan } · { notes } · { monthlyPrice } · { whatsapp: boolean } (WhatsApp y Campañas)
+ * { action: 'suspend' } · { action: 'cancel' } · { plan } (cortesía; no si paga
+ * con Stripe: ahí el plan lo lleva la suscripción) · { notes } · { monthlyPrice } ·
+ * { whatsapp: boolean } (bandeja de WhatsApp; Campañas y Fórmulas no se manejan aquí)
  * Extender la vigencia pagada se hace registrando un pago
  * (POST /api/platform/stores/[id]/payments), para que quede en el historial.
  * Todo queda en la bitácora (platform_events).
@@ -26,10 +25,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!body) return jsonError('Cuerpo de solicitud inválido')
 
   const db = getServerSupabase()
-  const { data: store } = await db.from('stores').select('id, status, trial_ends_at, paid_until, plan, monthly_price, modules, whatsapp_requested_at').eq('id', id).maybeSingle()
+  const { data: store } = await db.from('stores').select('id, status, paid_until, plan, monthly_price, modules, whatsapp_requested_at, subscription_status').eq('id', id).maybeSingle()
   if (!store) return jsonError('Tienda no encontrada', 404)
 
-  const now = Date.now()
   const updates: Record<string, unknown> = {}
   const events: { action: string; detail: Record<string, unknown> }[] = []
   switch (body.action) {
@@ -37,14 +35,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (body.months !== undefined && Number(body.months) !== 0) return jsonError('Para extender la vigencia registra un pago')
       Object.assign(updates, { status: 'active', paid_until: null })
       events.push({ action: 'activate_unlimited', detail: { prev_status: store.status, prev_paid_until: store.paid_until } })
-      break
-    }
-    case 'extend_trial': {
-      const days = Number(body.days) || TRIAL_DAYS
-      if (!Number.isInteger(days) || days < 1 || days > 90) return jsonError('Días inválidos')
-      const base = store.trial_ends_at && new Date(store.trial_ends_at).getTime() > now ? new Date(store.trial_ends_at).getTime() : now
-      Object.assign(updates, { status: 'trial', trial_ends_at: new Date(base + days * DAY).toISOString() })
-      events.push({ action: 'extend_trial', detail: { days, trial_ends_at: updates.trial_ends_at, prev_status: store.status } })
       break
     }
     case 'suspend':
@@ -56,7 +46,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     default: return jsonError('Acción no válida')
   }
   if (body.plan !== undefined) {
-    if (typeof body.plan !== 'string' || !PLANS[body.plan]) return jsonError('Plan no válido')
+    if (!isPlanId(body.plan)) return jsonError('Plan no válido')
+    if ((PAID_SUBSCRIPTION_STATUSES as readonly string[]).includes(store.subscription_status ?? '')) {
+      return jsonError('Esta tienda paga con Stripe: su plan lo cambia la suscripción (portal de Stripe).', 409)
+    }
     updates.plan = body.plan
     events.push({ action: 'plan', detail: { plan: body.plan, prev_plan: store.plan } })
   }
@@ -75,8 +68,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
   if (body.whatsapp !== undefined) {
     if (typeof body.whatsapp !== 'boolean') return jsonError('Valor de WhatsApp inválido')
-    // WhatsApp y Campañas van juntos; solo el panel los cambia (la tienda no tiene interruptores)
-    updates.modules = { ...normalizeModules(store.modules), whatsapp: body.whatsapp, campaigns: body.whatsapp }
+    // Solo la bandeja; Campañas y Fórmulas son extras que se activan fuera de la plataforma
+    updates.modules = { ...normalizeModules(store.modules), whatsapp: body.whatsapp }
     if (body.whatsapp) updates.whatsapp_requested_at = null
     events.push({ action: body.whatsapp ? 'whatsapp_on' : 'whatsapp_off', detail: { requested_at: store.whatsapp_requested_at } })
   }

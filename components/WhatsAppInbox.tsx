@@ -820,6 +820,8 @@ function CrmPanel({ phone, thread, convo, onClose, onChanged, toast }: {
   phone: string; thread: Thread | null; convo: Conversation | null
   onClose: () => void; onChanged: () => void; toast: (m: string) => void
 }) {
+  // Recibe/no recibe campañas solo tiene sentido en tiendas con Campañas
+  const campaignsOn = !!useSession()?.store?.modules.campaigns
   const [config, setConfig] = useState<ConfigLists>({ segments: [], canales: [] })
   useQueryEffect(() => { loadCatalogs().then(setConfig).catch(() => {}) }, [])
 
@@ -860,7 +862,7 @@ function CrmPanel({ phone, thread, convo, onClose, onChanged, toast }: {
 
           <LeadsSection contact={contact} phone={phone} leads={thread.leads} config={config} onChanged={onChanged} toast={toast} />
           <ReminderSection contact={contact} leads={thread.leads} toast={toast} />
-          <OptOutSection phone={phone} optOut={contact.wa_opt_out} onChanged={onChanged} toast={toast} />
+          {campaignsOn && <OptOutSection phone={phone} optOut={contact.wa_opt_out} onChanged={onChanged} toast={toast} />}
         </>
       ) : (
         <SaveContactSection phone={phone} profileName={profileName} config={config} onSaved={() => { onChanged(); notifyDataChanged('contact'); toast('Contacto guardado ✓') }} />

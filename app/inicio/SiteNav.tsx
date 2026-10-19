@@ -39,7 +39,7 @@ export function SiteNav() {
         <div className={s.navCta}>
           <Link href="/login" className={`${s.btn} ${s.btnGhost} ${s.hideSm}`}>Iniciar sesión</Link>
           <Link href="/registro" className={`${s.btn} ${s.btnPrimary}`}>
-            <span className={s.hideXs}>Pide una invitación</span><span className={s.showXs}>Invitación</span>
+            <span className={s.hideXs}>Crear cuenta gratis</span><span className={s.showXs}>Crear cuenta</span>
           </Link>
           <button
             ref={btnRef}

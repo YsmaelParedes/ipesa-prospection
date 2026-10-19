@@ -11,7 +11,6 @@ import { DEFAULT_MODULES, ROLE_LABELS, planOf, type StoreModule, type StoreModul
 import { MX_STATES } from '@/lib/mexico'
 import { Select, toOptions } from '@/components/Select'
 import { pendingInvite } from '@/lib/pendingInvite'
-import { requestInviteLinks } from '@/lib/legal'
 import { signOut } from '@/lib/signOut'
 import s from './bienvenida.module.css'
 
@@ -28,8 +27,6 @@ const STEPS = [
   { title: 'Tu equipo',    desc: 'Invita a tus vendedores' },
 ]
 const DONE = STEPS.length
-/** Cuenta sin tienda: las tiendas nuevas entran solo por invitación */
-const NO_STORE = -1
 
 type Profile = { name: string; city: string; state: string; phone: string; address: string }
 type Invite = { id: string; email: string; role: 'admin' | 'employee'; link: string }
@@ -117,7 +114,8 @@ function Wizard() {
       setModules(current.modules)
       setStep(1)
     } else {
-      setStep(NO_STORE)
+      // Cuenta nueva (registro abierto): crea su tienda en el plan Litro
+      setStep(0)
     }
   }, [session, step])
 
@@ -155,9 +153,7 @@ function Wizard() {
       {step >= 0 && step < DONE && <Stepper step={step} />}
 
       <main className={s.main}>
-        {step === NO_STORE ? (
-          <NoStoreStep />
-        ) : step === DONE && store ? (
+        {step === DONE && store ? (
           <DoneStep store={store} modules={modules} invites={invites.length} />
         ) : (
           <div className={s.layout}>
@@ -173,7 +169,8 @@ function Wizard() {
               )}
               {step === 2 && store && (
                 <TeamStep
-                  store={store} canInviteAdmins={isOwner && store.allowAdmins} invites={invites} locked={store.access === 'readonly'}
+                  store={store} canInviteAdmins={isOwner && store.allowAdmins} invites={invites}
+                  locked={store.access === 'readonly' ? 'readonly' : store.maxUsers <= 1 ? 'plan' : null}
                   onInvite={inv => setInvites(list => [inv, ...list.filter(i => i.email !== inv.email)])}
                   onBack={() => setStep(1)} onNext={() => setStep(DONE)}
                 />
@@ -418,7 +415,7 @@ function LogoStep({ store, onLogo, onBack, onNext }: {
 
 /* ── Paso 3: equipo ─────────────────────────────────────────────────────── */
 function TeamStep({ store, canInviteAdmins, invites, locked, onInvite, onBack, onNext }: {
-  store: ClientStore; canInviteAdmins: boolean; invites: Invite[]; locked: boolean
+  store: ClientStore; canInviteAdmins: boolean; invites: Invite[]; locked: 'readonly' | 'plan' | null
   onInvite: (inv: Invite) => void; onBack: () => void; onNext: () => void
 }) {
   const [email, setEmail]   = useState('')
@@ -459,7 +456,9 @@ function TeamStep({ store, canInviteAdmins, invites, locked, onInvite, onBack, o
       {error && <AuthAlert>{error}</AuthAlert>}
       {locked ? (
         <AuthAlert kind="info">
-          Podrás invitar a tu equipo en cuanto tu tienda esté activa, al registrarse su primer pago. Lo haces desde Configuración → Equipo.
+          {locked === 'plan'
+            ? <>El plan {store.planLabel} incluye solo al dueño. Para invitar a tu equipo cambia a Galón o Cubeta desde Configuración → Plan.</>
+            : <>Tu tienda está en solo lectura: por ahora no puedes invitar a tu equipo.</>}
         </AuthAlert>
       ) : (<>
       <form onSubmit={submit} className={s.inviteForm}>
@@ -518,14 +517,16 @@ function TeamStep({ store, canInviteAdmins, invites, locked, onInvite, onBack, o
 
 /* ── Listo ──────────────────────────────────────────────────────────────── */
 function DoneStep({ store, modules, invites }: { store: ClientStore; modules: StoreModules; invites: number }) {
-  const pending = store.access === 'readonly'
+  const free = store.plan === 'litro'
 
   const next = [
     modules.whatsapp
-      ? { href: '/configuracion?tab=whatsapp', icon: WhatsAppGlyph, tone: s.nextWa, title: 'Conecta tu WhatsApp', text: 'Usa el número de tu tienda para atender y enviar campañas.' }
+      ? { href: '/configuracion?tab=whatsapp', icon: WhatsAppGlyph, tone: s.nextWa, title: 'Conecta tu WhatsApp', text: 'Usa el número de tu tienda para atender a tus clientes desde el CRM.' }
       : { href: '/leads', icon: Ic.leads, tone: s.nextBrand, title: 'Registra tu primer lead', text: 'Da seguimiento a cada cotización hasta cerrarla.' },
     { href: '/contactos', icon: Ic.contacts, tone: s.nextCyan, title: 'Agrega tus clientes', text: 'Captúralos uno por uno o importa tu lista de Excel.' },
-    { href: '/configuracion?tab=catalogos', icon: Ic.settings, tone: s.nextMagenta, title: 'Ajusta tus catálogos', text: 'Segmentos y canales con los que trabaja tu tienda.' },
+    free
+      ? { href: '/configuracion?tab=plan', icon: Ic.settings, tone: s.nextMagenta, title: 'Conoce los planes', text: 'Galón y Cubeta quitan los límites y suman a tu equipo.' }
+      : { href: '/configuracion?tab=catalogos', icon: Ic.settings, tone: s.nextMagenta, title: 'Ajusta tus catálogos', text: 'Segmentos y canales con los que trabaja tu tienda.' },
   ]
 
   return (
@@ -533,9 +534,9 @@ function DoneStep({ store, modules, invites }: { store: ClientStore; modules: St
       <div className={s.doneBadge} aria-hidden="true"><span><AuthIcon.check /></span></div>
       <h1>¡{store.name} está lista!</h1>
       <p className={s.doneSub}>
-        {pending
-          ? <>Tu tienda quedará activa en cuanto se registre su primer pago. Mientras, ya puedes entrar, revisar todo y terminar de configurarla.</>
-          : <>Tienes todas las funciones disponibles.</>}
+        {free
+          ? <>Estás en el plan Litro, gratis: hasta {store.limits.contacts} contactos y {store.limits.leads} cotizaciones. Cuando lo necesites, cambia de plan en Configuración → Plan.</>
+          : <>Tu plan {store.planLabel} está activo.</>}
         {invites > 0 && <> Cuando tu equipo acepte su invitación lo verás en Configuración.</>}
       </p>
       <div className={s.next}>
@@ -551,25 +552,6 @@ function DoneStep({ store, modules, invites }: { store: ClientStore; modules: St
       <Link href="/" className={cx(s.btn, s.primary, s.lg)}>
         Entrar a mi tienda <AuthIcon.arrow className={s.btnArrow} />
       </Link>
-    </section>
-  )
-}
-
-/* ── Cuenta sin tienda ──────────────────────────────────────────────────── */
-function NoStoreStep() {
-  const links = requestInviteLinks()
-  return (
-    <section className={s.done}>
-      <div className={s.doneBadge} aria-hidden="true"><span><Ic.store /></span></div>
-      <h1>Tu cuenta aún no tiene tienda</h1>
-      <p className={s.doneSub}>
-        Las tiendas se dan de alta solo por invitación. Si ya te mandaron un enlace, ábrelo para unirte a tu tienda;
-        si quieres {APP_NAME} para tu tienda, pide tu invitación.
-      </p>
-      <div className={s.next} style={{ justifyContent: 'center' }}>
-        {links.whatsapp && <a href={links.whatsapp} target="_blank" rel="noopener noreferrer" className={cx(s.btn, s.primary, s.lg)}>Pedir invitación por WhatsApp</a>}
-        {links.email && <a href={links.email} className={cx(s.btn, links.whatsapp ? s.soft : s.primary, s.lg)}>Pedir invitación por correo</a>}
-      </div>
     </section>
   )
 }

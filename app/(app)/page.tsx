@@ -30,7 +30,7 @@ function trendOf(t: Trend | undefined, unit: 'count' | 'pts' = 'count'): { up: b
 const money = (n: number) => `$${Math.round(n).toLocaleString('es-MX')}`
 
 const FIRST_STEPS = [
-  { id: 'wa',    href: '/configuracion?tab=whatsapp', title: 'Conecta tu WhatsApp',    text: 'Atiende y manda campañas desde el número de tu tienda.' },
+  { id: 'wa',    href: '/configuracion?tab=whatsapp', title: 'Conecta tu WhatsApp',    text: 'Atiende a tus clientes desde el número de tu tienda.' },
   { id: 'cli',   href: '/contactos',                  title: 'Agrega tus clientes',     text: 'Uno por uno o importa tu lista de Excel.' },
   { id: 'team',  href: '/configuracion?tab=equipo',   title: 'Invita a tu equipo',      text: 'Cada vendedor entra con su propio acceso.' },
   { id: 'lead',  href: '/leads',                      title: 'Registra tu primer lead', text: 'Da seguimiento a cada cotización hasta cerrarla.' },

@@ -4,7 +4,7 @@ import { isUUID, jsonError, serverError } from '@/lib/validation'
 
 // DELETE /api/whatsapp/quick-replies/[id] (dueño/admin)
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const ctx = await requireStore({ admin: true, write: true })
+  const ctx = await requireStore({ admin: true, write: true, module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
 
   const { id } = await params

@@ -1,18 +1,22 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { logPlatformEvent } from '@/lib/platformEvents'
-import { serverError } from '@/lib/validation'
+import { jsonError, serverError } from '@/lib/validation'
+import { planOf } from '@/lib/stores'
 
 /**
  * POST /api/store/whatsapp-request — "Quiero activarlo" (dueño/admin).
  * Deja la solicitud en el panel de la plataforma para que un asesor contacte
  * a la tienda; la tienda no puede activar WhatsApp por su cuenta. Repetirla
  * no cambia la fecha original. Se permite aunque la tienda esté en solo lectura.
+ * Solo en planes que incluyen WhatsApp (Cubeta, Interno).
  */
 export async function POST() {
   const ctx = await requireStore({ admin: true })
   if (ctx instanceof Response) return ctx
-  if (ctx.store.modules.whatsapp) return NextResponse.json({ ok: true, active: true })
+  if (ctx.modules.whatsapp) return NextResponse.json({ ok: true, active: true })
+  // WhatsApp viene en Cubeta: en Litro y Galón primero hay que cambiar de plan
+  if (!planOf(ctx.plan).whatsapp) return jsonError('WhatsApp está incluido en el plan Cubeta. Cambia de plan para activarlo.', 402)
   if (ctx.store.whatsapp_requested_at) return NextResponse.json({ ok: true, requestedAt: ctx.store.whatsapp_requested_at })
 
   try {

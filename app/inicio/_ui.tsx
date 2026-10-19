@@ -49,7 +49,7 @@ export function PageHero({ kicker, title, lead, children }: { kicker: string; ti
 }
 
 /** Cierre con llamado a la acción, igual en todas las páginas. */
-export function CtaBand({ title = 'Tu sucursal, organizada desde hoy', text = 'Pide tu invitación: damos de alta tu tienda y te ayudamos a configurarla con tu equipo.' }: { title?: string; text?: string }) {
+export function CtaBand({ title = 'Tu sucursal, organizada desde hoy', text = 'Crea tu cuenta gratis con el plan Litro y cambia de plan cuando tu tienda lo necesite.' }: { title?: string; text?: string }) {
   return (
     <section className={s.ctaSection}>
       <div className={s.wrap}>
@@ -59,8 +59,8 @@ export function CtaBand({ title = 'Tu sucursal, organizada desde hoy', text = 'P
             <h2 className={s.h2}>{title}</h2>
             <p className={s.sub}>{text}</p>
             <div className={s.heroCtas}>
-              <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>Pedir invitación <Ic.arrow className={s.btnArrow} /></Link>
-              <Link href="/inicio/como-empezar" className={`${s.btn} ${s.btnLight} ${s.btnLg}`}>Cómo empezar</Link>
+              <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>Crear cuenta gratis <Ic.arrow className={s.btnArrow} /></Link>
+              <Link href="/inicio/precios" className={`${s.btn} ${s.btnLight} ${s.btnLg}`}>Ver precios</Link>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 'use client'
 
+import { PlanLimitHint } from '@/components/PlanLimitHint'
 import { useDataReady, useQueryEffect } from '@/lib/useCachedQuery'
 
 
@@ -207,6 +208,7 @@ function ContactosContent() {
 
   return (
     <>
+      <PlanLimitHint kind="contacts" used={contacts.length} />
       <div className="section-head">
         {someChecked ? (
           /* ── Barra de selección ── */
@@ -678,11 +680,12 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
   )
 }
 
-/* ── WhatsApp dentro de la ficha: últimos mensajes, ventana de 24 h y campañas ── */
+/* ── WhatsApp dentro de la ficha: últimos mensajes, ventana de 24 h y (con Campañas) si recibe campañas ── */
 function ContactWhatsApp({ contact: c, readonly, onUpdated }: { contact: any; readonly: boolean; onUpdated: (c: any) => void }) {
   const phone = normalizePhone(c.phone)
   const [data, setData] = useState<{ messages: any[]; lastInboundAt: string | null } | null>(null)
   const [saving, setSaving] = useState(false)
+  const campaignsOn = !!useSession()?.store?.modules.campaigns
 
   useQueryEffect(() => {
     apiFetch(`/api/whatsapp/conversations/${phone}?preview=1&limit=3`)
@@ -724,12 +727,14 @@ function ContactWhatsApp({ contact: c, readonly, onUpdated }: { contact: any; re
             ))}
           </div>
         )}
-        <div className="wa-mini-foot">
-          <label className="wa-check-row" style={{ alignItems: 'center' }}>
-            <input type="checkbox" checked={!c.wa_opt_out} onChange={toggleOptOut} disabled={saving || readonly} />
-            <span>Recibe campañas de WhatsApp</span>
-          </label>
-        </div>
+        {campaignsOn && (
+          <div className="wa-mini-foot">
+            <label className="wa-check-row" style={{ alignItems: 'center' }}>
+              <input type="checkbox" checked={!c.wa_opt_out} onChange={toggleOptOut} disabled={saving || readonly} />
+              <span>Recibe campañas de WhatsApp</span>
+            </label>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -958,10 +963,13 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
   const doImport = async () => {
     if (!preview) return
     setStep('importing'); setTotal(preview.valid.length); setProgress(0)
-    let inserted = 0, duplicates = 0, failed = 0, done = 0
+    let inserted = 0, duplicates = 0, failed = 0, skipped = 0, done = 0
+    let limitMessage = ''
     await batchQueryChanges(async () => {
     for (let i = 0; i < preview.valid.length; i += 200) {
       const chunk = preview.valid.slice(i, i + 200)
+      // Plan Litro lleno: el resto ya no cabe (no se manda)
+      if (limitMessage) { skipped += chunk.length; done += chunk.length; setProgress(done); continue }
       try {
         const r = await apiFetch('/api/data/contacts', {
           method: 'POST',
@@ -969,7 +977,10 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
           body: JSON.stringify({ contacts: chunk }),
         })
         const d = await r.json().catch(() => ({}))
-        if (r.ok) { inserted += d.inserted ?? 0; duplicates += d.duplicates ?? 0; failed += d.invalid ?? 0 }
+        if (r.ok) {
+          inserted += d.inserted ?? 0; duplicates += d.duplicates ?? 0; failed += d.invalid ?? 0; skipped += d.overLimit ?? 0
+          if (d.limitMessage) limitMessage = d.limitMessage
+        } else if (d.code === 'PLAN_LIMIT') { skipped += chunk.length; limitMessage = d.error }
         else failed += chunk.length
       } catch { failed += chunk.length }
       done += chunk.length; setProgress(done)
@@ -977,8 +988,9 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
     })
     const parts = [`${inserted} importado${inserted !== 1 ? 's' : ''}`]
     if (duplicates) parts.push(`${duplicates} ya existían`)
+    if (skipped) parts.push(`${skipped} no cupieron en tu plan`)
     if (failed) parts.push(`${failed} con error`)
-    onDone(`Importación: ${parts.join(' · ')}`)
+    onDone(`Importación: ${parts.join(' · ')}${limitMessage ? `. ${limitMessage}` : ''}`)
   }
 
   const titleMap: Record<Step, string> = {

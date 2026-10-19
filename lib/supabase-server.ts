@@ -3,8 +3,8 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import {
-  isStoreAdminRole, normalizeModules, storeAccess,
-  type StoreAccess, type StoreModule, type StoreModules, type StoreRole, type StoreStatus,
+  effectiveModules, effectivePlan, isStoreAdminRole, normalizeModules, storeAccess,
+  type PlanId, type StoreAccess, type StoreModule, type StoreModules, type StoreRole, type StoreStatus,
 } from './stores'
 
 const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -59,7 +59,7 @@ export async function getSessionUser(): Promise<User | null> {
 
 // ─── Tiendas ─────────────────────────────────────────────────────────────────
 export const STORE_COLUMNS =
-  'id, slug, name, phone, email, address, city, state, logo_path, timezone, status, plan, trial_ends_at, paid_until, modules, onboarding_completed_at, whatsapp_requested_at, created_at'
+  'id, slug, name, phone, email, address, city, state, logo_path, timezone, status, plan, trial_ends_at, paid_until, modules, onboarding_completed_at, whatsapp_requested_at, created_at, stripe_customer_id, stripe_subscription_id, subscription_status, current_period_end, cancel_at_period_end'
 
 export type StoreRow = {
   id: string; slug: string; name: string
@@ -69,6 +69,12 @@ export type StoreRow = {
   modules: StoreModules; onboarding_completed_at: string | null; created_at: string
   /** La tienda pidió activar WhatsApp ("Quiero activarlo") y aún no se activa */
   whatsapp_requested_at: string | null
+  /** Suscripción de Stripe (solo servidor: nunca se mandan los ids al navegador) */
+  stripe_customer_id: string | null
+  stripe_subscription_id: string | null
+  subscription_status: string | null
+  current_period_end: string | null
+  cancel_at_period_end: boolean
 }
 
 export type Membership = { storeId: string; role: StoreRole; store: StoreRow }
@@ -83,6 +89,12 @@ export type StoreContext = {
   isOwner: boolean
   store: StoreRow
   access: StoreAccess
+  /** Plan que aplica hoy (una cortesía vencida cuenta como Litro) */
+  plan: PlanId
+  /** Módulos que la tienda puede usar: los de su plan y encendidos por el asesor */
+  modules: StoreModules
+  /** Plan Litro: solo entra el dueño; el resto del equipo queda en espera */
+  ownerOnlyBlocked: boolean
   memberships: Membership[]
 }
 
@@ -109,6 +121,7 @@ export async function resolveStoreContext(user: User): Promise<StoreContext | nu
   if (!memberships.length) return null
   const wanted = (await cookies()).get(ACTIVE_STORE_COOKIE)?.value
   const m = memberships.find(x => x.storeId === wanted) ?? memberships[0]
+  const plan = effectivePlan(m.store)
   return {
     uid: user.id,
     user,
@@ -118,12 +131,15 @@ export async function resolveStoreContext(user: User): Promise<StoreContext | nu
     isOwner: m.role === 'owner',
     store: m.store,
     access: storeAccess(m.store),
+    plan,
+    modules: effectiveModules(m.store),
+    ownerOnlyBlocked: plan === 'litro' && m.role !== 'owner',
     memberships,
   }
 }
 
 // ─── Respuestas estándar ─────────────────────────────────────────────────────
-type ErrorCode = 'UNAUTHENTICATED' | 'NO_STORE' | 'FORBIDDEN' | 'MODULE_DISABLED' | 'STORE_READONLY'
+type ErrorCode = 'UNAUTHENTICATED' | 'NO_STORE' | 'FORBIDDEN' | 'MODULE_DISABLED' | 'STORE_READONLY' | 'PLAN_OWNER_ONLY'
 
 function errorResponse(status: number, code: ErrorCode, error: string) {
   return Response.json({ error, code }, { status })
@@ -169,14 +185,17 @@ export async function requireStore(opts: RequireStoreOptions = {}): Promise<Stor
     return Response.json({ error: 'Error al cargar la tienda' }, { status: 500 })
   }
   if (!ctx) return errorResponse(403, 'NO_STORE', 'Tu cuenta no pertenece a ninguna tienda todavía')
+  if (ctx.ownerOnlyBlocked) {
+    return errorResponse(403, 'PLAN_OWNER_ONLY', 'Tu tienda está en el plan Litro, que solo incluye al dueño.')
+  }
   if (opts.owner && !ctx.isOwner) return forbiddenResponse('Solo el dueño de la tienda puede hacer esto')
   if (opts.admin && !ctx.isAdmin) return forbiddenResponse()
-  if (opts.module && !ctx.store.modules[opts.module]) {
-    return errorResponse(403, 'MODULE_DISABLED', 'Este módulo está desactivado para tu tienda')
+  if (opts.module && !ctx.modules[opts.module]) {
+    return errorResponse(403, 'MODULE_DISABLED', 'Este módulo no está incluido o activado para tu tienda')
   }
   if (opts.write && ctx.access === 'readonly') {
     return errorResponse(402, 'STORE_READONLY',
-      'Tu tienda está en modo solo lectura: el periodo de prueba terminó o la suscripción no está vigente.')
+      'Tu tienda está en modo solo lectura: está suspendida o cancelada.')
   }
   return ctx
 }

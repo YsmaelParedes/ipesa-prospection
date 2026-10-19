@@ -40,8 +40,8 @@ export async function POST(req: NextRequest) {
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
   const role = body?.role === 'admin' ? 'admin' : 'employee'
   if (!EMAIL_RE.test(email) || email.length > 254) return jsonError('Escribe un correo válido')
-  if (role === 'admin' && !planOf(ctx.store.plan).allowAdmins) {
-    return jsonError('Tu plan incluye un solo administrador: el dueño. Invita a tu equipo como vendedores.', 403)
+  if (role === 'admin' && !planOf(ctx.plan).allowAdmins) {
+    return jsonError('Tu plan no incluye administradores además del dueño (Cubeta sí). Invita a tu equipo como vendedores.', 403)
   }
   if (role === 'admin' && !ctx.isOwner) return jsonError('Solo el dueño puede invitar administradores', 403)
 
@@ -50,8 +50,12 @@ export async function POST(req: NextRequest) {
     if (members.some(m => m.email.toLowerCase() === email)) return jsonError('Esa persona ya es parte del equipo')
     const activeSeats = members.filter(m => m.status === 'active').length
       + pending.filter(i => invitationStatus(i) === 'valid' && i.email !== email).length
-    const { maxUsers, label } = planOf(ctx.store.plan)
-    if (activeSeats >= maxUsers) return jsonError(`Tu plan ${label} permite hasta ${maxUsers} usuarios`, 403)
+    const { maxUsers, label } = planOf(ctx.plan)
+    if (activeSeats >= maxUsers) {
+      return jsonError(maxUsers === 1
+        ? `El plan ${label} incluye solo al dueño. Cambia a Galón o Cubeta para invitar a tu equipo.`
+        : `Tu plan ${label} permite hasta ${maxUsers} usuarios. Cambia de plan para sumar más.`, 403)
+    }
 
     // Un administrador no puede pisar (ni rebajar) la invitación de administrador que hizo el dueño
     if (!ctx.isOwner && pending.some(i => i.email === email && i.role === 'admin' && invitationStatus(i) === 'valid')) {

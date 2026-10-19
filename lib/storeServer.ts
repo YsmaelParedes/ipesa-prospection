@@ -7,7 +7,7 @@ import { ACTIVE_STORE_COOKIE, STORE_COLUMNS, getServerSupabase, type StoreContex
 import { randomToken } from './crypto'
 import {
   DEFAULT_CANALES, DEFAULT_MODULES, DEFAULT_PLAN, DEFAULT_SEGMENTS,
-  normalizeModules, planOf, slugify, storeAccess, trialDaysLeft,
+  effectiveModules, effectivePlan, normalizeModules, planOf, slugify, storeAccess,
 } from './stores'
 import type { Schema } from './validation'
 
@@ -28,8 +28,10 @@ export function storeLogoUrl(path: string | null): string | null {
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/store-assets/${path}`
 }
 
-/** Lo que el navegador necesita saber de la tienda activa (sin datos internos). */
+/** Lo que el navegador necesita saber de la tienda activa (sin datos internos ni ids de Stripe). */
 export function publicStore(store: StoreRow) {
+  const plan = effectivePlan(store)
+  const def = planOf(plan)
   return {
     id: store.id,
     slug: store.slug,
@@ -41,15 +43,23 @@ export function publicStore(store: StoreRow) {
     state: store.state,
     logoUrl: storeLogoUrl(store.logo_path),
     status: store.status,
-    plan: store.plan,
-    planLabel: planOf(store.plan).label,
-    maxUsers: planOf(store.plan).maxUsers,
-    allowAdmins: planOf(store.plan).allowAdmins,
-    trialEndsAt: store.trial_ends_at,
-    trialDaysLeft: trialDaysLeft(store),
+    plan,
+    planLabel: def.label,
+    maxUsers: def.maxUsers,
+    allowAdmins: def.allowAdmins,
+    limits: { contacts: def.maxContacts, leads: def.maxLeads },
+    planIncludesWhatsApp: def.whatsapp,
+    /** Suscripción de Stripe: estado, próximo cobro y si se cancela al final del periodo */
+    subscription: store.stripe_subscription_id ? {
+      status: store.subscription_status,
+      currentPeriodEnd: store.current_period_end,
+      cancelAtPeriodEnd: !!store.cancel_at_period_end,
+    } : null,
+    /** Tiene cliente en Stripe (puede abrir el portal: facturas, tarjeta) */
+    billingPortal: !!store.stripe_customer_id,
     paidUntil: store.paid_until,
     access: storeAccess(store),
-    modules: normalizeModules(store.modules),
+    modules: effectiveModules(store),
     onboardingCompleted: !!store.onboarding_completed_at,
     whatsappRequestedAt: store.whatsapp_requested_at ?? null,
   }
@@ -61,6 +71,7 @@ export function sessionPayload(ctx: StoreContext) {
     role: ctx.role,
     isAdmin: ctx.isAdmin,
     isOwner: ctx.isOwner,
+    ownerOnlyBlocked: ctx.ownerOnlyBlocked,
     stores: ctx.memberships.map(m => ({ id: m.storeId, name: m.store.name, role: m.role, logoUrl: storeLogoUrl(m.store.logo_path) })),
   }
 }
@@ -76,12 +87,14 @@ export async function setActiveStoreCookie(storeId: string) {
 }
 
 /**
- * Crea una tienda "Por activar" (sin prueba gratis: queda en solo lectura
- * hasta su primer pago o cortesía) con sus catálogos iniciales y el registro
- * de WhatsApp (sin conectar), SIN dueño todavía. El slug se desambigua si ya
- * existe. Precio mensual acordado opcional (lo captura el panel del dueño).
+ * Crea una tienda en el plan Litro (gratis) con sus catálogos iniciales y el
+ * registro de WhatsApp (sin conectar). Con `ownerId`, ese usuario queda como
+ * dueño (registro abierto); sin él, la tienda queda sin dueño hasta que acepte
+ * su invitación (alta desde el panel de la plataforma). Si no se puede dar de
+ * alta al dueño, la tienda se deshace. El slug se desambigua si ya existe.
+ * Precio mensual acordado opcional (solo para acuerdos especiales del panel).
  */
-export async function createStore(createdBy: string, profile: Record<string, unknown>, monthlyPrice: number | null = null): Promise<StoreRow> {
+export async function createStore(createdBy: string, profile: Record<string, unknown>, monthlyPrice: number | null = null, ownerId: string | null = null): Promise<StoreRow> {
   const db = getServerSupabase()
   const base = slugify(String(profile.name)) || 'tienda'
   let store: StoreRow | null = null
@@ -90,7 +103,7 @@ export async function createStore(createdBy: string, profile: Record<string, unk
     const { data, error } = await db.from('stores').insert({
       ...profile,
       slug: slug.length >= 3 ? slug : `${slug}-tienda`,
-      status: 'pending',
+      status: 'active',
       plan: DEFAULT_PLAN,
       modules: DEFAULT_MODULES,
       monthly_price: monthlyPrice,
@@ -100,6 +113,14 @@ export async function createStore(createdBy: string, profile: Record<string, unk
     else if (error.code !== '23505') throw error
   }
   if (!store) throw new Error('No se pudo generar un identificador único para la tienda')
+
+  if (ownerId) {
+    const { error: ownerError } = await db.from('store_members').insert({ store_id: store.id, user_id: ownerId, role: 'owner', status: 'active' })
+    if (ownerError) {
+      await db.from('stores').delete().eq('id', store.id)
+      throw ownerError
+    }
+  }
 
   const catalogs = [
     ...DEFAULT_SEGMENTS.map(label => ({ store_id: store!.id, type: 'segment', label })),
@@ -116,5 +137,5 @@ export async function createStore(createdBy: string, profile: Record<string, unk
   })
   if (waError) console.error('[createStore] whatsapp', waError.message)
 
-  return store
+  return { ...store, modules: normalizeModules(store.modules) }
 }

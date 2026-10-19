@@ -6,16 +6,15 @@ import { jsonError, readJson } from '@/lib/validation'
 import { reportError } from '@/lib/errorReport'
 
 /**
- * POST /api/auth/register — CERRADO: las cuentas se crean solo por invitación
- * (el panel del dueño da de alta la tienda e invita a su dueño; el dueño
- * invita a su equipo). Se conserva el código por si se vuelve a abrir el
- * registro (REGISTRATION_OPEN).
+ * POST /api/auth/register — registro abierto: crea la cuenta (con confirmación
+ * de correo) y, al confirmarla, /bienvenida da de alta su tienda en el plan
+ * Litro (gratis). REGISTRATION_OPEN = false lo vuelve a cerrar.
  */
-const REGISTRATION_OPEN = false
+const REGISTRATION_OPEN = true
 
 export async function POST(req: NextRequest) {
   if (!REGISTRATION_OPEN) {
-    return jsonError('Por ahora las cuentas se crean solo por invitación.', 403)
+    return jsonError('Por ahora el registro está cerrado.', 403)
   }
   if (!rateLimit(`register:${clientIp(req)}`, 5, 60 * 60 * 1000)) {
     return jsonError('Demasiados registros desde esta conexión. Intenta más tarde.', 429)

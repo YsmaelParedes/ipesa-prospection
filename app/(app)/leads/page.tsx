@@ -1,5 +1,6 @@
 'use client'
 
+import { PlanLimitHint } from '@/components/PlanLimitHint'
 import { useDataReady, useQueryEffect } from '@/lib/useCachedQuery'
 
 
@@ -235,6 +236,7 @@ function LeadsContent() {
 
   return (
     <>
+      <PlanLimitHint kind="leads" used={leads.length} />
       <div className="section-head">
         <h2>Leads</h2>
         {!loading && <span className="count">{counts.abiertos} abierto{counts.abiertos !== 1 ? 's' : ''}{openValue > 0 ? ` · ${money(openValue)} en juego` : ''}</span>}

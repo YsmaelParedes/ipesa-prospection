@@ -1,106 +1,201 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import type { ClientStore } from '@/lib/profile'
-import { LEGAL, requestInviteLinks } from '@/lib/legal'
-import { PAYMENT_GRACE_DAYS, STATUS_LABELS, TRIAL_DAYS } from '@/lib/stores'
-import { Ico, Note, Panel, copyText, cx, fmtDate, useToast } from './ui'
+import { invalidateSession } from '@/lib/profile'
+import { useCachedQuery } from '@/lib/useCachedQuery'
+import { formatPlanPrice, type PlanPrice } from '@/lib/billing'
+import { PLAN_COPY } from '@/lib/planFeatures'
+import { LEGAL } from '@/lib/legal'
+import { PLANS, PUBLIC_PLANS, STATUS_LABELS } from '@/lib/stores'
+import { Ico, Note, Panel, api, cx, fmtDate, send } from './ui'
 import s from './configuracion.module.css'
 
 export const STATUS_BADGE: Record<string, string> = {
   pending: s.bWarn, trial: s.bTrial, active: s.bActive, suspended: s.bDanger, cancelled: s.bMuted,
 }
 
-const INCLUDED = [
-  'Contactos, leads y recordatorios',
-  'Fórmulas de color en mL',
-  'Notificaciones en el celular',
-  'Soporte para configurar tu tienda',
-]
-// Solo la tienda original los tiene; no se ofrecen a tiendas nuevas
-const WHATSAPP_INCLUDED = ['Bandeja de WhatsApp ligada al CRM', 'Campañas con las reglas oficiales de Meta']
+type Usage = { contacts: number; leads: number; members: number }
+type Prices = { available: boolean; prices: Partial<Record<'galon' | 'cubeta', PlanPrice>> }
 
-export function PlanTab({ store }: { store: ClientStore }) {
-  const [toast, showToast] = useToast()
+const fmtCount = (n: number) => n.toLocaleString('es-MX')
+
+/**
+ * Configuración → Plan: plan actual con su uso, los tres planes y el cobro
+ * con Stripe (Checkout para suscribirse, portal para cambiar, cancelar,
+ * tarjeta y facturas). Solo el dueño paga o cambia de plan.
+ */
+export function PlanTab({ store, isOwner }: { store: ClientStore; isOwner: boolean }) {
+  const params = useSearchParams()
+  const justPaid = params.get('pago') === 'ok'
+  const { data: usage } = useCachedQuery<Usage>('/api/billing/usage')
+  const { data: priceData } = useCachedQuery<Prices>('/api/billing/prices')
+  const [busy, setBusy] = useState('')
+  const [error, setError] = useState('')
+
+  // Al volver de Stripe el webhook puede tardar unos segundos: se revisa la sesión
+  useEffect(() => {
+    if (!justPaid) return
+    const timers = [2000, 5000, 10000].map(ms => setTimeout(() => invalidateSession(), ms))
+    return () => timers.forEach(clearTimeout)
+  }, [justPaid])
+
+  const sub = store.subscription
+  const paying = !!sub && ['active', 'trialing', 'past_due'].includes(sub.status ?? '')
+  const pastDue = sub?.status === 'past_due' || sub?.status === 'unpaid'
   const readonly = store.access === 'readonly'
-  const trial = store.status === 'trial'
-  const daysLeft = store.trialDaysLeft ?? 0
-  const trialPct = Math.max(4, Math.min(100, ((TRIAL_DAYS - daysLeft) / TRIAL_DAYS) * 100))
+  const courtesy = store.plan === 'interno' || (!paying && store.plan !== 'litro')
+  const prices = priceData?.prices ?? {}
+  const canPay = !!priceData?.available
 
-  const headline = (() => {
-    if (store.status === 'pending') return 'Tu tienda aún no está activa'
-    if (store.status === 'suspended') return 'Tu tienda está suspendida'
-    if (store.status === 'cancelled') return 'Tu suscripción está cancelada'
-    if (trial) return readonly ? 'Tu prueba gratis terminó' : `Te quedan ${daysLeft} ${daysLeft === 1 ? 'día' : 'días'} de prueba`
-    return readonly ? 'Tu pago está pendiente' : 'Tu plan está activo'
-  })()
+  const go = async (key: string, path: string, body?: unknown) => {
+    setBusy(key)
+    setError('')
+    try {
+      const { url } = await api<{ url: string }>(path, send('POST', body ?? {}))
+      window.location.href = url
+    } catch (e) {
+      setError((e as Error).message)
+      setBusy('')
+    }
+  }
+  const checkout = (plan: 'galon' | 'cubeta') => go(plan, '/api/billing/checkout', { plan })
+  const portal = () => go('portal', '/api/billing/portal')
 
-  const subject = encodeURIComponent(`Activar ${LEGAL.product} · ${store.name}`)
-  const body = encodeURIComponent(`Hola, quiero activar el plan ${store.planLabel} para la tienda "${store.name}" (${store.slug}).`)
+  const headline = readonly
+    ? `Tu tienda está ${STATUS_LABELS[store.status].toLowerCase()}`
+    : store.plan === 'litro' ? 'Litro · gratis' : `Plan ${store.planLabel}`
+
+  const nextLine = paying
+    ? sub?.cancelAtPeriodEnd ? `Termina el ${fmtDate(sub.currentPeriodEnd)}` : fmtDate(sub?.currentPeriodEnd)
+    : store.plan === 'litro' ? 'Sin cobro' : store.paidUntil ? `Cortesía hasta ${fmtDate(store.paidUntil)}` : 'Cortesía sin vencimiento'
+
+  const meters = [
+    { label: 'Contactos', used: usage?.contacts, max: store.limits.contacts },
+    { label: 'Cotizaciones (leads)', used: usage?.leads, max: store.limits.leads },
+    { label: 'Usuarios', used: usage?.members, max: store.maxUsers },
+  ]
 
   return (
     <>
       <div className={s.planCard}>
         <div className={s.planTop}>
           <div>
-            <small>Plan {store.planLabel}</small>
+            <small>Tu plan</small>
             <strong>{headline}</strong>
           </div>
-          <span className={cx(s.badge, STATUS_BADGE[store.status])}><i />{STATUS_LABELS[store.status]}</span>
+          <span className={cx(s.badge, pastDue ? s.bDanger : readonly ? STATUS_BADGE[store.status] : s.bActive)}>
+            <i />{pastDue ? 'Pago pendiente' : readonly ? STATUS_LABELS[store.status] : paying ? 'Suscripción activa' : courtesy ? 'Cortesía' : 'Activo'}
+          </span>
         </div>
-        {trial && !readonly && <div className={s.trialBar} aria-hidden="true"><i style={{ width: `${trialPct}%` }} /></div>}
         <div className={s.planStats}>
           <div className={s.planStat}>
-            <small>{trial ? 'La prueba termina' : 'Pagado hasta'}</small>
-            <strong>{trial ? fmtDate(store.trialEndsAt) : store.paidUntil ? fmtDate(store.paidUntil) : store.status === 'pending' ? 'Pendiente del primer pago' : 'Sin fecha de corte'}</strong>
+            <small>{paying ? 'Próximo cobro' : 'Pago'}</small>
+            <strong>{nextLine}</strong>
           </div>
           <div className={s.planStat}>
-            <small>Acceso</small>
-            <strong>{readonly ? 'Solo consulta' : 'Completo'}</strong>
+            <small>Contactos</small>
+            <strong>{usage ? `${fmtCount(usage.contacts)}${store.limits.contacts !== null ? ` de ${fmtCount(store.limits.contacts)}` : ''}` : '…'}</strong>
           </div>
           <div className={s.planStat}>
-            <small>Usuarios incluidos</small>
-            <strong>Hasta {store.maxUsers}</strong>
+            <small>Usuarios</small>
+            <strong>{usage ? `${usage.members} de ${store.maxUsers}` : `Hasta ${store.maxUsers}`}</strong>
           </div>
         </div>
       </div>
 
+      {justPaid && !paying && <Note kind="info">Recibimos tu pago. Estamos confirmándolo con Stripe: tu plan se activa en unos segundos.</Note>}
+      {justPaid && paying && <Note kind="ok">¡Listo! Tu plan {store.planLabel} está activo.</Note>}
+      {pastDue && (
+        <Note kind="danger">
+          No pudimos cobrar tu plan {store.planLabel}. Stripe volverá a intentarlo; actualiza tu tarjeta en
+          «Administrar suscripción» para no perderlo. Si el cobro no pasa, tu tienda vuelve al plan Litro (no se borra nada).
+        </Note>
+      )}
+      {paying && sub?.cancelAtPeriodEnd && !pastDue && (
+        <Note kind="warn">Cancelaste tu suscripción: conservas el plan {store.planLabel} hasta el {fmtDate(sub.currentPeriodEnd)} y después pasas al plan Litro. Puedes reactivarla en «Administrar suscripción».</Note>
+      )}
       {readonly && (
         <Note kind="warn">
           En solo consulta tu equipo puede ver su información y descargarla completa (Configuración → Tienda), pero no
-          registrar clientes ni enviar mensajes. Nada se borra: al activar tu plan todo vuelve a funcionar al instante.
+          registrar clientes ni enviar mensajes. Escríbenos para reactivarla{LEGAL.email ? ` a ${LEGAL.email}` : ''}.
         </Note>
       )}
+      {error && <Note kind="danger">{error}</Note>}
 
-      <Panel icon={Ico.card} title={store.status === 'active' && !readonly ? '¿Necesitas ayuda con tu plan?' : 'Activa tu plan'}
-        subtitle={`La activación se hace con nosotros: acordamos el precio y la forma de pago (transferencia o efectivo), y en cuanto se registra el pago tu tienda queda activa. Si un pago vence tienes ${PAYMENT_GRACE_DAYS} días de gracia.`}>
-        {LEGAL.whatsapp || LEGAL.email ? (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {LEGAL.whatsapp && (
-              <a className="btn btn-primary" href={requestInviteLinks(decodeURIComponent(body)).whatsapp!} target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a>
-            )}
-            {LEGAL.email && (
-              <a className={LEGAL.whatsapp ? 'btn btn-ghost' : 'btn btn-primary'} href={`mailto:${LEGAL.email}?subject=${subject}&body=${body}`}><Ico.mail style={{ width: 15, height: 15 }} />Escribir por correo</a>
-            )}
+      {store.plan === 'litro' && (
+        <Panel icon={Ico.bolt} tone="tAmber" title="Lo que usas del plan Litro" subtitle="Al llegar al límite puedes seguir consultando todo; para registrar más, cambia de plan.">
+          <div className={s.meters}>
+            {meters.map(m => {
+              const pct = m.max && m.used !== undefined ? Math.min(100, (m.used / m.max) * 100) : 0
+              return (
+                <div key={m.label} className={s.meter}>
+                  <div className={s.meterTop}><span>{m.label}</span><strong>{m.used === undefined ? '…' : `${fmtCount(m.used)} de ${m.max === null ? 'sin límite' : fmtCount(m.max)}`}</strong></div>
+                  <div className={cx(s.meterBar, pct >= 100 ? s.meterFull : pct >= 80 && s.meterHigh)}><i style={{ width: `${pct}%` }} /></div>
+                </div>
+              )
+            })}
           </div>
-        ) : (
-          <p className={s.hint} style={{ marginTop: 0 }}>Contacta a tu asesor de {LEGAL.product} y compártele el identificador de tu tienda.</p>
-        )}
-        <div className={s.slugRow}>
-          <span>Identificador de tu tienda</span>
-          <code>{store.slug}</code>
-          <button className="btn btn-ghost" onClick={async () => { if (await copyText(store.slug)) showToast('Identificador copiado') }}>
-            <Ico.copy style={{ width: 14, height: 14 }} />Copiar
-          </button>
-        </div>
-      </Panel>
+        </Panel>
+      )}
 
-      <Panel icon={Ico.check} tone="tTeal" title={`Incluido en el plan ${store.planLabel}`}>
-        <ul className={s.features}>
-          {[...INCLUDED, ...(store.modules.whatsapp ? WHATSAPP_INCLUDED : [])].map(f => <li key={f}><Ico.check />{f}</li>)}
-          <li><Ico.check />Hasta {store.maxUsers} usuarios con roles</li>
-        </ul>
-      </Panel>
-      {toast}
+      {store.plan === 'interno' ? (
+        <Panel icon={Ico.shield} tone="tTeal" title="Plan de cortesía" subtitle="Tu tienda tiene todas las funciones sin cobro. Si necesitas cambiar algo, escríbenos.">
+          <ul className={s.features}>
+            {PLAN_COPY.cubeta.features.slice(1).map(f => <li key={f}><Ico.check />{f}</li>)}
+            <li><Ico.check />Hasta {store.maxUsers} usuarios con roles</li>
+          </ul>
+        </Panel>
+      ) : (
+        <Panel icon={Ico.card} title="Planes"
+          subtitle={!isOwner ? 'Solo el dueño de la tienda puede cambiar el plan.' : 'Pago mensual con tarjeta a través de Stripe. Cambia o cancela cuando quieras.'}>
+          <div className={s.plans}>
+            {PUBLIC_PLANS.map(id => {
+              const copy = PLAN_COPY[id]
+              const current = store.plan === id && !readonly
+              const price = id === 'litro' ? null : prices[id]
+              let action: React.ReactNode
+              if (current) action = <button className="btn btn-ghost" disabled>Tu plan actual</button>
+              else if (!isOwner || readonly) action = null
+              else if (id === 'litro') action = paying ? <button className="btn btn-ghost" disabled={!!busy} onClick={portal}>{busy === 'portal' ? 'Abriendo…' : 'Cancelar suscripción'}</button> : null
+              else if (paying) action = <button className="btn btn-dark" disabled={!!busy} onClick={portal}>{busy === 'portal' ? 'Abriendo…' : `Cambiar a ${PLANS[id].label}`}</button>
+              else if (store.plan === 'interno') action = null
+              else action = (
+                <button className={copy.highlight ? 'btn btn-primary' : 'btn btn-dark'} disabled={!!busy || !canPay} onClick={() => checkout(id)}>
+                  {!canPay ? 'Disponible pronto' : busy === id ? 'Abriendo pago…' : `Cambiar a ${PLANS[id].label}`}
+                </button>
+              )
+              return (
+                <div key={id} className={cx(s.planOption, current && s.planOptionOn, copy.highlight && !current && s.planOptionHi)}>
+                  {copy.highlight && <span className={s.planFlag}>Recomendado</span>}
+                  <div className={s.planName}>{PLANS[id].label}</div>
+                  <div className={s.planPrice}>
+                    {id === 'litro'
+                      ? <><strong>Gratis</strong><small>para siempre</small></>
+                      : price ? <><strong>{formatPlanPrice(price)}</strong><small>al mes</small></>
+                      : <><strong className={s.planPriceSoon}>—</strong><small>{priceData ? 'precio pronto' : 'cargando…'}</small></>}
+                  </div>
+                  <p className={s.planTagline}>{copy.tagline}</p>
+                  <ul className={s.planFeatures}>
+                    {copy.features.map(f => <li key={f}><Ico.check />{f}</li>)}
+                  </ul>
+                  {action && <div className={s.planAction}>{action}</div>}
+                </div>
+              )
+            })}
+          </div>
+          {isOwner && store.billingPortal && (
+            <div className={s.billingRow}>
+              <span>Facturas, tarjeta y cancelación</span>
+              <button className="btn btn-ghost" disabled={!!busy} onClick={portal}>
+                <Ico.card style={{ width: 15, height: 15 }} />{busy === 'portal' ? 'Abriendo…' : 'Administrar suscripción'}
+              </button>
+            </div>
+          )}
+          <p className={s.hint}>Precios por tienda, impuestos incluidos. Si bajas de plan no se borra nada: lo que pase del límite se conserva y sigues pudiendo consultarlo.</p>
+        </Panel>
+      )}
     </>
   )
 }

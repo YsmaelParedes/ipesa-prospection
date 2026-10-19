@@ -54,7 +54,7 @@ export async function PATCH(req: NextRequest) {
   const updates: Record<string, unknown> = {}
   if (body.role !== undefined) {
     if (body.role !== 'admin' && body.role !== 'employee') return jsonError('Rol inválido')
-    if (body.role === 'admin' && !planOf(ctx.store.plan).allowAdmins) {
+    if (body.role === 'admin' && !planOf(ctx.plan).allowAdmins) {
       return jsonError('Tu plan incluye un solo administrador: el dueño.', 403)
     }
     if (body.role === 'admin' && !ctx.isOwner) return jsonError('Solo el dueño puede nombrar administradores', 403)

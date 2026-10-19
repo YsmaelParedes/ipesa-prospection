@@ -46,7 +46,7 @@ function ConnectionPanel() {
 
   const quality = QUALITY[health?.qualityRating ?? 'UNKNOWN'] ?? QUALITY.UNKNOWN
   return (
-    <Panel icon={WhatsAppGlyph} tone="tWa" title="Tu número de WhatsApp" subtitle="El número con el que tu tienda atiende y envía promociones desde el CRM.">
+    <Panel icon={WhatsAppGlyph} tone="tWa" title="Tu número de WhatsApp" subtitle="El número con el que tu tienda atiende a sus clientes desde el CRM.">
       <div className={s.waHero}>
         <span className={cx(s.waBadge, !conn.connected && s.waBadgeOff)}><WhatsAppGlyph /></span>
         <div className={s.waMain}>

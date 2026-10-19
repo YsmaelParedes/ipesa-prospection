@@ -76,7 +76,7 @@ async function GETImpl(req: NextRequest) {
       activitiesQuery,
       supabase.from('whatsapp_threads').select('phone', { count: 'exact', head: true }).eq('store_id', storeId).gt('unread', 0),
       supabase.from('whatsapp_messages').select('id', { count: 'exact', head: true }).eq('store_id', storeId).eq('direction', 'inbound').gte('created_at', startOfToday),
-      req.nextUrl.searchParams.get('includeWhatsApp') !== '0' && isAdmin && ctx.store.modules.whatsapp ? getDashboardWhatsAppUsage(storeId) : Promise.resolve(null),
+      req.nextUrl.searchParams.get('includeWhatsApp') !== '0' && isAdmin && ctx.modules.whatsapp ? getDashboardWhatsAppUsage(storeId) : Promise.resolve(null),
       isAdmin ? getUserNameMap(storeId).catch(() => new Map<string, string>()) : Promise.resolve(null),
     ])
     if (leadsError) throw leadsError
