@@ -59,7 +59,7 @@ No se necesita llave publicable: el pago es en la página de Stripe.
 
 ### 2. En el panel de Stripe (modo de prueba primero)
 
-1. **Productos y precios:** "Matices Galón" y "Matices Cubeta", cada uno con un precio mensual en MXN y los *lookup keys* `galon_mensual` y `cubeta_mensual`.
+1. **Productos y precios:** ✅ en modo de prueba ("Plan Galon" 99 USD y "Plan Cubeta" 129 USD al mes, lookup keys `galon_mensual` y `cubeta_mensual`, impuestos incluidos). En modo real hay que repetirlo: los precios de prueba no pasan solos.
 2. **Stripe Tax** (porque `automatic_tax` está encendido):
    - Activa Stripe Tax y registra tu dirección de origen y tu registro de impuestos en México. Sin esto Checkout falla al crear la sesión.
    - Decide si el precio ya incluye IVA: en cada precio, `tax_behavior` = **inclusive** para que el precio publicado sea el final; con `exclusive` se suma el IVA al pagar. Los términos y la página de precios dicen "precio en pesos mexicanos"; ajústalos si eliges `exclusive`.

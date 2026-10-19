@@ -62,6 +62,13 @@ test('Stripe prices and subscriptions map to plans', () => {
     subscriptionId: 'sub_1', customerId: 'cus_1', status: 'active', plan: 'cubeta',
     periodEnd: new Date(1_800_000_000 * 1000).toISOString(), cancelAtPeriodEnd: true, storeId: 'abc',
   })
+  // Cancelar desde el portal (API actual): cancel_at con la fecha de término
+  const ending = subscriptionSnapshot({
+    id: 'sub_2', status: 'active', customer: 'cus_2', cancel_at_period_end: false, cancel_at: 1_790_000_000,
+    items: { data: [{ current_period_end: 1_790_000_000, price: { lookup_key: 'galon_mensual' } }] },
+  })
+  assert.equal(ending.cancelAtPeriodEnd, true)
+  assert.equal(ending.periodEnd, new Date(1_790_000_000 * 1000).toISOString())
   for (const s of ['active', 'trialing', 'past_due']) assert.equal(subscriptionGivesPlan(s), true)
   for (const s of ['canceled', 'unpaid', 'incomplete', 'incomplete_expired', null]) assert.equal(subscriptionGivesPlan(s), false)
   assert.equal(formatPlanPrice({ amount: 499, currency: 'mxn', interval: 'month' }), '$499')

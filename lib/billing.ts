@@ -29,6 +29,8 @@ export type SubscriptionLike = {
   status: string
   customer: string | { id: string }
   cancel_at_period_end: boolean
+  /** Fecha programada de término (segundos). La API actual la usa al cancelar desde el portal. */
+  cancel_at?: number | null
   metadata?: Record<string, string> | null
   items: { data: { current_period_end?: number | null; price: { lookup_key: string | null } }[] }
 }
@@ -39,25 +41,28 @@ export type SubscriptionSnapshot = {
   status: string
   /** Plan del precio suscrito; null si no es un precio de Matices */
   plan: PaidPlanId | null
+  /** Próximo cobro o, si está programada para terminar, la fecha en que termina */
   periodEnd: string | null
+  /** Ya no se renueva: termina en periodEnd y la tienda pasa a Litro */
   cancelAtPeriodEnd: boolean
   storeId: string | null
 }
 
 /**
  * Datos de la suscripción para apply_stripe_subscription. En la API actual
- * de Stripe la fecha de cobro vive en cada concepto (items.data[].current_period_end).
+ * de Stripe la fecha de cobro vive en cada concepto (items.data[].current_period_end)
+ * y cancelar desde el portal programa `cancel_at` (cancel_at_period_end queda en false).
  */
 export function subscriptionSnapshot(sub: SubscriptionLike): SubscriptionSnapshot {
   const item = sub.items.data.find(i => planFromLookupKey(i.price.lookup_key)) ?? sub.items.data[0]
-  const end = item?.current_period_end
+  const end = sub.cancel_at || item?.current_period_end
   return {
     subscriptionId: sub.id,
     customerId: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
     status: sub.status,
     plan: planFromLookupKey(item?.price.lookup_key),
     periodEnd: end ? new Date(end * 1000).toISOString() : null,
-    cancelAtPeriodEnd: !!sub.cancel_at_period_end,
+    cancelAtPeriodEnd: !!sub.cancel_at_period_end || !!sub.cancel_at,
     storeId: sub.metadata?.store_id || null,
   }
 }

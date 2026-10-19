@@ -193,7 +193,7 @@ export function PlanTab({ store, isOwner }: { store: ClientStore; isOwner: boole
               </button>
             </div>
           )}
-          <p className={s.hint}>Precios en pesos mexicanos. Si bajas de plan no se borra nada: lo que pase del límite se conserva y sigues pudiendo consultarlo.</p>
+          <p className={s.hint}>Precios por tienda, impuestos incluidos. Si bajas de plan no se borra nada: lo que pase del límite se conserva y sigues pudiendo consultarlo.</p>
         </Panel>
       )}
     </>

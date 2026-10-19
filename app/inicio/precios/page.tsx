@@ -29,7 +29,7 @@ export default function PreciosPage() {
       <section className={s.section}>
         <div className={s.wrap}>
           <PricingCards />
-          <p className={s.finePrint}>Precios en pesos mexicanos, por tienda. Si necesitas factura, pídela al contratar.</p>
+          <p className={s.finePrint}>Precios por tienda, en dólares estadounidenses (USD) e impuestos incluidos. Si necesitas factura, escríbenos.</p>
         </div>
       </section>
 
