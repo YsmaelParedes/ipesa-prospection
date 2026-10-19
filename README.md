@@ -216,9 +216,9 @@ la pantalla de inicio (iOS 16.4+).
 
 Las suscripciones son por dominio: **si cambia el dominio de la app**, cada persona debe
 volver a activar los avisos en el dominio nuevo. Las suscripciones del dominio anterior siguen
-llegando mientras ese dominio responda (al tocarlas abren el dominio anterior). El job
-`crm-avisos-recordatorios` de pg_cron llama a `https://crm-pinturas.vercel.app` a propósito:
-ese dominio de Vercel no depende del DNS propio; si algún día se apaga, actualiza su URL.
+llegando mientras ese dominio responda. El job `crm-avisos-recordatorios` de pg_cron llama a
+`https://www.matices.app/api/cron/reminders`; si cambia el dominio, actualiza su URL con
+`cron.alter_job` (el 19 de octubre de 2026 `crm-pinturas.vercel.app` dejó de existir y se cambió).
 
 ## Base de datos
 

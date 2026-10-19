@@ -20,7 +20,7 @@ Cada etapa dice qué se implementa, qué cambia y si necesita migración de base
 | Si un cliente cancela o no paga | Queda en **solo lectura indefinidamente** y puede descargar toda su información en Excel. **Sin borrado automático** (decisión del 15 de octubre): se borra solo si el dueño de la tienda lo pide por escrito. Consta en términos y privacidad. |
 | Respaldos y hosting | Vercel Pro (US$20) y Supabase Pro (US$25) con el primer cliente de paga. Antes, respaldo manual mensual. |
 | Fórmulas Vinipesa y Vintek | Se quedan, como módulo opcional por tienda, para poder quitarlas si hay un reclamo. Revisar derechos de marca antes de cobrar. |
-| Nombre y dominio | **Nombre: Matices** (decidido el 16 de octubre; en `lib/brand.ts`, `public/manifest.json` y `public/sw.js`). **Dominio: `matices.app`** (comprado el 19 de octubre; principal `www.matices.app`, `matices.app` redirige). `crm-pinturas.vercel.app` sigue funcionando para el cron de pg_cron y los webhooks ya configurados. |
+| Nombre y dominio | **Nombre: Matices** (decidido el 16 de octubre; en `lib/brand.ts`, `public/manifest.json` y `public/sw.js`). **Dominio: `matices.app`** (comprado el 19 de octubre; principal `www.matices.app`, `matices.app` redirige). `crm-pinturas.vercel.app` dejó de existir ese mismo día: el cron de pg_cron y los webhooks se pasaron a `www.matices.app`. |
 | Pilotos | 2 negocios conocidos, aparte de la tienda familiar. |
 | Facturación (CFDI) | Se emite fuera del sistema. En cada pago solo se anota si pidió factura y su número. |
 | Soporte | Botón "Ayuda" con WhatsApp y correo. Sin tickets ni chat interno. |
