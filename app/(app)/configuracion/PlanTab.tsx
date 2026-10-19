@@ -136,10 +136,6 @@ export function PlanTab({ store, isOwner }: { store: ClientStore; isOwner: boole
                 </div>
               )
             })}
-            <div className={s.meter}>
-              <div className={s.meterTop}><span>Fórmulas de color</span><strong>{store.limits.formulas} de muestra</strong></div>
-              <div className={s.meterHint}>Galón y Cubeta incluyen todas las fórmulas.</div>
-            </div>
           </div>
         </Panel>
       )}

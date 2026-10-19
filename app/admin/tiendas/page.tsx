@@ -293,7 +293,7 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
             </div>
             <div className={s.action}>
               <div>
-                <strong>WhatsApp y Campañas</strong>
+                <strong>WhatsApp</strong>
                 <small>
                   {waActive
                     ? `Activo${store.whatsapp_connected ? ' · número conectado' : ' · falta conectar el número (sección Conexión de WhatsApp)'}.`
@@ -306,13 +306,13 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
               </div>
               <div className={s.actionCtl}>
                 {!waActive ? (
-                  <button className="btn btn-ghost" disabled={!!busy} onClick={() => patch('wa', { whatsapp: true }, 'WhatsApp y Campañas activados')}>
+                  <button className="btn btn-ghost" disabled={!!busy} onClick={() => patch('wa', { whatsapp: true }, 'WhatsApp activado')}>
                     {busy === 'wa' ? 'Guardando…' : 'Activar'}
                   </button>
                 ) : confirm === 'wa_off' ? (
                   <>
                     <button className="btn btn-ghost" onClick={() => setConfirm(null)}>No</button>
-                    <button className="btn btn-dark" disabled={!!busy} onClick={() => patch('wa', { whatsapp: false }, 'WhatsApp y Campañas desactivados')}>
+                    <button className="btn btn-dark" disabled={!!busy} onClick={() => patch('wa', { whatsapp: false }, 'WhatsApp desactivado')}>
                       {busy === 'wa' ? 'Guardando…' : 'Sí, desactivar'}
                     </button>
                   </>

@@ -26,8 +26,8 @@ export type ClientStore = {
   /** El plan permite nombrar administradores además del dueño */
   allowAdmins: boolean
   /** Límites del plan (null = sin límite) */
-  limits: { contacts: number | null; leads: number | null; formulas: number | null }
-  /** El plan incluye WhatsApp y Campañas (Cubeta); además el asesor debe conectarlo */
+  limits: { contacts: number | null; leads: number | null }
+  /** El plan incluye la bandeja de WhatsApp (Cubeta); además el asesor debe conectarlo */
   planIncludesWhatsApp: boolean
   /** Suscripción de Stripe (null = plan gratis o asignado a mano) */
   subscription: { status: string | null; currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean } | null

@@ -81,7 +81,7 @@ const TOOL_ITEMS: NavItem[] = [
 
 const TITLE_MAP: Record<string, { t: string; s: string }> = {
   '/':               { t: 'Inicio',        s: 'Lo que hay que atender hoy'         },
-  '/whatsapp':       { t: 'WhatsApp',      s: 'Conversaciones y campañas'          },
+  '/whatsapp':       { t: 'WhatsApp',      s: 'Conversaciones con tus clientes'    },
   '/contactos':      { t: 'Contactos',     s: 'Tu base de clientes'                },
   '/leads':          { t: 'Leads',         s: 'Oportunidades de venta'             },
   '/recordatorios':  { t: 'Agenda',        s: 'Recordatorios y seguimientos'       },

@@ -10,7 +10,7 @@ import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
  * { action: 'activate' } (sin vencimiento: tienda propia o acuerdo especial) ·
  * { action: 'suspend' } · { action: 'cancel' } · { plan } (cortesía; no si paga
  * con Stripe: ahí el plan lo lleva la suscripción) · { notes } · { monthlyPrice } ·
- * { whatsapp: boolean } (WhatsApp y Campañas)
+ * { whatsapp: boolean } (bandeja de WhatsApp; Campañas y Fórmulas no se manejan aquí)
  * Extender la vigencia pagada se hace registrando un pago
  * (POST /api/platform/stores/[id]/payments), para que quede en el historial.
  * Todo queda en la bitácora (platform_events).
@@ -68,8 +68,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
   if (body.whatsapp !== undefined) {
     if (typeof body.whatsapp !== 'boolean') return jsonError('Valor de WhatsApp inválido')
-    // WhatsApp y Campañas van juntos; solo el panel los cambia (la tienda no tiene interruptores)
-    updates.modules = { ...normalizeModules(store.modules), whatsapp: body.whatsapp, campaigns: body.whatsapp }
+    // Solo la bandeja; Campañas y Fórmulas son extras que se activan fuera de la plataforma
+    updates.modules = { ...normalizeModules(store.modules), whatsapp: body.whatsapp }
     if (body.whatsapp) updates.whatsapp_requested_at = null
     events.push({ action: body.whatsapp ? 'whatsapp_on' : 'whatsapp_off', detail: { requested_at: store.whatsapp_requested_at } })
   }

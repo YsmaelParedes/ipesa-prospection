@@ -680,11 +680,12 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
   )
 }
 
-/* ── WhatsApp dentro de la ficha: últimos mensajes, ventana de 24 h y campañas ── */
+/* ── WhatsApp dentro de la ficha: últimos mensajes, ventana de 24 h y (con Campañas) si recibe campañas ── */
 function ContactWhatsApp({ contact: c, readonly, onUpdated }: { contact: any; readonly: boolean; onUpdated: (c: any) => void }) {
   const phone = normalizePhone(c.phone)
   const [data, setData] = useState<{ messages: any[]; lastInboundAt: string | null } | null>(null)
   const [saving, setSaving] = useState(false)
+  const campaignsOn = !!useSession()?.store?.modules.campaigns
 
   useQueryEffect(() => {
     apiFetch(`/api/whatsapp/conversations/${phone}?preview=1&limit=3`)
@@ -726,12 +727,14 @@ function ContactWhatsApp({ contact: c, readonly, onUpdated }: { contact: any; re
             ))}
           </div>
         )}
-        <div className="wa-mini-foot">
-          <label className="wa-check-row" style={{ alignItems: 'center' }}>
-            <input type="checkbox" checked={!c.wa_opt_out} onChange={toggleOptOut} disabled={saving || readonly} />
-            <span>Recibe campañas de WhatsApp</span>
-          </label>
-        </div>
+        {campaignsOn && (
+          <div className="wa-mini-foot">
+            <label className="wa-check-row" style={{ alignItems: 'center' }}>
+              <input type="checkbox" checked={!c.wa_opt_out} onChange={toggleOptOut} disabled={saving || readonly} />
+              <span>Recibe campañas de WhatsApp</span>
+            </label>
+          </div>
+        )}
       </div>
     </div>
   )

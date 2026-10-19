@@ -18,7 +18,7 @@ export type PlatformStore = {
   members: number; contacts: number; leads: number; whatsapp_connected: boolean; last_activity_at: string | null
   /** Precio mensual acordado con la tienda (null = sin acordar) */
   monthly_price: number | null
-  /** Módulos activos (WhatsApp y Campañas los activa el panel) */
+  /** Módulos activos (WhatsApp lo activa el panel; Campañas y Fórmulas, fuera de la plataforma) */
   modules: { whatsapp?: boolean; campaigns?: boolean } | null
   /** Pidió WhatsApp desde la tienda ("Quiero activarlo"); se limpia al activarlo */
   whatsapp_requested_at: string | null

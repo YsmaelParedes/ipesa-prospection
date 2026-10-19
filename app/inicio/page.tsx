@@ -10,7 +10,7 @@ import s from './inicio.module.css'
 
 export const metadata: Metadata = {
   title: `${APP_NAME} · ${APP_TAGLINE}`,
-  description: 'Contactos, cotizaciones, agenda y fórmulas de color en un solo lugar para tu tienda de pinturas. Empieza gratis.',
+  description: 'Contactos, cotizaciones, agenda y equipo en un solo lugar para tu tienda de pinturas. Empieza gratis.',
 }
 
 const DEMO_STORE = 'Pinturas La Paleta'
@@ -22,8 +22,8 @@ const FEATURES = [
   { icon: Ic.leads,     tone: s.tBrand,   title: 'Cotizaciones con seguimiento', text: 'De nuevo a cotizado y ganado. Cada oportunidad con su monto y su siguiente paso.', href: '/inicio/funciones#leads' },
   { icon: Ic.grid,      tone: s.tAmber,   title: 'Lo que toca hoy', text: 'Al abrir, tu equipo ve a quién llamar, qué cotización espera respuesta y qué visitas tiene.', href: '/inicio/funciones#agenda' },
   { icon: Ic.users,     tone: s.tMagenta, title: 'Tu equipo y tu base, protegidos', text: 'Cada vendedor con su usuario. Exportar y borrar, solo tú.', href: '/inicio/funciones#equipo' },
-  { icon: Ic.flask,     tone: s.tTeal,    title: 'Fórmulas de color', text: 'Fórmulas convertidas a mililitros para igualar colores sin errores.', href: '/inicio/funciones#formulas' },
-  { icon: Ic.chat,      tone: s.tWa,      title: 'WhatsApp en el CRM', text: 'En el plan Cubeta: atiende y manda promociones desde el número de tu tienda.', href: '/inicio/whatsapp' },
+  { icon: Ic.bell,      tone: s.tTeal,    title: 'Avisos en tu celular', text: 'Recordatorios a la hora exacta y el resumen del día, aunque la app esté cerrada.', href: '/inicio/funciones#avisos' },
+  { icon: Ic.chat,      tone: s.tWa,      title: 'WhatsApp en el CRM', text: 'En el plan Cubeta: atiende a tus clientes desde el número de tu tienda.', href: '/inicio/whatsapp' },
 ]
 
 const STEPS = [
@@ -42,7 +42,7 @@ export default function LandingPage() {
             <span className={s.eyebrow}><span className={s.eyebrowDot} />Para tiendas de pintura</span>
             <h1 className={s.h1}>El CRM hecho para tiendas <span className={s.spectrumText}>de pintura</span></h1>
             <p className={s.lead}>
-              Contactos, cotizaciones, agenda y fórmulas de color en un solo lugar. Tu equipo sabe a quién darle
+              Contactos, cotizaciones, agenda y avisos en un solo lugar. Tu equipo sabe a quién darle
               seguimiento hoy y tú ves cómo va la venta de tu sucursal.
             </p>
             <div className={s.heroCtas}>
@@ -71,7 +71,7 @@ export default function LandingPage() {
                   <span className={s.winNav}><Ic.contacts />Contactos</span>
                   <span className={s.winNav}><Ic.leads />Leads</span>
                   <span className={s.winNav}><Ic.bell />Agenda<b>3</b></span>
-                  <span className={s.winNav}><Ic.flask />Fórmulas</span>
+                  <span className={s.winNav}><Ic.users />Equipo</span>
                 </div>
                 <div className={s.winMain}>
                   <div className={s.dashHead}>
@@ -108,18 +108,6 @@ export default function LandingPage() {
               <p className={s.msgIn}>11:00 · Llamar a Karen López para confirmar su cotización de vinílica arena</p>
               <p className={s.msgIn}>13:30 · Enviar precio a Constructora Ríos</p>
               <div className={s.chatLinked}><Ic.link />Ligado a su lead · $4,850</div>
-            </div>
-
-            <div className={`${s.float} ${s.formula}`}>
-              <div className={s.formulaHead}>
-                <span className={s.swatch} />
-                <div><small>Fórmula · cubeta 19 L</small><strong>Arena del desierto</strong></div>
-              </div>
-              <ul className={s.formulaList}>
-                <li><b style={{ background: '#C99A2E' }} />Óxido amarillo<span>38 mL</span></li>
-                <li><b style={{ background: '#A8432B' }} />Óxido rojo<span>9 mL</span></li>
-                <li><b style={{ background: '#2B2B2B' }} />Negro<span>4 mL</span></li>
-              </ul>
             </div>
           </div>
         </div>

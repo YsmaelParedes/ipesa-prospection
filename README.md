@@ -96,13 +96,17 @@ En Supabase → **Authentication**:
 | Si deja de pagar o cancela, pasa al plan **Litro** (no se borra nada) | Automático (webhook) |
 
 - **Planes** (`PLANS` en `lib/stores.ts`): **Litro** gratis (solo el dueño, 50 contactos,
-  10 leads, 20 fórmulas de muestra, sin WhatsApp), **Galón** (3 usuarios, sin límites, sin
-  WhatsApp), **Cubeta** (5 usuarios con administradores, WhatsApp y campañas) e **Interno**
+  10 leads, sin WhatsApp), **Galón** (3 usuarios, sin límites, sin WhatsApp), **Cubeta**
+  (5 usuarios con administradores y bandeja de WhatsApp) e **Interno**
   (cortesía de la tienda propia). El precio vive en Stripe (lookup keys `galon_mensual` y
   `cubeta_mensual`). Los límites de contactos y leads los hace cumplir la base
   (`plan_quota` + trigger `enforce_plan_quota`, mismos números que `PLANS`). En Litro, solo
   el dueño entra (`403 PLAN_OWNER_ONLY` para el resto). Al bajar de Cubeta a Galón se
   desactivan los usuarios más recientes que sobran y los administradores pasan a vendedores.
+- **Campañas y Fórmulas** no se ofrecen en la plataforma: las fórmulas son de IPESA y las
+  campañas se venden aparte. Las tiendas nuevas nacen sin esos módulos y no hay botón para
+  activarlos; se encienden a mano en `stores.modules` (hoy solo IPESA). El envío a varias
+  personas exige el módulo `campaigns`; una plantilla a un solo chat solo exige WhatsApp.
 - **Plan efectivo** (`effectivePlan` en TS y `store_effective_plan` en SQL): un Galón o
   Cubeta asignado a mano vence con su `paid_until` (+3 días de gracia) y cuenta como Litro.
   Las suscripciones de Stripe dejan `paid_until` en null.

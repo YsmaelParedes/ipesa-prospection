@@ -7,14 +7,14 @@ import s from '../inicio.module.css'
 
 export const metadata: Metadata = {
   title: `Funciones · ${APP_NAME}`,
-  description: 'Contactos con segmentos, cotizaciones con seguimiento, agenda del día, equipo con permisos, fórmulas de color y avisos en el celular.',
+  description: 'Contactos con segmentos, cotizaciones con seguimiento, agenda del día, equipo con permisos y avisos en el celular.',
 }
 
 const MAX_USERS = PLANS.galon.maxUsers
 
 const JUMPS = [
   ['#contactos', 'Contactos'], ['#leads', 'Cotizaciones'], ['#agenda', 'Agenda'],
-  ['#equipo', 'Equipo y permisos'], ['#formulas', 'Fórmulas'], ['#avisos', 'Avisos'],
+  ['#equipo', 'Equipo y permisos'], ['#avisos', 'Avisos'],
 ]
 
 function Bullets({ items }: { items: string[] }) {
@@ -135,33 +135,9 @@ export default function FuncionesPage() {
         </div>
       </section>
 
-      {/* Fórmulas */}
-      <section id="formulas" className={s.section}>
-        <div className={`${s.wrap} ${s.split} ${s.splitRev}`}>
-          <div>
-            <span className={s.kicker}>Fórmulas de color</span>
-            <h2 className={s.h2}>Iguala colores sin adivinar</h2>
-            <p className={s.sub}>Busca el color y el tamaño que vas a preparar: la fórmula sale en mililitros, lista para el mostrador.</p>
-            <Bullets items={['Cantidades en mL para 1 L, 4 L o 19 L', 'Búsqueda por nombre o código', 'Disponible según los catálogos de tu tienda']} />
-          </div>
-          <div className={`${s.mock} ${s.mockFormula}`} aria-hidden="true">
-            <div className={s.formulaHead}>
-              <span className={s.swatch} />
-              <div><small>Fórmula · cubeta 19 L</small><strong>Arena del desierto</strong></div>
-            </div>
-            <ul className={s.formulaList}>
-              <li><b style={{ background: '#C99A2E' }} />Óxido amarillo<span>38 mL</span></li>
-              <li><b style={{ background: '#A8432B' }} />Óxido rojo<span>9 mL</span></li>
-              <li><b style={{ background: '#2B2B2B' }} />Negro<span>4 mL</span></li>
-            </ul>
-            <div className={s.sizes}><span>1 L</span><span>4 L</span><span className={s.sizeOn}>19 L</span></div>
-          </div>
-        </div>
-      </section>
-
       {/* Avisos */}
-      <section id="avisos" className={`${s.section} ${s.sectionAlt}`}>
-        <div className={`${s.wrap} ${s.split}`}>
+      <section id="avisos" className={s.section}>
+        <div className={`${s.wrap} ${s.split} ${s.splitRev}`}>
           <div>
             <span className={s.kicker}>Avisos en tu celular</span>
             <h2 className={s.h2}>Te avisa a la hora, aunque la app esté cerrada</h2>

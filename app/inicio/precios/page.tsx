@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 }
 
 const NOTES = [
-  { q: '¿Necesito tarjeta para empezar?', a: `No. El plan Litro es gratis para siempre: ${PLANS.litro.maxContacts} contactos, ${PLANS.litro.maxLeads} cotizaciones y ${PLANS.litro.formulaLimit} fórmulas de muestra.` },
+  { q: '¿Necesito tarjeta para empezar?', a: `No. El plan Litro es gratis para siempre: ${PLANS.litro.maxContacts} contactos y ${PLANS.litro.maxLeads} cotizaciones, con agenda y avisos en el celular.` },
   { q: '¿Cómo se paga?', a: 'Con tarjeta de crédito o débito, cada mes, a través de Stripe. Nosotros nunca vemos ni guardamos los datos de tu tarjeta.' },
   { q: '¿Puedo cambiar o cancelar?', a: 'Cuando quieras, desde tu CRM. Si cancelas, conservas tu plan hasta el final del mes pagado y después pasas a Litro.' },
   { q: '¿Qué pasa si bajo de plan?', a: 'No se borra nada. Lo que pase del límite se conserva y lo sigues viendo; solo no puedes registrar más hasta volver a subir.' },

@@ -6,14 +6,14 @@ import s from '../inicio.module.css'
 
 export const metadata: Metadata = {
   title: `WhatsApp en tu CRM · ${APP_NAME}`,
-  description: 'Atiende el WhatsApp de tu tienda desde el CRM, con cada chat ligado a su cliente y su cotización, y manda promociones con las reglas oficiales de Meta. Incluido en el plan Cubeta.',
+  description: 'Atiende el WhatsApp de tu tienda desde el CRM, con cada chat ligado a su cliente y su cotización. Incluido en el plan Cubeta.',
 }
 
 const POINTS = [
   { icon: Ic.chat, tone: s.tWa, title: 'Una bandeja para todo el equipo', text: 'Los chats del número de tu tienda en el CRM, sin pasarse el celular.' },
   { icon: Ic.link, tone: s.tBrand, title: 'Cada chat con su cliente', text: 'Mientras respondes ves su historial, sus cotizaciones y su siguiente paso.' },
-  { icon: Ic.megaphone, tone: s.tMagenta, title: 'Promociones con plantillas', text: 'Manda ofertas a los clientes que elijas con plantillas aprobadas por Meta.' },
-  { icon: Ic.shield, tone: s.tCyan, title: 'Con las reglas oficiales de Meta', text: 'Respeta el límite de tu número, a quien se da de baja y las esperas que pide Meta, para cuidar tu número.' },
+  { icon: Ic.megaphone, tone: s.tMagenta, title: 'Respuestas rápidas', text: 'Respuestas guardadas para lo que más te preguntan y plantillas aprobadas por Meta para retomar una conversación.' },
+  { icon: Ic.shield, tone: s.tCyan, title: 'Con las reglas oficiales de Meta', text: 'Respeta la ventana de atención y las esperas que pide Meta, para cuidar tu número.' },
 ]
 
 const STEPS = [
@@ -60,7 +60,7 @@ export default function WhatsAppPage() {
             </div>
           </div>
           <div>
-            <span className={s.kicker}>Bandeja y campañas</span>
+            <span className={s.kicker}>Bandeja de WhatsApp</span>
             <h2 className={s.h2}>Cada conversación, conectada con su venta</h2>
             <div className={s.pointList}>
               {POINTS.map(p => (

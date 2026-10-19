@@ -521,7 +521,7 @@ function DoneStep({ store, modules, invites }: { store: ClientStore; modules: St
 
   const next = [
     modules.whatsapp
-      ? { href: '/configuracion?tab=whatsapp', icon: WhatsAppGlyph, tone: s.nextWa, title: 'Conecta tu WhatsApp', text: 'Usa el número de tu tienda para atender y enviar campañas.' }
+      ? { href: '/configuracion?tab=whatsapp', icon: WhatsAppGlyph, tone: s.nextWa, title: 'Conecta tu WhatsApp', text: 'Usa el número de tu tienda para atender a tus clientes desde el CRM.' }
       : { href: '/leads', icon: Ic.leads, tone: s.nextBrand, title: 'Registra tu primer lead', text: 'Da seguimiento a cada cotización hasta cerrarla.' },
     { href: '/contactos', icon: Ic.contacts, tone: s.nextCyan, title: 'Agrega tus clientes', text: 'Captúralos uno por uno o importa tu lista de Excel.' },
     free
@@ -535,7 +535,7 @@ function DoneStep({ store, modules, invites }: { store: ClientStore; modules: St
       <h1>¡{store.name} está lista!</h1>
       <p className={s.doneSub}>
         {free
-          ? <>Estás en el plan Litro, gratis: hasta {store.limits.contacts} contactos, {store.limits.leads} cotizaciones y {store.limits.formulas} fórmulas de color. Cuando lo necesites, cambia de plan en Configuración → Plan.</>
+          ? <>Estás en el plan Litro, gratis: hasta {store.limits.contacts} contactos y {store.limits.leads} cotizaciones. Cuando lo necesites, cambia de plan en Configuración → Plan.</>
           : <>Tu plan {store.planLabel} está activo.</>}
         {invites > 0 && <> Cuando tu equipo acepte su invitación lo verás en Configuración.</>}
       </p>

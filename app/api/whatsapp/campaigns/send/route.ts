@@ -144,6 +144,8 @@ export async function POST(req: NextRequest) {
   }
 
   const batch = recipients !== undefined
+  // Varias personas = campaña: es un extra aparte, no basta con tener WhatsApp
+  if (batch && !ctx.modules.campaigns) return jsonError('Las campañas no están activadas en tu tienda', 403)
   if (batch) {
     if (!Array.isArray(recipients) || recipients.length < 1 || recipients.length > CAMPAIGN_BATCH_SIZE
         || !recipients.every((r: any) => isUUID(r?.contactId))) {

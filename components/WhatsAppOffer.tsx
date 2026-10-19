@@ -11,7 +11,7 @@ import { invalidateSession, useSession } from '@/lib/profile'
 
 const BENEFITS = [
   { icon: <WaIcon.chat size={18} />,      title: 'Todos los chats en un solo lugar', text: 'Tu equipo atiende el WhatsApp de la tienda desde el CRM, sin pasarse el celular.' },
-  { icon: <WaIcon.megaphone size={18} />, title: 'Promociones a tus clientes',       text: 'Envía ofertas y avisos a los clientes que elijas, con un clic.' },
+  { icon: <WaIcon.megaphone size={18} />, title: 'Responde rápido',                  text: 'Respuestas guardadas y plantillas aprobadas para retomar conversaciones.' },
   { icon: <WaIcon.user size={18} />,      title: 'Cada chat ligado a su cliente',     text: 'Ves su historial y sus cotizaciones mientras le respondes.' },
 ]
 
@@ -123,7 +123,7 @@ export function WhatsAppOffer() {
               {session?.isOwner
                 ? <Link href="/configuracion?tab=plan" className="btn btn-primary wa-offer-btn"><WaIcon.whatsapp size={17} /> Cambiar a Cubeta</Link>
                 : <span className="wa-offer-note">Pídele al dueño de la tienda que cambie al plan Cubeta.</span>}
-              <span className="wa-offer-note">WhatsApp y campañas vienen en el plan Cubeta; al cambiar, un asesor conecta el número de tu tienda.</span>
+              <span className="wa-offer-note">WhatsApp viene en el plan Cubeta; al cambiar, un asesor conecta el número de tu tienda.</span>
             </>
           ) : requested ? (
             <div className="wa-offer-done" role="status">

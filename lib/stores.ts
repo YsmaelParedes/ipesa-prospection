@@ -21,12 +21,16 @@ export const STORE_MODULES = ['whatsapp', 'campaigns', 'formulas'] as const
 export type StoreModule = typeof STORE_MODULES[number]
 export type StoreModules = Record<StoreModule, boolean>
 /**
- * Módulos de una tienda nueva. WhatsApp y Campañas vienen en el plan Cubeta,
- * pero además el asesor tiene que conectar el número y encenderlos desde
- * /admin (modules.whatsapp). Lo que la tienda puede usar es la combinación de
- * los dos: effectiveModules().
+ * Módulos de una tienda nueva:
+ *  · whatsapp: la bandeja de chats. Viene en el plan Cubeta, pero además el
+ *    asesor tiene que conectar el número y encenderla desde /admin.
+ *  · campaigns y formulas: extras que NO se ofrecen en la plataforma (las
+ *    fórmulas son de IPESA y las campañas se venden aparte). Las tiendas
+ *    nuevas nacen sin ellos y solo se encienden a mano en la base
+ *    (stores.modules); hoy solo los tiene la tienda IPESA.
+ * Lo que la tienda puede usar es la combinación con su plan: effectiveModules().
  */
-export const DEFAULT_MODULES: StoreModules = { whatsapp: false, campaigns: false, formulas: true }
+export const DEFAULT_MODULES: StoreModules = { whatsapp: false, campaigns: false, formulas: false }
 
 export const STATUS_LABELS: Record<StoreStatus, string> = {
   pending: 'Por activar', trial: 'Prueba gratis', active: 'Activa', suspended: 'Suspendida', cancelled: 'Cancelada',
@@ -43,8 +47,7 @@ export const ROLE_LABELS: Record<StoreRole, string> = {
  *  · allowAdmins: si el dueño puede nombrar administradores.
  *  · maxContacts / maxLeads: null = sin límite. Los mismos números están en la
  *    función plan_quota() de la base, que los hace cumplir: cambia los dos.
- *  · formulaLimit: fórmulas de color accesibles (null = todas).
- *  · whatsapp: incluye WhatsApp y Campañas.
+ *  · whatsapp: incluye la bandeja de WhatsApp (las campañas son un extra aparte).
  *  · paid: se cobra con Stripe.
  * Interno = la tienda propia (IPESA): cortesía con todo, la asigna el dueño de
  * la plataforma desde la ficha.
@@ -52,14 +55,14 @@ export const ROLE_LABELS: Record<StoreRole, string> = {
 export type PlanId = 'litro' | 'galon' | 'cubeta' | 'interno'
 export type PlanDef = {
   label: string; maxUsers: number; allowAdmins: boolean
-  maxContacts: number | null; maxLeads: number | null; formulaLimit: number | null
+  maxContacts: number | null; maxLeads: number | null
   whatsapp: boolean; paid: boolean
 }
 export const PLANS: Record<PlanId, PlanDef> = {
-  litro:   { label: 'Litro',   maxUsers: 1,  allowAdmins: false, maxContacts: 50,   maxLeads: 10,   formulaLimit: 20,   whatsapp: false, paid: false },
-  galon:   { label: 'Galón',   maxUsers: 3,  allowAdmins: false, maxContacts: null, maxLeads: null, formulaLimit: null, whatsapp: false, paid: true },
-  cubeta:  { label: 'Cubeta',  maxUsers: 5,  allowAdmins: true,  maxContacts: null, maxLeads: null, formulaLimit: null, whatsapp: true,  paid: true },
-  interno: { label: 'Interno', maxUsers: 50, allowAdmins: true,  maxContacts: null, maxLeads: null, formulaLimit: null, whatsapp: true,  paid: false },
+  litro:   { label: 'Litro',   maxUsers: 1,  allowAdmins: false, maxContacts: 50,   maxLeads: 10,   whatsapp: false, paid: false },
+  galon:   { label: 'Galón',   maxUsers: 3,  allowAdmins: false, maxContacts: null, maxLeads: null, whatsapp: false, paid: true },
+  cubeta:  { label: 'Cubeta',  maxUsers: 5,  allowAdmins: true,  maxContacts: null, maxLeads: null, whatsapp: true,  paid: true },
+  interno: { label: 'Interno', maxUsers: 50, allowAdmins: true,  maxContacts: null, maxLeads: null, whatsapp: true,  paid: false },
 }
 /** Planes que se venden (en orden), sin la cortesía interna. */
 export const PUBLIC_PLANS = ['litro', 'galon', 'cubeta'] as const satisfies readonly PlanId[]
@@ -83,11 +86,15 @@ export function effectivePlan(s: PlanFields, now = Date.now()): PlanId {
   return plan
 }
 
-/** Módulos que la tienda puede usar: los que incluye su plan Y encendió el asesor. */
+/**
+ * Módulos que la tienda puede usar: WhatsApp si su plan lo incluye y el asesor
+ * lo encendió; Campañas solo encima de WhatsApp; Fórmulas tal como estén en la base.
+ */
 export function effectiveModules(s: PlanFields & { modules: unknown }, now = Date.now()): StoreModules {
   const m = normalizeModules(s.modules)
   const p = PLANS[effectivePlan(s, now)]
-  return { whatsapp: m.whatsapp && p.whatsapp, campaigns: m.campaigns && p.whatsapp, formulas: m.formulas }
+  const whatsapp = m.whatsapp && p.whatsapp
+  return { whatsapp, campaigns: whatsapp && m.campaigns, formulas: m.formulas }
 }
 
 /** Estados de Stripe con los que la suscripción sigue dando el plan pagado. */
