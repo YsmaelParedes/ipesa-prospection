@@ -15,7 +15,7 @@ import { QuickCreateFab, QuickCreateHost, QuickCreateMenu } from '@/components/Q
 import { APP_NAME } from '@/lib/brand'
 import { invalidateSession, useSession } from '@/lib/profile'
 import { signOut } from '@/lib/signOut'
-import { CHANGELOG, CURRENT_VERSION } from '@/lib/changelog'
+import { CURRENT_VERSION, changelogFor } from '@/lib/changelog'
 import { SYSTEM_NOTICE } from '@/lib/systemNotice'
 import { EMAILS } from '@/lib/legal'
 import { ROLE_LABELS, STATUS_LABELS, type StoreModule } from '@/lib/stores'
@@ -151,6 +151,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 
   // Las novedades no se abren solas: solo con el botón de la versión
   const closeWhatsNew = () => setWhatsNewOpen(false)
+  // Novedades: solo lo que aplica a esta tienda (sin lo de módulos que no tiene)
+  const notes = changelogFor(session?.store?.modules)
 
   /* Cerrar el menú lateral y la campana al navegar */
   useEffect(() => { setDrawerOpen(false); setBellOpen(false) }, [pathname])
@@ -628,8 +630,8 @@ Pantalla: ${pathname}`,
               <button className="modal-close btn-icon" onClick={closeWhatsNew} aria-label="Cerrar"><Icon.close style={{ width: 16, height: 16 }} /></button>
             </div>
             <div className="modal-body">
-              {CHANGELOG.map((entry, i) => (
-                <div key={entry.version} style={{ marginBottom: i < CHANGELOG.length - 1 ? 22 : 0 }}>
+              {notes.map((entry, i) => (
+                <div key={entry.version} style={{ marginBottom: i < notes.length - 1 ? 22 : 0 }}>
                   <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 2 }}>{entry.title}</div>
                   <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 10 }}>Versión {entry.version} · {entry.date}</div>
                   <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -637,7 +639,7 @@ Pantalla: ${pathname}`,
                       <li key={j} style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>{it}</li>
                     ))}
                   </ul>
-                  {i < CHANGELOG.length - 1 && <div style={{ borderTop: '1px solid var(--line)', marginTop: 22 }} />}
+                  {i < notes.length - 1 && <div style={{ borderTop: '1px solid var(--line)', marginTop: 22 }} />}
                 </div>
               ))}
             </div>
