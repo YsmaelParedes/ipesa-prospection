@@ -1,7 +1,7 @@
 import { cleanAddress, parseColonia } from '@/lib/address'
 import type { CommercialContact } from '@/lib/commercial'
 
-export { StatusChip, fmtDay, nextLabel } from '@/components/CommercialUI'
+export { PriorityChip, StatusChip, fmtDay, nextLabel } from '@/components/CommercialUI'
 
 export type Member = { user_id: string; name: string; role: string }
 export type CommercialData = {

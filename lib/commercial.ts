@@ -20,6 +20,29 @@ export const STATUS_INFO: Record<CommercialStatus, { label: string; color: strin
 export const statusInfo = (s: string | null | undefined) => STATUS_INFO[s as CommercialStatus] ?? STATUS_INFO.nuevo
 export const isCommercialStatus = (v: unknown): v is CommercialStatus => typeof v === 'string' && (COMMERCIAL_STATUSES as readonly string[]).includes(v)
 
+export const PRIORITIES = ['alta', 'media', 'baja'] as const
+export type Priority = typeof PRIORITIES[number]
+export const PRIORITY_INFO: Record<Priority, { label: string; color: string; bg: string; rank: number }> = {
+  alta:  { label: 'Alta',  color: 'var(--danger)',     bg: 'var(--danger-soft)',  rank: 0 },
+  media: { label: 'Media', color: 'var(--warning)',    bg: 'var(--warning-soft)', rank: 1 },
+  baja:  { label: 'Baja',  color: 'var(--muted)',      bg: 'var(--paper-2)',      rank: 2 },
+}
+export const priorityInfo = (p: string | null | undefined) => PRIORITY_INFO[p as Priority] ?? PRIORITY_INFO.media
+
+/** Sugerencias para "Origen" (se puede escribir otro). */
+export const ORIGINS = ['Visita de campo', 'Llamada', 'Recomendación', 'WhatsApp', 'Redes sociales', 'Sucursal', 'Otro'] as const
+
+/** Etapas del tablero de Seguimiento y su probabilidad de cierre (para el monto "en juego"). */
+export const PIPELINE_STAGES = ['contactado', 'interes', 'cotizacion', 'cliente'] as const
+export const STAGE_PROBABILITY: Record<string, number> = { contactado: 0.1, interes: 0.25, cotizacion: 0.5 }
+
+/** Días completos desde una fecha/hora hasta hoy (AAAA-MM-DD). */
+export function daysSince(iso: string | null | undefined, today: string): number | null {
+  if (!iso) return null
+  const from = Date.parse(`${String(iso).slice(0, 10)}T12:00:00Z`), to = Date.parse(`${today}T12:00:00Z`)
+  return Number.isNaN(from) ? null : Math.max(0, Math.round((to - from) / 86_400_000))
+}
+
 export const ACTIVITY_KINDS = ['llamada', 'whatsapp', 'visita', 'nota'] as const
 export type ActivityKind = typeof ACTIVITY_KINDS[number]
 export const KIND_LABELS: Record<ActivityKind, string> = { llamada: 'Llamada', whatsapp: 'WhatsApp', visita: 'Visita', nota: 'Nota' }
@@ -82,6 +105,7 @@ export type CommercialContact = {
   id: string; name: string; phone: string; email: string | null; company: string | null
   address: string | null; postal_code: string | null; segment: string | null; acquisition_channel: string | null
   colonia: string | null; owner_id: string | null; owner_name?: string
+  priority: Priority; potential_monthly: number | string | null; origin: string | null
   commercial_status: CommercialStatus; next_action: string | null; next_action_at: string | null
   last_activity_at: string | null; last_result: string | null; last_note: string | null
   no_answer_streak: number; created_at: string
@@ -105,13 +129,18 @@ export const inQueue = (b: Bucket) => b === 'vencido' || b === 'hoy' || b === 'n
 
 const BUCKET_RANK: Record<Bucket, number> = { vencido: 0, hoy: 1, nuevo: 2, programado: 3, sin_fecha: 4, depurar: 5 }
 
-/** Orden de la cola: vencidos, hoy, nuevos; dentro de cada grupo, los que no contestan al final. */
+/**
+ * Orden de la cola: vencidos, hoy, nuevos. Dentro de cada grupo: los que no
+ * contestan al final y, antes, la prioridad alta.
+ */
 export function queueCompare(today: string) {
-  return (a: BucketFields & Pick<CommercialContact, 'no_answer_streak' | 'created_at'>, b: typeof a) => {
+  return (a: BucketFields & Pick<CommercialContact, 'no_answer_streak' | 'created_at'> & { priority?: string | null }, b: typeof a) => {
     const ra = BUCKET_RANK[bucketOf(a, today)], rb = BUCKET_RANK[bucketOf(b, today)]
     if (ra !== rb) return ra - rb
     const la = a.no_answer_streak >= NO_ANSWER_LIMIT ? 1 : 0, lb = b.no_answer_streak >= NO_ANSWER_LIMIT ? 1 : 0
     if (la !== lb) return la - lb
+    const pa = priorityInfo(a.priority).rank, pb = priorityInfo(b.priority).rank
+    if (pa !== pb) return pa - pb
     if (a.next_action_at && b.next_action_at && a.next_action_at !== b.next_action_at) return a.next_action_at < b.next_action_at ? -1 : 1
     return String(a.created_at).localeCompare(String(b.created_at))
   }

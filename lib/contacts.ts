@@ -1,9 +1,10 @@
 import { getServerSupabase } from './supabase-server'
 import { parseFields, type ParseResult, type Schema } from './validation'
 import { normalizePhone } from './phone'
+import { PRIORITIES } from './commercial'
 
 /** Columnas que se devuelven al cliente (sin columnas heredadas sin uso). */
-export const CONTACT_COLUMNS = 'id, name, phone, email, company, address, postal_code, colonia, segment, acquisition_channel, wa_opt_out, owner_id, commercial_status, next_action, next_action_at, last_note, created_at, updated_at'
+export const CONTACT_COLUMNS = 'id, name, phone, email, company, address, postal_code, colonia, segment, acquisition_channel, wa_opt_out, owner_id, commercial_status, next_action, next_action_at, last_note, priority, potential_monthly, origin, created_at, updated_at'
 
 /** Columnas editables de `contacts` (lista blanca + validación). */
 export const CONTACT_SCHEMA: Schema = {
@@ -14,6 +15,9 @@ export const CONTACT_SCHEMA: Schema = {
   address:             { type: 'text', max: 500, nullable: true, label: 'Dirección' },
   postal_code:         { type: 'text', max: 10,  nullable: true, label: 'C.P.' },
   colonia:             { type: 'text', max: 120, nullable: true, label: 'Colonia' },
+  priority:            { type: 'enum', values: PRIORITIES, label: 'Prioridad' },
+  potential_monthly:   { type: 'number', min: 0, max: 1_000_000_000, nullable: true, label: 'Potencial mensual' },
+  origin:              { type: 'text', max: 60, nullable: true, label: 'Origen' },
   segment:             { type: 'text', max: 100, nullable: true, label: 'Tipo' },
   acquisition_channel: { type: 'text', max: 100, label: 'Canal' },
 }

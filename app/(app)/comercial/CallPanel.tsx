@@ -6,13 +6,13 @@ import { apiFetch } from '@/lib/apiClient'
 import { useQueryEffect } from '@/lib/useCachedQuery'
 import { hasStreetNumber } from '@/lib/address'
 import {
-  ACTIVITY_KINDS, COMMERCIAL_STATUSES, KIND_LABELS, NO_ANSWER_LIMIT, RESULTS, RESULT_RULES, STATUS_INFO,
+  ACTIVITY_KINDS, COMMERCIAL_STATUSES, KIND_LABELS, NO_ANSWER_LIMIT, PRIORITIES, PRIORITY_INFO, RESULTS, RESULT_RULES, STATUS_INFO,
   resultLabel, suggestNext, type ActivityKind, type CallResult, type CommercialContact,
 } from '@/lib/commercial'
 import { fmtAgo } from '@/lib/datetime'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
 import { Select } from '@/components/Select'
-import { Ico, StatusChip, addressOf, bizName, coloniaOf, fmtDay, money, nextLabel, personName } from './ui'
+import { Ico, PriorityChip, StatusChip, addressOf, bizName, coloniaOf, fmtDay, money, nextLabel, personName } from './ui'
 import s from './comercial.module.css'
 
 type Activity = {
@@ -25,13 +25,15 @@ const jsonInit = (method: string, body: unknown): RequestInit => ({
   method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
 })
 
-export function CallPanel({ contact, today, canWork, readonly, waModule, onClose, onChanged, onNext, nextName }: {
+export function CallPanel({ contact, today, canWork, readonly, waModule, initialResult, onClose, onChanged, onNext, nextName }: {
   contact: CommercialContact
   today: string
   /** Es el responsable (o el dueño con un contacto sin asignar) y puede registrar. */
   canWork: boolean
   readonly: boolean
   waModule: boolean
+  /** Resultado ya elegido desde la tarjeta de la cola. */
+  initialResult?: CallResult
   onClose: () => void
   onChanged: (c: CommercialContact) => void
   /** Pasa al siguiente de la cola (si hay). */
@@ -39,11 +41,13 @@ export function CallPanel({ contact, today, canWork, readonly, waModule, onClose
   nextName?: string
 }) {
   const [kind, setKind]         = useState<ActivityKind>('llamada')
-  const [result, setResult]     = useState<CallResult | null>(null)
+  const suggested = initialResult ? suggestNext(initialResult, today) : null
+  const [result, setResult]     = useState<CallResult | null>(initialResult ?? null)
   const [note, setNote]         = useState('')
   const [amount, setAmount]     = useState('')
-  const [nextAt, setNextAt]     = useState('')
-  const [nextAction, setNextAction] = useState('')
+  const [nextAt, setNextAt]     = useState(suggested?.nextAt ?? '')
+  const [nextAction, setNextAction] = useState(suggested?.nextAction ?? '')
+  const [potential, setPotential] = useState(contact.potential_monthly != null ? String(contact.potential_monthly) : '')
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState('')
   const [history, setHistory]   = useState<Activity[] | null>(null)
@@ -129,6 +133,7 @@ export function CallPanel({ contact, today, canWork, readonly, waModule, onClose
           <div className="detail-title">{bizName(contact)}</div>
           <div className="detail-meta">
             <StatusChip value={contact.commercial_status} />
+            <PriorityChip value={contact.priority} />
             {person && <span className="cell-muted">{person}</span>}
             <span className={`follow-chip ${next.tone}`}>{next.label}</span>
             <Link href={`/contactos?id=${contact.id}`} className="detail-link"><Ico.user /> Ver contacto</Link>
@@ -141,6 +146,9 @@ export function CallPanel({ contact, today, canWork, readonly, waModule, onClose
               <div className="kv"><div className="k">Teléfono</div><div className="v" style={{ fontFamily: 'var(--font-mono)' }}>{fmtPhone(contact.phone) || '—'}</div></div>
               <div className="kv"><div className="k">Colonia</div><div className="v">{colonia || '—'}</div></div>
               <div className="kv" style={{ gridColumn: '1 / -1' }}><div className="k">Dirección</div><div className="v" style={{ fontSize: 13 }}>{addr || '—'}{addr && !hasStreetNumber(contact.address) ? ' · sin número' : ''}</div></div>
+              {(contact.origin || contact.potential_monthly != null) && (
+                <div className="kv"><div className="k">Origen · potencial</div><div className="v" style={{ fontSize: 13 }}>{contact.origin || '—'}{contact.potential_monthly != null ? ` · ${money(contact.potential_monthly)}/mes` : ''}</div></div>
+              )}
               <div className="kv"><div className="k">Correo</div><div className="v" style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{contact.email || '—'}</div></div>
               <div className="kv"><div className="k">Próxima acción</div><div className="v" style={{ fontSize: 13 }}>{contact.next_action_at ? `${contact.next_action || 'Dar seguimiento'} · ${fmtDay(contact.next_action_at)}` : '—'}</div></div>
             </div>
@@ -231,6 +239,23 @@ export function CallPanel({ contact, today, canWork, readonly, waModule, onClose
                   <label htmlFor="cm-resched">Reprogramar</label>
                   <input id="cm-resched" type="date" value={contact.next_action_at ?? ''}
                     onChange={e => patch({ next_action_at: e.target.value || null, ...(e.target.value && !contact.next_action ? { next_action: 'Dar seguimiento' } : {}) })} />
+                </div>
+              </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>Prioridad</label>
+                  <Select value={contact.priority} aria-label="Prioridad" onChange={v => patch({ priority: v })}
+                    options={PRIORITIES.map(v => ({ value: v, label: PRIORITY_INFO[v].label, color: PRIORITY_INFO[v].color }))} />
+                </div>
+                <div className="field">
+                  <label htmlFor="cm-potential">Potencial mensual (MXN)</label>
+                  <input id="cm-potential" type="number" min="0" inputMode="decimal" value={potential} placeholder="0"
+                    onChange={e => setPotential(e.target.value)}
+                    onBlur={() => {
+                      const v = potential.trim() === '' ? null : Number(potential)
+                      if (v !== null && (!Number.isFinite(v) || v < 0)) { setError('El potencial no es válido'); return }
+                      if (v !== (contact.potential_monthly == null ? null : Number(contact.potential_monthly))) patch({ potential_monthly: v })
+                    }} />
                 </div>
               </div>
               {contact.commercial_status === 'depurar' && (

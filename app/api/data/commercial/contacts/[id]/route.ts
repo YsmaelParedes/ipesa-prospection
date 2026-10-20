@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, parseFields, readJson, serverError, type Schema } from '@/lib/validation'
 import { COMMERCIAL_COLUMNS, getVisibleContact } from '@/lib/commercialServer'
-import { COMMERCIAL_STATUSES } from '@/lib/commercial'
+import { COMMERCIAL_STATUSES, PRIORITIES } from '@/lib/commercial'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -10,12 +10,14 @@ const SCHEMA: Schema = {
   commercial_status: { type: 'enum', values: COMMERCIAL_STATUSES, label: 'Estado' },
   next_action:       { type: 'text', max: 200, nullable: true, label: 'Próxima acción' },
   next_action_at:    { type: 'date', nullable: true, label: 'Fecha de la próxima acción' },
+  priority:          { type: 'enum', values: PRIORITIES, label: 'Prioridad' },
+  potential_monthly: { type: 'number', min: 0, max: 1_000_000_000, nullable: true, label: 'Potencial mensual' },
 }
 
 /**
- * PATCH /api/data/commercial/contacts/[id] — cambia a mano el estado o la
- * próxima acción (reprogramar, sacar de "Por depurar"). Solo el responsable,
- * o el dueño/administrador.
+ * PATCH /api/data/commercial/contacts/[id] — cambia a mano el estado, la
+ * próxima acción (reprogramar, sacar de "Por depurar"), la prioridad o el
+ * potencial mensual. Solo el responsable o el dueño/administrador.
  */
 export async function PATCH(req: NextRequest, { params }: Ctx) {
   const ctx = await requireStore({ write: true })

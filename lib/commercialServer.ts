@@ -3,7 +3,7 @@ import { planOf } from './stores'
 
 export const COMMERCIAL_COLUMNS =
   'id, name, phone, email, company, address, postal_code, colonia, segment, acquisition_channel, owner_id, commercial_status, ' +
-  'next_action, next_action_at, last_activity_at, last_result, last_note, no_answer_streak, created_at'
+  'next_action, next_action_at, last_activity_at, last_result, last_note, no_answer_streak, priority, potential_monthly, origin, created_at'
 
 export const ACTIVITY_COLUMNS =
   'id, contact_id, user_id, kind, result, note, quote_amount, sale_amount, next_action, next_action_at, is_followup, created_at'

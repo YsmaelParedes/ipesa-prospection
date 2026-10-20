@@ -106,8 +106,26 @@ export async function POST(req: NextRequest) {
   const parsed = parseContact(body)
   if (!parsed.ok) return jsonError(parsed.error)
 
-  // Quien lo da de alta queda como responsable en el sistema comercial (los importados quedan sin asignar)
-  const { data, error } = await supabase.from('contacts').insert([{ ...parsed.data, store_id: ctx.storeId, owner_id: ctx.uid }]).select(CONTACT_COLUMNS)
+  // Responsable en el sistema comercial: quien lo da de alta (los importados quedan sin asignar).
+  // El dueño/admin puede elegir a otra persona activa del equipo, o dejarlo sin asignar (null).
+  let ownerId: string | null = ctx.uid
+  if (ctx.isAdmin && 'owner_id' in body && body.owner_id !== ctx.uid) {
+    if (body.owner_id === null) ownerId = null
+    else if (!isUUID(body.owner_id)) return jsonError('Responsable inválido')
+    else {
+      const { data: member } = await supabase.from('store_members').select('user_id')
+        .eq('store_id', ctx.storeId).eq('user_id', body.owner_id).eq('status', 'active').maybeSingle()
+      if (!member) return jsonError('Esa persona no está activa en el equipo')
+      ownerId = body.owner_id
+    }
+  }
+  // Observaciones del alta de prospecto: quedan como primera nota de su historial comercial
+  const note = typeof body.note === 'string' ? body.note.trim() : ''
+  if (note.length > 2000) return jsonError('Las observaciones exceden 2000 caracteres')
+
+  const { data, error } = await supabase.from('contacts')
+    .insert([{ ...parsed.data, store_id: ctx.storeId, owner_id: ownerId, ...(note ? { last_note: note } : {}) }])
+    .select(CONTACT_COLUMNS)
   if (error) {
     if (error.code === '23505') return jsonError(duplicateContactMessage(error.message))
     const hit = parsePlanLimitError(error)
@@ -115,6 +133,11 @@ export async function POST(req: NextRequest) {
     return serverError('POST /api/data/contacts', error, 'Error al crear contacto')
   }
   await linkWhatsAppMessages(ctx.storeId, data ?? [])
+  if (note && data?.[0]) {
+    const { error: noteError } = await supabase.from('commercial_activities')
+      .insert({ store_id: ctx.storeId, contact_id: data[0].id, user_id: ctx.uid, kind: 'nota', note })
+    if (noteError) console.error('[POST /api/data/contacts] nota inicial', noteError)
+  }
   return NextResponse.json(data)
 }
 

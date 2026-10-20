@@ -23,8 +23,8 @@ type Control = {
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 
-export function ControlTab({ today, isAdmin, readonly, team, salesTeam }: {
-  today: string; isAdmin: boolean; readonly: boolean; team: Member[]; salesTeam: boolean
+export function ControlTab({ today, isAdmin, readonly, team, salesTeam, uid }: {
+  today: string; isAdmin: boolean; readonly: boolean; team: Member[]; salesTeam: boolean; uid: string
 }) {
   const [date, setDate]     = useState(today)
   const [person, setPerson] = useState('')
@@ -154,6 +154,8 @@ export function ControlTab({ today, isAdmin, readonly, team, salesTeam }: {
             </div>
           )}
 
+          <DayNotes date={date} uid={uid} isAdmin={isAdmin} readonly={readonly} team={team} />
+
           <div className={s.split2}>
             <div className={s.panel}>
               <h4>Resultados de {monthName}</h4>
@@ -178,6 +180,66 @@ export function ControlTab({ today, isAdmin, readonly, team, salesTeam }: {
             </div>
           </div>
         </>
+      )}
+    </div>
+  )
+}
+
+/* ── Observaciones del día: cada quien la suya; el dueño ve las del equipo ── */
+function DayNotes({ date, uid, isAdmin, readonly, team }: { date: string; uid: string; isAdmin: boolean; readonly: boolean; team: Member[] }) {
+  const [notes, setNotes] = useState<{ user_id: string; note: string; updated_at: string }[] | null>(null)
+  const [draft, setDraft] = useState('')
+  const [saved, setSaved] = useState('')
+  const [state, setState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [error, setError] = useState('')
+
+  const load = useCallback(async () => {
+    const r = await apiFetch(`/api/data/commercial/notes?date=${date}`).catch(() => null)
+    if (!r?.ok) { setNotes([]); return }
+    const list = (await r.json()).notes ?? []
+    setNotes(list)
+    const mine = list.find((n: { user_id: string }) => n.user_id === uid)?.note ?? ''
+    setDraft(mine); setSaved(mine); setState('idle')
+  }, [date, uid])
+  useQueryEffect(() => { load() }, [load])
+
+  const save = async () => {
+    if (draft.trim() === saved.trim()) return
+    setState('saving'); setError('')
+    const r = await apiFetch('/api/data/commercial/notes', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date, note: draft }),
+    }).catch(() => null)
+    if (!r?.ok) { setError((await r?.json().catch(() => ({})))?.error || 'No se pudo guardar'); setState('idle'); return }
+    setSaved(draft.trim()); setState('saved')
+  }
+
+  const others = (notes ?? []).filter(n => n.user_id !== uid)
+  const nameOf = (id: string) => team.find(m => m.user_id === id)?.name ?? 'Otra persona'
+
+  return (
+    <div className={s.panel} style={{ marginBottom: 14 }}>
+      <h4>Observaciones del día</h4>
+      {!readonly && (
+        <>
+          <textarea rows={2} value={draft} maxLength={2000} onChange={e => { setDraft(e.target.value); setState('idle') }} onBlur={save}
+            placeholder="Cómo fue el día: clientes difíciles, pendientes, avisos para el equipo…" style={{ width: '100%' }} aria-label="Tus observaciones del día" />
+          <div className="cell-muted" style={{ fontSize: 12, marginTop: 4 }}>
+            {state === 'saving' ? 'Guardando…' : state === 'saved' ? 'Guardado' : 'Se guarda al salir del cuadro.'}
+          </div>
+          {error && <div className="field-error">{error}</div>}
+        </>
+      )}
+      {isAdmin && (
+        notes === null ? null : others.length === 0
+          ? <div className="cell-muted" style={{ fontSize: 13, marginTop: 8 }}>Nadie más del equipo dejó observaciones este día.</div>
+          : <div className={s.history} style={{ marginTop: 10 }}>
+              {others.map(n => (
+                <div key={n.user_id} className={s.hItem}>
+                  <div className={s.hHead}><strong>{nameOf(n.user_id)}</strong></div>
+                  <div className={s.hNote}>{n.note}</div>
+                </div>
+              ))}
+            </div>
       )}
     </div>
   )

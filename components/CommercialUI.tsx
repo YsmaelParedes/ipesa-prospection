@@ -1,4 +1,4 @@
-import { addDays, statusInfo } from '@/lib/commercial'
+import { addDays, priorityInfo, statusInfo } from '@/lib/commercial'
 import { MESES } from '@/lib/datetime'
 
 export function fmtDay(iso: string) {
@@ -24,5 +24,17 @@ export function StatusChip({ value }: { value: string }) {
       display: 'inline-flex', alignItems: 'center', padding: '3px 9px', borderRadius: 999,
       fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', background: info.bg, color: info.color,
     }}>{info.label}</span>
+  )
+}
+
+/** Prioridad del contacto; la media no se muestra para no llenar de etiquetas. */
+export function PriorityChip({ value, showMedia = false }: { value: string | null | undefined; showMedia?: boolean }) {
+  if (!value || (value === 'media' && !showMedia)) return null
+  const info = priorityInfo(value)
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', padding: '3px 9px', borderRadius: 999,
+      fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', background: info.bg, color: info.color,
+    }}>Prioridad {info.label.toLowerCase()}</span>
   )
 }
