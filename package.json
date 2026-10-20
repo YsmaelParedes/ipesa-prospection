@@ -1,12 +1,13 @@
 {
   "name": "crm-pinturas",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "test:cache": "node --test tests/query-cache.test.cjs tests/api-client.test.cjs tests/server-timing.test.cjs tests/dashboard-whatsapp.test.cjs tests/error-report.test.cjs tests/plans.test.cjs",
+    "test:billing": "node --test tests/stripe-billing.test.cjs tests/stripe-billing-db.test.cjs",
     "benchmark:api": "node scripts/benchmark-api.mjs"
   },
   "dependencies": {
@@ -21,6 +22,7 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
     "@types/node": "^20",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19",

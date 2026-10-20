@@ -18,6 +18,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.1.1',
+    date: '20 de octubre, 2026',
+    title: 'Pagos más confiables',
+    items: [
+      'El pago de tu plan es más seguro ante fallas de conexión: si das doble clic o se corta la red, no se crea un segundo cobro.',
+      'Si un cobro falla, conservas tu plan tres días mientras actualizas tu tarjeta; después tu tienda usa Litro hasta que se confirme el pago, sin borrar nada.',
+    ],
+  },
+  {
     version: '3.1.0',
     date: '20 de octubre, 2026',
     title: 'Acceso más seguro',

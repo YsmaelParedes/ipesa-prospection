@@ -75,8 +75,9 @@ type PlanFields = { plan: string; paid_until: string | null }
 
 /**
  * Plan que aplica hoy. Un plan de paga asignado a mano cuyo paid_until venció
- * (más los días de gracia) cuenta como Litro; las suscripciones de Stripe dejan
- * paid_until en null y su plan lo mantiene el webhook. Gemela de la función
+ * (más los días de gracia) cuenta como Litro. Stripe deja paid_until en null
+ * mientras está al corriente; en past_due guarda el inicio de la mora para
+ * limitarla a los mismos días de gracia. Gemela de la función
  * store_effective_plan() de la base: si cambias una, cambia la otra.
  */
 export function effectivePlan(s: PlanFields, now = Date.now()): PlanId {

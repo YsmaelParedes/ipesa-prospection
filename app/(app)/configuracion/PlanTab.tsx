@@ -109,8 +109,9 @@ export function PlanTab({ store, isOwner }: { store: ClientStore; isOwner: boole
       {justPaid && paying && <Note kind="ok">¡Listo! Tu plan {store.planLabel} está activo.</Note>}
       {pastDue && (
         <Note kind="danger">
-          No pudimos cobrar tu plan {store.planLabel}. Stripe volverá a intentarlo; actualiza tu tarjeta en
-          «Administrar suscripción» para no perderlo. Si el cobro no pasa, tu tienda vuelve al plan Litro (no se borra nada).
+          Hay un pago pendiente de tu suscripción. Actualiza tu tarjeta en «Administrar suscripción».
+          Conservas el plan de pago durante tres días desde el primer aviso de cobro fallido;
+          después tu tienda usa Litro hasta que se confirme el pago (no se borra nada).
         </Note>
       )}
       {paying && sub?.cancelAtPeriodEnd && !pastDue && (

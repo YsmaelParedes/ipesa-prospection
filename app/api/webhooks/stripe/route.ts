@@ -3,7 +3,7 @@ import type Stripe from 'stripe'
 import { readBoundedBody } from '@/lib/boundedBody'
 import { getServerSupabase } from '@/lib/supabase-server'
 import { getStripe } from '@/lib/stripe'
-import { notifyStoreOwner, syncSubscription } from '@/lib/stripeSync'
+import { NOT_A_STORE, notifyStoreOwner, syncSubscription } from '@/lib/stripeSync'
 import { reportError } from '@/lib/errorReport'
 
 export const dynamic = 'force-dynamic'
@@ -12,7 +12,8 @@ export const dynamic = 'force-dynamic'
  * POST /api/webhooks/stripe — avisos de Stripe (suscripciones y cobros).
  *  · Firma verificada con STRIPE_WEBHOOK_SECRET sobre el cuerpo crudo; sin
  *    el secreto se rechaza todo (falla cerrado).
- *  · Cada evento se procesa una sola vez (tabla stripe_events).
+ *  · Una entrega reclama el evento; las demás esperan o reconocen su término.
+ *    Si el proceso cae antes de confirmar, la sincronización puede repetirse.
  *  · El plan de la tienda solo lo cambia syncSubscription, que vuelve a leer
  *    la suscripción en Stripe.
  *  · Si algo falla responde 500 para que Stripe lo reintente.
@@ -40,18 +41,32 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getServerSupabase()
+  let claimToken: string | null = null
   try {
-    await db.from('stripe_events').upsert({ id: event.id, type: event.type }, { onConflict: 'id', ignoreDuplicates: true })
-    const { data: seen, error: seenError } = await db.from('stripe_events').select('processed_at').eq('id', event.id).maybeSingle()
-    if (seenError) throw seenError
-    if (seen?.processed_at) return NextResponse.json({ received: true, duplicate: true })
+    const { data: claim, error: claimError } = await db.rpc('claim_stripe_event', { p_id: event.id, p_type: event.type })
+    if (claimError) throw claimError
+    if (claim?.status === 'processed') return NextResponse.json({ received: true, duplicate: true })
+    if (claim?.status !== 'claimed' || !claim.token) {
+      // A 2xx here would acknowledge an event whose other worker may crash.
+      return NextResponse.json({ error: 'Evento en proceso' }, { status: 503, headers: { 'Retry-After': '30' } })
+    }
+    claimToken = claim.token
 
     await handleEvent(event)
 
-    const { error } = await db.from('stripe_events').update({ processed_at: new Date().toISOString() }).eq('id', event.id)
+    const { data: completed, error } = await db.rpc('finish_stripe_event', { p_id: event.id, p_token: claimToken, p_success: true })
     if (error) throw error
+    if (!completed) throw new Error('El bloqueo del evento venció antes de completarlo')
     return NextResponse.json({ received: true })
   } catch (error) {
+    if (claimToken) {
+      try {
+        const { error: releaseError } = await db.rpc('finish_stripe_event', { p_id: event.id, p_token: claimToken, p_success: false })
+        if (releaseError) throw releaseError
+      } catch {
+        console.error('[stripe/event] No se pudo liberar el evento')
+      }
+    }
     console.error('[POST /api/webhooks/stripe]', event.type, error instanceof Error ? error.message : error)
     reportError({ source: 'webhook', context: `webhook/stripe ${event.type}`, error })
     return NextResponse.json({ error: 'No se pudo procesar' }, { status: 500 })
@@ -106,8 +121,13 @@ async function handleEvent(event: Stripe.Event) {
 
 async function syncOrReport(subscriptionId: string, type: string) {
   const result = await syncSubscription(subscriptionId)
+  if (!result.ok && result.reason === NOT_A_STORE) {
+    // Otro producto de la misma cuenta de Stripe: se registra en el log y se da por atendido
+    console.warn('[webhook/stripe] suscripción que no es de ninguna tienda:', subscriptionId)
+    return result
+  }
   if (!result.ok && result.reason !== 'Suscripción anterior ignorada') {
-    reportError({ source: 'webhook', context: `webhook/stripe ${type}`, error: new Error(result.reason) })
+    throw new Error(`${type}: ${result.reason}`)
   }
   return result
 }
