@@ -1,5 +1,5 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- Leads → Sistema comercial (datos). Requiere 20261020120000_commercial_system.
+-- Leads → Sistema comercial (datos). Requiere 20261020211955_commercial_system.
 --
 -- Cada lead queda como historial de su contacto (por contact_id o, si no lo
 -- tiene, por teléfono en la misma tienda):
