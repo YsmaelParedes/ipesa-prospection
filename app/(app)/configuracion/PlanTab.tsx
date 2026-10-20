@@ -17,7 +17,7 @@ export const STATUS_BADGE: Record<string, string> = {
   pending: s.bWarn, trial: s.bTrial, active: s.bActive, suspended: s.bDanger, cancelled: s.bMuted,
 }
 
-type Usage = { contacts: number; leads: number; members: number }
+type Usage = { contacts: number; members: number }
 type Prices = { available: boolean; prices: Partial<Record<'galon' | 'cubeta', PlanPrice>> }
 
 const fmtCount = (n: number) => n.toLocaleString('es-MX')
@@ -74,7 +74,6 @@ export function PlanTab({ store, isOwner }: { store: ClientStore; isOwner: boole
 
   const meters = [
     { label: 'Contactos', used: usage?.contacts, max: store.limits.contacts },
-    { label: 'Cotizaciones (leads)', used: usage?.leads, max: store.limits.leads },
     { label: 'Usuarios', used: usage?.members, max: store.maxUsers },
   ]
 

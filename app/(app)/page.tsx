@@ -9,7 +9,8 @@ import { cachedQueryData, apiFetch } from '@/lib/apiClient'
 import { useCallback, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Avatar, CanalChip, EstadoChip, TrendIcon, Donut, canalColor, fmtDate, segColor } from '@/components/CrmUI'
+import { Avatar, TrendIcon, Donut, segColor } from '@/components/CrmUI'
+import { StatusChip, fmtDay, nextLabel } from '@/components/CommercialUI'
 import { useSession } from '@/lib/profile'
 import { reminderSubject, reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
@@ -27,13 +28,14 @@ function trendOf(t: Trend | undefined, unit: 'count' | 'pts' = 'count'): { up: b
   return { up: diff >= 0, delta: `${pct >= 0 ? '+' : '−'}${Math.abs(pct)}%`, note: 'vs mes anterior' }
 }
 
+const toIsoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const money = (n: number) => `$${Math.round(n).toLocaleString('es-MX')}`
 
 const FIRST_STEPS = [
   { id: 'wa',    href: '/configuracion?tab=whatsapp', title: 'Conecta tu WhatsApp',    text: 'Atiende a tus clientes desde el número de tu tienda.' },
   { id: 'cli',   href: '/contactos',                  title: 'Agrega tus clientes',     text: 'Uno por uno o importa tu lista de Excel.' },
   { id: 'team',  href: '/configuracion?tab=equipo',   title: 'Invita a tu equipo',      text: 'Cada vendedor entra con su propio acceso.' },
-  { id: 'lead',  href: '/leads',                      title: 'Registra tu primer lead', text: 'Da seguimiento a cada cotización hasta cerrarla.' },
+  { id: 'com',   href: '/comercial',                  title: 'Haz tu primera llamada', text: 'Anota el resultado y la próxima fecha de cada cliente.' },
 ]
 
 function FirstSteps({ whatsapp }: { whatsapp: boolean }) {
@@ -84,7 +86,7 @@ export default function DashboardPage() {
   }, [])
 
   useQueryEffect(() => { loadDashboard(); loadReminders() }, [loadDashboard, loadReminders])
-  useDataChanged(['reminder', 'lead', 'contact', 'activity'], () => { loadDashboard(); loadReminders() })
+  useDataChanged(['reminder', 'contact', 'commercial'], () => { loadDashboard(); loadReminders() })
 
   const completeReminder = async (id: string) => {
     const r = await apiFetch(`/api/data/reminders/${id}`, {
@@ -111,13 +113,14 @@ export default function DashboardPage() {
   const bySegment = segRest > 0 ? [...segTop, { name: `Otros (${segmentsAll.length - 6})`, count: segRest, color: '#B8B8B7' }] : segTop
   const segTotal = segmentsAll.reduce((s: number, d: any) => s + d.count, 0) || 1
 
-  const byChannel: any[] = data?.byChannel ?? []
-  const maxCh = Math.max(...byChannel.map((c: any) => c.count), 1)
+  const byResult: any[] = data?.byResult ?? []
+  const maxRes = Math.max(...byResult.map((c: any) => c.count), 1)
   const byOwner: any[] = data?.byOwner ?? []
   const maxOwner = Math.max(...byOwner.map((o: any) => o.count), 1)
-  const recentLeads: any[] = data?.recentLeads ?? []
+  const upcoming: any[] = data?.upcoming ?? []
   const activity: any[] = data?.activity ?? []
-  const followUp = data?.followUp ?? { count: 0, leads: [] }
+  const queue = data?.queue ?? { count: 0, contacts: [] }
+  const todayIso = toIsoDay(now)
 
   const due = (reminders ?? []).filter(r => isDueToday(r.fecha_recordatorio, now))
   const overdueCount = due.filter(r => isOverdue(r.fecha_recordatorio, now)).length
@@ -165,7 +168,7 @@ export default function DashboardPage() {
                       <strong>{reminderTitle(r)}</strong>
                       <small style={overdue ? { color: 'var(--brand)' } : undefined}>
                         {fmtDue(r.fecha_recordatorio, now)}
-                        {subject && <> · {r.lead_id ? <Link href={`/leads?id=${r.lead_id}`}>{subject}</Link> : subject}</>}
+                        {subject && <> · {subject}</>}
                       </small>
                     </span>
                     {!readonly && <button className="notif-done" onClick={() => completeReminder(r.id)}>✓ Listo</button>}
@@ -177,41 +180,34 @@ export default function DashboardPage() {
           )}
         </section>
 
-        <section className="today-card" style={{ order: followUp.count ? 2 : 4 }}>
+        <section className="today-card" style={{ order: queue.count ? 2 : 4 }}>
           <header className="today-head">
             <span className="today-icon tone-brand">🎯</span>
             <div>
-              <h3>Leads sin seguimiento</h3>
-              <p>{followUp.count ? `${followUp.count} abierto${followUp.count !== 1 ? 's' : ''} sin próxima llamada o visita` : 'Todos tus leads abiertos tienen seguimiento'}</p>
+              <h3>Llamadas para hoy</h3>
+              <p>{queue.count ? `${queue.count} por llamar${m.overdue ? ` · ${m.overdue} vencida${m.overdue !== 1 ? 's' : ''}` : ''}` : 'Sin llamadas pendientes'}</p>
             </div>
-            <Link href="/leads" className="today-link">Leads →</Link>
+            <Link href="/comercial" className="today-link">Sistema comercial →</Link>
           </header>
-          {followUp.leads.length === 0 ? (
+          {queue.contacts.length === 0 ? (
             <div className="today-empty">
-              {(m.leadsActivos ?? 0) === 0 ? 'No tienes leads abiertos.' : 'Bien hecho: cada lead abierto tiene su siguiente paso.'}
-              {!readonly && (m.leadsActivos ?? 0) === 0 && <button className="link-btn" onClick={() => openQuickCreate({ kind: 'lead' })}>Registrar un lead</button>}
+              {(m.totalContacts ?? 0) === 0 ? 'Agrega tus clientes para empezar a llamar.' : 'Todo al día: no hay llamadas pendientes para hoy.'}
             </div>
           ) : (
             <ul className="today-list">
-              {followUp.leads.map((l: any) => (
-                <li key={l.id} className="today-row">
-                  <Avatar name={l.name} size={28} />
+              {queue.contacts.map((c: any) => (
+                <li key={c.id} className="today-row">
+                  <Avatar name={c.name} size={28} />
                   <span className="today-main">
-                    <Link href={`/leads?id=${l.id}`}><strong>{l.name}</strong></Link>
-                    <small><EstadoChip value={l.estado} small />{l.monto ? ` ${money(Number(l.monto))}` : ''}</small>
+                    <Link href={`/comercial?id=${c.id}`}><strong>{c.name}</strong></Link>
+                    <small style={c.overdue ? { color: 'var(--brand)' } : undefined}>
+                      <StatusChip value={c.status} /> {c.fresh && !c.next_action_at ? 'Sin llamar' : `${c.next_action || 'Dar seguimiento'} · ${nextLabel(c.next_action_at, todayIso).label}`}
+                    </small>
                   </span>
-                  {!readonly && (
-                    <button className="today-action" onClick={() => openQuickCreate({
-                      kind: 'reminder',
-                      defaults: { lead_id: l.id, lead_name: l.name, type: 'call', nota: `Dar seguimiento a ${String(l.name).split(/\s+/)[0]}` },
-                    })}>
-                      Programar
-                    </button>
-                  )}
                 </li>
               ))}
-              {followUp.count > followUp.leads.length && (
-                <li className="today-more"><Link href="/leads">Ver los {followUp.count} en Leads →</Link></li>
+              {queue.count > queue.contacts.length && (
+                <li className="today-more"><Link href="/comercial">Ver las {queue.count} en el sistema comercial →</Link></li>
               )}
             </ul>
           )}
@@ -242,30 +238,31 @@ export default function DashboardPage() {
       <div className="kpi-grid">
         <KpiCard label="Contactos" value={(m.totalContacts ?? 0).toLocaleString('es-MX')} color="var(--c-cyan)"
           note={m.newContactsMonth ? `+${m.newContactsMonth} este mes` : 'Sin altas este mes'} />
-        <KpiCard label="Leads abiertos" value={m.leadsActivos ?? 0} color="var(--brand)"
-          note={m.openValue ? `${money(m.openValue)} en juego` : 'Sin valor estimado'} />
-        <KpiCard label="Cierres del mes" value={m.cierresMes ?? 0} color="var(--success-fill)" trend={trendOf(t.wins)} hint="ventas ganadas" />
-        <KpiCard label="Conversión" value={`${m.conversion ?? 0}%`} color="var(--c-magenta)" trend={trendOf(t.conversion, 'pts')} hint="leads ganados" />
+        <KpiCard label="Para llamar hoy" value={m.queueToday ?? 0} color="var(--brand)"
+          note={m.overdue ? `${m.overdue} vencida${m.overdue !== 1 ? 's' : ''}` : 'Ninguna vencida'} />
+        <KpiCard label="Cotizaciones del mes" value={m.quotesMonth ?? 0} color="var(--c-magenta)"
+          note={m.quotedMonth ? `${money(m.quotedMonth)} cotizado` : 'Sin montos cotizados'} />
+        <KpiCard label="Ventas del mes" value={m.salesMonth ?? 0} color="var(--success-fill)" trend={trendOf(t.sales)} hint="ventas registradas" />
       </div>
 
       <div className="dash-grid">
         <div className="panel">
           <div className="panel-head">
-            <div className="panel-title">Leads por canal</div>
+            <div className="panel-title">Resultados de llamadas</div>
             <span className="panel-sub">últimos 30 días</span>
-            <Link href="/leads" className="panel-action">Ver leads →</Link>
+            <Link href="/comercial" className="panel-action">Ver sistema →</Link>
           </div>
-          {byChannel.length === 0 ? (
-            <p className="panel-empty">Sin leads en los últimos 30 días</p>
+          {byResult.length === 0 ? (
+            <p className="panel-empty">Sin llamadas registradas en los últimos 30 días</p>
           ) : (
             <div className="barchart">
-              {byChannel.map((ch: any) => {
-                const color = canalColor(ch.name)
+              {byResult.map((r: any, i: number) => {
+                const color = segColor(i)
                 return (
-                  <div className="bar-row" key={ch.name}>
-                    <div className="bar-label"><span className="dot" style={{ background: color }}></span>{ch.name}</div>
-                    <div className="bar-track"><div className="bar-fill" style={{ width: `${(ch.count / maxCh) * 100}%`, background: color }}></div></div>
-                    <div className="bar-value">{ch.count}</div>
+                  <div className="bar-row" key={r.key}>
+                    <div className="bar-label"><span className="dot" style={{ background: color }}></span>{r.name}</div>
+                    <div className="bar-track"><div className="bar-fill" style={{ width: `${(r.count / maxRes) * 100}%`, background: color }}></div></div>
+                    <div className="bar-value">{r.count}</div>
                   </div>
                 )
               })}
@@ -302,8 +299,8 @@ export default function DashboardPage() {
       {data?.isAdmin && byOwner.length > 1 && (
         <div className="panel" style={{ marginBottom: 14 }}>
           <div className="panel-head">
-            <div className="panel-title">Leads por vendedor</div>
-            <span className="panel-sub">supervisión de equipo</span>
+            <div className="panel-title">Llamadas y visitas por persona</div>
+            <span className="panel-sub">últimos 30 días</span>
           </div>
           <div className="barchart">
             {byOwner.map((o: any) => (
@@ -320,35 +317,33 @@ export default function DashboardPage() {
       <div className="dash-grid">
         <div className="panel">
           <div className="panel-head">
-            <div className="panel-title">Leads recientes</div>
-            <Link href="/leads" className="panel-action">Ver todos →</Link>
+            <div className="panel-title">Próximos seguimientos</div>
+            <Link href="/comercial" className="panel-action">Ver todos →</Link>
           </div>
-          {recentLeads.length === 0 ? (
-            <p className="panel-empty">
-              Sin leads aún{!readonly && <> · <button className="link-btn" onClick={() => openQuickCreate({ kind: 'lead' })}>Registrar el primero</button></>}
-            </p>
+          {upcoming.length === 0 ? (
+            <p className="panel-empty">Sin seguimientos programados después de hoy</p>
           ) : (
             <table className="table" style={{ marginTop: -4 }}>
               <thead>
                 <tr>
-                  <th>Lead</th>
-                  <th>Canal</th>
+                  <th>Negocio</th>
                   <th>Estado</th>
+                  <th>Qué sigue</th>
                   <th style={{ textAlign: 'right' }}>Fecha</th>
                 </tr>
               </thead>
               <tbody>
-                {recentLeads.map((l: any) => (
-                  <tr key={l.id} onClick={() => router.push(`/leads?id=${l.id}`)}>
+                {upcoming.map((c: any) => (
+                  <tr key={c.id} onClick={() => router.push(`/comercial?id=${c.id}`)}>
                     <td>
                       <div className="cell-name">
-                        <Avatar name={l.name} size={28} />
-                        <span className="nm" style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.name}</span>
+                        <Avatar name={c.name} size={28} />
+                        <span className="nm" style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
                       </div>
                     </td>
-                    <td data-label="Canal"><CanalChip value={l.canal} small /></td>
-                    <td data-label="Estado"><EstadoChip value={l.estado} small /></td>
-                    <td data-label="Fecha" className="cell-muted" style={{ textAlign: 'right' }}>{fmtDate(l.fecha)}</td>
+                    <td data-label="Estado"><StatusChip value={c.status} /></td>
+                    <td data-label="Qué sigue" className="cell-muted">{c.next_action || 'Dar seguimiento'}</td>
+                    <td data-label="Fecha" className="cell-muted" style={{ textAlign: 'right' }}>{fmtDay(c.next_action_at)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -362,16 +357,16 @@ export default function DashboardPage() {
             <span className="panel-sub">últimas 2 semanas</span>
           </div>
           {activity.length === 0 ? (
-            <p className="panel-empty">Aquí verás las llamadas, cotizaciones y visitas que registres en cada lead.</p>
+            <p className="panel-empty">Aquí verás las llamadas, visitas y ventas que registre tu equipo.</p>
           ) : (
             <div>
               {activity.map((a: any) => (
-                <Link className="activity-row" key={a.id} href={a.leadId ? `/leads?id=${a.leadId}` : '/leads'}>
+                <Link className="activity-row" key={a.id} href={`/comercial?id=${a.contactId}`}>
                   <div className="activity-icon" style={ACTIVITY_TONE[a.type] ?? ACTIVITY_TONE.default}>
                     <ActivityIcon type={a.type} />
                   </div>
                   <div className="activity-text">
-                    <strong>{a.title}</strong> · {a.leadName}
+                    <strong>{a.title}</strong> · {a.contactName}
                     {a.amount ? <span className="activity-amount"> {money(Number(a.amount))}</span> : null}
                     {a.text && <div className="activity-desc">{a.text}</div>}
                     <div className="activity-time">{fmtAgo(a.at, now)}{a.who ? ` · ${a.who}` : ''}</div>
@@ -414,12 +409,10 @@ function KpiCard({ label, value, color, trend, hint, note }: {
 }
 
 const ACTIVITY_TONE: Record<string, React.CSSProperties> = {
-  call:     { background: 'var(--c-cyan-soft)',    color: 'var(--c-cyan-ink)' },
-  email:    { background: 'var(--c-magenta-soft)', color: 'var(--c-magenta-ink)' },
+  llamada:  { background: 'var(--c-cyan-soft)',    color: 'var(--c-cyan-ink)' },
   whatsapp: { background: '#E3F7EA',               color: '#128C4A' },
-  quote:    { background: 'var(--warning-soft)',   color: 'var(--warning)' },
-  meeting:  { background: 'var(--c-purple-soft)',  color: 'var(--c-purple-ink)' },
-  visit:    { background: 'var(--c-teal-soft)',    color: 'var(--c-teal-ink)' },
+  visita:   { background: 'var(--c-teal-soft)',    color: 'var(--c-teal-ink)' },
+  nota:     { background: 'var(--paper-2)',        color: 'var(--muted)' },
   close:    { background: 'var(--success-soft)',   color: 'var(--success)' },
   default:  { background: 'var(--brand-soft)',     color: 'var(--brand)' },
 }
@@ -428,14 +421,10 @@ function ActivityIcon({ type }: { type?: string }) {
   const s = { width: 15, height: 15 }
   const p = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, style: s }
   switch (type) {
-    case 'call':     return <svg {...p}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z" /></svg>
-    case 'email':    return <svg {...p}><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-10 6L2 7" /></svg>
+    case 'llamada':  return <svg {...p}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z" /></svg>
     case 'whatsapp': return <svg {...p}><path d="M21 11.5a8.38 8.38 0 0 1-9 8.4 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.2A8.38 8.38 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5Z" /></svg>
-    case 'quote':    return <svg {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M8 13h8M8 17h5" /></svg>
-    case 'meeting':  return <svg {...p}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /></svg>
-    case 'visit':    return <svg {...p}><path d="M3 9 4.5 4h15L21 9" /><path d="M3 9h18v1a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9Z" /><path d="M5 13v7h14v-7" /></svg>
+    case 'visita':   return <svg {...p}><path d="M3 9 4.5 4h15L21 9" /><path d="M3 9h18v1a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9Z" /><path d="M5 13v7h14v-7" /></svg>
     case 'close':    return <svg {...p} strokeWidth={2.4}><path d="m5 13 4 4L19 7" /></svg>
-    case 'lead':     return <svg {...p} strokeWidth={2.4}><path d="M12 5v14M5 12h14" /></svg>
     default:         return <svg {...p}><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
   }
 }

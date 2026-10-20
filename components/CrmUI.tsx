@@ -87,7 +87,7 @@ export function CanalChip({ value, small }: { value: string; small?: boolean }) 
   )
 }
 
-/* Chip de estado de lead */
+/* Chip de etapa (demo del sitio) */
 export function EstadoChip({ value, small }: { value: string; small?: boolean }) {
   const ESTADO_MAP: Array<[string[], string]> = [
     [['nuevo'], 'chip-nuevo'],
@@ -114,7 +114,7 @@ export function EstadoChip({ value, small }: { value: string; small?: boolean })
   )
 }
 
-/* Chip de segmento de lead */
+/* Chip de segmento */
 export function SegmentoChip({ value, small }: { value: string; small?: boolean }) {
   const SEG_MAP: Array<[string[], string]> = [
     [['residencial', 'hogar', 'casa', 'particular'], 'chip-residencial'],
@@ -140,7 +140,7 @@ export function SegmentoChip({ value, small }: { value: string; small?: boolean 
   )
 }
 
-/* Chip de vendedor/dueño del lead — visible solo en vista de administrador */
+/* Chip de vendedor responsable — visible solo en vista de administrador */
 export function OwnerChip({ value, small }: { value: string; small?: boolean }) {
   const smallStyle = small ? { fontSize: 11, padding: '3px 8px' } : undefined
   const { bg, color } = hashChip(value)

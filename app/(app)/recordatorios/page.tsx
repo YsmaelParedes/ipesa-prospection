@@ -8,13 +8,14 @@ import { cachedQueryData, apiFetch } from '@/lib/apiClient'
 
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import { normalizePhone } from '@/lib/phone'
 import { useSession } from '@/lib/profile'
 import { REMINDER_TYPES, REMINDER_TYPE_INFO, remTypeInfo, reminderSubject, reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
 import { MESES, QUICK_WHEN, fmtDue, isSameDay, quickDate, toDbLocal, type QuickWhen } from '@/lib/datetime'
+import { bucketOf, type CommercialContact } from '@/lib/commercial'
+import { StatusChip, nextLabel } from '@/components/CommercialUI'
 
-type LeadContact = { id: string; name: string; phone?: string; email?: string }
+type CommercialData = { today: string; uid: string; salesTeam: boolean; contacts: CommercialContact[] }
 
 /* ══════════════════════════════════════════════════════════
    ICONOS SVG
@@ -25,11 +26,7 @@ const Ico = {
   trash: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>,
   edit:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
   clock: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
-  lead:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12 }}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
   user:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12 }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-  phone: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.961.361 1.904.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.906.339 1.849.573 2.81.7a2 2 0 0 1 1.72 2.03Z"/></svg>,
-  whatsapp: () => <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 13, height: 13 }}><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.8.9-1 1.1c-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.4-.9-.8-1.5-1.8-1.7-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.3-.7.3-1.2.2-1.4 0-.1-.3-.2-.6-.4Zm-5.5 7.5c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.5 4.4-9.9 9.9-9.9s9.9 4.4 9.9 9.9-4.5 9.9-10 9.9Zm8.4-18.3C18.2 1.5 15.2.3 12 .3 5.4.3.1 5.6.1 12.2c0 2.1.6 4.2 1.6 6L0 24l5.9-1.5c1.7 1 3.7 1.5 5.7 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4Z"/></svg>,
-  mail:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>,
   snooze:() => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M5 3 2 6M22 6l-3-3"/></svg>,
 }
 
@@ -69,8 +66,8 @@ function SnoozeMenu({ onPick }: { onPick: (when: QuickWhen) => void }) {
 /* ══════════════════════════════════════════════════════════
    TARJETA DE RECORDATORIO
 ══════════════════════════════════════════════════════════ */
-function RemCard({ r, accent, contact, readonly, onComplete, onDelete, onSnooze }: {
-  r: Reminder; accent: string; contact?: LeadContact; readonly: boolean
+function RemCard({ r, accent, readonly, onComplete, onDelete, onSnooze }: {
+  r: Reminder; accent: string; readonly: boolean
   onComplete?: () => void
   onDelete:    () => void
   onSnooze?:   (when: QuickWhen) => void
@@ -79,7 +76,6 @@ function RemCard({ r, accent, contact, readonly, onComplete, onDelete, onSnooze 
   const typeInfo = remTypeInfo(r.type)
   const isHigh   = r.priority === 'high'
   const subject  = reminderSubject(r)
-  const phone    = normalizePhone(contact?.phone)
 
   return (
     <div className={`rem-card ${isHigh ? 'high' : ''} ${r.completado ? 'done' : ''}`}>
@@ -93,9 +89,7 @@ function RemCard({ r, accent, contact, readonly, onComplete, onDelete, onSnooze 
 
         <div className="rem-card-title">{reminderTitle(r)}</div>
 
-        {subject && (r.lead_id
-          ? <Link href={`/leads?id=${r.lead_id}`} className="rem-subject lead"><Ico.lead /> {subject}</Link>
-          : <span className="rem-subject"><Ico.user /> {subject}</span>)}
+        {subject && <span className="rem-subject"><Ico.user /> {subject}</span>}
 
         {!r.completado ? (
           <div className="rem-card-when" style={{ color: accent }}><Ico.clock /> {fmtDue(r.fecha_recordatorio)}</div>
@@ -113,9 +107,6 @@ function RemCard({ r, accent, contact, readonly, onComplete, onDelete, onSnooze 
         ) : (
           <>
             <div className="rem-card-icons">
-              {phone && <a href={`tel:${phone}`} title="Llamar" className="icon-btn icon-btn-call"><Ico.phone /></a>}
-              {phone.length === 10 && <Link href={`/whatsapp?phone=${phone}`} title="Abrir chat de WhatsApp" className="icon-btn icon-btn-whatsapp"><Ico.whatsapp /></Link>}
-              {contact?.email && <a href={`mailto:${contact.email}`} title="Correo" className="icon-btn icon-btn-mail"><Ico.mail /></a>}
               {!readonly && !r.completado && onSnooze && <SnoozeMenu onPick={onSnooze} />}
               {!readonly && !r.completado && (
                 <button onClick={() => openQuickCreate({ kind: 'reminder', reminder: r })} title="Editar" className="icon-btn icon-btn-edit"><Ico.edit /></button>
@@ -133,8 +124,8 @@ function RemCard({ r, accent, contact, readonly, onComplete, onDelete, onSnooze 
 }
 
 /* ── Grupo con encabezado ── */
-function RemGroup({ label, color, items, contactsById, readonly, onComplete, onDelete, onSnooze }: {
-  label: string; color: string; items: Reminder[]; contactsById: Map<string, LeadContact>; readonly: boolean
+function RemGroup({ label, color, items, readonly, onComplete, onDelete, onSnooze }: {
+  label: string; color: string; items: Reminder[]; readonly: boolean
   onComplete: (id: string) => void; onDelete: (id: string) => void; onSnooze: (r: Reminder, when: QuickWhen) => void
 }) {
   if (items.length === 0) return null
@@ -148,10 +139,37 @@ function RemGroup({ label, color, items, contactsById, readonly, onComplete, onD
       <div className="rem-group-list">
         {items.map(r => (
           <RemCard key={r.id} r={r} accent={color} readonly={readonly}
-            contact={r.lead_id ? contactsById.get(r.lead_id) : undefined}
             onComplete={() => onComplete(r.id)} onDelete={() => onDelete(r.id)} onSnooze={when => onSnooze(r, when)} />
         ))}
       </div>
+    </section>
+  )
+}
+
+/* ── Seguimientos del sistema comercial (se registran ahí, aquí solo se ven) ── */
+function CommercialFollowUps({ items, today }: { items: CommercialContact[]; today: string }) {
+  if (items.length === 0) return null
+  return (
+    <section className="rem-group">
+      <div className="rem-group-head">
+        <span className="rem-group-dot" style={{ background: 'var(--brand)' }} />
+        <span className="rem-group-label" style={{ color: 'var(--brand)' }}>Llamadas del sistema comercial</span>
+        <span className="rem-group-count">{items.length}</span>
+        <Link href="/comercial" className="link-btn" style={{ marginLeft: 'auto' }}>Ir a la cola →</Link>
+      </div>
+      {items.slice(0, 8).map(c => {
+        const next = nextLabel(c.next_action_at, today)
+        return (
+          <Link key={c.id} href={`/comercial?id=${c.id}`} className={`rem-row ${next.tone === 'overdue' ? 'overdue' : ''}`} style={{ textDecoration: 'none' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="rem-row-when">{next.label}</div>
+              <div className="rem-row-text">{c.next_action || 'Dar seguimiento'} · {c.company?.trim() || c.name}</div>
+            </div>
+            <StatusChip value={c.commercial_status} />
+          </Link>
+        )
+      })}
+      {items.length > 8 && <Link href="/comercial" className="link-btn">Ver las {items.length} en el sistema comercial →</Link>}
     </section>
   )
 }
@@ -163,8 +181,8 @@ export default function AgendaPage() {
   const session  = useSession()
   const readonly = session?.store?.access === 'readonly'
   const [reminders, setReminders] = useState<Reminder[]>(() => cachedQueryData('/api/data/reminders')?.reminders ?? [])
-  const [leads,     setLeads]     = useState<LeadContact[]>(() => cachedQueryData('/api/data/leads')?.leads ?? [])
-  const [loading,   setLoading]   = useState(() => !cachedQueryData('/api/data/reminders') || !cachedQueryData('/api/data/leads'))
+  const [commercial, setCommercial] = useState<CommercialData | null>(() => cachedQueryData('/api/data/commercial') ?? null)
+  const [loading,   setLoading]   = useState(() => !cachedQueryData('/api/data/reminders'))
   useDataReady(loading, 'recordatorios')
   const [tab,       setTab]       = useState<'pending' | 'done'>('pending')
   const [typeFilter,setTypeFilter]= useState<string>('all')
@@ -174,16 +192,15 @@ export default function AgendaPage() {
 
   const load = useCallback(async () => {
     try {
-      const [remRes, leadsRes] = await Promise.all([apiFetch('/api/data/reminders'), apiFetch('/api/data/leads')])
-      const remData   = await remRes.json()
-      const leadsData = await leadsRes.json()
+      const [remRes, comRes] = await Promise.all([apiFetch('/api/data/reminders'), apiFetch('/api/data/commercial')])
+      const remData = await remRes.json()
       setReminders(remData.reminders || [])
-      setLeads((leadsData.leads || []).map((l: any) => ({ id: l.id, name: l.name, phone: l.phone, email: l.email })))
+      if (comRes.ok) setCommercial(await comRes.json())
     } catch {} finally { setLoading(false) }
   }, [])
 
   useQueryEffect(() => { load() }, [load])
-  useDataChanged(['reminder', 'lead'], load)
+  useDataChanged(['reminder', 'commercial'], load)
 
   const mutate = async (url: string, init: RequestInit, okMsg: string) => {
     const r = await apiFetch(url, { headers: { 'Content-Type': 'application/json' }, ...init }).catch(() => null)
@@ -210,7 +227,15 @@ export default function AgendaPage() {
   const pending = reminders.filter(r => !r.completado).sort((a, b) => a.fecha_recordatorio.localeCompare(b.fecha_recordatorio))
   const done    = reminders.filter(r =>  r.completado).sort((a, b) => String(b.completado_at || b.created_at).localeCompare(String(a.completado_at || a.created_at)))
   const applyTypeFilter = (list: Reminder[]) => typeFilter === 'all' ? list : list.filter(r => (r.type || 'task') === typeFilter)
-  const contactsById = useMemo(() => new Map(leads.map(l => [l.id, l])), [leads])
+  // Seguimientos del sistema comercial con fecha de hoy o vencida (los míos; sin reparto, también los sin asignar)
+  const followUps = useMemo(() => {
+    if (!commercial) return []
+    const isAdmin = !!session?.isAdmin
+    return commercial.contacts
+      .filter(c => !isAdmin || c.owner_id === commercial.uid || (!commercial.salesTeam && c.owner_id === null))
+      .filter(c => c.next_action_at && ['vencido', 'hoy'].includes(bucketOf(c, commercial.today)))
+      .sort((a, b) => String(a.next_action_at).localeCompare(String(b.next_action_at)))
+  }, [commercial, session?.isAdmin])
 
   const pendingF = applyTypeFilter(pending)
   const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1)
@@ -225,7 +250,7 @@ export default function AgendaPage() {
     return m
   }, [tab, pending, done])
 
-  const groupProps = { contactsById, readonly, onComplete: handleComplete, onDelete: handleDelete, onSnooze: handleSnooze }
+  const groupProps = { readonly, onComplete: handleComplete, onDelete: handleDelete, onSnooze: handleSnooze }
 
   return (
     <>
@@ -266,7 +291,7 @@ export default function AgendaPage() {
           <div style={{ width: 28, height: 28, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         </div>
       ) : tab === 'pending' ? (
-        pendingF.length === 0 ? (
+        pendingF.length === 0 && followUps.length === 0 ? (
           <div className="empty-state">
             <div style={{ fontSize: 34, marginBottom: 10, opacity: 0.5 }}>✅</div>
             <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, color: 'var(--ink)' }}>
@@ -276,6 +301,7 @@ export default function AgendaPage() {
           </div>
         ) : (
           <>
+            <CommercialFollowUps items={followUps} today={commercial?.today ?? ''} />
             <RemGroup label="Vencidos" color="var(--danger)" items={overdue} {...groupProps} />
             <RemGroup label="Hoy" color="var(--brand)" items={todayRem} {...groupProps} />
             <RemGroup label="Mañana" color="var(--warning)" items={tomorrowRem} {...groupProps} />
@@ -288,8 +314,7 @@ export default function AgendaPage() {
         ) : (
           <div className="rem-group-list">
             {doneF.map(r => (
-              <RemCard key={r.id} r={r} accent="var(--muted-2)" readonly={readonly}
-                contact={r.lead_id ? contactsById.get(r.lead_id) : undefined} onDelete={() => handleDelete(r.id)} />
+              <RemCard key={r.id} r={r} accent="var(--muted-2)" readonly={readonly} onDelete={() => handleDelete(r.id)} />
             ))}
           </div>
         )

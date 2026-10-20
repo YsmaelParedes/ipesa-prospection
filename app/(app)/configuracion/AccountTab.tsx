@@ -61,7 +61,7 @@ export function AccountTab({ session }: { session: Session }) {
 
   return (
     <>
-      <Panel icon={Ico.user} title="Tu perfil" subtitle="Así te ve tu equipo en leads, actividades y conversaciones.">
+      <Panel icon={Ico.user} title="Tu perfil" subtitle="Así te ve tu equipo en el sistema comercial, la agenda y las conversaciones.">
         <form onSubmit={saveName} className={s.formGrid}>
           <div className="field">
             <label htmlFor="me-name">Nombre</label>

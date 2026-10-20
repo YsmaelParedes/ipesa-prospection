@@ -66,7 +66,7 @@ export default function RegisterPage() {
   return (
     <>
       <AuthHeader title="Crea la cuenta de tu tienda"
-        subtitle={<>Empieza gratis con el plan Litro: {LITRO.maxContacts} contactos y {LITRO.maxLeads} cotizaciones, sin tarjeta. Cambia de plan cuando quieras.</>} />
+        subtitle={<>Empieza gratis con el plan Litro: {LITRO.maxContacts} contactos y tu cola de llamadas, sin tarjeta. Cambia de plan cuando quieras.</>} />
       {error && <AuthAlert>{error}</AuthAlert>}
       <form onSubmit={submit} className="auth-form">
         <AuthField label="Tu nombre" icon={AuthIcon.user} value={name} onChange={e => setName(e.target.value)}

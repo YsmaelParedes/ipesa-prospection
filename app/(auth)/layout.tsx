@@ -23,7 +23,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <p>Contactos, cotizaciones, agenda y avisos en un solo lugar. La información de cada tienda, separada y protegida.</p>
             <ul className="auth-art-list">
               <li><span className="dot d1" />Lo que toca hoy: seguimientos y recordatorios</li>
-              <li><span className="dot d2" />Pipeline de ventas, cotizaciones y recordatorios</li>
+              <li><span className="dot d2" />Sistema comercial: llamadas, seguimientos y metas del día</li>
               <li><span className="dot d3" />Tu equipo con permisos que cuidan tu base</li>
             </ul>
           </div>

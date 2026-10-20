@@ -136,7 +136,7 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
         </form>
         <p className={s.hint}>
           {role === 'employee'
-            ? <><strong>Vendedor:</strong> entra con su propio usuario y ve solo sus leads y su agenda; los contactos son de toda la tienda{store.modules.whatsapp ? ', y atiende WhatsApp' : ''}.</>
+            ? <><strong>Vendedor:</strong> entra con su propio usuario y en el sistema comercial trabaja solo los contactos que le asignes; los contactos son de toda la tienda{store.modules.whatsapp ? ', y atiende WhatsApp' : ''}.</>
             : <><strong>Administrador:</strong> además ve el trabajo de todo el equipo y configura la tienda.</>}
         </p>
         {error && <div className={s.error}>{error}</div>}
@@ -179,7 +179,7 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
                         className={s.select} value={m.role} disabled={busyId === m.user_id} aria-label={`Rol de ${name}`}
                         onChange={role => act(m.user_id, () => api('/api/store/members', send('PATCH', { userId: m.user_id, role })), 'Rol actualizado')}
                         options={[
-                          { value: 'employee', label: 'Vendedor', hint: 'Ve sus leads y su agenda' },
+                          { value: 'employee', label: 'Vendedor', hint: 'Trabaja los contactos que le asignes' },
                           ...(((isOwner && store.allowAdmins) || m.role === 'admin')
                             ? [{ value: 'admin', label: 'Administrador', hint: 'Configura la tienda y ve todo', disabled: !isOwner || !store.allowAdmins }]
                             : []),

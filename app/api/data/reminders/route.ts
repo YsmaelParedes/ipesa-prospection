@@ -1,7 +1,7 @@
 import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
-import { isUUID, jsonError, parseFields, readJson, serverError } from '@/lib/validation'
+import { getServerSupabase, requireStore } from '@/lib/supabase-server'
+import { jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 import { REMINDER_SCHEMA, reminderToApp, reminderToDB } from '@/lib/reminders'
 import { getAccessibleLead } from '@/lib/leads'
 import { naiveIso, zonedIso } from '@/lib/datetime'
@@ -9,35 +9,10 @@ import { fetchPaged } from '@/lib/paged'
 
 const COLUMNS = 'id, user_id, lead_id, lead_name, nota, reminder_date, completado, completado_at, created_at, type, priority'
 
-/**
- * GET /api/data/reminders — la agenda personal del usuario en la tienda activa.
- * GET /api/data/reminders?lead_id=uuid — todos los recordatorios de ese lead
- *   (de cualquier persona del equipo), si el usuario puede ver el lead: así la
- *   ficha muestra el mismo seguimiento que la lista. Solo su autor los edita.
- */
-async function GETImpl(req: NextRequest) {
+/** GET /api/data/reminders — la agenda personal del usuario en la tienda activa. */
+async function GETImpl() {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
-
-  const leadId = req.nextUrl.searchParams.get('lead_id')
-  if (leadId && !isUUID(leadId)) return jsonError('lead_id inválido')
-
-  if (leadId) {
-    if (!(await getAccessibleLead(ctx, leadId))) return jsonError('Lead no encontrado', 404)
-    const [{ data, error }, names] = await Promise.all([
-      getServerSupabase().from('reminders').select(COLUMNS)
-        .eq('store_id', ctx.storeId).eq('lead_id', leadId).order('reminder_date', { ascending: true }),
-      getUserNameMap(ctx.storeId).catch(() => new Map<string, string>()),
-    ])
-    if (error) return serverError('GET /api/data/reminders?lead_id', error, 'Error al obtener recordatorios')
-    return NextResponse.json({
-      reminders: (data ?? []).map(({ user_id, ...r }) => ({
-        ...reminderToApp(r),
-        mine: user_id === ctx.uid,
-        owner_name: user_id === ctx.uid ? null : (user_id ? names.get(user_id) ?? 'Otro usuario' : 'Sin asignar'),
-      })),
-    })
-  }
 
   try {
     const data = await fetchPaged<any>((from, to) => getServerSupabase()

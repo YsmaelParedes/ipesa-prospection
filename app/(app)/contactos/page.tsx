@@ -10,12 +10,13 @@ import { cachedQueryData, apiFetch, batchQueryChanges } from '@/lib/apiClient'
 import { Suspense, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Avatar, TipoChip, CanalChip, FilterDropdown, EstadoChip, fmtDateLong, fmtPhone, normalizePhone, segmentColor } from '@/components/CrmUI'
+import { Avatar, TipoChip, CanalChip, FilterDropdown, fmtDateLong, fmtPhone, normalizePhone, segmentColor } from '@/components/CrmUI'
+import { StatusChip, fmtDay } from '@/components/CommercialUI'
 import { Select, toOptions } from '@/components/Select'
 import { phoneDigits } from '@/components/ContactFormModal'
 import { useSession } from '@/lib/profile'
 import { useCatalogs } from '@/lib/catalogs'
-import { isOpenLead, reminderTitle, type Reminder } from '@/lib/crm'
+import { reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
 import { fmtDue, isOverdue } from '@/lib/datetime'
 import { normText } from '@/lib/searchIndex'
@@ -420,7 +421,6 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
   onUpdated: (c: any) => void; onDeleted: (id: string) => void
 }) {
   const { segments, canales } = useCatalogs()
-  const [leads, setLeads]         = useState<any[] | null>(null)
   const [reminders, setReminders] = useState<Reminder[]>([])
   const [editing, setEditing]     = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
@@ -430,7 +430,7 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
     name: c.name || '', phone: normalizePhone(c.phone), email: c.email || '',
     company: c.company || '', segment: c.segment || '',
     acquisition_channel: c.acquisition_channel || '',
-    address: c.address || '', postal_code: c.postal_code || '',
+    address: c.address || '', postal_code: c.postal_code || '', colonia: c.colonia || '',
   })
   const [saveError, setSaveError] = useState('')
   const phone = normalizePhone(c.phone)
@@ -441,31 +441,18 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
     return () => window.removeEventListener('keydown', h)
   }, [onClose])
 
-  // Leads de este contacto + recordatorios pendientes: los de sus leads (de
-  // cualquier persona del equipo) y los tuyos sin lead que llevan su nombre
+  // Recordatorios pendientes que llevan el nombre de este cliente
   const loadFollowUp = useCallback(async () => {
-    const params = new URLSearchParams({ contact_id: c.id })
-    if (phone.length === 10) params.set('phone', phone)
-    const [l, own] = await Promise.all([
-      apiFetch(`/api/data/leads?${params}`).then(res => res.json()).catch(() => ({ leads: [] })),
-      apiFetch('/api/data/reminders').then(res => res.json()).catch(() => ({ reminders: [] })),
-    ])
-    const list: any[] = l.leads || []
-    const perLead = await Promise.all(list.slice(0, 10).map(x =>
-      apiFetch(`/api/data/reminders?lead_id=${x.id}`).then(res => res.json()).then(d => d.reminders ?? []).catch(() => []),
-    ))
+    const own = await apiFetch('/api/data/reminders').then(res => res.json()).catch(() => ({ reminders: [] }))
     const name = normText(c.name)
-    const general = (own.reminders || []).filter((x: Reminder) => !x.lead_id && normText(x.lead_name) === name)
-    setLeads(list)
-    setReminders([...perLead.flat(), ...general]
-      .filter((x: Reminder) => !x.completado)
+    setReminders((own.reminders || [])
+      .filter((x: Reminder) => !x.completado && normText(x.lead_name) === name)
       .sort((a: Reminder, b: Reminder) => a.fecha_recordatorio.localeCompare(b.fecha_recordatorio)))
-  }, [c.id, c.name, phone])
+  }, [c.name])
 
   useQueryEffect(() => { loadFollowUp() }, [loadFollowUp])
-  useDataChanged(['lead', 'reminder'], loadFollowUp)
+  useDataChanged(['reminder'], loadFollowUp)
 
-  const openLead = (leads ?? []).find(l => isOpenLead(l.estado))
   const upd = (k: keyof typeof editForm, v: string) => setEditForm(f => ({ ...f, [k]: v }))
   const phoneErr = editForm.phone.length > 0 && editForm.phone.length < 10
   const canSaveEdit = editForm.name.trim() && editForm.phone.length === 10
@@ -503,11 +490,8 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
 
   const scheduleFollowUp = () => openQuickCreate({
     kind: 'reminder',
-    defaults: openLead
-      ? { lead_id: openLead.id, lead_name: openLead.name, type: 'call', nota: `Dar seguimiento a ${firstName(c.name)}` }
-      : { lead_id: null, lead_name: c.name, type: 'call', nota: `Llamar a ${firstName(c.name)}` },
+    defaults: { lead_id: null, lead_name: c.name, type: 'call', nota: `Llamar a ${firstName(c.name)}` },
   })
-  const contactLite = { id: c.id, name: c.name, phone: c.phone, email: c.email, company: c.company, segment: c.segment, acquisition_channel: c.acquisition_channel }
   const now = new Date()
 
   return (
@@ -571,6 +555,10 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
                   <input value={editForm.postal_code} onChange={e => upd('postal_code', e.target.value.replace(/\D/g, '').slice(0, 5))} inputMode="numeric" maxLength={5} />
                 </div>
               </div>
+              <div className="field">
+                <label>Colonia</label>
+                <input value={editForm.colonia} onChange={e => upd('colonia', e.target.value)} maxLength={120} placeholder="Si la dejas vacía, se toma de la dirección" />
+              </div>
               {saveError && <div className="field-error" style={{ marginBottom: 8 }}>{saveError}</div>}
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="btn btn-ghost" onClick={() => setEditing(false)} style={{ flex: 1 }}>Cancelar</button>
@@ -581,36 +569,17 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
             </div>
           ) : (
             <>
-              {/* ── Seguimiento: leads + recordatorios ── */}
+              {/* ── Sistema comercial ── */}
               <div className="detail-section">
                 <div className="detail-section-head">
-                  <h4>Leads {leads ? `(${leads.length})` : ''}</h4>
-                  {!readonly && <button className="link-btn" onClick={() => openQuickCreate({ kind: 'lead', contact: contactLite })}><Ico.plus /> Nuevo lead</button>}
+                  <h4>Sistema comercial</h4>
+                  <Link href={`/comercial?id=${c.id}`} className="link-btn">Abrir →</Link>
                 </div>
-                {leads === null ? null : leads.length === 0 ? (
-                  <div className="empty-state small" style={{ textAlign: 'left', padding: '4px 0' }}>
-                    Sin leads. Registra uno cuando pida una cotización.
-                  </div>
-                ) : (
-                  <div className="mini-cards">
-                    {leads.map((l: any) => (
-                      <Link key={l.id} href={`/leads?id=${l.id}`} className="mini-card">
-                        <span className="mini-card-top">
-                          <EstadoChip value={l.estado || 'Nuevo'} small />
-                          {l.monto ? <strong>${Number(l.monto).toLocaleString('es-MX')}</strong> : null}
-                        </span>
-                        <span className="mini-card-sub">
-                          {l.canal || 'Sin canal'} · {fmtDateLong(String(l.fecha || l.created_at).slice(0, 10))}
-                          {isOpenLead(l.estado) && (!l.next_reminder_at
-                            ? <> · <span style={{ color: 'var(--warning)' }}>sin seguimiento</span></>
-                            : isOverdue(l.next_reminder_at, now)
-                              ? <> · <span style={{ color: 'var(--danger)' }}>seguimiento vencido</span></>
-                              : <> · Seguimiento {fmtDue(l.next_reminder_at, now).toLowerCase()}</>)}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
+                <div className="kv-grid">
+                  <div className="kv"><div className="k">Estado</div><div className="v"><StatusChip value={c.commercial_status || 'nuevo'} /></div></div>
+                  <div className="kv"><div className="k">Próxima acción</div><div className="v" style={{ fontSize: 13 }}>{c.next_action_at ? `${c.next_action || 'Dar seguimiento'} · ${fmtDay(c.next_action_at)}` : '—'}</div></div>
+                  {c.last_note && <div className="kv" style={{ gridColumn: '1 / -1' }}><div className="k">Última nota</div><div className="v" style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{c.last_note}</div></div>}
+                </div>
               </div>
 
               <div className="detail-section">

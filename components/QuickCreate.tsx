@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import ContactFormModal from '@/components/ContactFormModal'
-import LeadCreateModal from '@/components/LeadCreateModal'
 import ReminderModal from '@/components/ReminderModal'
 import {
   notifyDataChanged, openQuickCreate, useQuickCreateRequests,
@@ -17,14 +16,12 @@ const Ico = {
   plus:     svg(<path d="M12 5v14M5 12h14" />),
   chevron:  svg(<path d="m6 9 6 6 6-6" />),
   contact:  svg(<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" /></>),
-  lead:     svg(<path d="M22 12h-4l-3 9L9 3l-3 9H2" />),
   reminder: svg(<><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></>),
   check:    svg(<path d="m5 13 4 4L19 7" />),
 }
 
 const ITEMS: { kind: QuickCreateRequest['kind']; label: string; hint: string; icon: () => React.ReactElement; tone: string }[] = [
   { kind: 'contact',  label: 'Contacto',     hint: 'Un cliente nuevo en tu base',  icon: Ico.contact,  tone: 'cyan' },
-  { kind: 'lead',     label: 'Lead',         hint: 'Una oportunidad de venta',     icon: Ico.lead,     tone: 'brand' },
   { kind: 'reminder', label: 'Recordatorio', hint: 'Una llamada, visita o tarea',  icon: Ico.reminder, tone: 'amber' },
 ]
 
@@ -66,9 +63,9 @@ export function QuickCreateMenu() {
 
 /**
  * Botón flotante (celular). En una lista crea directo lo de esa pantalla
- * (contacto, lead o recordatorio); en Inicio ofrece las opciones en una hoja.
+ * (contacto o recordatorio); en Inicio ofrece las opciones en una hoja.
  */
-export function QuickCreateFab({ kind }: { kind?: 'contact' | 'lead' | 'reminder' }) {
+export function QuickCreateFab({ kind }: { kind?: 'contact' | 'reminder' }) {
   const [open, setOpen] = useState(false)
   const item = kind ? ITEMS.find(it => it.kind === kind) : null
   return (
@@ -117,10 +114,6 @@ export function QuickCreateHost() {
       {req?.kind === 'contact' && (
         <ContactFormModal initialName={req.name} initialPhone={req.phone} onClose={close}
           onSaved={c => done('contact', 'Contacto guardado', `/contactos?id=${c.id}`, 'Ver ficha')} />
-      )}
-      {req?.kind === 'lead' && (
-        <LeadCreateModal contact={req.contact} onClose={close}
-          onSaved={l => done('lead', 'Lead creado', `/leads?id=${l.id}`, 'Ver lead')} />
       )}
       {req?.kind === 'reminder' && (
         <ReminderModal reminder={req.reminder} defaults={req.defaults} onClose={close}

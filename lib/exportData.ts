@@ -1,17 +1,15 @@
 /**
  * Exportar la información de la tienda a Excel (solo navegador).
- *  · leadRows: renglones de leads (botón Exportar de Leads y descarga completa).
- *  · downloadStoreWorkbook: un solo archivo con Contactos, Leads, Historial,
+ *  · contactRows: renglones de contactos con su estado comercial.
+ *  · downloadStoreWorkbook: un solo archivo con Contactos, Historial comercial,
  *    Agenda y Catálogos, pedido por partes a /api/data/export.
  */
 import { normalizePhone } from './phone'
+import { KIND_LABELS, resultLabel, statusInfo, type ActivityKind } from './commercial'
 
 type Row = Record<string, any>
 type Sheet = { name: string; rows: Row[] }
 
-const ACTIVITY_LABELS: Record<string, string> = {
-  call: 'Llamada', email: 'Correo', whatsapp: 'WhatsApp', quote: 'Cotización', meeting: 'Reunión', visit: 'Visita', note: 'Nota',
-}
 const REMINDER_LABELS: Record<string, string> = {
   task: 'Tarea', call: 'Llamada', email: 'Correo', whatsapp: 'WhatsApp', meeting: 'Reunión',
 }
@@ -28,30 +26,21 @@ function dateTime(iso: unknown, local = true) {
 const amount = (v: unknown) => (v === null || v === undefined || v === '' ? '' : Number(v))
 
 export const contactRows = (list: Row[]) => list.map(c => ({
-  'Nombre':         c.name || '',
-  'Teléfono':       normalizePhone(c.phone),
-  'Correo':         c.email || '',
-  'Empresa':        c.company || '',
-  'Segmento':       c.segment || '',
-  'Canal':          c.acquisition_channel || '',
-  'Dirección':      c.address || '',
-  'C.P.':           c.postal_code || '',
-  'Fecha registro': day(c.created_at),
-}))
-
-/** `owner` = nombre del vendedor (owner_name en la app, user_name en la exportación completa). */
-export const leadRows = (list: Row[]) => list.map(l => ({
-  'Nombre':    l.name || '',
-  'Teléfono':  normalizePhone(l.phone),
-  'Correo':    l.email || '',
-  'Segmento':  l.segmento || '',
-  'Canal':     l.canal || '',
-  'Estado':    l.estado || '',
-  'Monto':     amount(l.monto),
-  'Fecha':     day(l.fecha),
-  'Vendedor':  l.owner_name ?? l.user_name ?? '',
-  'Notas':     l.notas || '',
-  'Creado':    day(l.created_at),
+  'Nombre':           c.name || '',
+  'Teléfono':         normalizePhone(c.phone),
+  'Correo':           c.email || '',
+  'Empresa':          c.company || '',
+  'Segmento':         c.segment || '',
+  'Canal':            c.acquisition_channel || '',
+  'Dirección':        c.address || '',
+  'Colonia':          c.colonia || '',
+  'C.P.':             c.postal_code || '',
+  'Estado comercial': c.commercial_status ? statusInfo(c.commercial_status).label : '',
+  'Responsable':      c.owner_name ?? '',
+  'Próxima acción':   c.next_action_at ? c.next_action || '' : '',
+  'Fecha próxima':    c.next_action_at || '',
+  'Última nota':      c.last_note || '',
+  'Fecha registro':   day(c.created_at),
 }))
 
 async function writeWorkbook(filename: string, sheets: Sheet[]) {
@@ -63,10 +52,6 @@ async function writeWorkbook(filename: string, sheets: Sheet[]) {
     XLSX.utils.book_append_sheet(wb, ws, sh.name)
   }
   XLSX.writeFile(wb, filename)
-}
-
-export async function downloadLeads(list: Row[], filtered: boolean) {
-  await writeWorkbook(`leads${filtered ? '-filtrados' : ''}-${new Date().toLocaleDateString('en-CA')}.xlsx`, [{ name: 'Leads', rows: leadRows(list) }])
 }
 
 async function fetchPart(part: string): Promise<Row[]> {
@@ -85,26 +70,28 @@ async function fetchPart(part: string): Promise<Row[]> {
 /** Todo lo de la tienda en un archivo. `onStep` avisa qué parte se está descargando. */
 export async function downloadStoreWorkbook(slug: string, onStep?: (label: string) => void) {
   onStep?.('Contactos'); const contacts = await fetchPart('contacts')
-  onStep?.('Leads'); const leads = await fetchPart('leads')
-  onStep?.('Historial'); const activities = await fetchPart('activities')
+  onStep?.('Historial comercial'); const activities = await fetchPart('activities')
   onStep?.('Agenda'); const reminders = await fetchPart('reminders')
   onStep?.('Catálogos'); const catalogs = await fetchPart('catalogs')
 
-  const leadName = new Map(leads.map(l => [l.id, l.name]))
+  const contactName = new Map(contacts.map(c => [c.id, c.company?.trim() || c.name]))
   await writeWorkbook(`${slug}-informacion-${new Date().toLocaleDateString('en-CA')}.xlsx`, [
     { name: 'Contactos', rows: contactRows(contacts) },
-    { name: 'Leads', rows: leadRows(leads) },
-    { name: 'Historial de leads', rows: activities.map(a => ({
-      'Lead':        leadName.get(a.lead_id) ?? '',
-      'Tipo':        ACTIVITY_LABELS[a.type] ?? a.type ?? '',
-      'Descripción': a.description || '',
-      'Monto':       amount(a.amount),
-      'Fecha':       dateTime(a.activity_date),
-      'Registró':    a.user_name || '',
+    { name: 'Historial comercial', rows: activities.map(a => ({
+      'Fecha':          dateTime(a.created_at),
+      'Cliente':        contactName.get(a.contact_id) ?? '',
+      'Tipo':           KIND_LABELS[a.kind as ActivityKind] ?? a.kind ?? '',
+      'Resultado':      resultLabel(a.result),
+      'Nota':           a.note || '',
+      'Monto cotizado': amount(a.quote_amount),
+      'Monto vendido':  amount(a.sale_amount),
+      'Próxima acción': a.next_action || '',
+      'Fecha próxima':  a.next_action_at || '',
+      'Registró':       a.user_name || '',
     })) },
     { name: 'Agenda', rows: reminders.map(r => ({
       'Fecha y hora':  dateTime(r.reminder_date, false),   // hora de la tienda, sin zona
-      'Lead':          r.lead_name || leadName.get(r.lead_id) || '',
+      'Cliente':       r.lead_name || '',
       'Nota':          r.nota || '',
       'Tipo':          REMINDER_LABELS[r.type] ?? r.type ?? '',
       'Hecho':         r.completado ? 'Sí' : 'No',
@@ -113,5 +100,5 @@ export async function downloadStoreWorkbook(slug: string, onStep?: (label: strin
     })) },
     { name: 'Catálogos', rows: catalogs.map(c => ({ 'Tipo': c.type === 'segment' ? 'Segmento' : 'Canal', 'Valor': c.label })) },
   ])
-  return { contacts: contacts.length, leads: leads.length, activities: activities.length, reminders: reminders.length }
+  return { contacts: contacts.length, activities: activities.length, reminders: reminders.length }
 }

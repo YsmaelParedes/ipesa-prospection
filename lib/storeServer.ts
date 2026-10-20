@@ -47,7 +47,8 @@ export function publicStore(store: StoreRow) {
     planLabel: def.label,
     maxUsers: def.maxUsers,
     allowAdmins: def.allowAdmins,
-    limits: { contacts: def.maxContacts, leads: def.maxLeads },
+    limits: { contacts: def.maxContacts },
+    salesTeam: def.salesTeam,
     planIncludesWhatsApp: def.whatsapp,
     /** Suscripción de Stripe: estado, próximo cobro y si se cancela al final del periodo */
     subscription: store.stripe_subscription_id ? {

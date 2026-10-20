@@ -23,7 +23,7 @@ async function phoneParam(params: Ctx['params']): Promise<string | null> {
 
 /**
  * GET /api/whatsapp/conversations/[phone][?preview=1&limit=n]
- * Hilo completo + ficha del CRM (contacto, leads visibles para el usuario)
+ * Hilo completo + ficha del CRM (contacto y su estado en el sistema comercial)
  * + estado de la ventana de 24 h + si Meta reportó que el número no tiene
  * WhatsApp (`noWhatsApp`). Sin `preview` y con el encabezado
  * `x-crm-read: 1`, marca los entrantes como leídos (también en el WhatsApp
@@ -53,15 +53,22 @@ async function GETImpl(req: NextRequest, { params }: Ctx) {
     const linkedId = lastInbound?.contact_id ?? messages.find(m => m.contact_id)?.contact_id ?? null
     const contact = await contactForPhone(ctx.storeId, phone, linkedId)
 
-    // Leads del contacto que el usuario puede ver (empleado: suyos + heredados)
-    let leads: { id: string; name: string; estado: string; monto: number | null; canal: string; created_at: string; user_id: string | null }[] = []
+    // Sistema comercial: el detalle (próxima acción y nota) solo para su responsable o el dueño/admin
+    let commercial: { status: string; next_action: string | null; next_action_at: string | null; last_note: string | null; mine: boolean } | null = null
     if (contact) {
-      const { data } = await supabase.from('leads')
-        .select('id, name, estado, monto, canal, created_at, user_id')
-        .eq('store_id', ctx.storeId)
-        .or(`contact_id.eq.${contact.id},phone.eq.${phone}`)
-        .order('created_at', { ascending: false }).limit(20)
-      leads = (data ?? []).filter(l => ctx.isAdmin || !l.user_id || l.user_id === ctx.uid)
+      const { data } = await supabase.from('contacts')
+        .select('commercial_status, owner_id, next_action, next_action_at, last_note')
+        .eq('store_id', ctx.storeId).eq('id', contact.id).maybeSingle()
+      if (data) {
+        const visible = ctx.isAdmin || data.owner_id === ctx.uid
+        commercial = {
+          status: data.commercial_status,
+          next_action: visible ? data.next_action : null,
+          next_action_at: visible ? data.next_action_at : null,
+          last_note: visible ? data.last_note : null,
+          mine: data.owner_id === ctx.uid,
+        }
+      }
     }
 
     // Marcar como leído es un efecto secundario: solo si lo pide la bandeja con su
@@ -87,7 +94,7 @@ async function GETImpl(req: NextRequest, { params }: Ctx) {
       phone,
       messages,
       contact,
-      leads,
+      commercial,
       profileName: lastInbound?.profile_name ?? null,
       lastInboundAt: lastInbound?.created_at ?? null,
       windowOpen: isWindowOpen(lastInbound?.created_at),

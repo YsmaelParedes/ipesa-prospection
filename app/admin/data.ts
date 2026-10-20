@@ -15,7 +15,7 @@ export type PlatformStore = {
   status: StoreStatus; plan: string; trial_ends_at: string | null; paid_until: string | null; created_at: string
   onboarding_completed_at: string | null; platform_notes: string | null
   owner_email: string | null; owner_name: string | null
-  members: number; contacts: number; leads: number; whatsapp_connected: boolean; last_activity_at: string | null
+  members: number; contacts: number; activities: number; whatsapp_connected: boolean; last_activity_at: string | null
   /** Precio mensual acordado con la tienda (null = sin acordar) */
   monthly_price: number | null
   /** Módulos activos (WhatsApp lo activa el panel; Campañas y Fórmulas, fuera de la plataforma) */

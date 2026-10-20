@@ -5,9 +5,9 @@
  * Compartido por cliente y servidor (sin dependencias de Node).
  */
 
-export type LimitKind = 'contacts' | 'leads'
+export type LimitKind = 'contacts'
 
-const NOUN: Record<LimitKind, string> = { contacts: 'contactos', leads: 'leads' }
+const NOUN: Record<LimitKind, string> = { contacts: 'contactos' }
 
 export function planLimitMessage(kind: LimitKind, limit: number): string {
   return `Llegaste a los ${limit} ${NOUN[kind]} del plan Litro. Cambia a Galón para registrar sin límite.`
@@ -15,7 +15,7 @@ export function planLimitMessage(kind: LimitKind, limit: number): string {
 
 /** Si el error de la base es el límite del plan, devuelve tipo y límite. */
 export function parsePlanLimitError(error: { code?: string; message?: string } | null | undefined): { kind: LimitKind; limit: number } | null {
-  const m = /^PLAN_LIMIT:(contacts|leads):(\d+)$/.exec(error?.message ?? '')
+  const m = /^PLAN_LIMIT:(contacts):(\d+)$/.exec(error?.message ?? '')
   return m ? { kind: m[1] as LimitKind, limit: Number(m[2]) } : null
 }
 

@@ -153,7 +153,7 @@ function StoresList() {
                 </span>
                 <span className={s.cellUse}>
                   <span title="Usuarios activos">{st.members}/{planOf(planNow(st)).maxUsers} usuarios</span>
-                  <span title="Contactos y leads">{st.contacts.toLocaleString('es-MX')} contactos · {st.leads.toLocaleString('es-MX')} leads</span>
+                  <span title="Contactos y actividades comerciales">{st.contacts.toLocaleString('es-MX')} contactos · {st.activities.toLocaleString('es-MX')} actividades</span>
                   {st.whatsapp_connected && <span className={cx(s.wa, s.waOn)}><i />WhatsApp conectado</span>}
                 </span>
                 <span className={s.cellAct}>
@@ -242,7 +242,7 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
             <div><small>Plan</small><strong>{subscriptionLine(store)}</strong>{stripeUrl && <span><a href={stripeUrl} target="_blank" rel="noopener noreferrer" className={s.panelLink}>Ver cliente en Stripe</a></span>}</div>
             <div><small>Dueño</small><strong>{store.owner_name || (store.owner_email ? '—' : 'Aún no entra')}</strong><span>{store.owner_email ?? store.owner_invite?.email}</span></div>
             <div><small>Precio acordado (a mano)</small><strong>{store.monthly_price === null ? 'Sin acordar' : `${fmtMoney(store.monthly_price)} al mes`}</strong></div>
-            <div><small>Uso</small><strong>{store.members} usuarios · {store.contacts} contactos · {store.leads} leads</strong></div>
+            <div><small>Uso</small><strong>{store.members} usuarios · {store.contacts} contactos · {store.activities} actividades</strong></div>
             <div><small>Alta</small><strong>{fmt(store.created_at)}</strong><span>{store.onboarding_completed_at ? 'Configuración terminada' : 'Aún configurando'}</span></div>
           </div>
 

@@ -1,8 +1,8 @@
 import { apiFetch } from '@/lib/apiClient'
 /**
- * Índice en memoria de contactos y leads para el buscador global, el
- * selector de contacto y la detección de duplicados. Se descarga la primera
- * vez que se usa y se vuelve a pedir cuando cambian contactos o leads.
+ * Índice en memoria de contactos para el buscador global, el selector de
+ * cliente y la detección de duplicados. Se descarga la primera vez que se usa
+ * y se vuelve a pedir cuando cambian los contactos.
  * Busca sin acentos ni mayúsculas ("maria" encuentra "María").
  */
 import { normalizePhone } from './phone'
@@ -10,22 +10,17 @@ import { normalizePhone } from './phone'
 export type IndexContact = {
   id: string; name: string; phone: string; email: string | null; company: string | null
   segment: string | null; acquisition_channel: string | null; wa_opt_out?: boolean
+  commercial_status?: string
 }
-export type IndexLead = {
-  id: string; name: string; phone: string | null; estado: string; monto: number | null
-  contact_id: string | null; canal: string | null; segmento: string | null
-}
-export type SearchIndex = { contacts: IndexContact[]; leads: IndexLead[] }
+export type SearchIndex = { contacts: IndexContact[] }
 
 export const normText = (s: string | null | undefined) =>
   (s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
 
 export function loadSearchIndex(): Promise<SearchIndex> {
-  return Promise.all([
-    apiFetch('/api/data/contacts').then(r => (r.ok ? r.json() : { contacts: [] })),
-    apiFetch('/api/data/leads').then(r => (r.ok ? r.json() : { leads: [] })),
-  ]).then(([c, l]) => ({ contacts: c.contacts ?? [], leads: l.leads ?? [] }))
-
+  return apiFetch('/api/data/contacts')
+    .then(r => (r.ok ? r.json() : { contacts: [] }))
+    .then(c => ({ contacts: c.contacts ?? [] }))
 }
 
 const tokens = (text: string) => normText(text).split(/[\s.,;:()/@_-]+/).filter(Boolean)
@@ -60,10 +55,6 @@ function rank<T>(list: T[], scoreOf: (item: T) => number | null, limit: number):
 
 export function searchContacts(list: IndexContact[], q: string, limit = 6): IndexContact[] {
   return rank(list, c => score(c.name, `${c.company ?? ''} ${c.email ?? ''}`, c.phone, q), limit)
-}
-
-export function searchLeads(list: IndexLead[], q: string, limit = 5): IndexLead[] {
-  return rank(list, l => score(l.name, '', l.phone, q), limit)
 }
 
 export function findContactByPhone(list: IndexContact[], phone: string): IndexContact | null {

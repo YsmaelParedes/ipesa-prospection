@@ -23,7 +23,7 @@ const GROUPS: { id: string; title: string; items: { q: string; a: string }[] }[]
   {
     id: 'plan', title: 'Plan y pagos',
     items: [
-      { q: '¿Cuánto cuesta?', a: `El plan Litro es gratis (${PLANS.litro.maxContacts} contactos y ${PLANS.litro.maxLeads} cotizaciones). Galón y Cubeta se pagan cada mes; consulta los precios en la página de Precios.` },
+      { q: '¿Cuánto cuesta?', a: `El plan Litro es gratis (${PLANS.litro.maxContacts} contactos). Galón y Cubeta se pagan cada mes; consulta los precios en la página de Precios.` },
       { q: '¿Cómo se paga?', a: 'Con tarjeta de crédito o débito, cada mes, a través de Stripe. Nosotros nunca vemos los datos de tu tarjeta. Si un cobro no pasa, Stripe lo reintenta; si al final no se cobra, tu tienda vuelve al plan Litro sin borrar nada.' },
       { q: '¿Puedo cancelar?', a: 'Cuando quieras, desde Configuración → Plan. Conservas tu plan hasta el final del mes pagado y después pasas a Litro.' },
       { q: '¿Cuántas personas pueden usarlo?', a: `Litro es solo para el dueño. Galón incluye hasta ${PLANS.galon.maxUsers} usuarios y Cubeta hasta ${PLANS.cubeta.maxUsers}, con administradores. Cada quien con su propio acceso.` },

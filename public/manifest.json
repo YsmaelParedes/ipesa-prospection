@@ -43,9 +43,9 @@
       "description": "Ver contactos"
     },
     {
-      "name": "Leads",
-      "url": "/leads",
-      "description": "Ver pipeline de leads"
+      "name": "Comercial",
+      "url": "/comercial",
+      "description": "Llamadas para hoy y seguimientos"
     },
     {
       "name": "Recordatorios",

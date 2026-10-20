@@ -45,8 +45,8 @@ export const ROLE_LABELS: Record<StoreRole, string> = {
  * aquí solo lo que incluye cada uno.
  *  · maxUsers: usuarios activos de la tienda, contando al dueño (Litro: solo él).
  *  · allowAdmins: si el dueño puede nombrar administradores.
- *  · maxContacts / maxLeads: null = sin límite. Los mismos números están en la
- *    función plan_quota() de la base, que los hace cumplir: cambia los dos.
+ *  · maxContacts: null = sin límite. El mismo número está en la función
+ *    plan_quota() de la base, que lo hace cumplir: cambia los dos.
  *  · whatsapp: incluye la bandeja de WhatsApp (las campañas son un extra aparte).
  *  · paid: se cobra con Stripe.
  * Interno = la tienda propia (IPESA): cortesía con todo, la asigna el dueño de
@@ -55,14 +55,16 @@ export const ROLE_LABELS: Record<StoreRole, string> = {
 export type PlanId = 'litro' | 'galon' | 'cubeta' | 'interno'
 export type PlanDef = {
   label: string; maxUsers: number; allowAdmins: boolean
-  maxContacts: number | null; maxLeads: number | null
+  maxContacts: number | null
   whatsapp: boolean; paid: boolean
+  /** Sistema comercial en equipo: reparto de contactos, metas y control diario. */
+  salesTeam: boolean
 }
 export const PLANS: Record<PlanId, PlanDef> = {
-  litro:   { label: 'Litro',   maxUsers: 1,  allowAdmins: false, maxContacts: 50,   maxLeads: 10,   whatsapp: false, paid: false },
-  galon:   { label: 'Galón',   maxUsers: 3,  allowAdmins: false, maxContacts: null, maxLeads: null, whatsapp: false, paid: true },
-  cubeta:  { label: 'Cubeta',  maxUsers: 5,  allowAdmins: true,  maxContacts: null, maxLeads: null, whatsapp: true,  paid: true },
-  interno: { label: 'Interno', maxUsers: 50, allowAdmins: true,  maxContacts: null, maxLeads: null, whatsapp: true,  paid: false },
+  litro:   { label: 'Litro',   maxUsers: 1,  allowAdmins: false, maxContacts: 50,   whatsapp: false, paid: false, salesTeam: false },
+  galon:   { label: 'Galón',   maxUsers: 3,  allowAdmins: false, maxContacts: null, whatsapp: false, paid: true,  salesTeam: true },
+  cubeta:  { label: 'Cubeta',  maxUsers: 5,  allowAdmins: true,  maxContacts: null, whatsapp: true,  paid: true,  salesTeam: true },
+  interno: { label: 'Interno', maxUsers: 50, allowAdmins: true,  maxContacts: null, whatsapp: true,  paid: false, salesTeam: true },
 }
 /** Planes que se venden (en orden), sin la cortesía interna. */
 export const PUBLIC_PLANS = ['litro', 'galon', 'cubeta'] as const satisfies readonly PlanId[]

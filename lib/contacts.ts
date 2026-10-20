@@ -3,7 +3,7 @@ import { parseFields, type ParseResult, type Schema } from './validation'
 import { normalizePhone } from './phone'
 
 /** Columnas que se devuelven al cliente (sin columnas heredadas sin uso). */
-export const CONTACT_COLUMNS = 'id, name, phone, email, company, address, postal_code, segment, acquisition_channel, wa_opt_out, created_at, updated_at'
+export const CONTACT_COLUMNS = 'id, name, phone, email, company, address, postal_code, colonia, segment, acquisition_channel, wa_opt_out, owner_id, commercial_status, next_action, next_action_at, last_note, created_at, updated_at'
 
 /** Columnas editables de `contacts` (lista blanca + validación). */
 export const CONTACT_SCHEMA: Schema = {
@@ -13,6 +13,7 @@ export const CONTACT_SCHEMA: Schema = {
   company:             { type: 'text', max: 200, nullable: true, label: 'Empresa' },
   address:             { type: 'text', max: 500, nullable: true, label: 'Dirección' },
   postal_code:         { type: 'text', max: 10,  nullable: true, label: 'C.P.' },
+  colonia:             { type: 'text', max: 120, nullable: true, label: 'Colonia' },
   segment:             { type: 'text', max: 100, nullable: true, label: 'Tipo' },
   acquisition_channel: { type: 'text', max: 100, label: 'Canal' },
 }

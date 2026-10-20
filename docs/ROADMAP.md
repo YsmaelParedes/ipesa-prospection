@@ -146,6 +146,12 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 ### Etapa 9. Pilotos
 - 2 negocios conocidos, activados con pago de cortesía. Se corrige lo que pidan antes de cobrar.
 
+### Etapa 11. Sistema comercial (reemplaza a Leads)
+- Implementado el 20 de octubre de 2026 (4.0.0), sin geolocalización. Falta rehacer la demo del sitio público.
+- Detalle y sus 7 etapas en [`SISTEMA_COMERCIAL.md`](SISTEMA_COMERCIAL.md).
+- Cola de llamadas por vendedor, resultados con próxima fecha, reparto, distancia con OpenStreetMap, control diario con metas y tablero.
+- Planes: completo en Galón y Cubeta; versión básica en Litro.
+
 ## Después del MVP
 - Cobro automático con Mercado Pago o Stripe.
 - Facturación CFDI integrada.

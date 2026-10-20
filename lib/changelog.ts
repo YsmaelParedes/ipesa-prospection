@@ -18,6 +18,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.0.0',
+    date: '20 de octubre, 2026',
+    title: 'Sistema comercial (reemplaza a Leads)',
+    items: [
+      'Nueva sección Comercial: tu cola "Para llamar hoy" con los vencidos primero, luego los de hoy y los clientes nuevos que tienen dirección completa.',
+      'Registra cada llamada, WhatsApp o visita con su resultado (no contesta, interés, cotización, venta…) y la app te sugiere cuándo volver a llamar.',
+      'Columnas pensadas para llamar: negocio, colonia, contacto, teléfono, dirección, correo, próximo seguimiento y la última nota.',
+      '"Por depurar" junta a los contactos sin dirección con número o con el teléfono equivocado, para corregirlos sin borrar nada.',
+      'Galón y Cubeta: el dueño reparte contactos entre sus vendedores (a una persona o en partes iguales) y ve el control diario contra la meta de llamadas, cotizaciones y ventas.',
+      'Leads se retiró: cada lead quedó como historial de su contacto, con su estado, montos y notas.',
+    ],
+  },
+  {
     version: '3.2.1',
     date: '20 de octubre, 2026',
     title: 'Planes más fáciles de distinguir',

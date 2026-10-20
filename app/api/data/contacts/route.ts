@@ -106,7 +106,8 @@ export async function POST(req: NextRequest) {
   const parsed = parseContact(body)
   if (!parsed.ok) return jsonError(parsed.error)
 
-  const { data, error } = await supabase.from('contacts').insert([{ ...parsed.data, store_id: ctx.storeId }]).select(CONTACT_COLUMNS)
+  // Quien lo da de alta queda como responsable en el sistema comercial (los importados quedan sin asignar)
+  const { data, error } = await supabase.from('contacts').insert([{ ...parsed.data, store_id: ctx.storeId, owner_id: ctx.uid }]).select(CONTACT_COLUMNS)
   if (error) {
     if (error.code === '23505') return jsonError(duplicateContactMessage(error.message))
     const hit = parsePlanLimitError(error)

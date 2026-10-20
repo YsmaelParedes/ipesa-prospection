@@ -5,9 +5,9 @@
  *  - "cambiaron los datos": cada pantalla recarga lo que muestra.
  */
 import { useEffect, useRef } from 'react'
-import type { ContactLite, Reminder, ReminderType } from './crm'
+import type { Reminder, ReminderType } from './crm'
 
-export type DataKind = 'contact' | 'lead' | 'reminder' | 'activity'
+export type DataKind = 'contact' | 'lead' | 'reminder' | 'activity' | 'commercial'
 
 const CHANGED = 'crm:data-changed'
 const QUICK   = 'crm:quick-create'
@@ -41,7 +41,6 @@ export type ReminderDefaults = {
 
 export type QuickCreateRequest =
   | { kind: 'contact'; name?: string; phone?: string }
-  | { kind: 'lead'; contact?: ContactLite }
   | { kind: 'reminder'; reminder?: Reminder; defaults?: ReminderDefaults }
 
 export function openQuickCreate(req: QuickCreateRequest) {

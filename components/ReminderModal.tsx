@@ -12,13 +12,13 @@ import {
 } from '@/lib/crm'
 import type { ReminderDefaults } from '@/lib/crmEvents'
 import { QUICK_WHEN, localNow, quickDate, toDbLocal, type QuickWhen } from '@/lib/datetime'
-import { loadSearchIndex, normText, type IndexLead } from '@/lib/searchIndex'
+import { loadSearchIndex, searchContacts, type IndexContact } from '@/lib/searchIndex'
 
 const CloseIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 17, height: 17 }}><path d="M18 6 6 18M6 6l12 12" /></svg>
 
 /**
  * Formulario único para crear o editar un recordatorio (Agenda, campana,
- * ficha de lead, ficha de contacto e Inicio usan este mismo).
+ * ficha de contacto e Inicio usan este mismo).
  */
 export default function ReminderModal({ reminder, defaults, onClose, onSaved }: {
   reminder?: Reminder
@@ -39,7 +39,7 @@ export default function ReminderModal({ reminder, defaults, onClose, onSaved }: 
   const [leadName, setLeadName] = useState((reminder?.lead_id ? reminder.lead_name : defaults?.lead_id ? defaults.lead_name : '') ?? '')
   const [subject, setSubject]   = useState(initialSubject)
   const [leadQ, setLeadQ]       = useState('')
-  const [leads, setLeads]       = useState<IndexLead[]>([])
+  const [contacts, setContacts] = useState<IndexContact[]>([])
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState('')
   const notaRef = useRef<HTMLTextAreaElement>(null)
@@ -50,12 +50,9 @@ export default function ReminderModal({ reminder, defaults, onClose, onSaved }: 
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
   }, [onClose, saving])
-  useQueryEffect(() => { loadSearchIndex().then(i => setLeads(i.leads)).catch(() => {}) }, [])
+  useQueryEffect(() => { loadSearchIndex().then(i => setContacts(i.contacts)).catch(() => {}) }, [])
 
-  const leadMatches = useMemo(() => {
-    const q = normText(leadQ)
-    return q ? leads.filter(l => normText(l.name).includes(q)).slice(0, 6) : []
-  }, [leads, leadQ])
+  const contactMatches = useMemo(() => (leadQ.trim() ? searchContacts(contacts, leadQ, 6) : []), [contacts, leadQ])
 
   const activeQuick = QUICK_WHEN.find(w => quickDate(w.key) === fecha)?.key
   const canSave = fecha.length >= 16 && (!!nota.trim() || !!leadId || !!subject) && !saving
@@ -145,11 +142,11 @@ export default function ReminderModal({ reminder, defaults, onClose, onSaved }: 
           </div>
 
           <div className="field" style={{ marginBottom: 0 }}>
-            <label>Lead o cliente <span className="label-muted">(opcional)</span></label>
+            <label>Cliente <span className="label-muted">(opcional)</span></label>
             {leadId ? (
               <div className="linked-chip">
-                <span>Lead · <strong>{leadName}</strong></span>
-                <button type="button" onClick={() => { setLeadId(null); setLeadName('') }} aria-label="Quitar lead">×</button>
+                <span>Cliente · <strong>{leadName}</strong></span>
+                <button type="button" onClick={() => { setLeadId(null); setLeadName('') }} aria-label="Quitar cliente">×</button>
               </div>
             ) : subject ? (
               <div className="linked-chip neutral">
@@ -158,13 +155,13 @@ export default function ReminderModal({ reminder, defaults, onClose, onSaved }: 
               </div>
             ) : (
               <div className="picker-search">
-                <input value={leadQ} onChange={e => setLeadQ(e.target.value)} placeholder="Buscar un lead por nombre…" aria-label="Buscar lead" />
-                {leadMatches.length > 0 && (
+                <input value={leadQ} onChange={e => setLeadQ(e.target.value)} placeholder="Buscar un cliente por nombre o teléfono…" aria-label="Buscar cliente" />
+                {contactMatches.length > 0 && (
                   <div className="picker-results" role="listbox">
-                    {leadMatches.map(l => (
-                      <button key={l.id} type="button" role="option" aria-selected="false"
-                        onClick={() => { setLeadId(l.id); setLeadName(l.name); setLeadQ('') }}>
-                        <strong>{l.name}</strong><small>{l.estado}</small>
+                    {contactMatches.map(c => (
+                      <button key={c.id} type="button" role="option" aria-selected="false"
+                        onClick={() => { setSubject(c.name); setLeadQ('') }}>
+                        <strong>{c.name}</strong><small>{c.company && c.company !== c.name ? c.company : c.segment ?? ''}</small>
                       </button>
                     ))}
                   </div>

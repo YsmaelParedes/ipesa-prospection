@@ -180,8 +180,8 @@ async function fetchWithCache(input: string | URL | Request, init?: RequestInit)
 const prefetchRoutes: Record<string, string[]> = {
   '/': ['/api/data/dashboard?includeWhatsApp=0', '/api/data/reminders'],
   '/contactos': ['/api/data/contacts', '/api/data/config'],
-  '/leads': ['/api/data/leads', '/api/data/config'],
-  '/recordatorios': ['/api/data/reminders', '/api/data/leads'],
+  '/comercial': ['/api/data/commercial'],
+  '/recordatorios': ['/api/data/reminders', '/api/data/commercial'],
   '/formulas': ['/api/formulas'],
   '/whatsapp': ['/api/whatsapp/conversations?filter=all'],
   '/configuracion': ['/api/data/config'],

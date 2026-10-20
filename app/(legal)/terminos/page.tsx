@@ -55,7 +55,7 @@ const sections: LegalSection[] = [
       <>
         <p>
           Cualquier tienda puede crear su cuenta. Toda tienda empieza en el plan <strong>Litro</strong>, gratuito, con
-          límites de uso ({PLANS.litro.maxContacts} contactos, {PLANS.litro.maxLeads} cotizaciones y solo el usuario
+          límites de uso ({PLANS.litro.maxContacts} contactos y solo el usuario
           del dueño). Los planes <strong>Galón</strong> y <strong>Cubeta</strong> son de
           paga y su precio vigente se muestra en el sitio y antes de pagar.
         </p>

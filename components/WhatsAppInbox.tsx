@@ -9,7 +9,9 @@ import { apiFetch, invalidateQueries } from '@/lib/apiClient'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { Avatar, EstadoChip, TipoChip, segmentColor } from '@/components/CrmUI'
+import { Avatar, TipoChip, segmentColor } from '@/components/CrmUI'
+import { StatusChip, nextLabel } from '@/components/CommercialUI'
+import { todayISO } from '@/lib/commercial'
 import { Select, toOptions } from '@/components/Select'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
 import {
@@ -20,7 +22,6 @@ import { fmtPhone, normalizePhone } from '@/lib/phone'
 import { isWindowOpen } from '@/lib/whatsappSafety'
 import { MAX_CAPTION, MAX_SEND_BYTES, SEND_ACCEPT, SEND_TYPES, fmtSize, sendMimeOf } from '@/lib/whatsappFiles'
 import { loadCatalogs, whatsappChannel, type Catalogs } from '@/lib/catalogs'
-import { isOpenLead } from '@/lib/crm'
 import { notifyDataChanged } from '@/lib/crmEvents'
 import { useSession } from '@/lib/profile'
 import type { NoWhatsApp } from '@/lib/campaignKinds'
@@ -67,13 +68,13 @@ type Contact = {
   segment: string | null; acquisition_channel: string | null; wa_opt_out: boolean
 }
 
-type LeadLite = { id: string; name: string; estado: string; monto: number | null; canal: string; created_at: string }
+type CommercialLite = { status: string; next_action: string | null; next_action_at: string | null; last_note: string | null; mine: boolean }
 
 type Thread = {
   phone: string
   messages: Message[]
   contact: Contact | null
-  leads: LeadLite[]
+  commercial: CommercialLite | null
   profileName: string | null
   lastInboundAt: string | null
   noWhatsApp: NoWhatsApp | null
@@ -202,14 +203,14 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
         if (silent && prev?.phone === phone) {
           return { ...prev, ...d, messages: mergeMessages(prev.messages, d.messages) }
         }
-        return { phone, messages: d.messages, contact: d.contact, leads: d.leads, profileName: d.profileName, lastInboundAt: d.lastInboundAt, noWhatsApp: d.noWhatsApp ?? null }
+        return { phone, messages: d.messages, contact: d.contact, commercial: d.commercial ?? null, profileName: d.profileName, lastInboundAt: d.lastInboundAt, noWhatsApp: d.noWhatsApp ?? null }
       })
       if (d.markedRead > 0) {
         setConversations(prev => prev.map(c => c.phone === phone ? { ...c, unread: 0 } : c))
         notifyUnreadChanged()
       }
     } catch {
-      if (!silent && request === threadRequest.current && selectedRef.current === phone) setThread({ phone, messages: [], contact: null, leads: [], profileName: null, lastInboundAt: null, noWhatsApp: null })
+      if (!silent && request === threadRequest.current && selectedRef.current === phone) setThread({ phone, messages: [], contact: null, commercial: null, profileName: null, lastInboundAt: null, noWhatsApp: null })
     } finally {
       if (!silent && request === threadRequest.current) setLoadingThread(false)
     }
@@ -290,7 +291,7 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
           <div className="wa-empty">
             <div className="wa-empty-icon"><WaIcon.whatsapp size={34} /></div>
             <div className="wa-empty-title">Bandeja de WhatsApp</div>
-            <div>Elige una conversación para leer y responder. Todo queda ligado al contacto y sus leads.</div>
+            <div>Elige una conversación para leer y responder. Todo queda ligado al contacto y su seguimiento.</div>
           </div>
         ) : (
           <ChatView
@@ -812,7 +813,7 @@ function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onSendFile, o
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Panel del CRM: contacto, leads, recordatorio, campañas
+   Panel del CRM: contacto, sistema comercial, recordatorio, campañas
 ══════════════════════════════════════════════════════════════════════════ */
 type ConfigLists = Catalogs
 
@@ -860,8 +861,8 @@ function CrmPanel({ phone, thread, convo, onClose, onChanged, toast }: {
             )}
           </section>
 
-          <LeadsSection contact={contact} phone={phone} leads={thread.leads} config={config} onChanged={onChanged} toast={toast} />
-          <ReminderSection contact={contact} leads={thread.leads} toast={toast} />
+          <CommercialSection contact={contact} commercial={thread.commercial} />
+          <ReminderSection contact={contact} toast={toast} />
           {campaignsOn && <OptOutSection phone={phone} optOut={contact.wa_opt_out} onChanged={onChanged} toast={toast} />}
         </>
       ) : (
@@ -904,7 +905,7 @@ function SaveContactSection({ phone, profileName, config, onSaved }: {
         <Avatar name={profileName || phone} size={52} />
         <div className="wa-profile-name">{profileName ? `~ ${profileName}` : fmtPhone(phone)}</div>
         <div className="wa-profile-phone">{fmtPhone(phone)}</div>
-        <p>Este número aún no está en tus contactos. Guárdalo para ligar la conversación a su ficha, crear leads y recordatorios.</p>
+        <p>Este número aún no está en tus contactos. Guárdalo para ligar la conversación a su ficha, su seguimiento y sus recordatorios.</p>
       </div>
       <div className="field"><label>Nombre *</label><input value={name} onChange={e => setName(e.target.value)} placeholder="Nombre del cliente" /></div>
       <div className="field-row">
@@ -925,88 +926,40 @@ function SaveContactSection({ phone, profileName, config, onSaved }: {
   )
 }
 
-function LeadsSection({ contact, phone, leads, config, onChanged, toast }: {
-  contact: Contact; phone: string; leads: LeadLite[]; config: ConfigLists; onChanged: () => void; toast: (m: string) => void
-}) {
-  const [open, setOpen]     = useState(false)
-  const [canal, setCanal]   = useState('')
-  const [monto, setMonto]   = useState('')
-  const [notas, setNotas]   = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError]   = useState('')
-
-  useEffect(() => {
-    if (!canal && config.canales.length) setCanal(whatsappChannel(config.canales))
-  }, [config, canal])
-
-  const create = async () => {
-    setSaving(true); setError('')
-    try {
-      const r = await apiFetch('/api/data/leads', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: contact.name, phone, email: contact.email ?? '', contact_id: contact.id,
-          canal: canal || 'WhatsApp', segmento: contact.segment || config.segments[0] || 'Hogar', estado: 'Nuevo',
-          monto: monto ? Number(monto) : null, notas: notas.trim() || null,
-        }),
-      })
-      const d = await r.json().catch(() => ({}))
-      if (!r.ok) { setError(d.error || 'No se pudo crear el lead'); return }
-      setOpen(false); setMonto(''); setNotas('')
-      toast('Lead creado ✓')
-      notifyDataChanged('lead')
-      onChanged()
-    } finally { setSaving(false) }
-  }
-
+function CommercialSection({ contact, commercial }: { contact: Contact; commercial: CommercialLite | null }) {
+  const today = todayISO()
+  const next = commercial ? nextLabel(commercial.next_action_at, today) : null
   return (
     <section className="wa-panel-section">
       <div className="wa-panel-title">
-        <span><WaIcon.leads size={13} /> Leads ({leads.length})</span>
-        <button className="wa-link-btn" onClick={() => setOpen(o => !o)}>{open ? 'Cancelar' : '+ Crear lead'}</button>
+        <span><WaIcon.leads size={13} /> Sistema comercial</span>
+        <Link className="wa-link-btn" href={`/comercial?id=${contact.id}`}>Registrar →</Link>
       </div>
-      {open && (
-        <div className="wa-inline-form">
-          <div className="field-row">
-            <div className="field">
-              <label>Canal</label>
-              <Select value={canal} onChange={setCanal} aria-label="Canal" options={toOptions(config.canales)} placeholder="Elegir canal" />
-            </div>
-            <div className="field">
-              <label>Valor (MXN)</label>
-              <input type="number" min="0" inputMode="decimal" value={monto} onChange={e => setMonto(e.target.value)} placeholder="0" />
-            </div>
-          </div>
-          <div className="field"><label>Notas</label><textarea rows={2} value={notas} onChange={e => setNotas(e.target.value)} placeholder="Producto de interés, m², color…" /></div>
-          {error && <div className="wa-form-error">{error}</div>}
-          <button className="btn btn-primary wa-block" onClick={create} disabled={saving}>{saving ? 'Creando…' : 'Crear lead'}</button>
-        </div>
-      )}
-      {leads.length === 0 && !open ? (
-        <div className="wa-muted-box">Sin leads. Crea uno para darle seguimiento en el pipeline.</div>
+      {!commercial ? (
+        <div className="wa-muted-box">Sin información comercial.</div>
       ) : (
         <div className="wa-lead-list">
-          {leads.map(l => (
-            <Link key={l.id} href={`/leads?id=${l.id}`} className="wa-lead">
-              <span className="wa-lead-top">
-                <EstadoChip value={l.estado} small />
-                {l.monto ? <strong>${Number(l.monto).toLocaleString('es-MX')}</strong> : null}
-              </span>
-              <span className="wa-lead-sub">{l.canal} · {new Date(l.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</span>
-            </Link>
-          ))}
+          <Link href={`/comercial?id=${contact.id}`} className="wa-lead">
+            <span className="wa-lead-top">
+              <StatusChip value={commercial.status} />
+              {next && commercial.next_action_at && <span className={`follow-chip ${next.tone}`}>{next.label}</span>}
+            </span>
+            <span className="wa-lead-sub">
+              {commercial.next_action_at ? (commercial.next_action || 'Dar seguimiento') : commercial.mine ? 'Sin próxima acción' : 'Lo trabaja otra persona del equipo'}
+            </span>
+            {commercial.last_note && <span className="wa-lead-sub" style={{ whiteSpace: 'pre-wrap' }}>{commercial.last_note.slice(0, 160)}</span>}
+          </Link>
         </div>
       )}
     </section>
   )
 }
 
-function ReminderSection({ contact, leads, toast }: { contact: Contact; leads: LeadLite[]; toast: (m: string) => void }) {
+function ReminderSection({ contact, toast }: { contact: Contact; toast: (m: string) => void }) {
   const [when, setWhen]   = useState<'1h' | 'tomorrow' | 'monday'>('tomorrow')
   const [nota, setNota]   = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const openLead = leads.find(l => isOpenLead(l.estado))
 
   const target = () => {
     const d = new Date()
@@ -1026,8 +979,8 @@ function ReminderSection({ contact, leads, toast }: { contact: Contact; leads: L
           nota: nota.trim() || `Dar seguimiento por WhatsApp a ${contact.name}`,
           fecha_recordatorio: target(),
           type: 'whatsapp', priority: 'medium',
-          lead_id: openLead?.id ?? null,
-          lead_name: openLead?.name ?? contact.name,
+          lead_id: null,
+          lead_name: contact.name,
         }),
       })
       const d = await r.json().catch(() => ({}))

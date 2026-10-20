@@ -174,7 +174,7 @@ function ExportPanel({ store, onDone }: { store: ClientStore; onDone: (msg: stri
     setStep('Contactos')
     try {
       const n = await downloadStoreWorkbook(store.slug, setStep)
-      onDone(`Descargado: ${n.contacts.toLocaleString('es-MX')} contactos, ${n.leads.toLocaleString('es-MX')} leads y ${n.reminders.toLocaleString('es-MX')} pendientes de agenda`)
+      onDone(`Descargado: ${n.contacts.toLocaleString('es-MX')} contactos, ${n.activities.toLocaleString('es-MX')} actividades comerciales y ${n.reminders.toLocaleString('es-MX')} pendientes de agenda`)
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -184,7 +184,7 @@ function ExportPanel({ store, onDone }: { store: ClientStore; onDone: (msg: stri
 
   return (
     <Panel icon={Ico.download} tone="tTeal" title="Descarga tu información"
-      subtitle="Un solo archivo de Excel con tus contactos, leads con su historial, agenda y catálogos. La información es de tu tienda: puedes llevártela cuando quieras.">
+      subtitle="Un solo archivo de Excel con tus contactos, su historial comercial, agenda y catálogos. La información es de tu tienda: puedes llevártela cuando quieras.">
       <button className="btn btn-ghost" onClick={run} disabled={!!step}>
         <Ico.download style={{ width: 15, height: 15 }} />
         {step ? `Preparando ${step.toLowerCase()}…` : 'Descargar mi información'}

@@ -6,17 +6,17 @@ import { cachedQueryData } from '@/lib/apiClient'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { usePathname, useRouter } from 'next/navigation'
-import { Avatar, EstadoChip } from '@/components/CrmUI'
+import { Avatar } from '@/components/CrmUI'
+import { StatusChip } from '@/components/CommercialUI'
 import { openQuickCreate } from '@/lib/crmEvents'
-import { loadSearchIndex, searchContacts, searchLeads, type SearchIndex } from '@/lib/searchIndex'
+import { loadSearchIndex, searchContacts, type SearchIndex } from '@/lib/searchIndex'
 import { fmtPhone } from '@/lib/phone'
 
 const SearchIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
 const BackIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
 
 type Item =
-  | { type: 'contact'; id: string; href: string; title: string; sub: string }
-  | { type: 'lead'; id: string; href: string; title: string; sub: string; estado: string }
+  | { type: 'contact'; id: string; href: string; title: string; sub: string; status?: string }
   | { type: 'create'; id: 'create'; title: string }
   | { type: 'all'; id: 'all'; href: string; title: string }
 
@@ -24,7 +24,7 @@ const isTyping = (el: Element | null) =>
   !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || (el as HTMLElement).isContentEditable)
 
 /**
- * Buscador de toda la app: encuentra clientes y leads por nombre, teléfono o
+ * Buscador de toda la app: encuentra clientes por nombre, teléfono o
  * empresa desde cualquier pantalla. Atajos: "/" o Ctrl+K.
  */
 export default function GlobalSearch() {
@@ -39,9 +39,9 @@ export default function GlobalSearch() {
   const inputRef = useRef<HTMLInputElement>(null)
   const sheetInputRef = useRef<HTMLInputElement>(null)
 
-  useQueryRefresh(['/api/data/contacts', '/api/data/leads'], () => {
+  useQueryRefresh(['/api/data/contacts'], () => {
     if (!index) return
-    if (!cachedQueryData('/api/data/contacts') || !cachedQueryData('/api/data/leads')) setIndex(null)
+    if (!cachedQueryData('/api/data/contacts')) setIndex(null)
     loadSearchIndex().then(setIndex).catch(() => {})
   })
   const ensureIndex = useCallback(() => { loadSearchIndex().then(setIndex).catch(() => {}) }, [])
@@ -86,12 +86,9 @@ export default function GlobalSearch() {
     const contacts = searchContacts(index.contacts, text, 6).map<Item>(c => ({
       type: 'contact', id: c.id, href: `/contactos?id=${c.id}`, title: c.name,
       sub: [fmtPhone(c.phone), c.company !== c.name ? c.company : null, c.segment].filter(Boolean).join(' · '),
+      status: c.commercial_status && c.commercial_status !== 'nuevo' ? c.commercial_status : undefined,
     }))
-    const leads = searchLeads(index.leads, text, 5).map<Item>(l => ({
-      type: 'lead', id: l.id, href: `/leads?id=${l.id}`, title: l.name, estado: l.estado,
-      sub: l.monto ? `$${Number(l.monto).toLocaleString('es-MX')}` : (l.canal || ''),
-    }))
-    const out: Item[] = [...contacts, ...leads]
+    const out: Item[] = [...contacts]
     if (!contacts.length) out.push({ type: 'create', id: 'create', title: `Crear contacto “${text}”` })
     else out.push({ type: 'all', id: 'all', href: `/contactos?q=${encodeURIComponent(text)}`, title: `Ver todos los contactos con “${text}”` })
     return out
@@ -121,15 +118,14 @@ export default function GlobalSearch() {
   const results = (
     <div className="gsearch-results" role="listbox" aria-label="Resultados">
       {!q.trim() ? (
-        <div className="gsearch-hint">Busca clientes y leads por nombre, teléfono o empresa.<span className="gsearch-kbd">Atajo: <kbd>/</kbd></span></div>
+        <div className="gsearch-hint">Busca clientes por nombre, teléfono o empresa.<span className="gsearch-kbd">Atajo: <kbd>/</kbd></span></div>
       ) : !index ? (
         <div className="gsearch-hint"><span className="wa-spinner sm" /> Buscando…</div>
       ) : (
         <>
-          {items.length > 0 && items[0].type === 'create' && <div className="gsearch-hint">No hay contactos ni leads con “{q.trim()}”.</div>}
+          {items.length > 0 && items[0].type === 'create' && <div className="gsearch-hint">No hay contactos con “{q.trim()}”.</div>}
           {items.map((it, i) => {
-            const section = (it.type === 'contact' && (i === 0 || items[i - 1].type !== 'contact')) ? 'Contactos'
-              : (it.type === 'lead' && (i === 0 || items[i - 1].type !== 'lead')) ? 'Leads' : null
+            const section = (it.type === 'contact' && (i === 0 || items[i - 1].type !== 'contact')) ? 'Contactos' : null
             return (
               <div key={`${it.type}-${it.id}`}>
                 {section && <div className="gsearch-section">{section}</div>}
@@ -140,12 +136,12 @@ export default function GlobalSearch() {
                   onMouseDown={e => e.preventDefault()}
                   onClick={() => choose(it)}
                 >
-                  {it.type === 'contact' || it.type === 'lead' ? <Avatar name={it.title} size={30} /> : <span className="gsearch-plus">{it.type === 'create' ? '+' : '→'}</span>}
+                  {it.type === 'contact' ? <Avatar name={it.title} size={30} /> : <span className="gsearch-plus">{it.type === 'create' ? '+' : '→'}</span>}
                   <span className="gsearch-main">
                     <strong>{it.title}</strong>
-                    {(it.type === 'contact' || it.type === 'lead') && it.sub && <small>{it.sub}</small>}
+                    {it.type === 'contact' && it.sub && <small>{it.sub}</small>}
                   </span>
-                  {it.type === 'lead' && <EstadoChip value={it.estado} small />}
+                  {it.type === 'contact' && it.status && <StatusChip value={it.status} />}
                 </button>
               </div>
             )
@@ -167,8 +163,8 @@ export default function GlobalSearch() {
             onChange={e => { setQ(e.target.value); setOpen(true); ensureIndex() }}
             onFocus={() => { setOpen(true); ensureIndex() }}
             onKeyDown={onKeyDown}
-            placeholder="Buscar cliente o lead…"
-            aria-label="Buscar cliente o lead"
+            placeholder="Buscar cliente…"
+            aria-label="Buscar cliente"
             role="combobox"
             aria-expanded={open}
             aria-autocomplete="list"
@@ -181,7 +177,7 @@ export default function GlobalSearch() {
       </div>
 
       {/* Celular: lupa que abre el buscador a pantalla completa */}
-      <button className="btn-icon gsearch-mobile-btn" onClick={() => { setSheet(true); ensureIndex() }} aria-label="Buscar cliente o lead">
+      <button className="btn-icon gsearch-mobile-btn" onClick={() => { setSheet(true); ensureIndex() }} aria-label="Buscar cliente">
         <SearchIcon />
       </button>
       {/* En un portal: la barra superior usa backdrop-filter y encerraría al "fixed" */}
@@ -192,7 +188,7 @@ export default function GlobalSearch() {
             <div className="gsearch-input">
               <SearchIcon />
               <input ref={sheetInputRef} value={q} onChange={e => { setQ(e.target.value); ensureIndex() }} onKeyDown={onKeyDown}
-                placeholder="Nombre, teléfono o empresa…" aria-label="Buscar cliente o lead" />
+                placeholder="Nombre, teléfono o empresa…" aria-label="Buscar cliente" />
               {q && <button className="gsearch-clear" onClick={() => setQ('')} aria-label="Limpiar búsqueda">×</button>}
             </div>
           </div>

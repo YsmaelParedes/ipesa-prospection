@@ -25,7 +25,7 @@ export function phoneDigits(raw: string): string {
 
 /**
  * Alta de contacto (la usan Contactos, el botón "+ Nuevo", el buscador y el
- * alta de un lead). Avisa si el teléfono ya es de otro contacto antes de guardar.
+ * sistema comercial). Avisa si el teléfono ya es de otro contacto antes de guardar.
  */
 export default function ContactFormModal({ initialName = '', initialPhone = '', onClose, onSaved }: {
   initialName?: string

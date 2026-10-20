@@ -59,9 +59,12 @@ const nextConfig: NextConfig = {
     root: path.resolve(__dirname),
   },
 
-  // El panel de "Plataforma" pasó a ser el panel del dueño (/admin)
+  // El panel de "Plataforma" pasó a ser el panel del dueño (/admin); Leads, el sistema comercial
   async redirects() {
-    return [{ source: '/plataforma', destination: '/admin/tiendas', permanent: false }]
+    return [
+      { source: '/plataforma', destination: '/admin/tiendas', permanent: false },
+      { source: '/leads', destination: '/comercial', permanent: false },
+    ]
   },
 
   // Única fuente de verdad de las cabeceras (antes se duplicaban en

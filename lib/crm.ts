@@ -1,16 +1,8 @@
 /**
  * Reglas del CRM compartidas por cliente y servidor (sin dependencias de
- * Node ni de React): etapas de un lead y tipos de actividad y recordatorio.
+ * Node ni de React): tipos y prioridades de recordatorio.
  */
 
-export const LEAD_ESTADOS = ['Nuevo', 'En seguimiento', 'Cotizado', 'Ganado / Venta realizada', 'Perdido'] as const
-export const WON  = 'Ganado / Venta realizada'
-export const LOST = 'Perdido'
-export const OPEN_ESTADOS = ['Nuevo', 'En seguimiento', 'Cotizado']
-/** Abierto = todavía se puede ganar (ni ganado ni perdido). */
-export const isOpenLead = (estado: string | null | undefined) => estado !== WON && estado !== LOST
-
-export const ACTIVITY_TYPES = ['call', 'email', 'whatsapp', 'quote', 'meeting', 'visit', 'note'] as const
 export const REMINDER_TYPES = ['task', 'call', 'email', 'whatsapp', 'meeting'] as const
 export const REMINDER_PRIORITIES = ['low', 'medium', 'high'] as const
 export type ReminderType = typeof REMINDER_TYPES[number]

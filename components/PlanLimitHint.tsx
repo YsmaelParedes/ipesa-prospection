@@ -4,10 +4,10 @@ import Link from '@/components/CachedLink'
 import { useSession } from '@/lib/profile'
 import type { LimitKind } from '@/lib/planLimits'
 
-const NOUN: Record<LimitKind, string> = { contacts: 'contactos', leads: 'cotizaciones' }
+const NOUN: Record<LimitKind, string> = { contacts: 'contactos' }
 
 /**
- * Aviso del límite del plan Litro en Contactos y Leads: aparece al llegar al
+ * Aviso del límite del plan Litro en Contactos: aparece al llegar al
  * 80 % y cambia de tono al llenarse. Sin límite (Galón, Cubeta) no muestra nada.
  */
 export function PlanLimitHint({ kind, used }: { kind: LimitKind; used: number }) {

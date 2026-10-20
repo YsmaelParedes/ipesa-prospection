@@ -4,7 +4,7 @@ import { serverError } from '@/lib/validation'
 
 /**
  * GET /api/billing/usage — cuánto usa la tienda de lo que incluye su plan
- * (Configuración → Plan): contactos, leads y usuarios activos. Dueño/admin.
+ * (Configuración → Plan): contactos y usuarios activos. Dueño/admin.
  */
 export async function GET() {
   const ctx = await requireStore({ admin: true })
@@ -16,15 +16,14 @@ export async function GET() {
       if (filter) q = filter(q)
       return q
     }
-    const [contacts, leads, members] = await Promise.all([
+    const [contacts, members] = await Promise.all([
       count('contacts'),
-      count('leads'),
       count('store_members', q => q.eq('status', 'active')),
     ])
-    const error = contacts.error ?? leads.error ?? members.error
+    const error = contacts.error ?? members.error
     if (error) throw error
     return NextResponse.json(
-      { contacts: contacts.count ?? 0, leads: leads.count ?? 0, members: members.count ?? 0 },
+      { contacts: contacts.count ?? 0, members: members.count ?? 0 },
       { headers: { 'Cache-Control': 'private, no-store' } },
     )
   } catch (error) {

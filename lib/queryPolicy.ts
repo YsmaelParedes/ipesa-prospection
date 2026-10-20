@@ -20,12 +20,11 @@ export function queryPolicy(path: string): QueryPolicy | null {
 }
 
 export function mutationResources(path: string): string[] {
-  if (path.startsWith('/api/data/contacts')) return ['/api/data/contacts', '/api/data/leads', '/api/data/dashboard', '/api/whatsapp/']
-  if (path.startsWith('/api/data/leads')) return ['/api/data/leads', '/api/data/contacts', '/api/data/reminders', '/api/data/dashboard', '/api/whatsapp/']
-  if (path.startsWith('/api/data/reminders')) return ['/api/data/reminders', '/api/data/leads', '/api/data/dashboard']
-  if (path.startsWith('/api/data/activities')) return ['/api/data/activities', '/api/data/dashboard']
+  if (path.startsWith('/api/data/contacts')) return ['/api/data/contacts', '/api/data/commercial', '/api/data/dashboard', '/api/whatsapp/']
+  if (path.startsWith('/api/data/commercial')) return ['/api/data/commercial', '/api/data/contacts', '/api/data/dashboard']
+  if (path.startsWith('/api/data/reminders')) return ['/api/data/reminders', '/api/data/dashboard']
   if (path.startsWith('/api/data/config')) return ['/api/data/config']
-  if (path.startsWith('/api/whatsapp/')) return ['/api/whatsapp/', '/api/data/dashboard', '/api/data/contacts', '/api/data/leads']
+  if (path.startsWith('/api/whatsapp/')) return ['/api/whatsapp/', '/api/data/dashboard', '/api/data/contacts', '/api/data/commercial']
   if (path.startsWith('/api/platform/') || path.startsWith('/api/store') || path === '/api/me') return ['/api/']
   return []
 }

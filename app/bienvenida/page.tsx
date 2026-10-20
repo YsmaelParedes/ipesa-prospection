@@ -481,7 +481,7 @@ function TeamStep({ store, canInviteAdmins, invites, locked, onInvite, onBack, o
       </form>
       <p className={s.roleHelp}>
         {role === 'employee'
-          ? <><strong>Vendedor:</strong> registra contactos, leads y recordatorios{store.modules.whatsapp ? ', y atiende WhatsApp' : ''}.</>
+          ? <><strong>Vendedor:</strong> registra contactos, llama a los que le asignes y lleva su agenda{store.modules.whatsapp ? ', y atiende WhatsApp' : ''}.</>
           : <><strong>Administrador:</strong> además configura la tienda, los catálogos y el equipo.</>}
       </p>
       </>)}
@@ -522,7 +522,7 @@ function DoneStep({ store, modules, invites }: { store: ClientStore; modules: St
   const next = [
     modules.whatsapp
       ? { href: '/configuracion?tab=whatsapp', icon: WhatsAppGlyph, tone: s.nextWa, title: 'Conecta tu WhatsApp', text: 'Usa el número de tu tienda para atender a tus clientes desde el CRM.' }
-      : { href: '/leads', icon: Ic.leads, tone: s.nextBrand, title: 'Registra tu primer lead', text: 'Da seguimiento a cada cotización hasta cerrarla.' },
+      : { href: '/comercial', icon: Ic.leads, tone: s.nextBrand, title: 'Haz tu primera llamada', text: 'Anota el resultado y la próxima fecha de cada cliente.' },
     { href: '/contactos', icon: Ic.contacts, tone: s.nextCyan, title: 'Agrega tus clientes', text: 'Captúralos uno por uno o importa tu lista de Excel.' },
     free
       ? { href: '/configuracion?tab=plan', icon: Ic.settings, tone: s.nextMagenta, title: 'Conoce los planes', text: 'Galón y Cubeta quitan los límites y suman a tu equipo.' }
@@ -535,7 +535,7 @@ function DoneStep({ store, modules, invites }: { store: ClientStore; modules: St
       <h1>¡{store.name} está lista!</h1>
       <p className={s.doneSub}>
         {free
-          ? <>Estás en el plan Litro, gratis: hasta {store.limits.contacts} contactos y {store.limits.leads} cotizaciones. Cuando lo necesites, cambia de plan en Configuración → Plan.</>
+          ? <>Estás en el plan Litro, gratis: hasta {store.limits.contacts} contactos. Cuando lo necesites, cambia de plan en Configuración → Plan.</>
           : <>Tu plan {store.planLabel} está activo.</>}
         {invites > 0 && <> Cuando tu equipo acepte su invitación lo verás en Configuración.</>}
       </p>
@@ -560,7 +560,7 @@ function DoneStep({ store, modules, invites }: { store: ClientStore; modules: St
 const PREVIEW_NAV: { label: string; icon: (p: IconProps) => React.ReactElement; module?: StoreModule }[] = [
   { label: 'Dashboard', icon: Ic.dashboard },
   { label: 'Contactos', icon: Ic.contacts },
-  { label: 'Leads', icon: Ic.leads },
+  { label: 'Comercial', icon: Ic.leads },
   { label: 'WhatsApp', icon: Ic.chat, module: 'whatsapp' },
   { label: 'Recordatorios', icon: Ic.clock },
   { label: 'Fórmulas', icon: Ic.flask, module: 'formulas' },
