@@ -65,6 +65,7 @@ npm run build     # compila para producción (lo mismo que corre Vercel)
 | `NEXT_PUBLIC_CONTACT_EMAIL` | Para vender | Correo de contacto (derechos ARCO, facturas, sucursales adicionales) |
 | `WHATSAPP_*` | Solo tienda original | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_ACCOUNT_ID`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN` y `WHATSAPP_APP_SECRET`: el número que ya usaba la tienda original. **Sin `WHATSAPP_APP_SECRET` el webhook rechaza los mensajes entrantes.** Las tiendas nuevas capturan sus credenciales en la app |
 | `WHATSAPP_GRAPH_VERSION` | No | Versión de Graph API (por defecto `v21.0`) |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Recomendada | Cloudflare Turnstile (anti-robots) en registro, login y recuperar contraseña. Widget "Matices - acceso" en Cloudflare. Si falta alguna, la verificación se omite |
 | `STRIPE_SECRET_KEY` | Para cobrar | Llave secreta de Stripe (`sk_test_…` en pruebas, `sk_live_…` en producción). Sin ella los planes de paga dicen "Disponible pronto" |
 | `STRIPE_WEBHOOK_SECRET` | Para cobrar | Secreto de firma del webhook `https://<dominio>/api/webhooks/stripe` (`whsec_…`). Sin él se rechazan los avisos de Stripe |
 

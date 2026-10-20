@@ -4,6 +4,7 @@ import { EMAIL_RE, passwordProblem, siteOrigin } from '@/lib/invitations'
 import { clientIp, rateLimit } from '@/lib/rateLimit'
 import { jsonError, readJson } from '@/lib/validation'
 import { reportError } from '@/lib/errorReport'
+import { TURNSTILE_ERROR, verifyTurnstile } from '@/lib/turnstile'
 
 /**
  * POST /api/auth/register — registro abierto: crea la cuenta (con confirmación
@@ -28,6 +29,7 @@ export async function POST(req: NextRequest) {
   const problem = passwordProblem(password)
   if (problem) return jsonError(problem)
   if (body?.acceptTerms !== true) return jsonError('Debes aceptar los términos y el aviso de privacidad')
+  if (!(await verifyTurnstile(body?.captcha, req, 'register'))) return jsonError(TURNSTILE_ERROR, 403)
 
   const supabase = await getAuthClient()
   const { data, error } = await supabase.auth.signUp({

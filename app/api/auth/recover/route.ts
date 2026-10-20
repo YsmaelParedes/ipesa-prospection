@@ -4,6 +4,7 @@ import { EMAIL_RE, siteOrigin } from '@/lib/invitations'
 import { clientIp, rateLimit } from '@/lib/rateLimit'
 import { jsonError, readJson } from '@/lib/validation'
 import { reportError } from '@/lib/errorReport'
+import { TURNSTILE_ERROR, verifyTurnstile } from '@/lib/turnstile'
 
 // POST /api/auth/recover { email } — envía el enlace para restablecer la contraseña
 export async function POST(req: NextRequest) {
@@ -13,6 +14,7 @@ export async function POST(req: NextRequest) {
   if (!rateLimit(`recover:${clientIp(req)}`, 5, 60 * 60 * 1000) || !rateLimit(`recover:${email}`, 3, 60 * 60 * 1000)) {
     return jsonError('Ya enviamos varios enlaces. Revisa tu correo o intenta en una hora.', 429)
   }
+  if (!(await verifyTurnstile(body?.captcha, req, 'recover'))) return jsonError(TURNSTILE_ERROR, 403)
 
   const supabase = await getAuthClient()
   const { error } = await supabase.auth.resetPasswordForEmail(email, {

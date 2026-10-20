@@ -1,14 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { AuthAlert, AuthField, AuthHeader, AuthIcon, SubmitButton } from '@/components/AuthUI'
+import { TURNSTILE_SITE_KEY, Turnstile, type TurnstileHandle } from '@/components/Turnstile'
 
 export default function RecoverPage() {
   const [email, setEmail]     = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
   const [sent, setSent]       = useState(false)
+  const [captcha, setCaptcha] = useState('')
+  const turnstile = useRef<TurnstileHandle>(null)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -16,10 +19,10 @@ export default function RecoverPage() {
     setLoading(true)
     try {
       const res = await fetch('/api/auth/recover', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, captcha }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setError(data.error || 'No se pudo enviar el enlace.'); return }
+      if (!res.ok) { setError(data.error || 'No se pudo enviar el enlace.'); turnstile.current?.reset(); return }
       setSent(true)
     } catch {
       setError('Error de conexión. Intenta de nuevo.')
@@ -47,7 +50,8 @@ export default function RecoverPage() {
       <form onSubmit={submit} className="auth-form">
         <AuthField label="Correo electrónico" icon={AuthIcon.mail} type="email" value={email}
           onChange={e => setEmail(e.target.value)} autoComplete="email" autoFocus required maxLength={254} placeholder="tu@correo.com" />
-        <SubmitButton loading={loading}>Enviar enlace</SubmitButton>
+        <Turnstile ref={turnstile} action="recover" onToken={setCaptcha} />
+        <SubmitButton loading={loading} disabled={!!TURNSTILE_SITE_KEY && !captcha}>{TURNSTILE_SITE_KEY && !captcha ? 'Verificando…' : 'Enviar enlace'}</SubmitButton>
       </form>
       <p className="auth-alt"><Link href="/login" className="auth-link strong">Volver a iniciar sesión</Link></p>
     </>

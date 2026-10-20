@@ -6,14 +6,16 @@ const isDev = process.env.NODE_ENV === 'development'
 // React en desarrollo necesita 'unsafe-eval' (overlay de errores); en
 // producción nunca, así que ahí la política es estricta.
 const scriptSrc = isDev
-  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-  : "script-src 'self' 'unsafe-inline'"
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com"
+  : "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com"
 
 const csp = [
   "default-src 'self'",
   scriptSrc,
   "style-src 'self' 'unsafe-inline'",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com",
+  // Cloudflare Turnstile (captcha de registro, inicio de sesión y recuperar contraseña)
+  "frame-src https://challenges.cloudflare.com",
   // Imágenes de encabezado de plantillas guardadas en Supabase Storage
   "img-src 'self' data: blob: https://*.supabase.co",
   // Audio/video de WhatsApp: llegan por el proxy autenticado /api/whatsapp/media

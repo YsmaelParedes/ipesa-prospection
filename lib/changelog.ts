@@ -18,6 +18,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.1.0',
+    date: '20 de octubre, 2026',
+    title: 'Acceso más seguro',
+    items: [
+      'Registro, inicio de sesión y recuperar contraseña ahora tienen una verificación anti-robots de Cloudflare. Casi siempre es invisible; si te pide marcar una casilla, solo confirma que eres una persona.',
+    ],
+  },
+  {
     version: '3.0.0',
     date: '18 de octubre, 2026',
     title: 'Planes Litro, Galón y Cubeta',
