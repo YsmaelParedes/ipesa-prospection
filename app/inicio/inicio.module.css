@@ -596,7 +596,8 @@ a.feature:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--brand-ring)
 .faqGroup .faq { margin-top: 0; max-width: none; }
 
 /* ── Pie ── */
-.footGrid { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(0, 1fr)); gap: 28px; }
+.footGrid { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(4, minmax(0, 1fr)); gap: 28px; }
+.footCol a { overflow-wrap: anywhere; }
 .footGrid .footBrand { flex-direction: column; align-items: flex-start; gap: 10px; }
 .footCol { display: flex; flex-direction: column; gap: 9px; font-size: 14px; font-weight: 600; color: var(--ink-3); }
 .footCol strong { margin-bottom: 4px; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }

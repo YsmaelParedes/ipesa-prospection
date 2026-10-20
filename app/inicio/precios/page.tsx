@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { APP_NAME } from '@/lib/brand'
 import { PLANS } from '@/lib/stores'
+import { EMAILS } from '@/lib/legal'
 import { CtaBand, PageHero, SectionHead } from '../_ui'
 import { PricingCards, PricingCompare } from '../Pricing'
 import s from '../inicio.module.css'
@@ -29,7 +30,7 @@ export default function PreciosPage() {
       <section className={s.section}>
         <div className={s.wrap}>
           <PricingCards />
-          <p className={s.finePrint}>Precios por tienda, en dólares estadounidenses (USD) e impuestos incluidos. Si necesitas factura, escríbenos.</p>
+          <p className={s.finePrint}>Precios por tienda, en dólares estadounidenses (USD) e impuestos incluidos. Si necesitas factura, escríbenos a <a href={`mailto:${EMAILS.facturacion}`}>{EMAILS.facturacion}</a>.</p>
         </div>
       </section>
 

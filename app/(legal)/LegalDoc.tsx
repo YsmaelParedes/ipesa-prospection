@@ -1,4 +1,4 @@
-import { LEGAL } from '@/lib/legal'
+import { LEGAL, EMAILS, type EmailKind } from '@/lib/legal'
 import s from './legal.module.css'
 
 export type LegalSection = { id: string; title: string; body: React.ReactNode }
@@ -40,9 +40,8 @@ export function LegalDoc({ kicker, title, summary, sections }: {
   )
 }
 
-/** Correo de contacto si está configurado; si no, una forma genérica. */
-export function ContactEmail() {
-  return LEGAL.email
-    ? <a href={`mailto:${LEGAL.email}`}>{LEGAL.email}</a>
-    : <>los medios de contacto que te compartimos al dar de alta tu tienda</>
+/** Correo de contacto según el tema (por omisión, el general). */
+export function ContactEmail({ kind = 'hola' }: { kind?: EmailKind }) {
+  const email = kind === 'hola' ? LEGAL.email : EMAILS[kind]
+  return <a href={`mailto:${email}`}>{email}</a>
 }

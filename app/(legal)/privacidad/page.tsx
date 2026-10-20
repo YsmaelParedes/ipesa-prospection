@@ -19,7 +19,7 @@ const sections: LegalSection[] = [
           términos de la Ley Federal de Protección de Datos Personales en Posesión de los Particulares y demás
           normatividad aplicable.
         </p>
-        <p>Para cualquier asunto relacionado con este aviso puedes escribirnos a <ContactEmail />.</p>
+        <p>Para cualquier asunto relacionado con este aviso puedes escribirnos a <ContactEmail kind="privacidad" />.</p>
       </>
     ),
   },
@@ -70,7 +70,7 @@ const sections: LegalSection[] = [
           <li>Cumplir obligaciones legales y atender requerimientos de autoridades competentes.</li>
         </ul>
         <p><strong>Finalidades adicionales</strong> que no son necesarias para el servicio: enviarte novedades, encuestas de satisfacción y promociones de {LEGAL.product}.</p>
-        <p>Si no quieres que usemos tus datos para las finalidades adicionales, escríbenos a <ContactEmail />. Tu negativa no afecta el servicio.</p>
+        <p>Si no quieres que usemos tus datos para las finalidades adicionales, escríbenos a <ContactEmail kind="privacidad" />. Tu negativa no afecta el servicio.</p>
       </>
     ),
   },
@@ -104,7 +104,7 @@ const sections: LegalSection[] = [
           <strong> cancelarlos</strong> cuando consideres que no se usan conforme a la ley y <strong>oponerte</strong> a
           su uso para fines específicos.
         </p>
-        <p>Para ejercerlos envía una solicitud a <ContactEmail /> que incluya:</p>
+        <p>Para ejercerlos envía una solicitud a <ContactEmail kind="privacidad" /> que incluya:</p>
         <ul>
           <li>Tu nombre y el correo de tu cuenta.</li>
           <li>Un documento que acredite tu identidad o, en su caso, la representación legal.</li>
@@ -201,7 +201,7 @@ export default function PrivacyPage() {
         'Usamos tus datos solo para darte el servicio, protegerlo y cobrar el plan.',
         'Los clientes que registra tu tienda son de tu tienda; nosotros solo los procesamos para ti.',
         'No vendemos datos y no usamos cookies de publicidad.',
-        <>Puedes ejercer tus derechos ARCO escribiendo a <ContactEmail key="email" />.</>,
+        <>Puedes ejercer tus derechos ARCO escribiendo a <ContactEmail key="email" kind="privacidad" />.</>,
       ]}
       sections={sections}
     />

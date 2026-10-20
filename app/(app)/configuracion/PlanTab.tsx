@@ -7,7 +7,7 @@ import { invalidateSession } from '@/lib/profile'
 import { useCachedQuery } from '@/lib/useCachedQuery'
 import { formatPlanPrice, type PlanPrice } from '@/lib/billing'
 import { PLAN_COPY } from '@/lib/planFeatures'
-import { LEGAL } from '@/lib/legal'
+import { EMAILS } from '@/lib/legal'
 import { PLANS, PUBLIC_PLANS, STATUS_LABELS } from '@/lib/stores'
 import { Ico, Note, Panel, api, cx, fmtDate, send } from './ui'
 import s from './configuracion.module.css'
@@ -120,7 +120,7 @@ export function PlanTab({ store, isOwner }: { store: ClientStore; isOwner: boole
       {readonly && (
         <Note kind="warn">
           En solo consulta tu equipo puede ver su información y descargarla completa (Configuración → Tienda), pero no
-          registrar clientes ni enviar mensajes. Escríbenos para reactivarla{LEGAL.email ? ` a ${LEGAL.email}` : ''}.
+          registrar clientes ni enviar mensajes. Escríbenos para reactivarla a {EMAILS.soporte}.
         </Note>
       )}
       {error && <Note kind="danger">{error}</Note>}

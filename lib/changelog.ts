@@ -18,6 +18,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.1.2',
+    date: '20 de octubre, 2026',
+    title: 'Correos de contacto',
+    items: [
+      'Ahora hay un correo para cada tema: hola@matices.app (dudas), soporte@matices.app (ayuda con tu tienda), facturacion@matices.app (cobros y facturas) y privacidad@matices.app (tus datos).',
+    ],
+  },
+  {
     version: '3.1.1',
     date: '20 de octubre, 2026',
     title: 'Pagos más confiables',

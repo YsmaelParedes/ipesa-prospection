@@ -73,7 +73,7 @@ const sections: LegalSection[] = [
         </p>
         <p>
           Los precios incluyen los impuestos que se indiquen al pagar. Si necesitas factura fiscal (CFDI), pídela
-          escribiéndonos a <ContactEmail />. Podemos suspender una tienda por incumplir estos términos.
+          escribiéndonos a <ContactEmail kind="facturacion" />. Podemos suspender una tienda por incumplir estos términos.
         </p>
       </>
     ),
@@ -166,7 +166,7 @@ const sections: LegalSection[] = [
         Puedes cancelar tu suscripción en cualquier momento desde Configuración → Plan («Administrar suscripción»).
         Conservas el plan pagado hasta el final del periodo ya cobrado y después tu tienda pasa al plan Litro; no
         hacemos reembolsos de periodos parciales salvo que la ley lo exija. Tu información se conserva: puedes
-        descargarla completa en Excel desde Configuración → Tienda, o pedirnos una copia a <ContactEmail />. No borramos la información de una tienda
+        descargarla completa en Excel desde Configuración → Tienda, o pedirnos una copia a <ContactEmail kind="soporte" />. No borramos la información de una tienda
         por nuestra cuenta; la eliminamos cuando su dueño nos lo pide por escrito. También podemos terminar el servicio
         si se incumplen estos términos, avisándote previamente cuando sea posible.
       </p>

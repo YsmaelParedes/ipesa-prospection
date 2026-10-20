@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { EMAILS } from '@/lib/legal'
 import { BrandLogo } from '@/components/Brand'
 import { APP_NAME, APP_TAGLINE } from '@/lib/brand'
 import { SiteNav } from './SiteNav'
@@ -27,6 +28,11 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             <strong>Cuenta</strong>
             <Link href="/login">Iniciar sesión</Link>
             <Link href="/registro">Crear cuenta gratis</Link>
+          </nav>
+          <nav className={s.footCol} aria-label="Contacto">
+            <strong>Contacto</strong>
+            <a href={`mailto:${EMAILS.hola}`}>{EMAILS.hola}</a>
+            <a href={`mailto:${EMAILS.soporte}`}>{EMAILS.soporte}</a>
           </nav>
           <nav className={s.footCol} aria-label="Legal">
             <strong>Legal</strong>
