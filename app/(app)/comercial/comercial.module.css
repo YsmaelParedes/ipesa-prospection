@@ -105,7 +105,9 @@ button.row.clickable:hover span:first-child { color: var(--brand); }
   .formGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) {
-  .goalsStrip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .goalsStrip { display: flex; overflow-x: auto; gap: 8px; margin: 0 -2px 14px; padding: 0 2px 4px; scroll-snap-type: x mandatory; }
+  .goalMini { flex: 0 0 116px; padding: 8px 10px; scroll-snap-align: start; }
+  .goalMini b { font-size: 18px; }
   .formGrid { grid-template-columns: 1fr; }
   .formGrid > * { grid-column: auto !important; }
   .qTop { flex-direction: column; }

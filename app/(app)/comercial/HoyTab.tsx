@@ -92,7 +92,7 @@ export function HoyTab({ queue, today, uid, isAdmin, salesTeam, readonly, unassi
                     <span className={s.qName}>{bizName(c)}</span>
                     <span className={s.qChips}>
                       <span className={`follow-chip ${next.tone}`}>{next.tone === 'none' ? 'Nuevo · nunca llamado' : `${next.label}${c.next_action ? ` · ${c.next_action}` : ''}`}</span>
-                      <StatusChip value={c.commercial_status} />
+                      {c.commercial_status !== 'nuevo' && <StatusChip value={c.commercial_status} />}
                       <PriorityChip value={c.priority} />
                       {isAdmin && c.owner_name && c.owner_id !== uid && <OwnerChip value={c.owner_name} small />}
                       {c.no_answer_streak >= NO_ANSWER_LIMIT && <span className={s.lowPriority}>{c.no_answer_streak} sin respuesta</span>}

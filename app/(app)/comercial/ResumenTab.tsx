@@ -32,17 +32,18 @@ export function ResumenTab({ contacts, today, salesTeam, isAdmin, onOpen, onGoTo
 
   const stats = useMemo(() => {
     const byStatus = Object.fromEntries(COMMERCIAL_STATUSES.map(st => [st, 0])) as Record<string, number>
-    let queue = 0, overdue = 0, inPlay = 0
+    let queue = 0, overdue = 0, inPlay = 0, cleanup = 0
     for (const c of contacts) {
       byStatus[c.commercial_status] = (byStatus[c.commercial_status] ?? 0) + 1
       const b = bucketOf(c, today)
       if (inQueue(b)) queue++
       if (b === 'vencido') overdue++
+      if (b === 'depurar') cleanup++
       inPlay += (Number(c.potential_monthly) || 0) * (STAGE_PROBABILITY[c.commercial_status] ?? 0)
     }
     const upcoming = contacts.filter(c => bucketOf(c, today) === 'programado')
       .sort((a, b) => String(a.next_action_at).localeCompare(String(b.next_action_at))).slice(0, 6)
-    return { byStatus, queue, overdue, inPlay, upcoming }
+    return { byStatus, queue, overdue, inPlay, upcoming, cleanup }
   }, [contacts, today])
 
   if (!salesTeam) {
@@ -98,7 +99,7 @@ export function ResumenTab({ contacts, today, salesTeam, isAdmin, onOpen, onGoTo
           </div>
           <div className={s.rows} style={{ marginTop: 10 }}>
             <div className={s.row}><span>No interesados</span><b>{stats.byStatus.no_interesado}</b></div>
-            <button className={`${s.row} ${s.clickable}`} onClick={() => onGoTo('base')}><span>Por depurar (estado)</span><b>{stats.byStatus.depurar}</b></button>
+            <button className={`${s.row} ${s.clickable}`} onClick={() => onGoTo('base')}><span>Por depurar (sin número o teléfono equivocado)</span><b>{stats.cleanup}</b></button>
           </div>
         </div>
 

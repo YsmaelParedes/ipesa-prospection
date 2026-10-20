@@ -22,9 +22,9 @@ export function BaseTab({ contacts, inScope, today, isAdmin, salesTeam, readonly
 }) {
   const [view, setView]       = useState<View>('todos')
   const [search, setSearch]   = useState('')
-  const [coloniaF, setColoniaF] = useState('Todas')
+  const [coloniaF, setColoniaF] = useState('Todos')
   const [segF, setSegF]       = useState('Todos')
-  const [prioF, setPrioF]     = useState('Todas')
+  const [prioF, setPrioF]     = useState('Todos')
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [shown, setShown]     = useState(PAGE)
 
@@ -33,9 +33,9 @@ export function BaseTab({ contacts, inScope, today, isAdmin, salesTeam, readonly
   const segmentos = useMemo(() => Array.from(new Set(contacts.map(c => c.segment).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, 'es')), [contacts])
 
   const matches = (c: CommercialContact) => {
-    if (coloniaF !== 'Todas' && coloniaOf(c) !== coloniaF) return false
+    if (coloniaF !== 'Todos' && coloniaOf(c) !== coloniaF) return false
     if (segF !== 'Todos' && c.segment !== segF) return false
-    if (prioF !== 'Todas' && c.priority !== prioF) return false
+    if (prioF !== 'Todos' && c.priority !== prioF) return false
     const q = search.trim().toLowerCase()
     if (q && !`${c.name} ${c.company ?? ''} ${c.phone} ${c.email ?? ''} ${c.address ?? ''} ${c.colonia ?? ''} ${c.last_note ?? ''}`.toLowerCase().includes(q)) return false
     return true
@@ -72,7 +72,7 @@ export function BaseTab({ contacts, inScope, today, isAdmin, salesTeam, readonly
     if (next.has(id)) next.delete(id); else next.add(id)
     return next
   })
-  const filtersOn = !!search.trim() || coloniaF !== 'Todas' || segF !== 'Todos' || prioF !== 'Todas'
+  const filtersOn = !!search.trim() || coloniaF !== 'Todos' || segF !== 'Todos' || prioF !== 'Todos'
 
   return (
     <div>
@@ -93,18 +93,18 @@ export function BaseTab({ contacts, inScope, today, isAdmin, salesTeam, readonly
         </label>
         <div className="filter-bar">
           {colonias.length > 0 && (
-            <FilterDropdown value={coloniaF} options={['Todas', ...colonias]} onChange={setColoniaF}
-              triggerLabel={v => v === 'Todas' ? 'Colonia' : v} optionLabel={v => v === 'Todas' ? 'Todas las colonias' : v} searchPlaceholder="Buscar colonia…" />
+            <FilterDropdown value={coloniaF} options={colonias} onChange={setColoniaF}
+              triggerLabel={v => v === 'Todos' ? 'Colonia' : v} optionLabel={v => v === 'Todos' ? 'Todas las colonias' : v} searchPlaceholder="Buscar colonia…" />
           )}
           {segmentos.length > 0 && (
-            <FilterDropdown value={segF} options={['Todos', ...segmentos]} onChange={setSegF}
+            <FilterDropdown value={segF} options={segmentos} onChange={setSegF}
               triggerLabel={v => v === 'Todos' ? 'Segmento' : v} optionLabel={v => v === 'Todos' ? 'Todos los segmentos' : v} searchPlaceholder="Buscar segmento…" />
           )}
-          <FilterDropdown value={prioF} options={['Todas', ...PRIORITIES]} onChange={setPrioF} searchable={false}
-            triggerLabel={v => v === 'Todas' ? 'Prioridad' : `Prioridad ${PRIORITY_INFO[v as 'alta'].label.toLowerCase()}`}
-            optionLabel={v => v === 'Todas' ? 'Todas las prioridades' : PRIORITY_INFO[v as 'alta'].label} />
-          {(coloniaF !== 'Todas' || segF !== 'Todos' || prioF !== 'Todas') && (
-            <button className="filter-pill" onClick={() => { setColoniaF('Todas'); setSegF('Todos'); setPrioF('Todas') }}>Limpiar filtros</button>
+          <FilterDropdown value={prioF} options={[...PRIORITIES]} onChange={setPrioF} searchable={false}
+            triggerLabel={v => v === 'Todos' ? 'Prioridad' : `Prioridad ${PRIORITY_INFO[v as 'alta'].label.toLowerCase()}`}
+            optionLabel={v => v === 'Todos' ? 'Todas las prioridades' : PRIORITY_INFO[v as 'alta'].label} />
+          {(coloniaF !== 'Todos' || segF !== 'Todos' || prioF !== 'Todos') && (
+            <button className="filter-pill" onClick={() => { setColoniaF('Todos'); setSegF('Todos'); setPrioF('Todos') }}>Limpiar filtros</button>
           )}
         </div>
       </div>
