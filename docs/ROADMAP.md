@@ -138,7 +138,7 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 
 ### Etapa 8. Listo para vender
 - Nombre del producto centralizado en un archivo ✅ (Matices, 2.9.0) y dominio propio ✅ (`www.matices.app`, 19 de octubre).
-- Botón "Ayuda" con WhatsApp y correo.
+- Botón "Ayuda" ✅ (3.2.0, solo correo a soporte@matices.app).
 - Términos de uso y aviso de privacidad actualizados.
 - Fórmulas como módulo opcional por tienda.
 - Vercel Pro y Supabase Pro, con respaldo comprobado.

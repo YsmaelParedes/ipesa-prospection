@@ -18,6 +18,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.2.0',
+    date: '20 de octubre, 2026',
+    title: 'Botón de Ayuda',
+    items: [
+      'Nuevo botón "Ayuda" en el menú, debajo de Configuración: abre un correo a soporte@matices.app con los datos de tu tienda ya escritos para atenderte más rápido.',
+    ],
+  },
+  {
     version: '3.1.2',
     date: '20 de octubre, 2026',
     title: 'Correos de contacto',

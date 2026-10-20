@@ -17,6 +17,7 @@ import { invalidateSession, useSession } from '@/lib/profile'
 import { signOut } from '@/lib/signOut'
 import { CHANGELOG, CURRENT_VERSION } from '@/lib/changelog'
 import { SYSTEM_NOTICE } from '@/lib/systemNotice'
+import { EMAILS } from '@/lib/legal'
 import { ROLE_LABELS, STATUS_LABELS, type StoreModule } from '@/lib/stores'
 import { reminderSubject, reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
@@ -47,6 +48,7 @@ const Icon = {
   bell:      stroke(<><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></>),
   menu:      stroke(<path d="M3 6h18M3 12h18M3 18h18" />, 2.2),
   plus:      stroke(<path d="M12 5v14M5 12h14" />, 2.4),
+  help:      stroke(<><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01" /></>),
   logout:    stroke(<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />),
   check:     stroke(<path d="m5 13 4 4L19 7" />, 2.4),
   arrowUp:   stroke(<path d="M12 19V5M5 12l7-7 7 7" />, 2.4),
@@ -325,6 +327,16 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   // Stripe no pudo cobrar: el dueño ve el aviso para actualizar su tarjeta
   const paymentIssue = !!session?.isOwner && !!store?.subscription && (store.subscription.status === 'past_due' || store.subscription.status === 'unpaid')
   const showFab      = !readonly && pathname in FAB_ROUTES
+  const helpMailto   = `mailto:${EMAILS.soporte}?subject=${encodeURIComponent(`Ayuda · ${store?.name ?? APP_NAME}`)}&body=${encodeURIComponent(
+    `Hola, necesito ayuda con:
+
+
+---
+Tienda: ${store?.name ?? ''}${store ? ` (${store.slug})` : ''}
+Plan: ${store?.planLabel ?? ''}
+Usuario: ${session?.user.email ?? ''}
+Pantalla: ${pathname}`,
+  )}`
 
   // Lo que toca hoy (vencidos + hoy): contador de la campana y de Agenda
   const dueCount = reminders.filter(r => isDueToday(r.fecha_recordatorio, now)).length
@@ -408,6 +420,11 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
             <Icon.settings className="nav-icon" />
             <span>Configuración</span>
           </Link>
+          {/* Ayuda: correo a soporte con la tienda y el plan ya escritos para saber quién es */}
+          <a className="nav-item" href={helpMailto} title={`Escríbenos a ${EMAILS.soporte}`}>
+            <Icon.help className="nav-icon" />
+            <span>Ayuda</span>
+          </a>
         </nav>
 
         <div className="user-card">
