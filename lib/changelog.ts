@@ -18,6 +18,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '3.2.1',
+    date: '20 de octubre, 2026',
+    title: 'Planes más fáciles de distinguir',
+    items: [
+      'Cada plan tiene su ícono (litro, galón y cubeta) y su nombre en grande, en la página de Precios y en Configuración → Plan.',
+    ],
+  },
+  {
     version: '3.2.0',
     date: '20 de octubre, 2026',
     title: 'Botón de Ayuda',

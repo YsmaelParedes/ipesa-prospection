@@ -6,6 +6,7 @@ import { formatPlanPrice, type PlanPrice } from '@/lib/billing'
 import { PLAN_COMPARE, PLAN_COPY } from '@/lib/planFeatures'
 import { PLANS, PUBLIC_PLANS } from '@/lib/stores'
 import { Ic } from './_ui'
+import { PlanIcon } from '@/components/PlanIcon'
 import s from './inicio.module.css'
 
 type Prices = Partial<Record<'galon' | 'cubeta', PlanPrice>>
@@ -36,12 +37,16 @@ export function PricingCards() {
           <div key={id} className={`${s.planCard} ${s.priceCard} ${copy.highlight ? s.priceCardHi : ''}`}>
             {copy.highlight && <span className={s.priceFlag}>El más elegido</span>}
             <div className={s.planTop}>
-              <span className={s.planName}>{PLANS[id].label}</span>
-              <strong>
-                {id === 'litro' ? 'Gratis' : price ? formatPlanPrice(price) : prices === null ? <span className={s.priceLoading}>…</span> : 'Muy pronto'}
-              </strong>
-              <small>{id === 'litro' ? 'para siempre, sin tarjeta' : price ? 'al mes, por tienda' : 'precio mensual por tienda'}</small>
+              <PlanIcon plan={id} className={s.priceIcon} />
+              <h3 className={s.priceName}>{PLANS[id].label}</h3>
               <p className={s.priceTagline}>{copy.tagline}</p>
+              <div className={s.priceAmount}>
+                <strong>
+                  {id === 'litro' ? 'Gratis' : price ? formatPlanPrice(price) : prices === null ? <span className={s.priceLoading}>…</span> : 'Muy pronto'}
+                </strong>
+                <small>{id === 'litro' ? 'para siempre' : price ? '/ mes' : ''}</small>
+              </div>
+              <small className={s.priceSub}>{id === 'litro' ? 'Sin tarjeta.' : 'Por tienda, impuestos incluidos.'}</small>
             </div>
             <ul className={s.planList}>
               {copy.features.map(f => <li key={f}><span className={s.bulletIcon}><Ic.check /></span>{f}</li>)}

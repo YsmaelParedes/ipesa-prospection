@@ -7,6 +7,7 @@ import { invalidateSession } from '@/lib/profile'
 import { useCachedQuery } from '@/lib/useCachedQuery'
 import { formatPlanPrice, type PlanPrice } from '@/lib/billing'
 import { PLAN_COPY } from '@/lib/planFeatures'
+import { PlanIcon } from '@/components/PlanIcon'
 import { EMAILS } from '@/lib/legal'
 import { PLANS, PUBLIC_PLANS, STATUS_LABELS } from '@/lib/stores'
 import { Ico, Note, Panel, api, cx, fmtDate, send } from './ui'
@@ -170,6 +171,7 @@ export function PlanTab({ store, isOwner }: { store: ClientStore; isOwner: boole
               return (
                 <div key={id} className={cx(s.planOption, current && s.planOptionOn, copy.highlight && !current && s.planOptionHi)}>
                   {copy.highlight && <span className={s.planFlag}>Recomendado</span>}
+                  <PlanIcon plan={id} className={s.planIcon} />
                   <div className={s.planName}>{PLANS[id].label}</div>
                   <div className={s.planPrice}>
                     {id === 'litro'
