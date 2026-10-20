@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { AuthAlert, AuthField, AuthHeader, AuthIcon, PasswordField, ResendConfirmation, SubmitButton } from '@/components/AuthUI'
 import { PLANS } from '@/lib/stores'
+import { TURNSTILE_SITE_KEY, Turnstile, type TurnstileHandle } from '@/components/Turnstile'
 
 /**
  * Registro abierto: la cuenta nace sin tienda; al confirmar el correo,
@@ -20,6 +21,8 @@ export default function RegisterPage() {
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
   const [sentTo, setSentTo]     = useState('')
+  const [captcha, setCaptcha]   = useState('')
+  const turnstile = useRef<TurnstileHandle>(null)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,10 +33,10 @@ export default function RegisterPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, acceptTerms: accept }),
+        body: JSON.stringify({ name, email, password, acceptTerms: accept, captcha }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setError(data.error || 'No se pudo crear la cuenta.'); return }
+      if (!res.ok) { setError(data.error || 'No se pudo crear la cuenta.'); turnstile.current?.reset(); return }
       if (data.needsConfirmation) setSentTo(email.trim().toLowerCase())
       else window.location.href = '/bienvenida'
     } catch {
@@ -75,7 +78,8 @@ export default function RegisterPage() {
           <input type="checkbox" checked={accept} onChange={e => setAccept(e.target.checked)} />
           <span>Acepto los <Link href="/terminos" target="_blank" className="auth-link">términos de uso</Link> y el <Link href="/privacidad" target="_blank" className="auth-link">aviso de privacidad</Link>.</span>
         </label>
-        <SubmitButton loading={loading}>Crear cuenta gratis</SubmitButton>
+        <Turnstile ref={turnstile} action="register" onToken={setCaptcha} />
+        <SubmitButton loading={loading} disabled={!!TURNSTILE_SITE_KEY && !captcha}>{TURNSTILE_SITE_KEY && !captcha ? 'Verificando…' : 'Crear cuenta gratis'}</SubmitButton>
       </form>
       <p className="auth-alt">¿Ya tienes cuenta? <Link href="/login" className="auth-link strong">Inicia sesión</Link></p>
       <p className="auth-fine">¿Te invitaron a una tienda? Abre el enlace de tu invitación: ahí creas tu contraseña.</p>

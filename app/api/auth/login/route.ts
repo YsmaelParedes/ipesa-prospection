@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { isPlatformAdmin } from '@/lib/supabase-server'
 import { readJson } from '@/lib/validation'
+import { TURNSTILE_ERROR, verifyTurnstile } from '@/lib/turnstile'
 
 /**
  * In-memory sliding-window rate limiter for the login endpoint.
@@ -61,6 +62,9 @@ export async function POST(req: NextRequest) {
   if (!body) return NextResponse.json({ error: 'Cuerpo de solicitud inválido' }, { status: 400 })
 
   const { email, password } = body
+  if (!(await verifyTurnstile(body.captcha, req, 'login'))) {
+    return NextResponse.json({ error: TURNSTILE_ERROR, code: 'CAPTCHA' }, { status: 403 })
+  }
 
   if (!email || !password) {
     return NextResponse.json({ error: 'Correo y contraseña son requeridos' }, { status: 400 })

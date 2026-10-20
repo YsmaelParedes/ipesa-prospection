@@ -1,11 +1,12 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { AuthAlert, AuthField, AuthHeader, AuthIcon, PasswordField, ResendConfirmation, SubmitButton } from '@/components/AuthUI'
 import { APP_NAME } from '@/lib/brand'
 import { safeNext } from '@/lib/safeNext'
+import { TURNSTILE_SITE_KEY, Turnstile, type TurnstileHandle } from '@/components/Turnstile'
 
 export default function LoginPage() {
   return <Suspense><LoginForm /></Suspense>
@@ -21,6 +22,8 @@ function LoginForm() {
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
   const [unconfirmed, setUnconfirmed] = useState('')
+  const [captcha, setCaptcha] = useState('')
+  const turnstile = useRef<TurnstileHandle>(null)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,11 +34,11 @@ function LoginForm() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, captcha }),
       })
       const data = await res.json().catch(() => ({}))
-      if (data.code === 'EMAIL_NOT_CONFIRMED') { setUnconfirmed(email.trim().toLowerCase()); return }
-      if (!res.ok) { setError(data.error || 'No pudimos iniciar sesión.'); return }
+      if (data.code === 'EMAIL_NOT_CONFIRMED') { setUnconfirmed(email.trim().toLowerCase()); turnstile.current?.reset(); return }
+      if (!res.ok) { setError(data.error || 'No pudimos iniciar sesión.'); turnstile.current?.reset(); return }
       // Sin ?next=, cada quien a su inicio (el dueño de la plataforma, a /admin)
       window.location.href = nextParam ? safeNext(nextParam) : safeNext(data.home)
     } catch {
@@ -66,7 +69,8 @@ function LoginForm() {
         <div className="auth-row-end">
           <Link href="/recuperar" className="auth-link">¿Olvidaste tu contraseña?</Link>
         </div>
-        <SubmitButton loading={loading}>Entrar</SubmitButton>
+        <Turnstile ref={turnstile} action="login" onToken={setCaptcha} />
+        <SubmitButton loading={loading} disabled={!!TURNSTILE_SITE_KEY && !captcha}>{TURNSTILE_SITE_KEY && !captcha ? 'Verificando…' : 'Entrar'}</SubmitButton>
       </form>
       <p className="auth-alt">¿Tu tienda aún no usa {APP_NAME}? <Link href="/registro" className="auth-link strong">Crea tu cuenta gratis</Link></p>
     </>
