@@ -8,6 +8,8 @@ Estado: **implementado el 20 de octubre de 2026 (versión 4.0.0) sin la geolocal
 - **Contacto nuevo:** quien lo da de alta a mano queda como responsable; los importados quedan sin asignar.
 - **"No interesado":** se le pone fecha a 90 días ("Volver a ofrecer") en vez de una columna aparte para ocultarlo.
 - **Ya cambiados:** Inicio (llamadas para hoy, cotizaciones y ventas del mes, resultados), Agenda (muestra las llamadas de hoy y vencidas), ficha de Contactos y de WhatsApp (estado comercial), buscador, exportación ("Historial comercial") y panel `/admin` (actividades en lugar de leads).
+- **Pestañas (como las hojas del Excel, aprobadas en mockup el 20 de octubre):** Resumen (tablero; el dueño entra aquí), Hoy (meta del día + cola en tarjetas con resultado a un toque; el vendedor entra aquí), Seguimiento (tablero por etapa), Actividades (bitácora), Base comercial (con "Por depurar", "Sin asignar", programados y clientes como filtros), Alta de prospectos y Control diario (con observaciones del día).
+- **Datos agregados del Excel:** prioridad (alta/media/baja), potencial mensual, origen y observaciones del día (migración `20261020220024_commercial_fields`). La probabilidad sale de la etapa: contactado 10 %, interés 25 %, cotización 50 %.
 - **Pendiente:** el sitio público (portada y funciones) todavía muestra la demo del tablero de Leads; se rehace aparte, con mockup.
 
 ## Por qué
