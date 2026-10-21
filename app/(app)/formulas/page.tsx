@@ -220,7 +220,7 @@ export default function FormulasPage() {
               </button>
               <div className="panel-head" style={{ marginBottom: 16, gap: 14 }}>
                 <Swatch hex={selected.swatch} size={48} />
-                <div>
+                <div style={{ flex: '1 1 160px', minWidth: 0, overflowWrap: 'anywhere' }}>
                   <div className="panel-title">{selected.code} — {selected.name}</div>
                   <div className="panel-sub" style={{ marginLeft: 0 }}>Base {selected.base}</div>
                 </div>
