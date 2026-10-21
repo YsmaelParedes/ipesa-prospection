@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { LEGAL } from '@/lib/legal'
+import { RETENTION_IDLE_MONTHS, RETENTION_LAST_NOTICE_DAYS, RETENTION_NOTICE_DAYS } from '@/lib/retention'
 import { ContactEmail, LegalDoc, type LegalSection } from '../LegalDoc'
 
 export const metadata: Metadata = {
@@ -169,7 +170,10 @@ const sections: LegalSection[] = [
         Conservamos los datos mientras exista la cuenta de la tienda, aunque haya cancelado su suscripción (en ese
         caso pasa al plan Litro y puede descargar su información completa). Eliminamos o anonimizamos de
         forma segura la información de una tienda cuando su dueño lo solicita por escrito, salvo lo que debamos
-        conservar para cumplir obligaciones legales.
+        conservar para cumplir obligaciones legales. También eliminamos las tiendas del plan Litro que pasan
+        {' '}{RETENTION_IDLE_MONTHS} meses sin uso, después de avisar a su dueño por correo {RETENTION_NOTICE_DAYS} y {RETENTION_LAST_NOTICE_DAYS} días
+        antes; de una tienda eliminada solo guardamos su nombre y la fecha, sin datos de sus clientes. Los
+        registros de cobro los conserva Stripe según sus obligaciones fiscales.
       </p>
     ),
   },

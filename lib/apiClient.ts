@@ -185,7 +185,7 @@ const prefetchRoutes: Record<string, string[]> = {
   '/formulas': ['/api/formulas'],
   '/whatsapp': ['/api/whatsapp/conversations?filter=all'],
   '/configuracion': ['/api/data/config'],
-  '/admin': ['/api/platform/stores'], '/admin/tiendas': ['/api/platform/stores'],
+  '/admin': ['/api/platform/stores', '/api/platform/billing'], '/admin/tiendas': ['/api/platform/stores'],
 }
 const prefetchAllowed = new Set(Object.values(prefetchRoutes).flat())
 const prefetchQueue = new Set<string>()
@@ -205,9 +205,5 @@ export function prefetchQuery(path: string) {
 export async function prefetchRoute(href: string) {
   const path = href.split('?')[0], session = await loadSession()
   if (!session || path.startsWith('/admin') && !session.platformAdmin || !path.startsWith('/admin') && !session.store || path === '/formulas' && !session.store?.modules.formulas || path === '/whatsapp' && !session.store?.modules.whatsapp) return
-  if (path === '/admin/pagos') {
-    const now = new Date()
-    prefetchQuery(`/api/platform/payments?month=${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
-  }
   for (const url of prefetchRoutes[path] ?? []) prefetchQuery(url)
 }

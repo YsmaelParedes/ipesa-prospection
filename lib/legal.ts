@@ -32,7 +32,7 @@ export const LEGAL = {
   /** Solo dígitos; 10 dígitos se toman como número de México (52) */
   whatsapp: (process.env.NEXT_PUBLIC_CONTACT_WHATSAPP || '').replace(/\D/g, '') || null,
   jurisdiction: 'Puebla, Puebla',
-  updatedAt: '18 de octubre de 2026',
+  updatedAt: '21 de octubre de 2026',
 }
 
 /**

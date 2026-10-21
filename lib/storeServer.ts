@@ -93,9 +93,8 @@ export async function setActiveStoreCookie(storeId: string) {
  * dueño (registro abierto); sin él, la tienda queda sin dueño hasta que acepte
  * su invitación (alta desde el panel de la plataforma). Si no se puede dar de
  * alta al dueño, la tienda se deshace. El slug se desambigua si ya existe.
- * Precio mensual acordado opcional (solo para acuerdos especiales del panel).
  */
-export async function createStore(createdBy: string, profile: Record<string, unknown>, monthlyPrice: number | null = null, ownerId: string | null = null): Promise<StoreRow> {
+export async function createStore(createdBy: string, profile: Record<string, unknown>, ownerId: string | null = null): Promise<StoreRow> {
   const db = getServerSupabase()
   const base = slugify(String(profile.name)) || 'tienda'
   let store: StoreRow | null = null
@@ -107,7 +106,6 @@ export async function createStore(createdBy: string, profile: Record<string, unk
       status: 'active',
       plan: DEFAULT_PLAN,
       modules: DEFAULT_MODULES,
-      monthly_price: monthlyPrice,
       created_by: createdBy,
     }).select(STORE_COLUMNS).single()
     if (!error) store = data as unknown as StoreRow

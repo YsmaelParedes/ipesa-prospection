@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     if ((await getMemberships(user.id)).length > 0) {
       return jsonError('Tu cuenta ya pertenece a una tienda. Para abrir otra sucursal, escríbenos.', 403)
     }
-    const store = await createStore(user.id, parsed.data, null, user.id)
+    const store = await createStore(user.id, parsed.data, user.id)
     await setActiveStoreCookie(store.id)
     return NextResponse.json({ store: publicStore(store) }, { status: 201 })
   } catch (error) {

@@ -1,5 +1,5 @@
 import { withServerTiming } from '@/lib/serverTiming'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import {
   displayNameOf, getServerSupabase, getSessionUser, invalidateStoreMembers, isPlatformAdmin,
   resolveStoreContext, unauthorizedResponse,
@@ -10,6 +10,7 @@ import { jsonError, readJson, serverError } from '@/lib/validation'
 /**
  * GET /api/me — quién soy, en qué tienda estoy y qué puedo hacer.
  * Sin tienda todavía → { store: null } y el cliente manda al alta de tienda.
+ * Anota que la tienda se usó (y cancela su eliminación por inactividad).
  */
 async function GETImpl() {
   const user = await getSessionUser()
@@ -18,6 +19,11 @@ async function GETImpl() {
     const [ctx, platformAdmin] = await Promise.all([resolveStoreContext(user), isPlatformAdmin(user.id)])
     const me = { id: user.id, email: user.email ?? '', name: displayNameOf(user) }
     if (!ctx) return NextResponse.json({ user: me, store: null, stores: [], platformAdmin }, { headers: { 'Cache-Control': 'no-store' } })
+    const storeId = ctx.storeId
+    after(async () => {
+      const { error } = await getServerSupabase().rpc('touch_store_seen', { p_store: storeId })
+      if (error) console.error('[GET /api/me] touch_store_seen', error.message)
+    })
     return NextResponse.json({ user: me, platformAdmin, ...sessionPayload(ctx) }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     return serverError('GET /api/me', error, 'Error al cargar tu sesión')

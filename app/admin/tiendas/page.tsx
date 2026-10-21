@@ -4,35 +4,45 @@ import { apiFetch } from '@/lib/apiClient'
 
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { fmtMoney, isMoney } from '@/lib/payments'
 import { PLANS, STATUS_LABELS, planOf, type PlanId, type StoreStatus } from '@/lib/stores'
 import {
-  ago, countStores, expiresSoon, fmtDate as fmt, isLapsed, isOff, isPastDue, isStripePaid, planNow, stripeCustomerUrl, subscriptionLine,
-  usePayments, usePlatformStores, wantsWhatsApp, type PlatformStore,
+  ago, countStores, fmtDate as fmt, isCancelling, isCourtesy, isDeletionScheduled, isOff, isPastDue, isStripePaid, planNow, subscriptionLine,
+  usePlatformStores, wantsWhatsApp, type PlatformStore,
 } from '../data'
-import { PaymentForm, PaymentRow } from '../payments-ui'
+import { SubscriptionBlock } from '../billing-ui'
 import { NewStoreModal, OwnerInviteBlock } from '../stores-ui'
 import { WhatsAppConnectionBlock } from '../whatsapp-ui'
 import { Select } from '@/components/Select'
+import { RETENTION_IDLE_MONTHS, RETENTION_NOTICE_DAYS } from '@/lib/retention'
 import s from '../admin.module.css'
 
 /**
  * Panel del dueño › Tiendas: todas las tiendas con su plan y suscripción y, en
- * la ficha de cada una, su cliente de Stripe, cortesías (plan a mano, pagos a
- * mano, precio acordado), WhatsApp y suspender. "Nueva tienda" da de alta una
- * tienda con invitación para casos especiales (lo normal es que se registren solas).
- * /admin/tiendas?tienda=<id> abre directo la ficha (enlaces del Resumen y Pagos).
+ * la ficha de cada una, sus facturas de Stripe, cortesía (plan sin cobro),
+ * WhatsApp, eliminación por inactividad y suspender o reactivar. "Nueva tienda" da de alta una tienda con
+ * invitación para casos especiales (lo normal es que se registren solas).
+ * /admin/tiendas?tienda=<id> abre directo la ficha (enlaces del Resumen).
  */
 
 type StoreRow = PlatformStore
-type Filter = 'all' | 'litro' | 'galon' | 'cubeta' | 'pastDue' | 'expiring' | 'lapsed' | 'off'
+type Filter = 'all' | 'litro' | 'galon' | 'cubeta' | 'pastDue' | 'cancelling' | 'courtesy' | 'deleting' | 'off'
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
 
 const STATUS_CLS: Record<StoreStatus, string> = { pending: s.bPending, trial: s.bTrial, active: s.bActive, suspended: s.bDanger, cancelled: s.bMuted }
 const PLAN_CLS: Record<PlanId, string> = { litro: s.bMuted, galon: s.bTrial, cubeta: s.bActive, interno: s.bPending }
+
+function retentionText(st: StoreRow) {
+  const used = st.last_used_at ? `Último uso: ${fmt(st.last_used_at)}. ` : ''
+  if (st.retention_hold) return `Excluida: no se elimina aunque deje de usarse. ${used}`.trim()
+  if (isDeletionScheduled(st)) return `${used}Ya se avisó al dueño: se elimina con todos sus datos el ${fmt(st.deletion_scheduled_for)} si nadie entra antes.`
+  if (st.retention_protected) return `${used}No aplica: solo se eliminan tiendas en Litro sin suscripción ni cortesía.`
+  return `${used}Si pasa ${RETENTION_IDLE_MONTHS} meses sin uso, se avisa al dueño y se elimina ${RETENTION_NOTICE_DAYS} días después.`
+}
+
+const CONFIRM_YES = { suspend: 'Sí, suspender', cancel: 'Sí, cancelar', activate: 'Sí, reactivar' }
+const CONFIRM_DONE = { suspend: 'Tienda suspendida', cancel: 'Tienda cancelada', activate: 'Tienda reactivada' }
 
 export default function StoresPage() {
   return <Suspense><StoresList /></Suspense>
@@ -65,8 +75,9 @@ function StoresList() {
       switch (filter) {
         case 'litro': case 'galon': case 'cubeta': return !isOff(st) && planNow(st) === filter
         case 'pastDue': return isPastDue(st)
-        case 'expiring': return expiresSoon(st)
-        case 'lapsed': return isLapsed(st)
+        case 'cancelling': return isCancelling(st)
+        case 'courtesy': return !isOff(st) && isCourtesy(st) && planNow(st) !== 'interno'
+        case 'deleting': return isDeletionScheduled(st)
         case 'off': return isOff(st)
         default: return true
       }
@@ -74,17 +85,18 @@ function StoresList() {
   }, [stores, query, filter])
 
   const open = stores?.find(st => st.id === openId) ?? null
-  // Los filtros de cortesías solo aparecen si hay alguna
+  // Los filtros de cancelaciones y cortesías solo aparecen si hay alguna
   const FILTERS: { id: Filter; label: string }[] = [
     { id: 'all', label: 'Todas' }, { id: 'litro', label: 'Litro' }, { id: 'galon', label: 'Galón' }, { id: 'cubeta', label: 'Cubeta' },
     { id: 'pastDue', label: 'Pago fallido' },
-    ...(counts.expiring ? [{ id: 'expiring' as Filter, label: 'Cortesía por vencer' }] : []),
-    ...(counts.lapsed ? [{ id: 'lapsed' as Filter, label: 'Cortesía vencida' }] : []),
+    ...(counts.cancelling ? [{ id: 'cancelling' as Filter, label: 'Se cancelan' }] : []),
+    ...(counts.courtesy ? [{ id: 'courtesy' as Filter, label: 'Cortesía' }] : []),
+    ...(counts.deleting ? [{ id: 'deleting' as Filter, label: 'Por eliminar' }] : []),
     { id: 'off', label: 'Suspendidas' },
   ]
   const FILTER_COUNT: Record<Filter, number> = {
     all: counts.all, litro: counts.litro, galon: counts.galon, cubeta: counts.cubeta,
-    pastDue: counts.pastDue, expiring: counts.expiring, lapsed: counts.lapsed, off: counts.off,
+    pastDue: counts.pastDue, cancelling: counts.cancelling, courtesy: counts.courtesy, deleting: counts.deleting, off: counts.off,
   }
 
   return (
@@ -145,8 +157,8 @@ function StoresList() {
                       ? <em className={cx(s.badge, STATUS_CLS[st.status])}>{STATUS_LABELS[st.status]}</em>
                       : <em className={cx(s.badge, PLAN_CLS[planNow(st)])}>{PLANS[planNow(st)].label}</em>}
                     {isPastDue(st) && <em className={cx(s.badge, s.bDanger)}>Pago fallido</em>}
-                    {isLapsed(st) && <em className={cx(s.badge, s.bPending)}>Cortesía vencida</em>}
-                    {expiresSoon(st) && <em className={cx(s.badge, s.bWarn)}>Por vencer</em>}
+                    {isCancelling(st) && <em className={cx(s.badge, s.bWarn)}>Se cancela</em>}
+                    {isDeletionScheduled(st) && <em className={cx(s.badge, s.bDanger)}>Se elimina {fmt(st.deletion_scheduled_for, { day: 'numeric', month: 'short' })}</em>}
                     {wantsWhatsApp(st) && <em className={cx(s.badge, s.bActive)}>Pidió WhatsApp</em>}
                   </span>
                   <small>{subscriptionLine(st)}</small>
@@ -177,28 +189,20 @@ function StoresList() {
 
 /* ── Detalle y acciones de una tienda ───────────────────────────────────── */
 function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: () => void; onSaved: () => Promise<void> }) {
-  const { payments, error: payError, reload: reloadPayments } = usePayments({ store: store.id })
   const [plan, setPlan]     = useState(store.plan)
-  const [price, setPrice]   = useState(store.monthly_price === null ? '' : String(store.monthly_price))
   const [notes, setNotes]   = useState(store.platform_notes ?? '')
   const [busy, setBusy]     = useState('')
   const [msg, setMsg]       = useState<{ ok: boolean; text: string } | null>(null)
-  const [confirm, setConfirm] = useState<'suspend' | 'cancel' | 'unlimited' | 'wa_off' | null>(null)
+  const [confirm, setConfirm] = useState<'suspend' | 'cancel' | 'activate' | 'wa_off' | null>(null)
   const waActive = !!store.modules?.whatsapp
   const stripePaid = isStripePaid(store)
-  const stripeUrl = stripeCustomerUrl(store)
+  const off = isOff(store)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
-
-  // Después de un pago o una anulación: recargar la tienda (vigencia) y sus pagos
-  const done = async (text: string) => {
-    await Promise.all([onSaved(), reloadPayments()])
-    setMsg({ ok: true, text })
-  }
 
   const patch = async (key: string, body: Record<string, unknown>, text: string) => {
     setBusy(key)
@@ -219,11 +223,6 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
     }
   }
 
-  const priceValue = price.trim() === '' ? null : Number(price)
-  const priceValid = priceValue === null || isMoney(priceValue)
-  // Solo el pago vigente más reciente se puede anular (la base lo vuelve a validar)
-  const latestLive = payments?.find(p => !p.voided_at)?.id
-
   return (
     <div className="modal" onClick={onClose}>
       <div className={cx('modal-card', s.drawer)} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="pl-title">
@@ -239,9 +238,8 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
         <div className="modal-body">
           <div className={s.facts}>
             <div><small>Estado</small><strong><em className={cx(s.badge, STATUS_CLS[store.status])}>{STATUS_LABELS[store.status]}</em>{isPastDue(store) && <em className={cx(s.badge, s.bDanger)}>Pago fallido</em>}</strong></div>
-            <div><small>Plan</small><strong>{subscriptionLine(store)}</strong>{stripeUrl && <span><a href={stripeUrl} target="_blank" rel="noopener noreferrer" className={s.panelLink}>Ver cliente en Stripe</a></span>}</div>
+            <div><small>Plan</small><strong>{subscriptionLine(store)}</strong></div>
             <div><small>Dueño</small><strong>{store.owner_name || (store.owner_email ? '—' : 'Aún no entra')}</strong><span>{store.owner_email ?? store.owner_invite?.email}</span></div>
-            <div><small>Precio acordado (a mano)</small><strong>{store.monthly_price === null ? 'Sin acordar' : `${fmtMoney(store.monthly_price)} al mes`}</strong></div>
             <div><small>Uso</small><strong>{store.members} usuarios · {store.contacts} contactos · {store.activities} actividades</strong></div>
             <div><small>Alta</small><strong>{fmt(store.created_at)}</strong><span>{store.onboarding_completed_at ? 'Configuración terminada' : 'Aún configurando'}</span></div>
           </div>
@@ -250,40 +248,18 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
 
           {!store.owner_email && <OwnerInviteBlock key={store.id} store={store} onDone={onSaved} />}
 
-          <PaymentForm key={`${store.id}-${store.monthly_price}`} store={store} onDone={done} />
-
-          <div className={s.block}>
-            <div className={s.blockHead}>
-              <strong>Pagos de esta tienda</strong>
-              <Link href="/admin/pagos" className={s.panelLink}>Ver todos los pagos</Link>
-            </div>
-            {payError && <div className={s.error}>{payError}</div>}
-            {!payments && !payError && <div className={s.center} style={{ padding: 16 }}><span className={s.spinner} /></div>}
-            {payments?.length === 0 && <div className={s.panelEmpty} style={{ padding: '4px 0 2px' }}>Todavía no hay pagos registrados.</div>}
-            {payments?.map(p => <PaymentRow key={p.id} payment={p} canVoid={p.id === latestLive} onVoided={done} />)}
-          </div>
+          <SubscriptionBlock key={store.id} store={store} />
 
           {/* Conexión técnica del número: solo cuando la tienda tiene o pidió WhatsApp */}
           {(waActive || !!store.whatsapp_requested_at) && <WhatsAppConnectionBlock key={store.id} storeId={store.id} onChanged={onSaved} />}
 
           <div className={s.actions}>
             <div className={s.action}>
-              <div><strong>Precio acordado</strong><small>Solo para cobros a mano (acuerdos especiales). Mensual, en MXN; prellena el monto al registrar un pago.</small></div>
-              <div className={s.actionCtl}>
-                <input className={s.input} inputMode="decimal" value={price} placeholder="Sin acordar" aria-label="Precio mensual acordado"
-                  onChange={e => setPrice(e.target.value.replace(/[^\d.]/g, ''))} />
-                <button className="btn btn-ghost" disabled={!!busy || !priceValid || priceValue === store.monthly_price}
-                  onClick={() => patch('price', { monthlyPrice: priceValue }, priceValue === null ? 'Precio acordado borrado' : `Precio acordado: ${fmtMoney(priceValue)} al mes`)}>
-                  {busy === 'price' ? 'Guardando…' : 'Guardar'}
-                </button>
-              </div>
-            </div>
-            <div className={s.action}>
               <div>
                 <strong>Plan</strong>
                 <small>{stripePaid
                   ? 'Lo lleva la suscripción de Stripe: la tienda lo cambia desde su portal.'
-                  : 'Cortesía o acuerdo especial. Galón y Cubeta a mano vencen con el último pago registrado (sin pagos: sin vencimiento); al vencer la tienda baja a Litro.'}</small>
+                  : 'Cortesía: el plan que elijas aquí no se cobra ni vence. Si después contrata con Stripe, la suscripción toma el control.'}</small>
               </div>
               <div className={s.actionCtl}>
                 <Select className={s.select} value={plan} onChange={setPlan} aria-label="Plan" disabled={stripePaid}
@@ -322,34 +298,43 @@ function StoreDrawer({ store, onClose, onSaved }: { store: StoreRow; onClose: ()
               </div>
             </div>
             <div className={s.action}>
-              <div><strong>Sin vencimiento</strong><small>Para tu propia tienda o un acuerdo especial: activa sin fecha de pago.</small></div>
+              <div>
+                <strong>Eliminación por inactividad</strong>
+                <small>{retentionText(store)}</small>
+              </div>
               <div className={s.actionCtl}>
-                {confirm === 'unlimited' ? (
-                  <>
-                    <button className="btn btn-ghost" onClick={() => setConfirm(null)}>No</button>
-                    <button className="btn btn-dark" disabled={!!busy} onClick={() => patch('unlimited', { action: 'activate' }, 'Activada sin vencimiento')}>
-                      {busy === 'unlimited' ? 'Guardando…' : 'Sí, sin vencimiento'}
-                    </button>
-                  </>
-                ) : (
-                  <button className="btn btn-ghost" disabled={!!busy || (store.status === 'active' && !store.paid_until)} onClick={() => setConfirm('unlimited')}>Activar</button>
-                )}
+                {store.retention_hold ? (
+                  <button className="btn btn-ghost" disabled={!!busy} onClick={() => patch('retention', { retentionHold: false }, 'Vuelve a aplicarle la eliminación por inactividad')}>
+                    {busy === 'retention' ? 'Guardando…' : 'Permitir'}
+                  </button>
+                ) : !store.retention_protected || isDeletionScheduled(store) ? (
+                  <button className="btn btn-ghost" disabled={!!busy} onClick={() => patch('retention', { retentionHold: true }, 'No se eliminará por inactividad')}>
+                    {busy === 'retention' ? 'Guardando…' : isDeletionScheduled(store) ? 'No eliminar' : 'Excluir'}
+                  </button>
+                ) : null}
               </div>
             </div>
             <div className={cx(s.action, s.actionDanger)}>
-              <div><strong>Suspender o cancelar</strong><small>La tienda queda en solo lectura; no se borra nada.</small></div>
+              <div>
+                <strong>{off ? 'Reactivar' : 'Suspender o cancelar'}</strong>
+                <small>{off
+                  ? 'Vuelve a trabajar normal con su plan de hoy.'
+                  : `La tienda queda en solo lectura; no se borra nada.${stripePaid ? ' No detiene el cobro: cancela también su suscripción en Stripe.' : ''}`}</small>
+              </div>
               <div className={s.actionCtl}>
-                {confirm === 'suspend' || confirm === 'cancel' ? (
+                {confirm === 'suspend' || confirm === 'cancel' || confirm === 'activate' ? (
                   <>
                     <button className="btn btn-ghost" onClick={() => setConfirm(null)}>No</button>
-                    <button className="btn btn-dark" disabled={!!busy} onClick={() => patch(confirm, { action: confirm }, confirm === 'suspend' ? 'Tienda suspendida' : 'Suscripción cancelada')}>
-                      {busy ? 'Guardando…' : confirm === 'suspend' ? 'Sí, suspender' : 'Sí, cancelar'}
+                    <button className="btn btn-dark" disabled={!!busy} onClick={() => patch(confirm, { action: confirm }, CONFIRM_DONE[confirm])}>
+                      {busy ? 'Guardando…' : CONFIRM_YES[confirm]}
                     </button>
                   </>
+                ) : off ? (
+                  <button className="btn btn-ghost" onClick={() => setConfirm('activate')}>Reactivar</button>
                 ) : (
                   <>
-                    <button className="btn btn-ghost btn-ghost-danger" disabled={store.status === 'suspended'} onClick={() => setConfirm('suspend')}>Suspender</button>
-                    <button className="btn btn-ghost btn-ghost-danger" disabled={store.status === 'cancelled'} onClick={() => setConfirm('cancel')}>Cancelar</button>
+                    <button className="btn btn-ghost btn-ghost-danger" onClick={() => setConfirm('suspend')}>Suspender</button>
+                    <button className="btn btn-ghost btn-ghost-danger" onClick={() => setConfirm('cancel')}>Cancelar</button>
                   </>
                 )}
               </div>

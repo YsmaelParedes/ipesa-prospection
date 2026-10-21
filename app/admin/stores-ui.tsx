@@ -5,7 +5,6 @@ import { apiFetch } from '@/lib/apiClient'
 
 import { useEffect, useState } from 'react'
 import { APP_NAME } from '@/lib/brand'
-import { isMoney } from '@/lib/payments'
 import { fmtDate, type PlatformStore } from './data'
 import s from './admin.module.css'
 
@@ -56,7 +55,7 @@ type Created = { id: string; name: string; phone: string | null; link: string; e
 export function NewStoreModal({ onClose, onCreated, onOpenStore }: {
   onClose: () => void; onCreated: () => Promise<void>; onOpenStore: (id: string) => void
 }) {
-  const [form, setForm] = useState({ name: '', city: '', state: '', phone: '', ownerEmail: '', monthlyPrice: '' })
+  const [form, setForm] = useState({ name: '', city: '', state: '', phone: '', ownerEmail: '' })
   const [busy, setBusy]   = useState(false)
   const [error, setError] = useState('')
   const [created, setCreated] = useState<Created | null>(null)
@@ -68,20 +67,18 @@ export function NewStoreModal({ onClose, onCreated, onOpenStore }: {
   }, [onClose, busy])
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm(f => ({ ...f, [k]: k === 'monthlyPrice' ? e.target.value.replace(/[^\d.]/g, '') : e.target.value }))
+    setForm(f => ({ ...f, [k]: e.target.value }))
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const price = form.monthlyPrice.trim() === '' ? null : Number(form.monthlyPrice)
     if (form.name.trim().length < 3) { setError('Escribe el nombre de la tienda'); return }
     if (!EMAIL_RE.test(form.ownerEmail.trim())) { setError('Escribe el correo del dueño: ahí le llega su acceso'); return }
-    if (price !== null && !isMoney(price)) { setError('Precio inválido (hasta 2 decimales)'); return }
     setBusy(true)
     setError('')
     try {
       const d = await postJson('/api/platform/stores', {
         name: form.name.trim(), city: form.city.trim() || null, state: form.state.trim() || null,
-        phone: form.phone.trim() || null, ownerEmail: form.ownerEmail.trim(), monthlyPrice: price,
+        phone: form.phone.trim() || null, ownerEmail: form.ownerEmail.trim(),
       })
       setCreated({ id: d.store.id, name: d.store.name, phone: form.phone.trim() || null, link: d.link, expiresAt: d.invitation.expiresAt, ownerEmail: d.invitation.email })
       await onCreated()
@@ -138,11 +135,6 @@ export function NewStoreModal({ onClose, onCreated, onOpenStore }: {
               <div className="field">
                 <label htmlFor="ns-owner">Correo del dueño</label>
                 <input id="ns-owner" type="email" value={form.ownerEmail} onChange={set('ownerEmail')} maxLength={254} placeholder="dueno@correo.com" autoComplete="off" />
-              </div>
-              <div className={s.formSection}>Acuerdo</div>
-              <div className="field">
-                <label htmlFor="ns-price">Precio mensual acordado (MXN, opcional)</label>
-                <input id="ns-price" value={form.monthlyPrice} onChange={set('monthlyPrice')} inputMode="decimal" placeholder="Sin acordar" />
               </div>
               {error && <div className={cx(s.msg, s.msgErr)} role="alert">{error}</div>}
             </div>

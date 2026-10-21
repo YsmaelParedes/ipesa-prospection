@@ -81,3 +81,7 @@ export function formatPlanPrice(p: PlanPrice | null | undefined): string | null 
     maximumFractionDigits: Number.isInteger(p.amount) ? 0 : 2,
   }).format(p.amount)
 }
+
+/** $1,497 · $499.50 · USD 99 (la moneda es la que trae Stripe; por omisión, pesos) */
+export const fmtMoney = (n: number, currency = 'mxn') =>
+  new Intl.NumberFormat('es-MX', { style: 'currency', currency: currency.toUpperCase(), maximumFractionDigits: Number.isInteger(n) ? 0 : 2 }).format(n)

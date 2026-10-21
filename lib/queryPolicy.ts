@@ -6,7 +6,7 @@ export function queryPolicy(path: string): QueryPolicy | null {
   if (p === '/api/data/export' || p.includes('/media/') || p.endsWith('/whatsapp') && p.startsWith('/api/platform/')) return null
   if (p === '/api/data/reminders') return { ...normal, poll: 60_000 }
   if (p.startsWith('/api/data/config') || p.startsWith('/api/formulas') || ['/api/whatsapp/templates', '/api/whatsapp/template-image'].includes(p) || p.startsWith('/api/whatsapp/quick-replies')) return { ...normal, staleTime: 300_000 }
-  if (p.startsWith('/api/platform/payments')) return { staleTime: 15_000, maxAge: 60_000 }
+  if (p === '/api/platform/billing' || p.endsWith('/invoices') && p.startsWith('/api/platform/')) return { staleTime: 15_000, maxAge: 60_000 }
   if (p.startsWith('/api/billing/')) return { staleTime: 15_000, maxAge: 60_000 }
   if (p.startsWith('/api/platform/')) return { ...normal, staleTime: 15_000 }
   if (p === '/api/whatsapp/status' || p === '/api/store/whatsapp') return { ...normal, staleTime: 60_000 }

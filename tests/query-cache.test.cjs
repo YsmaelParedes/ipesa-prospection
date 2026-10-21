@@ -93,7 +93,7 @@ test('403 removes previously authorized data', async () => {
 
 test('financial data expires after one minute even when refresh fails', async () => {
   let now = 1_000_000
-  const cache = new QueryCache(() => now), p = queryPolicy('/api/platform/payments?month=2026-10')
+  const cache = new QueryCache(() => now), p = queryPolicy('/api/platform/billing')
   await cache.read('payments', async () => 100, p)
   const stop = cache.subscribe(k => k === 'payments', () => {})
   now += 60_000

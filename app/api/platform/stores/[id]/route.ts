@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requirePlatformAdmin } from '@/lib/supabase-server'
 import { logPlatformEvent } from '@/lib/platformEvents'
-import { isMoney } from '@/lib/payments'
 import { PAID_SUBSCRIPTION_STATUSES, isPlanId, normalizeModules } from '@/lib/stores'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 
 /**
  * PATCH /api/platform/stores/[id] — administración manual de una tienda.
- * { action: 'activate' } (sin vencimiento: tienda propia o acuerdo especial) ·
+ * { action: 'activate' } (reactivar una suspendida o cancelada, sin vencimiento) ·
  * { action: 'suspend' } · { action: 'cancel' } · { plan } (cortesía; no si paga
- * con Stripe: ahí el plan lo lleva la suscripción) · { notes } · { monthlyPrice } ·
- * { whatsapp: boolean } (bandeja de WhatsApp; Campañas y Fórmulas no se manejan aquí)
- * Extender la vigencia pagada se hace registrando un pago
- * (POST /api/platform/stores/[id]/payments), para que quede en el historial.
- * Todo queda en la bitácora (platform_events).
+ * con Stripe: ahí el plan lo lleva la suscripción) · { notes } ·
+ * { whatsapp: boolean } (bandeja de WhatsApp; Campañas y Fórmulas no se manejan aquí) ·
+ * { retentionHold: boolean } (excluirla de la eliminación por inactividad; cancela la programada)
+ * Los cobros los lleva Stripe. Todo queda en la bitácora (platform_events).
  */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await requirePlatformAdmin()
@@ -25,14 +23,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!body) return jsonError('Cuerpo de solicitud inválido')
 
   const db = getServerSupabase()
-  const { data: store } = await db.from('stores').select('id, status, paid_until, plan, monthly_price, modules, whatsapp_requested_at, subscription_status').eq('id', id).maybeSingle()
+  const { data: store } = await db.from('stores').select('id, status, paid_until, plan, modules, whatsapp_requested_at, subscription_status, deletion_scheduled_for').eq('id', id).maybeSingle()
   if (!store) return jsonError('Tienda no encontrada', 404)
 
   const updates: Record<string, unknown> = {}
   const events: { action: string; detail: Record<string, unknown> }[] = []
   switch (body.action) {
     case 'activate': {
-      if (body.months !== undefined && Number(body.months) !== 0) return jsonError('Para extender la vigencia registra un pago')
       Object.assign(updates, { status: 'active', paid_until: null })
       events.push({ action: 'activate_unlimited', detail: { prev_status: store.status, prev_paid_until: store.paid_until } })
       break
@@ -58,20 +55,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     updates.platform_notes = body.notes || null
     events.push({ action: 'notes', detail: {} })
   }
-  if (body.monthlyPrice !== undefined) {
-    const price = body.monthlyPrice === null || body.monthlyPrice === '' ? null : Number(body.monthlyPrice)
-    if (price !== null && !isMoney(price)) {
-      return jsonError('Precio inválido (hasta 2 decimales)')
-    }
-    updates.monthly_price = price
-    events.push({ action: 'price', detail: { monthly_price: price, prev_monthly_price: store.monthly_price } })
-  }
   if (body.whatsapp !== undefined) {
     if (typeof body.whatsapp !== 'boolean') return jsonError('Valor de WhatsApp inválido')
     // Solo la bandeja; Campañas y Fórmulas son extras que se activan fuera de la plataforma
     updates.modules = { ...normalizeModules(store.modules), whatsapp: body.whatsapp }
     if (body.whatsapp) updates.whatsapp_requested_at = null
     events.push({ action: body.whatsapp ? 'whatsapp_on' : 'whatsapp_off', detail: { requested_at: store.whatsapp_requested_at } })
+  }
+  if (body.retentionHold !== undefined) {
+    if (typeof body.retentionHold !== 'boolean') return jsonError('Valor inválido')
+    updates.retention_hold = body.retentionHold
+    if (body.retentionHold) Object.assign(updates, { deletion_scheduled_for: null, deletion_notices: 0 })
+    events.push({ action: body.retentionHold ? 'retention_hold_on' : 'retention_hold_off', detail: { scheduled_for: store.deletion_scheduled_for } })
   }
   if (!Object.keys(updates).length) return jsonError('Nada que actualizar')
 

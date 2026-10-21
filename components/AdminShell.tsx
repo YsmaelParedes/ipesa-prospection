@@ -26,16 +26,14 @@ const stroke = (d: React.ReactNode) => function Svg(p: IconProps) {
 const Icon = {
   dashboard: stroke(<><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></>),
   store:     stroke(<><path d="M3 9 4.5 4h15L21 9" /><path d="M3 9h18v1a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9Z" /><path d="M5 13v7h14v-7" /><path d="M10 20v-4h4v4" /></>),
-  cash:      stroke(<><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2.5" /><path d="M6 10v4M18 10v4" /></>),
   external:  stroke(<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />),
   logout:    stroke(<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />),
   menu:      stroke(<path d="M3 6h18M3 12h18M3 18h18" />),
 }
 
 const NAV = [
-  { href: '/admin',         label: 'Resumen', sub: 'Cómo van las tiendas',              icon: Icon.dashboard },
-  { href: '/admin/tiendas', label: 'Tiendas', sub: 'Suscripciones, pagos y acciones',  icon: Icon.store },
-  { href: '/admin/pagos',   label: 'Pagos',   sub: 'Lo cobrado cada mes',              icon: Icon.cash },
+  { href: '/admin',         label: 'Resumen', sub: 'Ingresos y cómo van las tiendas', icon: Icon.dashboard },
+  { href: '/admin/tiendas', label: 'Tiendas', sub: 'Suscripciones y acciones',        icon: Icon.store },
 ]
 
 const initials = (name: string) => name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()

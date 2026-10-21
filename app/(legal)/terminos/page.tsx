@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { LEGAL } from '@/lib/legal'
 import { PLANS } from '@/lib/stores'
+import { RETENTION_IDLE_MONTHS, RETENTION_LAST_NOTICE_DAYS, RETENTION_NOTICE_DAYS } from '@/lib/retention'
 import { ContactEmail, LegalDoc, type LegalSection } from '../LegalDoc'
 
 export const metadata: Metadata = {
@@ -160,16 +161,24 @@ const sections: LegalSection[] = [
   },
   {
     id: 'cancelacion',
-    title: 'Cancelación',
+    title: 'Cancelación y tiendas sin uso',
     body: (
+      <>
       <p>
         Puedes cancelar tu suscripción en cualquier momento desde Configuración → Plan («Administrar suscripción»).
         Conservas el plan pagado hasta el final del periodo ya cobrado y después tu tienda pasa al plan Litro; no
         hacemos reembolsos de periodos parciales salvo que la ley lo exija. Tu información se conserva: puedes
-        descargarla completa en Excel desde Configuración → Tienda, o pedirnos una copia a <ContactEmail kind="soporte" />. No borramos la información de una tienda
-        por nuestra cuenta; la eliminamos cuando su dueño nos lo pide por escrito. También podemos terminar el servicio
+        descargarla completa en Excel desde Configuración → Tienda, o pedirnos una copia a <ContactEmail kind="soporte" />. La eliminamos cuando su dueño nos lo pide por escrito. También podemos terminar el servicio
         si se incumplen estos términos, avisándote previamente cuando sea posible.
       </p>
+      <p>
+        <strong>Tiendas sin uso.</strong> Si una tienda del plan Litro, sin suscripción ni cortesía, pasa {RETENTION_IDLE_MONTHS} meses
+        sin que nadie de su equipo la use, avisamos a su dueño por correo {RETENTION_NOTICE_DAYS} y {RETENTION_LAST_NOTICE_DAYS} días antes de eliminarla.
+        Para conservarla basta con entrar antes de la fecha del aviso. Si nadie entra, la eliminamos con toda su
+        información y las cuentas de su equipo que no pertenezcan a otra tienda; no se puede recuperar. Las tiendas con
+        un plan de paga no se eliminan por falta de uso.
+      </p>
+      </>
     ),
   },
   {
@@ -201,6 +210,7 @@ export default function TermsPage() {
         'La información de tu tienda es tuya y ninguna otra tienda puede verla.',
         'Contacta solo a clientes que aceptaron recibir tus mensajes.',
         'Puedes cancelar cuando quieras: pasas al plan Litro sin perder tu información.',
+        `Una tienda gratis que nadie usa en ${RETENTION_IDLE_MONTHS} meses se elimina, siempre con aviso previo por correo.`,
       ]}
       sections={sections}
     />
