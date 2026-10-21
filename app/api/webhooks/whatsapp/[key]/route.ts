@@ -43,6 +43,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   try { body = JSON.parse(raw) } catch { return NextResponse.json({ received: true }) }
 
   const items: InboundNotification[] = []
+  let failed = false
   try {
     for (const entry of body?.entry ?? []) {
       for (const change of entry?.changes ?? []) {
@@ -53,10 +54,13 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       }
     }
   } catch (error: any) {
+    failed = true
     console.error('[POST /api/webhooks/whatsapp/[key]]', error?.message ?? error)
     reportError({ source: 'webhook', context: 'webhook/whatsapp/tienda', error, storeId: row.store_id })
   }
 
   if (items.length) after(() => notifyStoreTeam(row.store_id, items))
+  // 500 = Meta reintenta; guardar es idempotente por wa_message_id
+  if (failed) return NextResponse.json({ error: 'No se pudo procesar' }, { status: 500 })
   return NextResponse.json({ received: true })
 }

@@ -135,10 +135,12 @@ export async function processChange(storeId: string, value: any): Promise<Inboun
       profile_name:  profileName,
       created_at:    msg.timestamp ? new Date(Number(msg.timestamp) * 1000).toISOString() : undefined,
     }])
-    // 23505 = Meta reintentó un mensaje que ya guardamos
+    // 23505 = Meta reintentó un mensaje que ya guardamos. Cualquier otro error
+    // se lanza: el webhook responde 500 y Meta reintenta (el índice único de
+    // wa_message_id evita duplicarlo).
     if (error) {
-      if (error.code !== '23505') console.error('[webhook/whatsapp] insert:', error.message)
-      continue
+      if (error.code === '23505') continue
+      throw new Error(`No se guardó el mensaje entrante: ${error.message}`)
     }
 
     // "BAJA" / "STOP" / botón "Detener promociones" → no más campañas

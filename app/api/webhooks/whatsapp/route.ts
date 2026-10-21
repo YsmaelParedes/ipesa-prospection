@@ -28,7 +28,8 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST — estados de mensajes salientes y mensajes entrantes. Responde 200
- * rápido (Meta reintenta si no); las notificaciones push van con after().
+ * rápido; las notificaciones push van con after(). Si no se pudo guardar,
+ * responde 500 para que Meta reintente (guardar es idempotente por wa_message_id).
  * Sin WHATSAPP_APP_SECRET no hay forma de saber que el evento viene de Meta,
  * así que se rechaza (falla cerrado).
  */
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
   try { body = JSON.parse(raw) } catch { return NextResponse.json({ received: true }) }
 
   const pending: { storeId: string; items: InboundNotification[] }[] = []
+  let failed = false
   try {
     for (const entry of body?.entry ?? []) {
       for (const change of entry?.changes ?? []) {
@@ -67,11 +69,13 @@ export async function POST(req: NextRequest) {
       }
     }
   } catch (error: any) {
-    // Igual responder 200: un 500 solo haría que Meta reintente el mismo lote.
+    failed = true
     console.error('[POST /api/webhooks/whatsapp]', error?.message ?? error)
     reportError({ source: 'webhook', context: 'webhook/whatsapp', error })
   }
 
+  // Lo que sí se guardó se notifica ya; al reintentar Meta, eso cuenta como duplicado y no se repite
   if (pending.some(p => p.items.length)) after(() => Promise.all(pending.map(p => notifyStoreTeam(p.storeId, p.items))))
+  if (failed) return NextResponse.json({ error: 'No se pudo procesar' }, { status: 500 })
   return NextResponse.json({ received: true })
 }
