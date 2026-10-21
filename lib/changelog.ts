@@ -36,6 +36,14 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.0.1',
+    date: '21 de octubre, 2026',
+    title: 'Tiendas gratis sin uso',
+    items: [
+      'Si una tienda del plan Litro pasa 6 meses sin que nadie la use, su dueño recibe un correo 30 y 7 días antes de que se elimine. Para conservarla basta con entrar. Los planes de paga no se eliminan. Detalles en los Términos de uso.',
+    ],
+  },
+  {
     version: '4.0.0',
     date: '20 de octubre, 2026',
     title: 'Sistema comercial (reemplaza a Leads)',
@@ -75,23 +83,6 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '3.1.1',
-    date: '20 de octubre, 2026',
-    title: 'Pagos más confiables',
-    items: [
-      'Si das doble clic al pagar o se corta la conexión, no se hace un segundo cobro.',
-      'Si un cobro falla, conservas tu plan tres días mientras actualizas tu tarjeta; después tu tienda usa Litro hasta que se confirme el pago, sin borrar nada.',
-    ],
-  },
-  {
-    version: '3.1.0',
-    date: '20 de octubre, 2026',
-    title: 'Acceso más seguro',
-    items: [
-      'Registro, inicio de sesión y recuperar contraseña ahora tienen una verificación anti-robots. Casi siempre es invisible; si te pide marcar una casilla, solo confirma que eres una persona.',
-    ],
-  },
-  {
     version: '3.0.0',
     date: '18 de octubre, 2026',
     title: 'Planes Litro, Galón y Cubeta',
@@ -114,10 +105,9 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '2.12.0',
     date: '17 de octubre, 2026',
-    title: 'Más cuidado con la información de tu tienda',
+    title: 'Exportar e importar, solo para el dueño',
     items: [
       'Exportar a Excel, importar listas y borrar contactos ahora son solo para el dueño y los administradores.',
-      'Los vendedores siguen viendo y atendiendo a todos los clientes, pero no pueden seleccionar, copiar ni imprimir la información, y su pantalla lleva una marca de agua discreta con su nombre.',
     ],
   },
   {
@@ -136,7 +126,6 @@ export const CHANGELOG: ChangelogEntry[] = [
     title: 'Pantalla clara cuando algo falla',
     items: [
       'Si algo falla dentro de la app, ahora ves un mensaje claro con el botón "Reintentar" en lugar de una pantalla en blanco.',
-      'Nos enteramos al momento para revisarlo, sin que tengas que reportarlo.',
     ],
   },
   {
@@ -187,11 +176,9 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: '15 de octubre, 2026',
     title: 'Ajustes en celular',
     items: [
-      'Aceptar una invitación respeta el límite de usuarios de tu plan.',
       'En celular ya se puede hacer zoom, y las ventanas, el menú y los avisos se acomodan mejor a pantallas pequeñas.',
       'La selección de contactos vuelve a estar disponible en celular.',
       { text: 'Fórmulas ya no deja un panel vacío al abrirse.', module: 'formulas' },
-      { text: 'Los borradores de mensajes de WhatsApp se borran al cerrar sesión.', module: 'whatsapp' },
       { text: 'El envío de prueba de una campaña respeta a quien se dio de baja y queda en el historial.', module: 'campaigns' },
     ],
   },
