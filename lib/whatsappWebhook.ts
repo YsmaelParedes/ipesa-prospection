@@ -70,11 +70,77 @@ export function verifyTokenMatches(received: string, expected: string): boolean 
 }
 
 /**
+ * Copia de un mensaje que mandó otro responsable del número (el agente de IA
+ * de Meta). `message` es el cuerpo tal como se envió a /messages: solo las
+ * plantillas y los interactivos tienen otra forma que un mensaje entrante.
+ */
+export function parseAgentEcho(message: any): Inbound | null {
+  switch (message?.type) {
+    case 'template':
+      return { text: `📋 Plantilla · ${String(message.template?.name ?? '').replace(/_/g, ' ')}` }
+    case 'interactive': {
+      const i = message.interactive ?? {}
+      const options = [
+        ...(i.action?.buttons ?? []).map((b: any) => b?.reply?.title),
+        ...(i.action?.sections ?? []).flatMap((sec: any) => (sec?.rows ?? []).map((r: any) => r?.title)),
+      ].filter(Boolean)
+      const text = [i.header?.text, i.body?.text, i.footer?.text].filter(Boolean).join('\n')
+      return { text: [text, options.length ? `👉 ${options.join(' · ')}` : ''].filter(Boolean).join('\n') || '[mensaje interactivo]' }
+    }
+    default: {
+      const parsed = parseInbound(message)
+      return parsed && { ...parsed, optOutCandidate: undefined }
+    }
+  }
+}
+
+type Supabase = ReturnType<typeof getServerSupabase>
+
+async function contactFor(supabase: Supabase, storeId: string, phone: string) {
+  const { data } = await supabase
+    .from('contacts')
+    .select('id, name')
+    .eq('store_id', storeId)
+    .in('phone', phoneVariants(phone))
+    .limit(1)
+    .maybeSingle()
+  return data as { id: string; name: string } | null
+}
+
+/** false si Meta reintentó un mensaje que ya guardamos. */
+async function insertMessage(supabase: Supabase, row: Record<string, unknown>): Promise<boolean> {
+  const { error } = await supabase.from('whatsapp_messages').insert([row])
+  // 23505 = ya lo teníamos. Cualquier otro error se lanza: el webhook responde
+  // 500 y Meta reintenta (el índice único de wa_message_id evita duplicarlo).
+  if (!error) return true
+  if (error.code === '23505') return false
+  throw new Error(`No se guardó el mensaje: ${error.message}`)
+}
+
+const toIso = (timestamp: unknown) => timestamp ? new Date(Number(timestamp) * 1000).toISOString() : undefined
+
+/**
  * Aplica un "change" del webhook a la tienda indicada. Todo se filtra por
  * store_id: un evento nunca toca mensajes ni contactos de otra tienda.
+ *
+ * Mientras el agente de IA de Meta atiende un chat, lo de ese chat llega en
+ * `value.standby` (campo "standby"): mensajes del cliente, copias de lo que
+ * contestó el agente y sus palomitas. Esos mensajes no avisan al equipo
+ * porque los está atendiendo el agente.
  */
 export async function processChange(storeId: string, value: any): Promise<InboundNotification[]> {
   const supabase = getServerSupabase()
+  const notifications = await applyEvents(supabase, storeId, value)
+  const standby = value?.standby
+  if (standby) {
+    await applyEvents(supabase, storeId, standby)
+    await saveAgentEchoes(supabase, storeId, standby.message_echoes)
+  }
+  return notifications
+}
+
+/** Estados de salientes y mensajes entrantes de un bloque del webhook. */
+async function applyEvents(supabase: Supabase, storeId: string, value: any): Promise<InboundNotification[]> {
   const notifications: InboundNotification[] = []
 
   // ── Estados de mensajes salientes ──
@@ -112,16 +178,9 @@ export async function processChange(storeId: string, value: any): Promise<Inboun
     const parsed = parseInbound(msg)
     if (!phone || !parsed || typeof msg?.id !== 'string') continue
 
-    const { data: contact } = await supabase
-      .from('contacts')
-      .select('id, name')
-      .eq('store_id', storeId)
-      .in('phone', phoneVariants(phone))
-      .limit(1)
-      .maybeSingle()
-
+    const contact = await contactFor(supabase, storeId, phone)
     const profileName = profileByWaId.get(String(msg.from)) || null
-    const { error } = await supabase.from('whatsapp_messages').insert([{
+    const saved = await insertMessage(supabase, {
       store_id:      storeId,
       contact_id:    contact?.id ?? null,
       phone,
@@ -133,15 +192,9 @@ export async function processChange(storeId: string, value: any): Promise<Inboun
       media_type:    parsed.mediaType ?? null,
       media_mime:    parsed.mime ?? null,
       profile_name:  profileName,
-      created_at:    msg.timestamp ? new Date(Number(msg.timestamp) * 1000).toISOString() : undefined,
-    }])
-    // 23505 = Meta reintentó un mensaje que ya guardamos. Cualquier otro error
-    // se lanza: el webhook responde 500 y Meta reintenta (el índice único de
-    // wa_message_id evita duplicarlo).
-    if (error) {
-      if (error.code === '23505') continue
-      throw new Error(`No se guardó el mensaje entrante: ${error.message}`)
-    }
+      created_at:    toIso(msg.timestamp),
+    })
+    if (!saved) continue
 
     // "BAJA" / "STOP" / botón "Detener promociones" → no más campañas
     if (contact && parsed.optOutCandidate && isOptOutMessage(parsed.optOutCandidate)) {
@@ -154,6 +207,36 @@ export async function processChange(storeId: string, value: any): Promise<Inboun
     notifications.push({ phone, title: contact?.name || profileName || fmtPhone(phone), text: parsed.text })
   }
   return notifications
+}
+
+/**
+ * Respuestas del agente de IA: salientes sin user_id ni plantilla. Así las
+ * distingue la bandeja, porque lo que manda el equipo o una campaña siempre
+ * lleva user_id.
+ */
+async function saveAgentEchoes(supabase: Supabase, storeId: string, echoes: any[] | undefined) {
+  for (const echo of echoes ?? []) {
+    const phone = normalizePhone(echo?.message?.to)
+    const parsed = parseAgentEcho(echo?.message)
+    if (!phone || !parsed || typeof echo?.id !== 'string') continue
+
+    const contact = await contactFor(supabase, storeId, phone)
+    await insertMessage(supabase, {
+      store_id:      storeId,
+      contact_id:    contact?.id ?? null,
+      phone,
+      direction:     'outbound',
+      body:          parsed.text.slice(0, 4096),
+      wa_message_id: echo.id,
+      status:        'sent',
+      media_id:      parsed.mediaId ?? null,
+      media_type:    parsed.mediaType ?? null,
+      media_mime:    parsed.mime ?? null,
+      user_id:       null,
+      template_name: null,
+      created_at:    toIso(echo.timestamp),
+    })
+  }
 }
 
 /** Push a los dispositivos del equipo DE ESA TIENDA con los avisos de WhatsApp activados. */

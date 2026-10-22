@@ -60,6 +60,8 @@ type Message = {
   media_id: string | null
   media_type: string | null
   media_mime: string | null
+  /** null en un saliente = lo contestó el agente de IA de Meta (ver whatsappWebhook). */
+  user_id?: string | null
   created_at: string
 }
 
@@ -568,11 +570,13 @@ function ChatView({
 
 function Bubble({ m, onDiscard }: { m: Message; onDiscard: () => void }) {
   const out = m.direction === 'outbound'
+  const byAgent = out && m.user_id === null && !m.template_name
   const caption = m.media_id ? mediaCaption(m.body) : m.body
   return (
     <div className={`wa-msg ${out ? 'out' : 'in'} ${m.status === 'failed' ? 'failed' : ''}`}>
       <div className="wa-bubble">
         {m.template_name && <div className="wa-template-tag"><WaIcon.template size={11} /> Plantilla · {m.template_name.replace(/_/g, ' ')}</div>}
+        {byAgent && <div className="wa-template-tag wa-agent-tag"><WaIcon.bolt size={11} /> Agente IA</div>}
         {m.media_id && m.media_type && <MediaContent mediaId={m.media_id} mediaType={m.media_type} mime={m.media_mime} />}
         {caption && <div className="wa-text"><Linkified text={caption} /></div>}
         <div className="wa-meta">

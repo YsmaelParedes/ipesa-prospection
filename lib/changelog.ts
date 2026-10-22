@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.1.0',
+    date: '22 de octubre, 2026',
+    title: 'El agente de IA en la bandeja',
+    module: 'whatsapp',
+    items: [
+      'Si tu número de WhatsApp tiene un agente de IA, los mensajes que atiende y sus respuestas aparecen en la bandeja.',
+      'Las respuestas del agente llevan la marca «Agente IA».',
+    ],
+  },
+  {
     version: '4.0.2',
     date: '22 de octubre, 2026',
     title: 'WhatsApp se desplaza de nuevo',
