@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.2.0',
+    date: '22 de octubre, 2026',
+    title: 'Trabaja junto con el agente de IA',
+    module: 'whatsapp',
+    items: [
+      'Te avisamos al celular cuando el agente de IA pide que alguien del equipo conteste un chat.',
+      'Cuando contestas tú, el agente se calla en ese chat. Con el botón «Devolver al agente» vuelve a atenderlo.',
+    ],
+  },
+  {
     version: '4.1.0',
     date: '22 de octubre, 2026',
     title: 'El agente de IA en la bandeja',

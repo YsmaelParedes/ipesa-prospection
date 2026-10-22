@@ -90,3 +90,40 @@ test('una copia sin destinatario no se guarda', async () => {
   await processChange(STORE, { ...meta, standby: { message_echoes: [{ id: 'wamid.X', message: { type: 'text', text: { body: 'x' } } }] } })
   assert.equal(inserted.length, 0)
 })
+
+test('cuando el agente pasa el chat a una persona se avisa al equipo', async () => {
+  inserted.length = 0
+  const echo = await processChange(STORE, {
+    ...meta,
+    standby: { message_echoes: [{
+      id: 'wamid.HANDOFF', timestamp: '1792700010',
+      message: { type: 'text', to: '5212221112233', text: { body: 'Gracias por ponerte en contacto. Solicitaré a un representante que responda.' } },
+    }] },
+  })
+  assert.equal(echo.length, 1)
+  assert.match(echo[0].title, /^🙋/)
+  assert.equal(echo[0].phone, inserted[0].phone)
+
+  const passed = await processChange(STORE, {
+    messaging_product: 'whatsapp', type: 'control_passed', timestamp: '1792700011',
+    sender: { phone_number: '5212221112233' }, recipient: { phone_number_id: '123' },
+    control_passed: { previous_owner_role: 'ai_agent', new_owner_role: 'escalation' },
+  })
+  assert.equal(passed.length, 1)
+  assert.equal(passed[0].text, echo[0].text)
+
+  // Devolverle el chat al agente no avisa
+  const back = await processChange(STORE, {
+    type: 'control_passed', sender: { phone_number: '5212221112233' },
+    control_passed: { new_owner_role: 'ai_agent' },
+  })
+  assert.deepEqual(back, [])
+})
+
+test('una respuesta normal del agente no avisa', async () => {
+  const n = await processChange(STORE, {
+    ...meta,
+    standby: { message_echoes: [{ id: 'wamid.NORMAL', message: { type: 'text', to: '5212221112233', text: { body: 'La cubeta de vinílica cuesta $1,200.' } } }] },
+  })
+  assert.deepEqual(n, [])
+})

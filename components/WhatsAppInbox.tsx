@@ -312,6 +312,7 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
               loadRef.current()
             }}
             setThread={setThread}
+            toast={showToast}
           />
         )}
       </section>
@@ -404,7 +405,7 @@ function ListSkeleton() {
    Chat
 ══════════════════════════════════════════════════════════════════════════ */
 function ChatView({
-  phone, thread, convo, loading, isAdmin, onBack, onTogglePanel, panelOpen, onOpenTemplate, onMessageSent, setThread,
+  phone, thread, convo, loading, isAdmin, onBack, onTogglePanel, panelOpen, onOpenTemplate, onMessageSent, setThread, toast,
 }: {
   phone: string
   thread: Thread | null
@@ -417,6 +418,7 @@ function ChatView({
   onOpenTemplate: (force?: boolean) => void
   onMessageSent: (m: Message) => void
   setThread: React.Dispatch<React.SetStateAction<Thread | null>>
+  toast: (msg: string) => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const nearBottom = useRef(true)
@@ -428,6 +430,22 @@ function ChatView({
   const lastInbound = thread?.lastInboundAt ?? convo?.lastInboundAt ?? null
   const windowOpen  = isWindowOpen(lastInbound)
   const messages    = thread?.messages ?? []
+  // Solo en chats donde ha contestado el agente de IA
+  const usesAgent   = messages.some(isAgentMessage)
+  const [releasing, setReleasing] = useState(false)
+
+  async function returnToAgent() {
+    setReleasing(true)
+    try {
+      const r = await apiFetch(`/api/whatsapp/conversations/${phone}/agent`, { method: 'POST' })
+      const d = await r.json().catch(() => ({}))
+      toast(r.ok ? 'El agente de IA vuelve a atender este chat' : d.error || 'No se pudo devolver el chat al agente')
+    } catch {
+      toast('No se pudo devolver el chat al agente')
+    } finally {
+      setReleasing(false)
+    }
+  }
 
   // Al abrir: hasta abajo. Con mensajes nuevos: seguir abajo solo si ya estabas ahí.
   const lastCount = useRef(0)
@@ -530,6 +548,12 @@ function ChatView({
           </span>
         </button>
         <span className="wa-head-window"><WindowBadge lastInboundAt={lastInbound} /></span>
+        {usesAgent && (
+          <button className="wa-agent-btn" onClick={returnToAgent} disabled={releasing}
+            title="Devolver al agente: el agente de IA vuelve a contestar este chat" aria-label="Devolver al agente">
+            <WaIcon.bolt size={14} /><span className="wa-agent-label">{releasing ? 'Devolviendo…' : 'Devolver al agente'}</span>
+          </button>
+        )}
         <a className="wa-icon-btn wa-hide-sm" href={`tel:${phone}`} title="Llamar"><WaIcon.phone size={17} /></a>
         <button className={`wa-icon-btn ${panelOpen ? 'on' : ''}`} onClick={onTogglePanel} title="Ficha del CRM" aria-label="Ficha del CRM" aria-pressed={panelOpen}>
           <WaIcon.info />
@@ -568,9 +592,12 @@ function ChatView({
   )
 }
 
+/** Saliente sin usuario ni plantilla = lo contestó el agente de IA (ver whatsappWebhook). */
+const isAgentMessage = (m: Message) => m.direction === 'outbound' && m.user_id === null && !m.template_name
+
 function Bubble({ m, onDiscard }: { m: Message; onDiscard: () => void }) {
   const out = m.direction === 'outbound'
-  const byAgent = out && m.user_id === null && !m.template_name
+  const byAgent = isAgentMessage(m)
   const caption = m.media_id ? mediaCaption(m.body) : m.body
   return (
     <div className={`wa-msg ${out ? 'out' : 'in'} ${m.status === 'failed' ? 'failed' : ''}`}>

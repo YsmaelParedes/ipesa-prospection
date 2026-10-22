@@ -192,6 +192,28 @@ export async function markWhatsAppRead(creds: WhatsAppCreds, waMessageId: string
 }
 
 /**
+ * Devuelve el chat al agente de IA de Meta (Thread Control, acción "release").
+ * Solo funciona si el CRM tiene el control: cuando el equipo contesta desde
+ * aquí, Meta le pasa el chat al CRM y el agente se calla.
+ */
+export async function releaseToAgent(creds: WhatsAppCreds, to: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const res = await externalFetch(`https://api.facebook.com/business/whatsapp/phone_numbers/${creds.phoneNumberId}/thread_control`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${creds.token}`, 'Content-Type': 'application/json', 'X-API-Version': '1.0.0' },
+      body: JSON.stringify({ messaging_product: 'whatsapp', action: 'release', to }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15_000),
+    })
+    if (res.ok) return { ok: true }
+    const data = await res.json().catch(() => ({}))
+    return { ok: false, error: data?.error?.error_user_msg || data?.error?.message || `Error HTTP ${res.status}` }
+  } catch (error: any) {
+    return { ok: false, error: error?.name === 'TimeoutError' ? 'Meta tardó demasiado en responder' : 'Error de red al contactar la API de WhatsApp' }
+  }
+}
+
+/**
  * Descarga un archivo multimedia entrante. Meta solo entrega una URL
  * temporal (≈5 min) que a su vez exige el token, así que la app hace de
  * proxy: el navegador nunca ve el token.

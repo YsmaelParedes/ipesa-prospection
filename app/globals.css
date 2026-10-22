@@ -1317,6 +1317,16 @@ a { color: inherit; text-decoration: none; }
   color: var(--ink-2); transition: background .15s, color .15s;
 }
 .wa-icon-btn:hover, .wa-icon-btn.on { background: var(--paper); color: var(--brand-strong); }
+.wa-agent-btn {
+  display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; min-height: 34px; padding: 0 11px; border-radius: 999px;
+  border: 1px solid #DDD6FE; background: #F5F3FF; color: #6D28D9; font-size: 12.5px; font-weight: 600; white-space: nowrap;
+}
+.wa-agent-btn:hover:not(:disabled) { background: #EDE9FE; }
+.wa-agent-btn:disabled { opacity: .6; }
+@container wa-thread (max-width: 560px) {
+  .wa-agent-btn { width: 36px; padding: 0; justify-content: center; border-radius: 50%; }
+  .wa-agent-label { display: none; }
+}
 .wa-window {
   display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px;
   font-size: 11px; font-weight: 700; white-space: nowrap;
