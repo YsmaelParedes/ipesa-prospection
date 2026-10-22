@@ -22,10 +22,10 @@ export default function QueryBoundary({ children }: { children: ReactNode }) {
   if (!session) return <div role="status">Comprobando sesión…</div>
   if (pathname.startsWith('/admin') && !session.platformAdmin) return <p role="alert">Ya no tienes acceso a la administración de la plataforma.</p>
   if (!pathname.startsWith('/admin') && !session.store) return <p role="alert">Tu cuenta no tiene una tienda activa.</p>
-  return <div key={sessionScope(session)}>
+  return <div key={sessionScope(session)} className="query-scope">
     {failed && !denied && <p role="status" className="alert alert-warning">No se pudieron actualizar algunos datos. Comprueba tu conexión; la información mostrada puede estar desactualizada.</p>}
     {denied && <p role="alert">Ya no tienes permiso para consultar estos datos. Se está comprobando tu acceso.</p>}
     {expired && <p role="alert">Los datos guardados ya vencieron. Espera a que se actualicen o <button onClick={() => window.location.reload()}>vuelve a cargar</button>.</p>}
-    <div hidden={expired || denied}>{children}</div>
+    <div className="query-view" hidden={expired || denied}>{children}</div>
   </div>
 }

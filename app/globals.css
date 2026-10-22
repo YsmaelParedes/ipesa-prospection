@@ -1064,6 +1064,10 @@ a { color: inherit; text-decoration: none; }
 .main.main--fill { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 .main--fill > .topbar { flex-shrink: 0; }
 .main--fill > .content { flex: 1; min-height: 0; display: flex; flex-direction: column; padding-bottom: 20px; }
+/* Los envoltorios de QueryBoundary heredan la altura para que el scroll quede en los paneles */
+.main--fill > .content > .query-scope,
+.main--fill .query-scope > .query-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.main--fill .query-scope > .query-view[hidden] { display: none; }
 
 
 /* ============================================================

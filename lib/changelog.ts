@@ -36,6 +36,13 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.0.2',
+    date: '22 de octubre, 2026',
+    title: 'WhatsApp se desplaza de nuevo',
+    module: 'whatsapp',
+    items: ['Ya puedes bajar en la lista de conversaciones, el chat, la ficha del contacto y los resultados de WhatsApp.'],
+  },
+  {
     version: '4.0.1',
     date: '21 de octubre, 2026',
     title: 'Tiendas gratis sin uso',
