@@ -1,12 +1,12 @@
 {
   "name": "crm-pinturas",
-  "version": "4.2.0",
+  "version": "4.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test:cache": "node --test tests/query-cache.test.cjs tests/api-client.test.cjs tests/server-timing.test.cjs tests/dashboard-whatsapp.test.cjs tests/error-report.test.cjs tests/plans.test.cjs tests/whatsapp-agent.test.cjs",
+    "test:cache": "node --test tests/query-cache.test.cjs tests/api-client.test.cjs tests/server-timing.test.cjs tests/dashboard-whatsapp.test.cjs tests/error-report.test.cjs tests/plans.test.cjs tests/whatsapp-agent.test.cjs tests/meta-agent.test.cjs",
     "test:billing": "node --test tests/stripe-billing.test.cjs tests/stripe-billing-db.test.cjs",
     "test:retention": "node --test tests/store-retention-db.test.cjs",
     "benchmark:api": "node scripts/benchmark-api.mjs"

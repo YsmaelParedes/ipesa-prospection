@@ -7,9 +7,10 @@ import { WhatsAppCampaigns, type CampaignPreset } from '@/components/WhatsAppCam
 import { WhatsAppCampaignResults } from '@/components/WhatsAppCampaignHistory'
 import { WaIcon } from '@/components/WhatsAppUI'
 import { WhatsAppOffer } from '@/components/WhatsAppOffer'
+import { WhatsAppAgent } from '@/components/WhatsAppAgent'
 import { useSession } from '@/lib/profile'
 
-type Tab = 'bandeja' | 'campanas' | 'resultados'
+type Tab = 'bandeja' | 'campanas' | 'resultados' | 'agente'
 
 export default function WhatsAppPage() {
   const session = useSession()
@@ -19,7 +20,16 @@ export default function WhatsAppPage() {
   const campaigns = isAdmin && (!session?.store || session.store.modules.campaigns)
   const [tab, setTab] = useState<Tab>('bandeja')
   const [retry, setRetry] = useState<CampaignPreset | null>(null)
-  const current: Tab = campaigns ? tab : 'bandeja'
+  const tabs = ([
+    ['bandeja', 'Bandeja', <WaIcon.chat key="i" />],
+    ...(campaigns ? [
+      ['campanas', 'Campañas', <WaIcon.megaphone key="i" />],
+      ['resultados', 'Resultados', <WaIcon.chart key="i" />],
+    ] : []),
+    // Agente de IA de Meta: lo configuran el dueño y los administradores
+    ...(isAdmin ? [['agente', 'Agente IA', <WaIcon.bolt key="i" />]] : []),
+  ] as [Tab, string, React.ReactNode][])
+  const current: Tab = tabs.some(([key]) => key === tab) ? tab : 'bandeja'
 
   // Tienda sin WhatsApp: presentación del servicio ("Por activar")
   if (session?.store && !session.store.modules.whatsapp) {
@@ -28,13 +38,9 @@ export default function WhatsAppPage() {
 
   return (
     <div className="wa-page">
-      {campaigns && (
+      {tabs.length > 1 && (
         <nav className="wa-tabs" role="tablist" aria-label="Secciones de WhatsApp">
-          {([
-            ['bandeja', 'Bandeja', <WaIcon.chat key="i" />],
-            ['campanas', 'Campañas', <WaIcon.megaphone key="i" />],
-            ['resultados', 'Resultados', <WaIcon.chart key="i" />],
-          ] as [Tab, string, React.ReactNode][]).map(([key, label, icon]) => (
+          {tabs.map(([key, label, icon]) => (
             <button key={key} role="tab" aria-selected={current === key} className={`wa-tab ${current === key ? 'active' : ''}`} onClick={() => setTab(key)}>
               {icon} {label}
             </button>
@@ -55,6 +61,7 @@ export default function WhatsAppPage() {
           onOpenChat={phone => { router.push(`/whatsapp?phone=${phone}`); setTab('bandeja') }}
         />
       )}
+      {current === 'agente' && <WhatsAppAgent />}
     </div>
   )
 }

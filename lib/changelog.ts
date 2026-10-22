@@ -36,6 +36,18 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.3.0',
+    date: '22 de octubre, 2026',
+    title: 'Configura tu agente de IA',
+    module: 'whatsapp',
+    items: [
+      'Nueva pestaña «Agente IA» en WhatsApp para el dueño y los administradores.',
+      'Enciende o apaga la IA y elige si contesta solo a números de prueba o a todos tus clientes.',
+      'Elige qué dice al pasar el chat al equipo y si manda un recordatorio cuando el cliente deja de contestar.',
+      'Agrega o quita los números de prueba.',
+    ],
+  },
+  {
     version: '4.2.0',
     date: '22 de octubre, 2026',
     title: 'Trabaja junto con el agente de IA',
