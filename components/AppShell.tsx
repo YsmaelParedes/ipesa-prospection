@@ -85,7 +85,7 @@ const TITLE_MAP: Record<string, { t: string; s: string }> = {
   '/':               { t: 'Inicio',        s: 'Lo que hay que atender hoy'         },
   '/whatsapp':       { t: 'WhatsApp',      s: 'Conversaciones con tus clientes'    },
   '/contactos':      { t: 'Contactos',     s: 'Tu base de clientes'                },
-  '/comercial':      { t: 'Sistema comercial', s: 'Llamadas, seguimientos y metas'  },
+  '/comercial':      { t: 'Sistema comercial', s: 'Hoy, oportunidades y equipo'     },
   '/recordatorios':  { t: 'Agenda',        s: 'Recordatorios y seguimientos'       },
   '/formulas':       { t: 'Fórmulas',      s: 'Igualación de colores'              },
   '/configuracion':  { t: 'Configuración', s: 'Tu tienda, equipo e integraciones'  },

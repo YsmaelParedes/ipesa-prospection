@@ -14,7 +14,7 @@ export const PLAN_COPY: Record<'litro' | 'galon' | 'cubeta', PlanCopy> = {
     features: [
       users(PLANS.litro.maxUsers),
       `${PLANS.litro.maxContacts} contactos`,
-      'Sistema comercial: tu cola de llamadas con su próxima fecha',
+      'Sistema comercial: tu lista de Hoy con a quién llamar y cuándo',
       'Importa tu lista de clientes de Excel',
       'Agenda, recordatorios y avisos en el celular',
     ],
@@ -26,7 +26,7 @@ export const PLAN_COPY: Record<'litro' | 'galon' | 'cubeta', PlanCopy> = {
       users(PLANS.galon.maxUsers),
       'Contactos sin límite',
       'Reparte contactos entre tus vendedores',
-      'Metas y control diario de llamadas y ventas',
+      'Oportunidades, metas por vendedor y pantalla Equipo',
       'Permisos que cuidan tu base de clientes',
       'Agenda, recordatorios y avisos en el celular',
     ],
@@ -47,8 +47,8 @@ export const PLAN_COPY: Record<'litro' | 'galon' | 'cubeta', PlanCopy> = {
 export const PLAN_COMPARE: { label: string; values: Record<'litro' | 'galon' | 'cubeta', string | boolean> }[] = [
   { label: 'Usuarios', values: { litro: '1', galon: String(PLANS.galon.maxUsers), cubeta: String(PLANS.cubeta.maxUsers) } },
   { label: 'Contactos', values: { litro: String(PLANS.litro.maxContacts), galon: 'Sin límite', cubeta: 'Sin límite' } },
-  { label: 'Sistema comercial: cola de llamadas y seguimientos', values: { litro: true, galon: true, cubeta: true } },
-  { label: 'Reparto de contactos, metas y control diario', values: { litro: false, galon: true, cubeta: true } },
+  { label: 'Sistema comercial: lista de Hoy y registro de llamadas', values: { litro: true, galon: true, cubeta: true } },
+  { label: 'Oportunidades, metas por vendedor y pantalla Equipo', values: { litro: false, galon: true, cubeta: true } },
   { label: 'Agenda y avisos en el celular', values: { litro: true, galon: true, cubeta: true } },
   { label: 'Importar desde Excel', values: { litro: true, galon: true, cubeta: true } },
   { label: 'Administradores además del dueño', values: { litro: false, galon: false, cubeta: true } },

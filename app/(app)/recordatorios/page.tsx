@@ -12,10 +12,11 @@ import { useSession } from '@/lib/profile'
 import { REMINDER_TYPES, REMINDER_TYPE_INFO, remTypeInfo, reminderSubject, reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
 import { MESES, QUICK_WHEN, fmtDue, isSameDay, quickDate, toDbLocal, type QuickWhen } from '@/lib/datetime'
-import { bucketOf, type CommercialContact } from '@/lib/commercial'
+import type { CommercialContact } from '@/lib/commercial'
 import { StatusChip, nextLabel } from '@/components/CommercialUI'
 
-type CommercialData = { today: string; uid: string; salesTeam: boolean; contacts: CommercialContact[] }
+/** Lo que trae /api/data/commercial (la lista de Hoy); aquí solo se usan los seguimientos con fecha. */
+type CommercialData = { today: string; due: CommercialContact[] }
 
 /* ══════════════════════════════════════════════════════════
    ICONOS SVG
@@ -155,7 +156,7 @@ function CommercialFollowUps({ items, today }: { items: CommercialContact[]; tod
         <span className="rem-group-dot" style={{ background: 'var(--brand)' }} />
         <span className="rem-group-label" style={{ color: 'var(--brand)' }}>Llamadas del sistema comercial</span>
         <span className="rem-group-count">{items.length}</span>
-        <Link href="/comercial" className="link-btn" style={{ marginLeft: 'auto' }}>Ir a la cola →</Link>
+        <Link href="/comercial" className="link-btn" style={{ marginLeft: 'auto' }}>Ir a Hoy →</Link>
       </div>
       {items.slice(0, 8).map(c => {
         const next = nextLabel(c.next_action_at, today)
@@ -227,15 +228,11 @@ export default function AgendaPage() {
   const pending = reminders.filter(r => !r.completado).sort((a, b) => a.fecha_recordatorio.localeCompare(b.fecha_recordatorio))
   const done    = reminders.filter(r =>  r.completado).sort((a, b) => String(b.completado_at || b.created_at).localeCompare(String(a.completado_at || a.created_at)))
   const applyTypeFilter = (list: Reminder[]) => typeFilter === 'all' ? list : list.filter(r => (r.type || 'task') === typeFilter)
-  // Seguimientos del sistema comercial con fecha de hoy o vencida (los míos; sin reparto, también los sin asignar)
+  // Seguimientos del sistema comercial con fecha de hoy o vencida (los míos y los sin dueño con fecha)
   const followUps = useMemo(() => {
-    if (!commercial) return []
-    const isAdmin = !!session?.isAdmin
-    return commercial.contacts
-      .filter(c => !isAdmin || c.owner_id === commercial.uid || (!commercial.salesTeam && c.owner_id === null))
-      .filter(c => c.next_action_at && ['vencido', 'hoy'].includes(bucketOf(c, commercial.today)))
-      .sort((a, b) => String(a.next_action_at).localeCompare(String(b.next_action_at)))
-  }, [commercial, session?.isAdmin])
+    if (!commercial?.due) return []
+    return [...commercial.due].sort((a, b) => String(a.next_action_at).localeCompare(String(b.next_action_at)))
+  }, [commercial])
 
   const pendingF = applyTypeFilter(pending)
   const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1)

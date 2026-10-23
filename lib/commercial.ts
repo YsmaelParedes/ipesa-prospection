@@ -1,22 +1,28 @@
 /**
- * Sistema comercial (docs/SISTEMA_COMERCIAL.md): estados del contacto,
- * resultados de cada llamada con su próxima fecha, cola "Para llamar hoy" y
- * conteos del control diario. Compartido por navegador y servidor.
+ * Sistema comercial (docs/SISTEMA_COMERCIAL.md): un solo avance por cliente
+ * (Prospecto → Contactado → Cotización → Cliente), resultados de cada
+ * actividad con su próxima fecha, lista de "Hoy" y conteos contra la meta.
+ * Compartido por navegador y servidor.
+ *
+ * En la base siguen los valores de siempre: "nuevo" se muestra como
+ * Prospecto, "depurar" como Número incorrecto e "interes" (ya no se usa) como
+ * Contactado.
  */
-import { hasStreetNumber } from './address'
 
 export const COMMERCIAL_STATUSES = ['nuevo', 'contactado', 'interes', 'cotizacion', 'cliente', 'no_interesado', 'depurar'] as const
 export type CommercialStatus = typeof COMMERCIAL_STATUSES[number]
 
 export const STATUS_INFO: Record<CommercialStatus, { label: string; color: string; bg: string }> = {
-  nuevo:         { label: 'Nuevo',         color: 'var(--c-cyan-ink)',    bg: 'var(--c-cyan-soft)' },
-  contactado:    { label: 'Contactado',    color: 'var(--c-teal-ink)',    bg: 'var(--c-teal-soft)' },
-  interes:       { label: 'Interés',       color: 'var(--c-purple-ink)',  bg: 'var(--c-purple-soft)' },
-  cotizacion:    { label: 'Cotización',    color: 'var(--warning)',       bg: 'var(--warning-soft)' },
-  cliente:       { label: 'Cliente',       color: 'var(--success)',       bg: 'var(--success-soft)' },
-  no_interesado: { label: 'No interesado', color: 'var(--muted)',         bg: 'var(--paper-2)' },
-  depurar:       { label: 'Por depurar',   color: 'var(--danger)',        bg: 'var(--danger-soft)' },
+  nuevo:         { label: 'Prospecto',         color: 'var(--c-cyan-ink)',    bg: 'var(--c-cyan-soft)' },
+  contactado:    { label: 'Contactado',        color: 'var(--c-teal-ink)',    bg: 'var(--c-teal-soft)' },
+  interes:       { label: 'Contactado',        color: 'var(--c-teal-ink)',    bg: 'var(--c-teal-soft)' },
+  cotizacion:    { label: 'Cotización',        color: 'var(--warning)',       bg: 'var(--warning-soft)' },
+  cliente:       { label: 'Cliente',           color: 'var(--success)',       bg: 'var(--success-soft)' },
+  no_interesado: { label: 'No interesado',     color: 'var(--muted)',         bg: 'var(--paper-2)' },
+  depurar:       { label: 'Número incorrecto', color: 'var(--danger)',        bg: 'var(--danger-soft)' },
 }
+/** Los que se pueden elegir a mano (sin "interes", que ya no se usa). */
+export const STATUS_CHOICES = ['nuevo', 'contactado', 'cotizacion', 'cliente', 'no_interesado', 'depurar'] as const
 export const statusInfo = (s: string | null | undefined) => STATUS_INFO[s as CommercialStatus] ?? STATUS_INFO.nuevo
 export const isCommercialStatus = (v: unknown): v is CommercialStatus => typeof v === 'string' && (COMMERCIAL_STATUSES as readonly string[]).includes(v)
 
@@ -32,9 +38,8 @@ export const priorityInfo = (p: string | null | undefined) => PRIORITY_INFO[p as
 /** Sugerencias para "Origen" (se puede escribir otro). */
 export const ORIGINS = ['Visita de campo', 'Llamada', 'Recomendación', 'WhatsApp', 'Redes sociales', 'Sucursal', 'Otro'] as const
 
-/** Etapas del tablero de Seguimiento y su probabilidad de cierre (para el monto "en juego"). */
-export const PIPELINE_STAGES = ['contactado', 'interes', 'cotizacion', 'cliente'] as const
-export const STAGE_PROBABILITY: Record<string, number> = { contactado: 0.1, interes: 0.25, cotizacion: 0.5 }
+/** Probabilidad de cierre según el avance (como en el Excel de seguimiento). */
+export const STAGE_PROBABILITY: Record<string, number> = { contactado: 0.5, interes: 0.5, cotizacion: 0.75, cliente: 1 }
 
 /** Días completos desde una fecha/hora hasta hoy (AAAA-MM-DD). */
 export function daysSince(iso: string | null | undefined, today: string): number | null {
@@ -49,6 +54,9 @@ export const KIND_LABELS: Record<ActivityKind, string> = { llamada: 'Llamada', w
 
 export const RESULTS = ['no_contesta', 'contactado', 'interes', 'cotizacion', 'venta', 'reprogramar', 'no_interesado', 'numero_equivocado'] as const
 export type CallResult = typeof RESULTS[number]
+/** Los 6 resultados que se eligen al registrar ("interes" y "reprogramar" quedan solo en el historial). */
+export const RESULT_CHOICES = ['no_contesta', 'contactado', 'cotizacion', 'venta', 'no_interesado', 'numero_equivocado'] as const
+export type ResultChoice = typeof RESULT_CHOICES[number]
 
 type Rule = {
   label: string
@@ -62,14 +70,14 @@ type Rule = {
   askSale?: true
 }
 export const RESULT_RULES: Record<CallResult, Rule> = {
-  no_contesta:       { label: 'No contesta',        days: 1,    status: null,            action: 'Volver a llamar' },
+  no_contesta:       { label: 'Sin contacto',       days: 1,    status: null,            action: 'Volver a llamar' },
   contactado:        { label: 'Contactado',         days: 3,    status: 'contactado',    action: 'Dar seguimiento' },
-  interes:           { label: 'Interés',            days: 3,    status: 'interes',       action: 'Dar seguimiento' },
+  interes:           { label: 'Interés',            days: 3,    status: 'contactado',    action: 'Dar seguimiento' },
   cotizacion:        { label: 'Cotización enviada', days: 2,    status: 'cotizacion',    action: 'Confirmar la cotización', askQuote: true },
   venta:             { label: 'Venta',              days: 30,   status: 'cliente',       action: 'Ofrecer recompra', askSale: true },
   reprogramar:       { label: 'Reprogramar',        days: null, status: null,            action: 'Llamar', pickDate: true },
   no_interesado:     { label: 'No interesado',      days: 90,   status: 'no_interesado', action: 'Volver a ofrecer' },
-  numero_equivocado: { label: 'Número equivocado',  days: null, status: 'depurar',       action: null },
+  numero_equivocado: { label: 'Número incorrecto',  days: null, status: 'depurar',       action: null },
 }
 export const isCallResult = (v: unknown): v is CallResult => typeof v === 'string' && Object.hasOwn(RESULT_RULES, v)
 export const resultLabel = (r: string | null | undefined) => (r && isCallResult(r) ? RESULT_RULES[r].label : '')
@@ -77,7 +85,7 @@ export const resultLabel = (r: string | null | undefined) => (r && isCallResult(
 /** Llamadas seguidas sin respuesta a partir de las cuales el contacto baja al final de su grupo. */
 export const NO_ANSWER_LIMIT = 3
 
-/** Contacto efectivo: hubo conversación (no cuenta "No contesta" ni "Número equivocado"). */
+/** Contacto efectivo: hubo conversación (no cuenta "Sin contacto" ni "Número incorrecto"). */
 export const isEffective = (r: string | null | undefined) => !!r && r !== 'no_contesta' && r !== 'numero_equivocado'
 
 /** Fecha de hoy (AAAA-MM-DD) en la zona horaria de la tienda. */
@@ -101,10 +109,24 @@ export function suggestNext(result: CallResult, today: string) {
   }
 }
 
+/** Qué va a pasar al guardar, en palabras del vendedor. */
+export function outcomeText(result: CallResult): string {
+  switch (result) {
+    case 'no_contesta':       return 'Vuelve a aparecer en tu lista en la fecha que elijas'
+    case 'contactado':        return 'Pasa a Contactado · 50 %'
+    case 'interes':           return 'Pasa a Contactado · 50 %'
+    case 'cotizacion':        return 'Pasa a Cotización · 75 % y aparece en tus Oportunidades'
+    case 'venta':             return 'Pasa a Cliente. Te recordamos ofrecer recompra'
+    case 'reprogramar':       return 'Vuelve en la fecha que elijas'
+    case 'no_interesado':     return 'Sale de tu lista y vuelve en 90 días'
+    case 'numero_equivocado': return 'Sale de la lista para corregir el número'
+  }
+}
+
 export type CommercialContact = {
   id: string; name: string; phone: string; email: string | null; company: string | null
   address: string | null; postal_code: string | null; segment: string | null; acquisition_channel: string | null
-  colonia: string | null; owner_id: string | null; owner_name?: string
+  colonia: string | null; zone: string | null; owner_id: string | null; owner_name?: string | null
   priority: Priority; potential_monthly: number | string | null; origin: string | null
   commercial_status: CommercialStatus; next_action: string | null; next_action_at: string | null
   last_activity_at: string | null; last_result: string | null; last_note: string | null
@@ -114,15 +136,11 @@ export type CommercialContact = {
 export type Bucket = 'vencido' | 'hoy' | 'nuevo' | 'programado' | 'sin_fecha' | 'depurar'
 export type BucketFields = Pick<CommercialContact, 'commercial_status' | 'next_action_at' | 'last_activity_at' | 'address'>
 
-/**
- * Dónde cae el contacto hoy. Un contacto con fecha siempre sigue su fecha. Uno
- * que nunca se ha trabajado entra a la cola solo si su dirección trae calle y
- * número; si no, va a "Por depurar".
- */
+/** Dónde cae el contacto hoy. Un contacto con fecha siempre sigue su fecha; uno nunca trabajado es prospecto nuevo. */
 export function bucketOf(c: BucketFields, today: string): Bucket {
   if (c.commercial_status === 'depurar') return 'depurar'
   if (c.next_action_at) return c.next_action_at < today ? 'vencido' : c.next_action_at === today ? 'hoy' : 'programado'
-  if (!c.last_activity_at) return hasStreetNumber(c.address) ? 'nuevo' : 'depurar'
+  if (!c.last_activity_at) return 'nuevo'
   return 'sin_fecha'
 }
 export const inQueue = (b: Bucket) => b === 'vencido' || b === 'hoy' || b === 'nuevo'
@@ -153,7 +171,7 @@ export type Goals = Record<GoalKey, number>
 export const GOAL_LABELS: Record<GoalKey, string> = {
   calls: 'Llamadas', effective: 'Contactos efectivos', quotes: 'Cotizaciones', followups: 'Seguimientos', sales: 'Ventas',
 }
-export const DEFAULT_GOALS: Goals = { calls: 25, effective: 12, quotes: 5, followups: 10, sales: 2 }
+export const DEFAULT_GOALS: Goals = { calls: 30, effective: 15, quotes: 6, followups: 10, sales: 2 }
 
 export function parseGoals(raw: unknown): Goals {
   const src = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {}
@@ -161,6 +179,37 @@ export function parseGoals(raw: unknown): Goals {
     const n = Number(src[k])
     return [k, Number.isInteger(n) && n >= 0 && n <= 999 ? n : DEFAULT_GOALS[k]]
   })) as Goals
+}
+
+/**
+ * Metas guardadas en stores.commercial_goals: las de la tienda en la raíz
+ * (forma de siempre) y, si el dueño las cambió para alguien, en byUser.
+ */
+export type GoalsConfig = { team: Goals; byUser: Record<string, Goals> }
+export function parseGoalsConfig(raw: unknown): GoalsConfig {
+  const src = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {}
+  const by = src.byUser && typeof src.byUser === 'object' ? src.byUser as Record<string, unknown> : {}
+  return {
+    team: parseGoals(src),
+    byUser: Object.fromEntries(Object.entries(by).filter(([k]) => /^[0-9a-f-]{36}$/i.test(k)).map(([k, v]) => [k, parseGoals(v)])),
+  }
+}
+export const goalsFor = (cfg: GoalsConfig, uid: string): Goals => cfg.byUser[uid] ?? cfg.team
+
+/** Cumplimiento (0–1) contra la meta: cada indicador topado en 100 %, promedio de los que tienen meta. */
+export function compliance(counts: Goals, goals: Goals, days = 1): number {
+  const keys = GOAL_KEYS.filter(k => goals[k] > 0)
+  if (!keys.length) return 0
+  return keys.reduce((sum, k) => sum + Math.min(1, counts[k] / (goals[k] * Math.max(1, days))), 0) / keys.length
+}
+
+/** Días hábiles (lunes a sábado) del 1 del mes hasta la fecha, inclusive. */
+export function workDaysUntil(isoDate: string): number {
+  let n = 0
+  for (let d = `${isoDate.slice(0, 7)}-01`; d <= isoDate; d = addDays(d, 1)) {
+    if (new Date(`${d}T12:00:00Z`).getUTCDay() !== 0) n++
+  }
+  return n
 }
 
 export type ActivityForCount = { kind: string; result: string | null; is_followup: boolean; quote_amount: number | string | null; sale_amount: number | string | null }

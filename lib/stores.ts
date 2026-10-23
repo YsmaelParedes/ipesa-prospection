@@ -57,7 +57,7 @@ export type PlanDef = {
   label: string; maxUsers: number; allowAdmins: boolean
   maxContacts: number | null
   whatsapp: boolean; paid: boolean
-  /** Sistema comercial en equipo: reparto de contactos, metas y control diario. */
+  /** Sistema comercial en equipo: Oportunidades, metas por vendedor y pantalla Equipo. */
   salesTeam: boolean
 }
 export const PLANS: Record<PlanId, PlanDef> = {

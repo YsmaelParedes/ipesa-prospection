@@ -1,29 +1,25 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { apiFetch, cachedQueryData } from '@/lib/apiClient'
 import { useDataReady, useQueryEffect } from '@/lib/useCachedQuery'
 import { useSession } from '@/lib/profile'
 import { notifyDataChanged, useDataChanged } from '@/lib/crmEvents'
-import { bucketOf, inQueue, queueCompare, suggestNext, type CallResult, type CommercialContact } from '@/lib/commercial'
-import { Select } from '@/components/Select'
-import { CallPanel } from './CallPanel'
-import { ResumenTab } from './ResumenTab'
-import { HoyTab } from './HoyTab'
-import { SeguimientoTab } from './SeguimientoTab'
-import { ActividadesTab } from './ActividadesTab'
-import { BaseTab } from './BaseTab'
-import { AltaTab } from './AltaTab'
-import { ControlTab } from './ControlTab'
-import { Ico, bizName, type CommercialData } from './ui'
+import type { CommercialContact } from '@/lib/commercial'
+import { HoyView, type Opened } from './HoyView'
+import { OportunidadesView } from './OportunidadesView'
+import { EquipoView } from './EquipoView'
+import { ContactPanel } from './ContactPanel'
+import { Ico, bizName, useWide, type TodayData } from './ui'
+import s from './comercial.module.css'
 
 const PATH = '/api/data/commercial'
-type Tab = 'resumen' | 'hoy' | 'seguimiento' | 'actividades' | 'base' | 'alta' | 'control'
-const TAB_KEYS: Tab[] = ['resumen', 'hoy', 'seguimiento', 'actividades', 'base', 'alta', 'control']
+type Tab = 'hoy' | 'oportunidades' | 'equipo'
+const TAB_KEYS: Tab[] = ['hoy', 'oportunidades', 'equipo']
 
 export default function ComercialPage() {
-  // ?id= abre un contacto directo (desde el buscador, Inicio o Contactos); ?tab= abre una pestaña
+  // ?id= abre un contacto (desde el buscador, Inicio, Contactos o WhatsApp); ?tab= abre una pestaña
   return <Suspense fallback={null}><ComercialContent /></Suspense>
 }
 
@@ -32,19 +28,22 @@ function ComercialContent() {
   const params = useSearchParams()
   const deepId = params.get('id')
   const session = useSession()
-  const isAdmin = !!session?.isAdmin
   const readonly = session?.store?.access === 'readonly'
   const waModule = !!session?.store?.modules.whatsapp
+  const wide = useWide()
 
-  const [data, setData]       = useState<CommercialData | null>(() => cachedQueryData<CommercialData>(PATH) ?? null)
+  const [data, setData] = useState<TodayData | null>(() => cachedQueryData<TodayData>(PATH) ?? null)
   const [loading, setLoading] = useState(() => !cachedQueryData(PATH))
   useDataReady(loading, 'comercial')
   const wanted = params.get('tab') as Tab | null
-  const [tab, setTab]         = useState<Tab | null>(wanted && TAB_KEYS.includes(wanted) ? wanted : null)
-  const [scope, setScope]     = useState('mine')   // dueño/admin: 'mine' | 'all' | user_id
-  const [open, setOpen]       = useState<{ id: string; result?: CallResult } | null>(null)
-  const [queueIds, setQueueIds] = useState<string[] | null>(null)
-  const [toast, setToast]     = useState('')
+  const [tab, setTab] = useState<Tab>(wanted && TAB_KEYS.includes(wanted) ? wanted : 'hoy')
+  const [zone, setZone] = useState('')
+  const [query, setQuery] = useState('')
+  const [search, setSearch] = useState('')
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [opened, setOpened] = useState<Opened | null>(null)
+  const [overlay, setOverlay] = useState<Opened | null>(deepId ? { id: deepId } : null)
+  const [toast, setToast] = useState('')
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const showToast = useCallback((msg: string) => {
@@ -53,150 +52,101 @@ function ComercialContent() {
     toastTimer.current = setTimeout(() => setToast(''), 2400)
   }, [])
 
+  // La búsqueda espera a que dejes de escribir
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(query.trim()), 300)
+    return () => clearTimeout(t)
+  }, [query])
+
+  const url = useCallback((offset = 0) => {
+    const qs = new URLSearchParams()
+    if (zone) qs.set('zone', zone)
+    if (search) qs.set('q', search)
+    if (offset) qs.set('offset', String(offset))
+    const str = qs.toString()
+    return str ? `${PATH}?${str}` : PATH
+  }, [zone, search])
+
   const load = useCallback(async () => {
     try {
-      const r = await apiFetch(PATH)
+      const r = await apiFetch(url())
       if (r.ok) setData(await r.json())
     } catch {} finally { setLoading(false) }
-  }, [])
+  }, [url])
   useQueryEffect(() => { load() }, [load])
   useDataChanged(['contact', 'commercial'], load)
+  useEffect(() => { if (deepId) setOverlay({ id: deepId }) }, [deepId])
 
-  const today = data?.today ?? ''
-  const uid = data?.uid ?? ''
-  const salesTeam = !!data?.salesTeam
-  const team = useMemo(() => data?.team ?? [], [data])
-  const contacts = useMemo(() => data?.contacts ?? [], [data])
-
-  // Pestaña inicial: el dueño entra al resumen; el vendedor (y Litro) a su día
-  const current: Tab = tab ?? (isAdmin && salesTeam ? 'resumen' : 'hoy')
-
-  useEffect(() => { if (deepId && contacts.some(c => c.id === deepId)) setOpen({ id: deepId }) }, [deepId, contacts])
-
-  // "Mis contactos" del dueño: los suyos; sin reparto (Litro) también los sin asignar
-  const inScope = useCallback((c: CommercialContact) => {
-    if (!isAdmin || scope === 'all') return true
-    if (scope === 'mine') return c.owner_id === uid || (!salesTeam && c.owner_id === null)
-    return c.owner_id === scope
-  }, [isAdmin, scope, uid, salesTeam])
-  const scoped = useMemo(() => contacts.filter(inScope), [contacts, inScope])
-  const queue = useMemo(() => scoped.filter(c => inQueue(bucketOf(c, today))).sort(queueCompare(today)), [scoped, today])
-
-  const canWork = useCallback((c: CommercialContact) => c.owner_id === uid || (c.owner_id === null && isAdmin), [uid, isAdmin])
-  const ownerName = useCallback((id: string | null) => (id ? team.find(m => m.user_id === id)?.name : undefined), [team])
-
-  const replaceContact = useCallback((c: CommercialContact) => {
-    setData(d => d ? { ...d, contacts: d.contacts.map(x => x.id === c.id ? { ...x, ...c, owner_name: ownerName(c.owner_id) ?? x.owner_name } : x) } : d)
-    notifyDataChanged('commercial')
-  }, [ownerName])
-  const addContact = useCallback((c: CommercialContact) => {
-    setData(d => d ? { ...d, contacts: [...d.contacts, { ...c, owner_name: ownerName(c.owner_id) }] } : d)
-  }, [ownerName])
-
-  const openContact = (c: CommercialContact, opts: { result?: CallResult; fromQueue?: boolean } = {}) => {
-    setOpen({ id: c.id, result: opts.result })
-    setQueueIds(opts.fromQueue ? queue.map(x => x.id) : null)
+  async function loadMore() {
+    if (!data) return
+    setLoadingMore(true)
+    try {
+      const r = await apiFetch(url(data.fresh.length))
+      if (r.ok) {
+        const more: TodayData = await r.json()
+        setData(d => d ? { ...d, fresh: [...d.fresh, ...more.fresh.filter(c => !d.fresh.some(x => x.id === c.id))], freshTotal: more.freshTotal } : d)
+      }
+    } finally { setLoadingMore(false) }
   }
-  const closeContact = () => {
-    setOpen(null)
-    setQueueIds(null)
+
+  // Al guardar: sale de la lista si ya no toca hoy; luego se recargan avance y lista
+  const onSaved = useCallback((c: CommercialContact) => {
+    setData(d => {
+      if (!d) return d
+      const stays = (x: CommercialContact) => x.next_action_at !== null && x.next_action_at <= d.today && x.commercial_status !== 'depurar'
+      return {
+        ...d,
+        due: stays(c) ? d.due.map(x => x.id === c.id ? { ...x, ...c } : x) : d.due.filter(x => x.id !== c.id),
+        fresh: d.fresh.filter(x => x.id !== c.id || (!c.last_activity_at && !c.owner_id)),
+      }
+    })
+    showToast(`${bizName(c)}: guardado`)
+    notifyDataChanged('commercial')
+  }, [showToast])
+
+  const closeOverlay = () => {
+    setOverlay(null)
     if (deepId) router.replace('/comercial', { scroll: false })
   }
 
-  // "No contesta" desde la tarjeta: se registra sin abrir la ficha, con la fecha sugerida
-  const quickNoAnswer = async (c: CommercialContact) => {
-    const next = suggestNext('no_contesta', today)
-    const r = await apiFetch('/api/data/commercial/activities', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contact_id: c.id, kind: 'llamada', result: 'no_contesta', next_action: next.nextAction, next_action_at: next.nextAt }),
-    })
-    const d = await r.json().catch(() => ({}))
-    if (!r.ok) { showToast(d.error || 'No se pudo registrar'); return }
-    if (d.contact) replaceContact(d.contact)
-    showToast(`${bizName(c)}: no contesta, se vuelve a llamar mañana`)
-  }
-
-  const openRow = open ? contacts.find(c => c.id === open.id) ?? null : null
-  const nextInQueue = useMemo(() => {
-    if (!queueIds || !open) return null
-    const at = queueIds.indexOf(open.id)
-    for (const id of queueIds.slice(at + 1)) {
-      const c = contacts.find(x => x.id === id)
-      if (c && inQueue(bucketOf(c, today)) && canWork(c)) return c
-    }
-    return null
-  }, [queueIds, open, contacts, today, canWork])
-
+  const salesTeam = !!data?.salesTeam
+  const isAdmin = !!data?.isAdmin
   const TABS: { key: Tab; label: string; count?: number }[] = [
-    { key: 'resumen', label: 'Resumen' },
-    { key: 'hoy', label: 'Hoy', count: queue.length },
-    { key: 'seguimiento', label: 'Seguimiento' },
-    { key: 'actividades', label: 'Actividades' },
-    { key: 'base', label: 'Base comercial' },
-    ...(readonly ? [] : [{ key: 'alta' as Tab, label: 'Alta de prospectos' }]),
-    { key: 'control', label: 'Control diario' },
+    { key: 'hoy', label: 'Hoy', count: data?.due.length },
+    ...(salesTeam ? [{ key: 'oportunidades' as Tab, label: 'Oportunidades' }] : []),
+    ...(salesTeam && isAdmin ? [{ key: 'equipo' as Tab, label: 'Equipo' }] : []),
   ]
-  const scoping = isAdmin && team.length > 1 && (current === 'hoy' || current === 'seguimiento' || current === 'base')
+  const current: Tab = TABS.some(t => t.key === tab) ? tab : 'hoy'
 
   return (
     <>
-      <div className="section-head">
-        <h2>Sistema comercial</h2>
-        {!loading && <span className="count">{queue.length} para llamar hoy</span>}
-        {scoping && (
-          <div className="section-actions">
-            <Select value={scope} onChange={setScope} aria-label="De quién" style={{ minWidth: 190 }}
-              options={[
-                { value: 'mine', label: salesTeam ? 'Mis contactos' : 'Mis contactos y sin asignar' },
-                { value: 'all', label: 'Todo el equipo' },
-                ...team.filter(m => m.user_id !== uid).map(m => ({ value: m.user_id, label: m.name })),
-              ]} />
-          </div>
-        )}
-      </div>
-
-      <div className="status-tabs" role="tablist" aria-label="Sistema comercial">
-        {TABS.map(t => (
-          <button key={t.key} role="tab" aria-selected={current === t.key} className={`status-tab ${current === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)}>
-            {t.label}{!loading && t.count !== undefined && <span className="status-tab-count">{t.count}</span>}
-          </button>
-        ))}
-      </div>
+      {TABS.length > 1 && (
+        <div className={s.tabs} role="tablist" aria-label="Sistema comercial">
+          {TABS.map(t => (
+            <button key={t.key} role="tab" aria-selected={current === t.key} className={`${s.tab} ${s.press}`} onClick={() => setTab(t.key)}>
+              {t.label}{t.count ? <span className={`${s.tabCount} ${s.num}`}>{t.count}</span> : null}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading || !data ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
           <div style={{ width: 32, height: 32, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         </div>
-      ) : current === 'resumen' ? (
-        <ResumenTab contacts={isAdmin ? contacts : scoped} today={today} salesTeam={salesTeam} isAdmin={isAdmin}
-          onOpen={c => openContact(c)} onGoTo={setTab} />
       ) : current === 'hoy' ? (
-        <HoyTab queue={queue} today={today} uid={uid} isAdmin={isAdmin} salesTeam={salesTeam} readonly={readonly}
-          unassigned={isAdmin && salesTeam && scope === 'mine' ? contacts.filter(c => c.owner_id === null).length : 0}
-          canWork={canWork} onOpen={(c, result) => openContact(c, { result, fromQueue: true })} onNoAnswer={quickNoAnswer}
-          onGoTo={setTab} />
-      ) : current === 'seguimiento' ? (
-        <SeguimientoTab contacts={scoped} today={today} multiOwner={isAdmin && scope !== 'mine'} onOpen={c => openContact(c)} />
-      ) : current === 'actividades' ? (
-        <ActividadesTab today={today} isAdmin={isAdmin} team={team} onOpen={id => { const c = contacts.find(x => x.id === id); if (c) openContact(c) }} />
-      ) : current === 'base' ? (
-        <BaseTab contacts={contacts} inScope={inScope} today={today} isAdmin={isAdmin} salesTeam={salesTeam} readonly={readonly}
-          uid={uid} team={team} onOpen={c => openContact(c)}
-          onAssigned={(n, msg) => { showToast(msg); if (n) { load(); notifyDataChanged('commercial') } }} />
-      ) : current === 'alta' ? (
-        <AltaTab contacts={contacts} isAdmin={isAdmin} salesTeam={salesTeam} uid={uid} team={team}
-          onCreated={(c, callNow) => { addContact(c); notifyDataChanged('contact'); showToast('Prospecto guardado'); if (callNow) openContact(c) }} />
+        <HoyView data={data} wide={wide} zone={zone} query={query} readonly={readonly} waModule={waModule} loadingMore={loadingMore}
+          onZone={setZone} onQuery={setQuery} onMore={loadMore} onSaved={onSaved} opened={opened} onOpen={setOpened} />
+      ) : current === 'oportunidades' ? (
+        <OportunidadesView isAdmin={isAdmin} onOpen={setOverlay} />
       ) : (
-        <ControlTab today={today} isAdmin={isAdmin} readonly={readonly} team={team} salesTeam={salesTeam} uid={uid} />
+        <EquipoView today={data.today} />
       )}
 
-      {openRow && (
-        <CallPanel key={`${openRow.id}-${open?.result ?? ''}`} contact={openRow} today={today} canWork={canWork(openRow)} readonly={readonly} waModule={waModule}
-          initialResult={open?.result}
-          onClose={closeContact}
-          onChanged={c => { replaceContact(c); showToast('Guardado') }}
-          onNext={nextInQueue ? () => setOpen({ id: nextInQueue.id }) : undefined}
-          nextName={nextInQueue ? bizName(nextInQueue) : undefined} />
+      {overlay && data && (
+        <ContactPanel key={`${overlay.id}-${overlay.result ?? ''}`} contactId={overlay.id} today={data.today} variant="overlay"
+          isAdmin={isAdmin} readonly={readonly} waModule={waModule} kind={overlay.kind} result={overlay.result}
+          onSaved={c => { onSaved(c); closeOverlay() }} onChanged={onSaved} onClose={closeOverlay} />
       )}
 
       {toast && <div className="toast-fixed"><Ico.check /> {toast}</div>}

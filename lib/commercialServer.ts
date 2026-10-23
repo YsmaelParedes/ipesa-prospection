@@ -2,7 +2,7 @@ import { getServerSupabase, type StoreContext } from './supabase-server'
 import { planOf } from './stores'
 
 export const COMMERCIAL_COLUMNS =
-  'id, name, phone, email, company, address, postal_code, colonia, segment, acquisition_channel, owner_id, commercial_status, ' +
+  'id, name, phone, email, company, address, postal_code, colonia, zone, segment, acquisition_channel, owner_id, commercial_status, ' +
   'next_action, next_action_at, last_activity_at, last_result, last_note, no_answer_streak, priority, potential_monthly, origin, created_at'
 
 export const ACTIVITY_COLUMNS =
@@ -13,20 +13,21 @@ export const hasSalesTeam = (ctx: StoreContext) => planOf(ctx.plan).salesTeam
 
 export function salesTeamRequired(): Response {
   return Response.json(
-    { error: 'El reparto de contactos, las metas y el control diario vienen en los planes Galón y Cubeta.', code: 'PLAN_FEATURE' },
+    { error: 'Oportunidades, metas por vendedor y la pantalla Equipo vienen en los planes Galón y Cubeta.', code: 'PLAN_FEATURE' },
     { status: 403 },
   )
 }
 
 /**
  * ¿Puede ver este contacto en el sistema comercial? Dueño/administrador: todos
- * los de la tienda. Vendedor: solo los suyos. Devuelve el contacto o null.
+ * los de la tienda. Vendedor: los suyos y los que aún no tienen dueño (el
+ * primero que registra una actividad se queda con él). Devuelve el contacto o null.
  */
 export async function getVisibleContact(ctx: StoreContext, contactId: string) {
   const { data } = await getServerSupabase().from('contacts').select('id, owner_id')
     .eq('id', contactId).eq('store_id', ctx.storeId).maybeSingle()
   if (!data) return null
-  if (!ctx.isAdmin && data.owner_id !== ctx.uid) return null
+  if (!ctx.isAdmin && data.owner_id !== null && data.owner_id !== ctx.uid) return null
   return data as { id: string; owner_id: string | null }
 }
 

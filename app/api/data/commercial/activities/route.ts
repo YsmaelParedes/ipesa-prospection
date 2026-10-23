@@ -101,8 +101,7 @@ const ACTIVITY_SCHEMA: Schema = {
 /**
  * POST /api/data/commercial/activities — registra una llamada, WhatsApp,
  * visita o nota y actualiza el contacto en la misma transacción. Solo el
- * responsable del contacto; el dueño o un administrador también puede tomar
- * uno sin responsable.
+ * responsable del contacto; si no tiene, quien registra se queda con él.
  */
 export async function POST(req: NextRequest) {
   const ctx = await requireStore({ write: true })
@@ -122,7 +121,7 @@ export async function POST(req: NextRequest) {
     p_kind: d.kind, p_result: d.kind === 'nota' ? null : d.result, p_note: d.note ?? null,
     p_quote: d.quote_amount ?? null, p_sale: d.sale_amount ?? null,
     p_next_action: d.next_action ?? null, p_next_at: d.next_action_at ?? null,
-    p_status: d.status ?? null, p_claim: ctx.isAdmin,
+    p_status: d.status ?? null, p_claim: true,
   })
   if (error) {
     const known = rpcUserError(error)
