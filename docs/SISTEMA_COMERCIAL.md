@@ -12,7 +12,7 @@ La versión 1 "no se entendía": se rehízo desde el Excel *Sistema Comercial IP
 - **Registro en 3 pasos** (`RegisterForm.tsx`): tipo (Llamada, WhatsApp, Visita) → 6 resultados (Sin contacto, Contactado, Cotización + monto, Venta + monto, No interesado, Número incorrecto) → nota y fecha sugerida. 3 "Sin contacto" seguidos = etiqueta "No contesta" y al final.
 - **Dueños:** las zonas no se reparten (decisión del dueño). Todos ven los prospectos sin dueño; quien registra la primera actividad se queda con él (`p_claim` siempre verdadero en `log_commercial_activity`). El dueño reasigna desde la ficha.
 - **Metas:** `stores.commercial_goals` guarda las de la tienda en la raíz y las propias en `byUser`. Por omisión, las del Excel: 30 llamadas, 15 efectivos, 6 cotizaciones, 10 seguimientos, 2 ventas.
-- **Datos nuevos:** `contacts.zone` + catálogo de zonas en Configuración (migración `20261023195916_commercial_zones`) y teléfono opcional para "Para visita" (`20261023230000_contacts_phone_optional`).
+- **Datos nuevos:** `contacts.zone` + catálogo de zonas en Configuración (migración `20261023195916_commercial_zones`) y teléfono opcional para "Para visita" (`20261023203612_contacts_phone_optional`).
 - **Se quitaron:** las 7 pestañas (Resumen, Hoy, Seguimiento, Actividades, Base comercial, Alta, Control diario) y las observaciones del día. Base comercial = Contactos (con filtro de zona); Alta = "+ Nuevo" (zona obligatoria si la tienda tiene zonas).
 
 ---

@@ -82,7 +82,8 @@
 .cardGroup .count { margin-left: auto; font-weight: 700; letter-spacing: 0; text-transform: none; }
 
 /* ── Ficha (panel derecho en computadora; ventana en celular) ── */
-.pane { position: sticky; top: 12px; padding: 16px; max-height: calc(100dvh - 120px); overflow-y: auto; overscroll-behavior: contain; }
+/* Fija arriba al bajar la lista; mide lo que cabe en pantalla y, al terminar su scroll, deja que la página siga bajando */
+.pane { position: sticky; top: 12px; padding: 16px; max-height: calc(100dvh - 24px); overflow-y: auto; }
 .paneHead { display: flex; gap: 12px; align-items: flex-start; }
 .paneHead .avatar { width: 44px; height: 44px; border-radius: 12px; font-size: 14px; }
 .paneTitle { font-family: var(--font-display); font-size: 19px; font-weight: 700; margin: 0; line-height: 1.2; overflow-wrap: anywhere; }
