@@ -44,8 +44,8 @@ export async function POST(req: NextRequest) {
     return jsonError('Lead no encontrado', 404)
   }
 
-  // El aviso push sale a la hora del recordatorio. Si esa hora ya pasó al
-  // capturarlo, no hay nada que avisar: quien lo guarda ya lo tiene a la vista.
+  // push_sent: si la hora ya pasó al capturarlo, no hay nada que avisar (quien
+  // lo guarda ya lo tiene a la vista). Hoy solo lo usa el resumen de la mañana.
   const pushSent = naiveIso(parsed.data.fecha_recordatorio) <= zonedIso(new Date(), ctx.store.timezone)
 
   const { data, error } = await getServerSupabase()

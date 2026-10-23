@@ -140,13 +140,12 @@ export default function FuncionesPage() {
         <div className={`${s.wrap} ${s.split} ${s.splitRev}`}>
           <div>
             <span className={s.kicker}>Avisos en tu celular</span>
-            <h2 className={s.h2}>Te avisa a la hora, aunque la app esté cerrada</h2>
-            <p className={s.sub}>Instálala como app en tu celular y recibe tus recordatorios y el resumen del día.</p>
-            <Bullets items={['Recordatorios a la hora exacta', 'Resumen de pendientes cada mañana', 'Funciona en Android y en iPhone (agregada a la pantalla de inicio)']} />
+            <h2 className={s.h2}>Tus pendientes en el celular, aunque la app esté cerrada</h2>
+            <p className={s.sub}>Instálala como app en tu celular y recibe cada mañana el resumen de tu día.</p>
+            <Bullets items={['Resumen de pendientes cada mañana', 'Funciona en Android y en iPhone (agregada a la pantalla de inicio)']} />
           </div>
           <div className={s.phone} aria-hidden="true">
             <div className={s.phoneNotch} />
-            <div className={s.notif}><span className={s.notifIcon}><Ic.bell /></span><div><strong>{APP_NAME} · ahora</strong><span>Llamar a Karen López para confirmar su cotización</span></div></div>
             <div className={s.notif}><span className={s.notifIcon}><Ic.calendar /></span><div><strong>{APP_NAME} · 8:00</strong><span>Hoy tienes 3 pendientes y 1 visita</span></div></div>
           </div>
         </div>

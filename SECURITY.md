@@ -64,9 +64,7 @@ Cloud API y Web Push, y el aislamiento entre tiendas.
   errores internos se registran en el servidor y al cliente le llega un mensaje genérico.
 - **Webhooks y cron autenticados**: firma HMAC-SHA256 de Meta (`X-Hub-Signature-256`) y
   `CRON_SECRET`, ambos comparados en tiempo constante. El cron falla cerrado si no hay
-  secreto. Los avisos a la hora los dispara pg_cron con un pase aleatorio de un solo uso
-  (`cron_tokens`, 244 bits, caduca en 5 min, solo `service_role` lo lee/borra), así que
-  ningún secreto se copia a la base de datos.
+  secreto.
 - **Cabeceras** definidas en un solo lugar (`next.config.ts`): CSP estricta (sin
   `unsafe-eval` en producción, `object-src 'none'`, `frame-ancestors 'none'`), HSTS con
   preload, COOP, `nosniff`, `X-Frame-Options: DENY`, Permissions-Policy restrictiva y sin

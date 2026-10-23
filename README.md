@@ -33,7 +33,7 @@ ficha de la tienda (`PATCH /api/platform/stores/[id]` con `{ whatsapp }`).
 | Datos y Auth | Supabase (Postgres + Auth + Storage) |
 | Mensajería | WhatsApp Cloud API de Meta (Graph API, sin intermediarios) |
 | Notificaciones | Web Push (VAPID) + service worker propio (`public/sw.js`) |
-| Hosting | Vercel (cron diario del resumen de la agenda) + Supabase pg_cron (avisos a la hora) |
+| Hosting | Vercel (crons diarios: resumen de la agenda y limpieza de tiendas) |
 
 > Next.js 16 cambia varias convenciones respecto a versiones anteriores (por ejemplo,
 > `middleware.ts` ahora es `proxy.ts`). Antes de tocar código revisa la guía incluida en
@@ -211,15 +211,16 @@ la pantalla de inicio (iOS 16.4+).
 
 | Aviso | Quién lo dispara |
 |---|---|
-| A la hora de cada recordatorio | Supabase **pg_cron** revisa cada minuto si ya toca alguno y solo entonces llama a `/api/cron/reminders` con un pase de un solo uso (`cron_tokens`), sin secretos compartidos. Ver `supabase/migrations/20261003120500_reminder_push_on_time.sql` |
 | Resumen de la agenda a las 8:00 | Cron diario de Vercel → `/api/cron/agenda` (con `CRON_SECRET`) |
 | Mensaje nuevo de WhatsApp | El webhook, al guardar el mensaje |
 
 Las suscripciones son por dominio: **si cambia el dominio de la app**, cada persona debe
 volver a activar los avisos en el dominio nuevo. Las suscripciones del dominio anterior siguen
-llegando mientras ese dominio responda. El job `crm-avisos-recordatorios` de pg_cron llama a
-`https://www.matices.app/api/cron/reminders`; si cambia el dominio, actualiza su URL con
-`cron.alter_job` (el 19 de octubre de 2026 `crm-pinturas.vercel.app` dejó de existir y se cambió).
+llegando mientras ese dominio responda.
+
+Los avisos a la hora de cada recordatorio (pg_cron cada minuto) se quitaron el 22 de octubre
+de 2026 porque agotaban el presupuesto de Disk IO de Supabase; volverán con un plan mayor.
+Ver `supabase/migrations/20261022230000_drop_reminder_push_on_time.sql`.
 
 ## Base de datos
 

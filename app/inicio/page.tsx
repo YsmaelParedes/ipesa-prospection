@@ -22,7 +22,7 @@ const FEATURES = [
   { icon: Ic.leads,     tone: s.tBrand,   title: 'Cotizaciones con seguimiento', text: 'De nuevo a cotizado y ganado. Cada oportunidad con su monto y su siguiente paso.', href: '/inicio/funciones#leads' },
   { icon: Ic.grid,      tone: s.tAmber,   title: 'Lo que toca hoy', text: 'Al abrir, tu equipo ve a quién llamar, qué cotización espera respuesta y qué visitas tiene.', href: '/inicio/funciones#agenda' },
   { icon: Ic.users,     tone: s.tMagenta, title: 'Tu equipo y tu base, protegidos', text: 'Cada vendedor con su usuario. Exportar y borrar, solo tú.', href: '/inicio/funciones#equipo' },
-  { icon: Ic.bell,      tone: s.tTeal,    title: 'Avisos en tu celular', text: 'Recordatorios a la hora exacta y el resumen del día, aunque la app esté cerrada.', href: '/inicio/funciones#avisos' },
+  { icon: Ic.bell,      tone: s.tTeal,    title: 'Avisos en tu celular', text: 'El resumen de tus pendientes cada mañana, aunque la app esté cerrada.', href: '/inicio/funciones#avisos' },
   { icon: Ic.chat,      tone: s.tWa,      title: 'WhatsApp en el CRM', text: 'En el plan Cubeta: atiende a tus clientes desde el número de tu tienda.', href: '/inicio/whatsapp' },
 ]
 

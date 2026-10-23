@@ -36,6 +36,15 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.4.0',
+    date: '22 de octubre, 2026',
+    title: 'Cambio en los avisos de la Agenda',
+    items: [
+      'Por ahora los recordatorios ya no te avisan uno por uno a su hora. Revisa la Agenda durante el día.',
+      'Sigue llegando a las 8:00 el aviso con tu agenda del día y los pendientes vencidos.',
+    ],
+  },
+  {
     version: '4.3.0',
     date: '22 de octubre, 2026',
     title: 'Configura tu agente de IA',

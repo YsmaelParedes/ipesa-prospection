@@ -32,8 +32,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (!own) return jsonError('Recordatorio no encontrado', 404)
   if (updates.lead_id && !(await getAccessibleLead(ctx, updates.lead_id as string))) return jsonError('Lead no encontrado', 404)
 
-  // Al reprogramarlo (o posponerlo) o reabrirlo, el aviso push vuelve a salir
-  // a su nueva hora; si esa hora ya pasó, no se avisa (ya lo tiene a la vista).
+  // Al reprogramarlo (o posponerlo) o reabrirlo, vuelve a quedar pendiente de
+  // aviso; si esa hora ya pasó, no (ya lo tiene a la vista).
   // Ambas son horas locales de la tienda en formato ISO: se comparan como texto.
   const reschedules = typeof updates.reminder_date === 'string' || updates.completado === false
   const pushSent = reschedules

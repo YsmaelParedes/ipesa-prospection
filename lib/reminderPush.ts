@@ -2,14 +2,12 @@ import { timingSafeEqual } from 'node:crypto'
 import type { NextRequest } from 'next/server'
 import { getServerSupabase } from './supabase-server'
 import { sendPushToSubscriptions, type PushPayload, type PushSub } from './push'
-import { remTypeInfo } from './crm'
 import { DEFAULT_TZ, naiveIso, zonedIso } from './datetime'
 
 /**
- * Avisos push de la Agenda:
- *  · A la hora de cada recordatorio: Supabase (pg_cron) revisa cada minuto si
- *    ya toca alguno y solo entonces llama a /api/cron/reminders.
- *  · Resumen de la mañana: el cron diario de Vercel llama a /api/cron/agenda.
+ * Avisos push de la Agenda: el resumen de la mañana, que el cron diario de
+ * Vercel pide a /api/cron/agenda. (Los avisos a la hora de cada recordatorio
+ * se quitaron el 22 de octubre de 2026; volverán con un plan mayor de Supabase.)
  * reminder_date no lleva zona: es la hora LOCAL de la tienda tal cual se
  * eligió, así que "ahora" se expresa igual (zonedIso) y se compara como texto.
  * Recorren todas las tiendas a propósito: cada recordatorio es personal y solo
@@ -18,31 +16,13 @@ import { DEFAULT_TZ, naiveIso, zonedIso } from './datetime'
 
 /* ── Quién puede llamar a los crons ─────────────────────────────────────── */
 
-const ONE_TIME_TTL_MS = 5 * 60_000
-
-/**
- * El cron de Vercel manda CRON_SECRET. Supabase manda un pase de un solo uso
- * que guarda en cron_tokens justo antes de llamar: se borra al usarlo y caduca
- * en 5 minutos, así que no hay un secreto que copiar de un lado al otro.
- * Sin CRON_SECRET ni pase válido no entra nadie (falla cerrado).
- */
-export async function authorizeCron(req: NextRequest, { allowOneTime = false } = {}): Promise<boolean> {
+/** Solo el cron de Vercel, con CRON_SECRET. Sin él no entra nadie (falla cerrado). */
+export async function authorizeCron(req: NextRequest): Promise<boolean> {
   const header = req.headers.get('authorization') ?? ''
   const secret = process.env.CRON_SECRET
-  if (secret) {
-    const expected = `Bearer ${secret}`
-    if (header.length === expected.length && timingSafeEqual(Buffer.from(header), Buffer.from(expected))) return true
-  }
-  if (!allowOneTime) return false
-  const token = /^Bearer ([0-9a-f]{64})$/.exec(header)?.[1]
-  if (!token) return false
-  const { data, error } = await getServerSupabase()
-    .from('cron_tokens')
-    .delete()
-    .eq('token', token)
-    .gte('created_at', new Date(Date.now() - ONE_TIME_TTL_MS).toISOString())
-    .select('token')
-  return !error && !!data?.length
+  if (!secret) return false
+  const expected = `Bearer ${secret}`
+  return header.length === expected.length && timingSafeEqual(Buffer.from(header), Buffer.from(expected))
 }
 
 /* ── Destinatarios ──────────────────────────────────────────────────────── */
@@ -122,21 +102,6 @@ function actionFor(r: Row): string | null {
   return (VERB[r.type ?? ''] ?? VERB.task)(name)
 }
 
-function reminderPayload(r: Row, lateMs: number): PushPayload {
-  const action = actionFor(r)
-  const nota = r.nota?.trim() || ''
-  let body = nota || 'Es la hora que programaste.'
-  // Si sale con retraso (reintento), que se vea la hora original
-  if (lateMs >= 15 * 60_000) body += ` · Era a las ${hhmm(r.reminder_date)}`
-  return {
-    title: clip(action ? `${remTypeInfo(r.type).emoji} ${action}` : '⏰ Recordatorio', 70),
-    body:  clip(body, 180),
-    url:   '/recordatorios',
-    tag:   `rem-${r.id}`,
-    sticky: true,
-  }
-}
-
 type Day = { today: Row[]; overdue: number; recent: number }
 
 function agendaPayload({ today, overdue }: Day): PushPayload {
@@ -150,67 +115,6 @@ function agendaPayload({ today, overdue }: Day): PushPayload {
   return today.length
     ? { title: `📋 Hoy tienes ${today.length} pendiente${s(today.length)}`, body: lines.join('\n'), url: '/recordatorios', tag: 'agenda-hoy' }
     : { title: `⚠️ Tienes ${overdue} pendiente${s(overdue)} vencido${s(overdue)}`, body: 'Ábrelos en la Agenda para ponerte al día.', url: '/recordatorios', tag: 'agenda-hoy' }
-}
-
-/* ── A la hora ──────────────────────────────────────────────────────────── */
-
-/** Más atrasado que esto ya no se avisa uno por uno: va en el resumen de la mañana. */
-const LATE_LIMIT_MS = 6 * 3600_000
-/** Si ningún dispositivo lo recibió, se reintenta en las siguientes vueltas durante este tiempo. */
-const RETRY_FOR_MS = 10 * 60_000
-
-/** Un aviso por cada recordatorio cuya hora ya llegó (y que aún no se avisó). */
-export async function sendDueReminders(now = new Date()) {
-  const supabase = getServerSupabase()
-  // Cota amplia (la zona más adelantada es UTC+14); luego cada tienda con su hora
-  const bound = new Date(now.getTime() + 14 * 3600_000).toISOString().slice(0, 19)
-  const { data, error } = await supabase
-    .from('reminders')
-    .select('id, store_id, user_id, lead_name, nota, reminder_date, type')
-    .eq('completado', false)
-    .eq('push_sent', false)
-    .not('user_id', 'is', null)
-    .lte('reminder_date', bound)
-    .order('reminder_date', { ascending: true })
-    .limit(200)
-  if (error) throw error
-  const rows = (data ?? []) as Row[]
-  const empty = { due: 0, sent: 0, failed: 0, expired: 0, retry: 0 }
-  if (!rows.length) return empty
-
-  const aud = await loadAudience(rows, now)
-  const due = rows
-    .map(r => ({ r, lateMs: msBetween(naiveIso(r.reminder_date), aud.nowFor(r)) }))
-    .filter(d => d.lateMs >= 0)
-  if (!due.length) return empty
-
-  // Se apartan antes de enviar: si dos vueltas se cruzan, cada aviso sale una sola vez.
-  const { data: claimed, error: claimError } = await supabase
-    .from('reminders')
-    .update({ push_sent: true })
-    .in('id', due.map(d => d.r.id))
-    .eq('push_sent', false)
-    .select('id')
-  if (claimError) throw claimError
-  const mine = new Set((claimed ?? []).map(c => c.id as string))
-
-  let sent = 0, failed = 0, expired = 0
-  const retry: string[] = []
-  for (const { r, lateMs } of due) {
-    // Sin dueño vigente, sin dispositivos o muy atrasado: queda marcado sin aviso
-    if (!mine.has(r.id) || lateMs > LATE_LIMIT_MS || !aud.canNotify(r)) continue
-    const devices = aud.devices.get(r.user_id)
-    if (!devices?.length) continue
-
-    const result = await sendPushToSubscriptions(devices, reminderPayload(r, lateMs))
-    sent += result.sent
-    failed += result.failed
-    expired += result.expired.length
-    if (result.expired.length) aud.devices.set(r.user_id, devices.filter(d => !result.expired.includes(d.endpoint)))
-    if (result.sent === 0 && result.failed > 0 && lateMs < RETRY_FOR_MS) retry.push(r.id)
-  }
-  if (retry.length) await supabase.from('reminders').update({ push_sent: false }).in('id', retry)
-  return { due: due.length, sent, failed, expired, retry: retry.length }
 }
 
 /* ── Resumen de la mañana ───────────────────────────────────────────────── */
