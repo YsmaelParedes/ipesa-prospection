@@ -44,7 +44,8 @@ export type Reminder = {
 export type ContactLite = {
   id: string
   name: string
-  phone: string
+  /** null = "Para visita" (sin teléfono) */
+  phone: string | null
   email?: string | null
   company?: string | null
   segment?: string | null

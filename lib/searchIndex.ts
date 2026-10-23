@@ -8,7 +8,7 @@ import { apiFetch } from '@/lib/apiClient'
 import { normalizePhone } from './phone'
 
 export type IndexContact = {
-  id: string; name: string; phone: string; email: string | null; company: string | null
+  id: string; name: string; phone: string | null; email: string | null; company: string | null
   segment: string | null; acquisition_channel: string | null; wa_opt_out?: boolean
   commercial_status?: string
 }

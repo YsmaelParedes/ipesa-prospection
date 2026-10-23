@@ -8,7 +8,7 @@ import type { Kind } from './RegisterForm'
 import { Ico, StatusChip, bizName, fmtDay, initials, money, type ListContact, type TodayData } from './ui'
 import s from './comercial.module.css'
 
-type Group = { key: 'late' | 'today' | 'fresh'; title: string; color: string; items: ListContact[] }
+type Group = { key: 'late' | 'today' | 'fresh' | 'visit'; title: string; color: string; items: ListContact[]; total?: number }
 export type Opened = { id: string; kind?: Kind; result?: ResultChoice }
 
 function whenOf(c: ListContact, today: string): { label: string; cls: string } {
@@ -42,7 +42,8 @@ export function HoyView({ data, wide, zone, query, readonly, waModule, loadingMo
   const groups: Group[] = useMemo(() => [
     { key: 'late', title: 'Vencidos', color: 'var(--brand)', items: data.due.filter(c => (c.next_action_at ?? '') < today) },
     { key: 'today', title: 'Para hoy', color: 'var(--warning-fill)', items: data.due.filter(c => c.next_action_at === today) },
-    { key: 'fresh', title: 'Prospectos nuevos', color: 'var(--c-cyan-ink)', items: data.fresh },
+    { key: 'fresh', title: 'Prospectos nuevos', color: 'var(--c-cyan-ink)', items: data.fresh, total: data.freshTotal },
+    { key: 'visit', title: 'Para visita (sin teléfono)', color: 'var(--ink-3)', items: data.visit, total: data.visitTotal },
   ], [data, today])
   const all = groups.flatMap(g => g.items)
 
@@ -120,7 +121,7 @@ export function HoyView({ data, wide, zone, query, readonly, waModule, loadingMo
               <div key={g.key}>
                 <div className={s.groupHead}>
                   <span className={s.dot} style={{ background: g.color }} />{g.title}
-                  <span className={`${s.count} ${s.num}`}>{g.key === 'fresh' ? `${g.items.length} de ${data.freshTotal.toLocaleString('es-MX')}` : g.items.length}</span>
+                  <span className={`${s.count} ${s.num}`}>{g.total !== undefined ? `${g.items.length} de ${g.total.toLocaleString('es-MX')}` : g.items.length}</span>
                 </div>
                 {g.items.map(c => {
                   const when = whenOf(c, today)
@@ -142,6 +143,10 @@ export function HoyView({ data, wide, zone, query, readonly, waModule, loadingMo
                         {waModule && phone.length === 10 && (
                           <button className={`${s.qbtn} ${s.qWa} ${s.press}`} aria-label={`WhatsApp a ${bizName(c)}`}
                             onClick={e => { e.stopPropagation(); onOpen({ id: c.id, kind: 'whatsapp' }) }}><Ico.chat /></button>
+                        )}
+                        {!phone && (
+                          <button className={`${s.qbtn} ${s.actMore} ${s.press}`} aria-label={`Registrar visita a ${bizName(c)}`}
+                            onClick={e => { e.stopPropagation(); onOpen({ id: c.id, kind: 'visita' }) }}><Ico.pin /></button>
                         )}
                       </span>
                     </div>
@@ -174,7 +179,7 @@ export function HoyView({ data, wide, zone, query, readonly, waModule, loadingMo
           <div key={g.key}>
             <div className={s.cardGroup}>
               <span className={s.dot} style={{ background: g.color }} />{g.title}
-              <span className={`${s.count} ${s.num}`}>{g.key === 'fresh' ? `${g.items.length} de ${data.freshTotal.toLocaleString('es-MX')}` : g.items.length}</span>
+              <span className={`${s.count} ${s.num}`}>{g.total !== undefined ? `${g.items.length} de ${g.total.toLocaleString('es-MX')}` : g.items.length}</span>
             </div>
             <div className={s.cards}>
               {g.items.map(c => {

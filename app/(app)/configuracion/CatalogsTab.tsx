@@ -26,7 +26,7 @@ function chipColor(label: string) {
 }
 
 function CatalogPanel({ type, title, singular, subtitle, icon, tone, canEdit }: {
-  type: 'segment' | 'canal'; title: string; singular: string; subtitle: string
+  type: 'segment' | 'canal' | 'zone'; title: string; singular: string; subtitle: string
   icon: typeof Ico.tag; tone?: 'tCyan' | 'tMagenta'; canEdit: boolean
 }) {
   const [toast, showToast] = useToast()
@@ -127,11 +127,13 @@ export function CatalogsTab({ canEdit }: { canEdit: boolean }) {
   return (
     <>
       {!canEdit && <Note>Solo el dueño o un administrador puede cambiar estas opciones, porque afectan a todo el equipo.</Note>}
-      <div className={s.grid2}>
+      <div className={s.grid3}>
         <CatalogPanel type="segment" title="Segmentos" singular="segmento" icon={Ico.tag} canEdit={canEdit}
           subtitle="Tipos de cliente para tus contactos." />
         <CatalogPanel type="canal" title="Canales" singular="canal" icon={Ico.channel} tone="tCyan" canEdit={canEdit}
           subtitle="Cómo te conoció el cliente." />
+        <CatalogPanel type="zone" title="Zonas" singular="zona" icon={Ico.pin} tone="tMagenta" canEdit={canEdit}
+          subtitle="Áreas de la ciudad para filtrar el sistema comercial." />
       </div>
     </>
   )

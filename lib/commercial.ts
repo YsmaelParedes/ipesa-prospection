@@ -124,7 +124,7 @@ export function outcomeText(result: CallResult): string {
 }
 
 export type CommercialContact = {
-  id: string; name: string; phone: string; email: string | null; company: string | null
+  id: string; name: string; phone: string | null; email: string | null; company: string | null
   address: string | null; postal_code: string | null; segment: string | null; acquisition_channel: string | null
   colonia: string | null; zone: string | null; owner_id: string | null; owner_name?: string | null
   priority: Priority; potential_monthly: number | string | null; origin: string | null

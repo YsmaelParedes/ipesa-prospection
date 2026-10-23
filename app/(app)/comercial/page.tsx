@@ -98,6 +98,7 @@ function ComercialContent() {
         ...d,
         due: stays(c) ? d.due.map(x => x.id === c.id ? { ...x, ...c } : x) : d.due.filter(x => x.id !== c.id),
         fresh: d.fresh.filter(x => x.id !== c.id || (!c.last_activity_at && !c.owner_id)),
+        visit: d.visit.filter(x => x.id !== c.id || (!c.last_activity_at && !c.owner_id)),
       }
     })
     showToast(`${bizName(c)}: guardado`)

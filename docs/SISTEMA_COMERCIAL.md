@@ -1,5 +1,22 @@
 # Sistema comercial (reemplaza a Leads)
 
+## Versión 2 (4.5.0, 23 de octubre de 2026) — lo vigente
+
+La versión 1 "no se entendía": se rehízo desde el Excel *Sistema Comercial IPESA Lomas de Angelópolis* (entrevista con el dueño y mockup aprobado, celular y escritorio). Lo de abajo, a partir de "Estado", describe la versión 1 y queda como historia.
+
+- **3 pantallas** (`app/(app)/comercial`):
+  - **Hoy** (`GET /api/data/commercial`): mis seguimientos vencidos y de hoy, prospectos sin dueño con teléfono (de a 30, por zona o búsqueda) y "Para visita" (sin teléfono). Computadora: lista + ficha con el registro siempre visible; celular: tarjetas con Llamar / WhatsApp / Visita. Arriba, el avance del día contra la meta.
+  - **Oportunidades** (`GET /api/data/commercial/opportunities`): cotizaciones abiertas, la más vieja primero, con cotizado y esperado (monto × 75 %). Ganada/Perdida abren el registro con Venta/No interesado.
+  - **Equipo** (`GET/PATCH /api/data/commercial/control`, dueño/admin, Galón/Cubeta/Interno): cada vendedor contra su meta del día y del mes (días hábiles lunes a sábado), totales, resultados del día y actividad por segmento del mes; editar metas de la tienda o por persona.
+- **Un solo avance:** Prospecto (`nuevo`) → Contactado (50 %) → Cotización (75 %) → Cliente, más No interesado (vuelve a 90 días) y Número incorrecto (`depurar`). `interes` ya no se usa (se muestra como Contactado).
+- **Registro en 3 pasos** (`RegisterForm.tsx`): tipo (Llamada, WhatsApp, Visita) → 6 resultados (Sin contacto, Contactado, Cotización + monto, Venta + monto, No interesado, Número incorrecto) → nota y fecha sugerida. 3 "Sin contacto" seguidos = etiqueta "No contesta" y al final.
+- **Dueños:** las zonas no se reparten (decisión del dueño). Todos ven los prospectos sin dueño; quien registra la primera actividad se queda con él (`p_claim` siempre verdadero en `log_commercial_activity`). El dueño reasigna desde la ficha.
+- **Metas:** `stores.commercial_goals` guarda las de la tienda en la raíz y las propias en `byUser`. Por omisión, las del Excel: 30 llamadas, 15 efectivos, 6 cotizaciones, 10 seguimientos, 2 ventas.
+- **Datos nuevos:** `contacts.zone` + catálogo de zonas en Configuración (migración `20261023195916_commercial_zones`) y teléfono opcional para "Para visita" (`20261023230000_contacts_phone_optional`).
+- **Se quitaron:** las 7 pestañas (Resumen, Hoy, Seguimiento, Actividades, Base comercial, Alta, Control diario) y las observaciones del día. Base comercial = Contactos (con filtro de zona); Alta = "+ Nuevo" (zona obligatoria si la tienda tiene zonas).
+
+---
+
 Estado: **implementado el 20 de octubre de 2026 (versión 4.0.0) sin la geolocalización**, por decisión del dueño. Rama `feature/sistema-comercial`.
 
 **Qué quedó distinto al plan original:**

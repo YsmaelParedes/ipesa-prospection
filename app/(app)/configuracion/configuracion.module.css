@@ -59,6 +59,7 @@
 .panelActions { display: flex; flex-wrap: wrap; gap: 8px; max-width: 100%; }
 
 .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; align-items: start; }
 .formGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; }
 .span2 { grid-column: 1 / -1; }
 .formFoot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 4px; padding-top: 16px; border-top: 1px solid var(--line); }

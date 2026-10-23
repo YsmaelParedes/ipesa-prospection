@@ -1,15 +1,15 @@
 import { useQueryEffect } from '@/lib/useCachedQuery'
 import { apiFetch } from '@/lib/apiClient'
 /**
- * Catálogos de la tienda (segmentos y canales) para formularios y filtros.
+ * Catálogos de la tienda (segmentos, canales y zonas) para formularios y filtros.
  * Se comparten durante cinco minutos; el adaptador invalida las lecturas
  * al confirmar cambios en Configuración → Catálogos.
  */
 import { useState } from 'react'
 
-export type Catalogs = { segments: string[]; canales: string[] }
+export type Catalogs = { segments: string[]; canales: string[]; zones: string[] }
 
-const EMPTY: Catalogs = { segments: [], canales: [] }
+const EMPTY: Catalogs = { segments: [], canales: [], zones: [] }
 
 export function loadCatalogs(): Promise<Catalogs> {
   return apiFetch('/api/data/config', { cache: 'no-store' })
@@ -17,6 +17,7 @@ export function loadCatalogs(): Promise<Catalogs> {
     .then((d: { items?: { type: string; label: string }[] }) => ({
       segments: (d.items ?? []).filter(i => i.type === 'segment').map(i => i.label),
       canales:  (d.items ?? []).filter(i => i.type === 'canal').map(i => i.label),
+      zones:    (d.items ?? []).filter(i => i.type === 'zone').map(i => i.label),
     }))
 }
 

@@ -854,7 +854,7 @@ function CrmPanel({ phone, thread, convo, onClose, onChanged, toast }: {
 }) {
   // Recibe/no recibe campañas solo tiene sentido en tiendas con Campañas
   const campaignsOn = !!useSession()?.store?.modules.campaigns
-  const [config, setConfig] = useState<ConfigLists>({ segments: [], canales: [] })
+  const [config, setConfig] = useState<ConfigLists>({ segments: [], canales: [], zones: [] })
   useQueryEffect(() => { loadCatalogs().then(setConfig).catch(() => {}) }, [])
 
   const contact = thread?.contact ?? null

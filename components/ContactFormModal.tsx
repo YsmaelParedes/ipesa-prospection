@@ -33,10 +33,10 @@ export default function ContactFormModal({ initialName = '', initialPhone = '', 
   onClose: () => void
   onSaved: (c: ContactLite) => void
 }) {
-  const { segments, canales } = useCatalogs()
+  const { segments, canales, zones } = useCatalogs()
   const [form, setForm] = useState({
     name: initialName, phone: phoneDigits(initialPhone), email: '', company: '',
-    segment: '', acquisition_channel: '', address: '', postal_code: '',
+    segment: '', acquisition_channel: '', zone: '', address: '', postal_code: '',
   })
   const [moreOpen, setMoreOpen] = useState(false)
   const [saving, setSaving]     = useState(false)
@@ -58,8 +58,12 @@ export default function ContactFormModal({ initialName = '', initialPhone = '', 
   // Con catálogos configurados, segmento y canal son obligatorios (sirven para filtrar campañas)
   const needSegment = segments.length > 0
   const needCanal = canales.length > 0
-  const canSave = form.name.trim().length > 0 && form.phone.length === 10 && !duplicate
-    && (!needSegment || !!form.segment) && (!needCanal || !!form.acquisition_channel) && !saving
+  const needZone = zones.length > 0
+  // Sin teléfono se guarda como "Para visita": entonces la dirección es obligatoria
+  const visitOnly = form.phone.length === 0
+  const askVisit = visitOnly && form.name.trim().length > 0
+  const canSave = form.name.trim().length > 0 && (form.phone.length === 10 || (visitOnly && form.address.trim().length > 0)) && !duplicate
+    && (!needSegment || !!form.segment) && (!needCanal || !!form.acquisition_channel) && (!needZone || !!form.zone) && !saving
 
   const save = async () => {
     if (!canSave) return
@@ -67,7 +71,7 @@ export default function ContactFormModal({ initialName = '', initialPhone = '', 
     try {
       const r = await apiFetch('/api/data/contacts', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, name: form.name.trim(), phone: normalizePhone(form.phone) }),
+        body: JSON.stringify({ ...form, name: form.name.trim(), phone: visitOnly ? null : normalizePhone(form.phone), zone: form.zone || null }),
       })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) { setError(d.error || 'No se pudo guardar el contacto'); return }
@@ -94,10 +98,11 @@ export default function ContactFormModal({ initialName = '', initialPhone = '', 
           </div>
           <div className="field-row">
             <div className="field">
-              <label htmlFor="c-phone">Celular * <span className="label-muted">(10 dígitos)</span></label>
+              <label htmlFor="c-phone">Celular <span className="label-muted">(10 dígitos)</span></label>
               <input id="c-phone" value={form.phone} onChange={e => upd('phone', phoneDigits(e.target.value))} inputMode="numeric" maxLength={10}
                 placeholder="222 000 0000" aria-invalid={phoneShort || !!duplicate} style={phoneShort || duplicate ? { borderColor: 'var(--danger)' } : undefined} />
               {phoneShort && <div className="field-error">Faltan {10 - form.phone.length} dígitos</div>}
+              {askVisit && <div className="field-hint">Sin celular queda «Para visita»: escribe su dirección.</div>}
               {duplicate && (
                 <div className="field-error">
                   Ya es de <strong>{duplicate.name}</strong> ({fmtPhone(duplicate.phone)}) ·{' '}
@@ -122,13 +127,19 @@ export default function ContactFormModal({ initialName = '', initialPhone = '', 
                 options={toOptions(canales)} placeholder={canales.length ? 'Elegir canal' : 'Sin canales'} />
             </div>
           </div>
+          {needZone && (
+            <div className="field">
+              <label htmlFor="c-zone">Zona *</label>
+              <Select id="c-zone" value={form.zone} onChange={v => upd('zone', v)} options={toOptions(zones)} placeholder="Elegir zona" />
+            </div>
+          )}
           {!needSegment && !needCanal && (
             <div className="field-hint" style={{ marginTop: -6, marginBottom: 12 }}>
               Agrega segmentos y canales en Configuración → Catálogos para clasificar a tus clientes.
             </div>
           )}
 
-          {moreOpen ? (
+          {moreOpen || askVisit ? (
             <>
               <div className="field">
                 <label htmlFor="c-company">Empresa</label>
@@ -136,7 +147,7 @@ export default function ContactFormModal({ initialName = '', initialPhone = '', 
               </div>
               <div className="field-row">
                 <div className="field">
-                  <label htmlFor="c-address">Dirección</label>
+                  <label htmlFor="c-address">Dirección{visitOnly ? ' *' : ''}</label>
                   <input id="c-address" value={form.address} onChange={e => upd('address', e.target.value)} maxLength={500} />
                 </div>
                 <div className="field">

@@ -3,12 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { jsonError, readJson, serverError } from '@/lib/validation'
 
-// Tipos reales en la BD (CHECK type IN ('segment','canal'))
-const CONFIG_TYPES = ['segment', 'canal'] as const
+// Tipos reales en la BD (CHECK type IN ('segment','canal','zone'))
+const CONFIG_TYPES = ['segment', 'canal', 'zone'] as const
 type ConfigType = typeof CONFIG_TYPES[number]
 const isConfigType = (v: unknown): v is ConfigType => typeof v === 'string' && (CONFIG_TYPES as readonly string[]).includes(v)
 
-// GET /api/data/config[?type=segment|canal] — catálogos de la tienda (alimentan los formularios)
+// GET /api/data/config[?type=segment|canal|zone] — catálogos de la tienda (alimentan los formularios)
 async function GETImpl(req: NextRequest) {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx

@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     const seen = new Set<string>()
     let invalid = 0
     for (const item of list) {
-      const parsed = item && typeof item === 'object' ? parseContact(item as Record<string, unknown>) : null
+      const parsed = item && typeof item === 'object' ? parseContact(item as Record<string, unknown>, false, { requirePhone: true }) : null
       if (!parsed || !parsed.ok) { invalid++; continue }
       const phone = parsed.data.phone as string
       if (seen.has(phone)) { invalid++; continue }

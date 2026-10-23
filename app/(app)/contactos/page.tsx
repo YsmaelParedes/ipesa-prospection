@@ -71,6 +71,7 @@ function ContactosContent() {
   const [contacts, setContacts]       = useState<any[]>(() => cachedQueryData('/api/data/contacts')?.contacts ?? [])
   const [segF, setSegF]               = useState('Todos')
   const [canalF, setCanalF]           = useState('Todos')
+  const [zoneF, setZoneF]             = useState('Todos')
   const [search, setSearch]           = useState(urlQuery ?? '')
   const [loading, setLoading]         = useState(() => !cachedQueryData('/api/data/contacts'))
   useDataReady(loading, 'contactos')
@@ -121,8 +122,10 @@ function ContactosContent() {
   // cada tecla/clic hacía lenta la lista.
   const segmentCounts = useMemo(() => countBy(contacts, 'segment'), [contacts])
   const canalCounts   = useMemo(() => countBy(contacts, 'acquisition_channel'), [contacts])
+  const zoneCounts    = useMemo(() => countBy(contacts, 'zone'), [contacts])
   const segmentOptions = useMemo(() => [...segmentCounts.keys()].sort(), [segmentCounts])
   const canalOptions   = useMemo(() => [...canalCounts.keys()].sort(), [canalCounts])
+  const zoneOptions    = useMemo(() => [...zoneCounts.keys()].sort(), [zoneCounts])
 
   const filtered = useMemo(() => {
     const q = normText(search)
@@ -131,6 +134,7 @@ function ContactosContent() {
     return contacts.filter(c => {
       if (segF !== 'Todos' && c.segment !== segF) return false
       if (canalF !== 'Todos' && c.acquisition_channel !== canalF) return false
+      if (zoneF !== 'Todos' && c.zone !== zoneF) return false
       if (words.length) {
         const hay = normText(`${c.name} ${c.email || ''} ${c.company || ''} ${c.acquisition_channel || ''} ${c.segment || ''}`)
         const byText = words.every(w => hay.includes(w))
@@ -139,10 +143,10 @@ function ContactosContent() {
       }
       return true
     })
-  }, [contacts, search, segF, canalF])
+  }, [contacts, search, segF, canalF, zoneF])
 
-  const filtersOn = segF !== 'Todos' || canalF !== 'Todos' || !!search.trim()
-  const clearFilters = () => { setSegF('Todos'); setCanalF('Todos'); setSearch('') }
+  const filtersOn = segF !== 'Todos' || canalF !== 'Todos' || zoneF !== 'Todos' || !!search.trim()
+  const clearFilters = () => { setSegF('Todos'); setCanalF('Todos'); setZoneF('Todos'); setSearch('') }
 
   /* ── Selección múltiple ── */
   const someChecked        = checkedIds.size > 0
@@ -277,8 +281,13 @@ function ContactosContent() {
               countFor={v => v === 'Todos' ? contacts.length : (canalCounts.get(v) ?? 0)}
               triggerLabel={v => v === 'Todos' ? 'Canal' : v} optionLabel={v => v === 'Todos' ? 'Todos los canales' : v} searchPlaceholder="Buscar canal…" />
           )}
-          {(segF !== 'Todos' || canalF !== 'Todos') && (
-            <button className="filter-pill" onClick={() => { setSegF('Todos'); setCanalF('Todos') }}>Limpiar filtros</button>
+          {zoneOptions.length > 0 && (
+            <FilterDropdown value={zoneF} options={zoneOptions} onChange={setZoneF}
+              countFor={v => v === 'Todos' ? contacts.length : (zoneCounts.get(v) ?? 0)}
+              triggerLabel={v => v === 'Todos' ? 'Zona' : v} optionLabel={v => v === 'Todos' ? 'Todas las zonas' : v} searchPlaceholder="Buscar zona…" />
+          )}
+          {(segF !== 'Todos' || canalF !== 'Todos' || zoneF !== 'Todos') && (
+            <button className="filter-pill" onClick={() => { setSegF('Todos'); setCanalF('Todos'); setZoneF('Todos') }}>Limpiar filtros</button>
           )}
         </div>
       </div>
@@ -420,7 +429,7 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
   onClose: () => void
   onUpdated: (c: any) => void; onDeleted: (id: string) => void
 }) {
-  const { segments, canales } = useCatalogs()
+  const { segments, canales, zones } = useCatalogs()
   const [reminders, setReminders] = useState<Reminder[]>([])
   const [editing, setEditing]     = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
@@ -430,7 +439,7 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
     name: c.name || '', phone: normalizePhone(c.phone), email: c.email || '',
     company: c.company || '', segment: c.segment || '',
     acquisition_channel: c.acquisition_channel || '',
-    address: c.address || '', postal_code: c.postal_code || '', colonia: c.colonia || '',
+    address: c.address || '', postal_code: c.postal_code || '', colonia: c.colonia || '', zone: c.zone || '',
   })
   const [saveError, setSaveError] = useState('')
   const phone = normalizePhone(c.phone)
@@ -455,7 +464,8 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
 
   const upd = (k: keyof typeof editForm, v: string) => setEditForm(f => ({ ...f, [k]: v }))
   const phoneErr = editForm.phone.length > 0 && editForm.phone.length < 10
-  const canSaveEdit = editForm.name.trim() && editForm.phone.length === 10
+  // Sin teléfono queda "Para visita": entonces necesita dirección
+  const canSaveEdit = editForm.name.trim() && (editForm.phone.length === 10 || (editForm.phone.length === 0 && editForm.address.trim()))
     && (!segments.length || !!editForm.segment) && (!canales.length || !!editForm.acquisition_channel)
   const opt = (list: string[], current: string) => current && !list.includes(current) ? [current, ...list] : list
 
@@ -463,7 +473,7 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
     setSaving(true); setSaveError('')
     const r = await apiFetch(`/api/data/contacts/${c.id}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...editForm, phone: normalizePhone(editForm.phone) }),
+      body: JSON.stringify({ ...editForm, phone: editForm.phone ? normalizePhone(editForm.phone) : null, zone: editForm.zone || null }),
     })
     if (r.ok) {
       const updated = await r.json()
@@ -541,6 +551,13 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
                     options={toOptions(opt(canales, editForm.acquisition_channel))} placeholder="Elegir canal" />
                 </div>
               </div>
+              {(zones.length > 0 || editForm.zone) && (
+                <div className="field">
+                  <label>Zona</label>
+                  <Select value={editForm.zone} onChange={v => upd('zone', v)} aria-label="Zona"
+                    options={toOptions(opt(zones, editForm.zone))} placeholder="Elegir zona" />
+                </div>
+              )}
               <div className="field">
                 <label>Empresa</label>
                 <input value={editForm.company} onChange={e => upd('company', e.target.value)} />
@@ -609,7 +626,8 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
                   {!readonly && <button className="link-btn" onClick={() => { setEditing(true); setConfirmDel(false) }}><Ico.edit /> Editar</button>}
                 </div>
                 <div className="kv-grid">
-                  <div className="kv"><div className="k">Teléfono</div><div className="v" style={{ fontFamily: 'var(--font-mono)' }}>{fmtPhone(c.phone) || '—'}</div></div>
+                  <div className="kv"><div className="k">Teléfono</div><div className="v" style={{ fontFamily: 'var(--font-mono)' }}>{fmtPhone(c.phone) || 'Sin teléfono · para visita'}</div></div>
+                  {c.zone && <div className="kv"><div className="k">Zona</div><div className="v">{c.zone}</div></div>}
                   <div className="kv"><div className="k">Correo</div><div className="v" style={{ fontSize: 13, wordBreak: 'break-all' }}>{c.email || '—'}</div></div>
                   <div className="kv"><div className="k">Empresa</div><div className="v">{c.company || '—'}</div></div>
                   <div className="kv"><div className="k">Canal</div><div className="v">{c.acquisition_channel || '—'}</div></div>
@@ -782,8 +800,9 @@ function WhatsAppCampaignModal({
   const ids = new Set(contactIds)
   const chosen = contacts.filter(c => ids.has(c.id))
   // Los dados de baja nunca reciben campañas (el servidor también lo valida)
-  const selectedContacts = chosen.filter(c => !c.wa_opt_out)
-  const optedOut = chosen.length - selectedContacts.length
+  const selectedContacts = chosen.filter(c => !c.wa_opt_out && c.phone)
+  const optedOut = chosen.filter(c => c.wa_opt_out).length
+  const noPhone = chosen.filter(c => !c.wa_opt_out && !c.phone).length
   const exampleName = (selectedContacts[0]?.name || 'Cliente').trim().split(/\s+/)[0]
 
   const overQuota = isOverQuota(quota, selectedContacts.length)
@@ -820,6 +839,7 @@ function WhatsAppCampaignModal({
               <div className="wa-quota" style={{ marginTop: 14 }}>
                 Se enviará a <strong>{selectedContacts.length}</strong> contacto{selectedContacts.length !== 1 ? 's' : ''} seleccionado{selectedContacts.length !== 1 ? 's' : ''}.
                 {optedOut > 0 && <> Se omiten <strong>{optedOut}</strong> que pidieron no recibir campañas.</>}
+                {noPhone > 0 && <> Se omiten <strong>{noPhone}</strong> sin teléfono.</>}
                 {' '}También se omite a quien Meta pidió no reenviarle marketing por 24 h y a quien no tiene WhatsApp.
               </div>
               <CampaignQuotaNote quota={quota} selectedCount={selectedContacts.length} />

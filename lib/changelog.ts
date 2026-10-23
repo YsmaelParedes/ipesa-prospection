@@ -36,6 +36,21 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.5.0',
+    date: '23 de octubre, 2026',
+    title: 'Sistema comercial nuevo',
+    items: [
+      'El sistema comercial ahora tiene 3 pantallas: Hoy (a quién llamar o visitar), Oportunidades (tus cotizaciones abiertas) y Equipo (las metas de cada vendedor).',
+      'Registra cada llamada en 3 pasos: tipo, resultado y cuándo volver a contactar (la fecha ya viene sugerida).',
+      'Cada cliente avanza en un solo camino: Prospecto, Contactado, Cotización y Cliente.',
+      'Todo el equipo ve los prospectos sin dueño; quien registra la primera llamada se queda con él.',
+      'En celular, botones grandes para llamar o escribir por WhatsApp; en la computadora, la lista y la ficha lado a lado.',
+      'Metas diarias por vendedor, con su cumplimiento del día y del mes.',
+      'Nuevas zonas para filtrar tus contactos (se agregan en Configuración → Catálogos).',
+      'Ya puedes guardar negocios sin teléfono para visitarlos en persona: aparecen en Hoy como «Para visita».',
+    ],
+  },
+  {
     version: '4.4.0',
     date: '22 de octubre, 2026',
     title: 'Cambio en los avisos de la Agenda',

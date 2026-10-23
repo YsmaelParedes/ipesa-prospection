@@ -464,6 +464,8 @@ a { color: inherit; text-decoration: none; }
 
 .cell-name { display: flex; align-items: center; gap: 11px; min-width: 0; }
 .cell-name > div { min-width: 0; overflow-wrap: anywhere; }
+/* En tabla (computadora) el nombre no puede encogerse a una letra por renglón */
+@media (min-width: 961px) { .contacts-table .cell-name { min-width: 220px; } }
 .cell-name .nm { font-weight: 700; color: var(--ink); }
 .cell-name .em { font-size: 11.5px; color: var(--muted); }
 .cell-mono { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink-2); letter-spacing: 0.01em; }

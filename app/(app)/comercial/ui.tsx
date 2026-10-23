@@ -14,6 +14,8 @@ export type TodayData = {
   today: string; uid: string; isAdmin: boolean; salesTeam: boolean
   zones: string[]; goals: Goals; counts: DayCounts
   due: ListContact[]; fresh: ListContact[]; freshTotal: number; offset: number
+  /** Sin teléfono ("Para visita"): los primeros y cuántos hay. */
+  visit: ListContact[]; visitTotal: number
 }
 
 export const money = (n: number | string | null | undefined) => `$${Number(n || 0).toLocaleString('es-MX')}`
