@@ -93,7 +93,7 @@ test('403 removes previously authorized data', async () => {
 
 test('financial data expires after one minute even when refresh fails', async () => {
   let now = 1_000_000
-  const cache = new QueryCache(() => now), p = queryPolicy('/api/platform/billing')
+  const cache = new QueryCache(() => now), p = queryPolicy('/api/billing/usage')
   await cache.read('payments', async () => 100, p)
   const stop = cache.subscribe(k => k === 'payments', () => {})
   now += 60_000
@@ -133,7 +133,6 @@ test('normalization, side-effect exclusions and mutation dependencies', () => {
   assert.equal(queryPolicy('/api/whatsapp/conversations/1234567890'), null)
   assert.equal(queryPolicy('/api/data/export'), null)
   assert.equal(queryPolicy('/api/whatsapp/media/123'), null)
-  assert.equal(queryPolicy('/api/platform/stores/123/whatsapp'), null)
   assert.ok(mutationResources('/api/data/reminders/123').includes('/api/data/leads'))
   assert.ok(mutationResources('/api/whatsapp/campaigns/send').includes('/api/data/dashboard'))
 })

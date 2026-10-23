@@ -5,12 +5,12 @@ import { siteOrigin } from '@/lib/invitations'
 import { jsonError, serverError } from '@/lib/validation'
 
 /**
- * POST /api/billing/portal — solo el dueño. Abre el portal de Stripe para
+ * POST /api/billing/portal — administradores. Abre el portal de Stripe para
  * cambiar de plan, cancelar al final del periodo, cambiar la tarjeta o
  * descargar facturas. Se permite aunque la tienda esté en solo lectura.
  */
 export async function POST(req: NextRequest) {
-  const ctx = await requireStore({ owner: true })
+  const ctx = await requireStore({ admin: true })
   if (ctx instanceof Response) return ctx
   if (!stripeConfigured()) return jsonError('El pago con tarjeta estará disponible pronto.', 503)
   if (!ctx.store.stripe_customer_id) return jsonError('Tu tienda aún no tiene una suscripción.', 409)

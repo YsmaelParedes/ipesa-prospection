@@ -13,7 +13,7 @@ async function pendingInvitations(storeId: string): Promise<InvitationRow[]> {
   return (data ?? []) as InvitationRow[]
 }
 
-// GET /api/store/invitations — pendientes (dueño/admin)
+// GET /api/store/invitations — pendientes (administradores)
 async function GETImpl() {
   const ctx = await requireStore({ admin: true })
   if (ctx instanceof Response) return ctx
@@ -41,9 +41,8 @@ export async function POST(req: NextRequest) {
   const role = body?.role === 'admin' ? 'admin' : 'employee'
   if (!EMAIL_RE.test(email) || email.length > 254) return jsonError('Escribe un correo válido')
   if (role === 'admin' && !planOf(ctx.plan).allowAdmins) {
-    return jsonError('Tu plan no incluye administradores además del dueño (Cubeta sí). Invita a tu equipo como vendedores.', 403)
+    return jsonError('Tu plan incluye un solo administrador (Cubeta permite más). Invita a tu equipo como vendedores.', 403)
   }
-  if (role === 'admin' && !ctx.isOwner) return jsonError('Solo el dueño puede invitar administradores', 403)
 
   try {
     const [members, pending] = await Promise.all([getStoreMembers(ctx.storeId), pendingInvitations(ctx.storeId)])
@@ -53,13 +52,8 @@ export async function POST(req: NextRequest) {
     const { maxUsers, label } = planOf(ctx.plan)
     if (activeSeats >= maxUsers) {
       return jsonError(maxUsers === 1
-        ? `El plan ${label} incluye solo al dueño. Cambia a Galón o Cubeta para invitar a tu equipo.`
+        ? `El plan ${label} incluye solo al administrador. Cambia a Galón o Cubeta para invitar a tu equipo.`
         : `Tu plan ${label} permite hasta ${maxUsers} usuarios. Cambia de plan para sumar más.`, 403)
-    }
-
-    // Un administrador no puede pisar (ni rebajar) la invitación de administrador que hizo el dueño
-    if (!ctx.isOwner && pending.some(i => i.email === email && i.role === 'admin' && invitationStatus(i) === 'valid')) {
-      return jsonError('Ese correo ya tiene una invitación de administrador; solo el dueño puede cambiarla.', 403)
     }
 
     // Una sola invitación vigente por correo: las anteriores se revocan

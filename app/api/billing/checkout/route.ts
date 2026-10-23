@@ -8,14 +8,14 @@ import { clientIp, rateLimit } from '@/lib/rateLimit'
 import { jsonError, readJson, serverError } from '@/lib/validation'
 
 /**
- * POST /api/billing/checkout { plan: 'galon' | 'cubeta' } — solo el dueño.
+ * POST /api/billing/checkout { plan: 'galon' | 'cubeta' } — administradores.
  * Abre el pago de Stripe (Checkout en modo suscripción) y devuelve su URL.
  * El plan de la tienda NO cambia aquí: lo cambia el webhook cuando Stripe
  * confirma la suscripción. Si ya paga una suscripción, el cambio de plan se
  * hace en el portal de Stripe (POST /api/billing/portal).
  */
 export async function POST(req: NextRequest) {
-  const ctx = await requireStore({ owner: true, write: true })
+  const ctx = await requireStore({ admin: true, write: true })
   if (ctx instanceof Response) return ctx
   if (!stripeConfigured()) return jsonError('El pago con tarjeta estará disponible pronto.', 503)
   if (!rateLimit(`checkout:${ctx.storeId}:${clientIp(req)}`, 10, 10 * 60 * 1000)) {

@@ -24,7 +24,7 @@ const settle = () => new Promise(resolve => setImmediate(resolve))
 
 beforeEach(() => {
   clock += 1_000_000
-  session = { user: { id: 'u1' }, store: { id: 's1', modules: { formulas: true }, access: 'full' }, role: 'owner', platformAdmin: true }
+  session = { user: { id: 'u1' }, store: { id: 's1', modules: { formulas: true }, access: 'full' }, role: 'admin' }
   calls = []; messages.length = 0
   handler = async () => response({ contacts: [{ id: 'one' }] })
   global.fetch = async (url, init) => {
@@ -179,7 +179,7 @@ test('401 clears all cached private resources and starts the expired-session flo
 test('a role change invalidates cached data even when the user and store remain the same', async () => {
   await api.apiFetch('/api/data/leads')
   const previousKey = api.queryKey('/api/data/leads')
-  session = { ...session, role: 'employee', platformAdmin: false }
+  session = { ...session, role: 'employee' }
   profile.invalidateSession(false)
   await profile.loadSession()
   assert.equal(api.queryCache.peek(previousKey), undefined)

@@ -466,6 +466,19 @@ a { color: inherit; text-decoration: none; }
 .cell-name > div { min-width: 0; overflow-wrap: anywhere; }
 /* En tabla (computadora) el nombre no puede encogerse a una letra por renglón */
 @media (min-width: 961px) { .contacts-table .cell-name { min-width: 220px; } }
+/* Teléfono con su tipo de línea: WhatsApp (verde) o Fijo (llamar) */
+.phone-cell { display: inline-flex; align-items: center; gap: 8px; }
+.line-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.line-chip svg { width: 12px; height: 12px; }
+.line-chip.wa { background: var(--success-soft); color: var(--success); }
+.line-chip.fijo { background: var(--paper); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line-strong); }
+/* "Ver más contactos" al pie de la tabla */
+.list-more { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; padding: 14px 16px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* Tipo de línea en la ficha (sin verificar / WhatsApp / fijo) */
+.line-seg { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.line-seg button { padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--ink-2); background: var(--paper); border: 1px solid var(--line-strong); transition-property: background-color, color, border-color; transition-duration: 150ms; }
+.line-seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.line-seg button:disabled { opacity: 0.6; }
 .cell-name .nm { font-weight: 700; color: var(--ink); }
 .cell-name .em { font-size: 11.5px; color: var(--muted); }
 .cell-mono { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink-2); letter-spacing: 0.01em; }
@@ -1901,9 +1914,6 @@ a { color: inherit; text-decoration: none; }
 .admin-store-text strong { display: block; font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-store-text small { display: block; font-size: 11.5px; color: var(--muted); }
 .admin-store-go { width: 15px; height: 15px; flex-shrink: 0; color: var(--muted); }
-.store-menu-admin { margin-bottom: 4px; border-bottom: 1px solid var(--line); border-radius: 8px 8px 0 0; padding-bottom: 10px; }
-.store-menu-admin span { display: inline-flex; align-items: center; gap: 7px; }
-.store-menu-admin svg { width: 14px; height: 14px; }
 
 .plan-banner {
   display: flex; align-items: center; gap: 10px; margin: 14px 32px 0; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.45;

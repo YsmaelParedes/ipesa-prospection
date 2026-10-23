@@ -15,7 +15,7 @@ function detectImage(bytes: Uint8Array): { mime: string; ext: string } | null {
   return null
 }
 
-// POST /api/store/logo (multipart: file) — dueño/admin
+// POST /api/store/logo (multipart: file) — administrador
 export async function POST(req: NextRequest) {
   const ctx = await requireStore({ admin: true })
   if (ctx instanceof Response) return ctx

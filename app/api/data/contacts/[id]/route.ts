@@ -39,6 +39,12 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   }
   if (Object.keys(updates).length === 0) return jsonError('No se proporcionaron campos válidos para actualizar')
 
+  // Número nuevo: lo que se sabía del anterior (WhatsApp o fijo) ya no aplica
+  if ('phone' in updates && !('line_type' in updates)) {
+    const { data: prev } = await getServerSupabase().from('contacts').select('phone').eq('id', id).eq('store_id', ctx.storeId).maybeSingle()
+    if (prev && prev.phone !== updates.phone) updates.line_type = null
+  }
+
   const { data, error } = await getServerSupabase()
     .from('contacts')
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -54,7 +60,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   return NextResponse.json(data)
 }
 
-// Solo dueño/administrador: los vendedores no borran contactos
+// Solo administrador: los vendedores no borran contactos
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
   const ctx = await requireStore({ admin: true, write: true })
   if (ctx instanceof Response) return ctx

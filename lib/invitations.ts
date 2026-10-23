@@ -9,7 +9,7 @@ export const INVITATION_DAYS = 7
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
 export type InvitationRow = {
-  id: string; store_id: string; email: string; role: 'owner' | 'admin' | 'employee'
+  id: string; store_id: string; email: string; role: 'admin' | 'employee'
   expires_at: string; accepted_at: string | null; revoked_at: string | null; created_at: string
 }
 
@@ -34,20 +34,17 @@ export async function findInvitationByToken(token: string): Promise<InvitationRo
 export const INVITATION_COLUMNS = 'id, store_id, email, role, expires_at, accepted_at, revoked_at, created_at'
 
 /**
- * Genera un enlace de invitación (equipo de una tienda o, desde el panel del
- * dueño, el dueño de una tienda nueva). Las invitaciones pendientes que pisa
- * se revocan: las del mismo correo o, con `replaceRole`, todas las de ese rol
- * (una sola invitación de dueño vigente por tienda). El token solo se devuelve
- * esta vez; en la base queda su hash.
+ * Genera un enlace de invitación al equipo de una tienda. Las invitaciones
+ * pendientes del mismo correo se revocan. El token solo se devuelve esta vez;
+ * en la base queda su hash.
  */
 export async function createInvitation(opts: {
-  storeId: string; email: string; role: InvitationRow['role']; invitedBy: string; origin: string; replaceRole?: boolean
+  storeId: string; email: string; role: InvitationRow['role']; invitedBy: string; origin: string
 }): Promise<{ invitation: InvitationRow; link: string }> {
   const db = getServerSupabase()
   let revoke = db.from('store_invitations').update({ revoked_at: new Date().toISOString() })
     .eq('store_id', opts.storeId).is('accepted_at', null).is('revoked_at', null)
-  revoke = opts.replaceRole ? revoke.eq('role', opts.role) : revoke.eq('email', opts.email)
-  const { error: revokeError } = await revoke
+  const { error: revokeError } = await revoke.eq('email', opts.email)
   if (revokeError) throw revokeError
 
   const token = randomToken(32)

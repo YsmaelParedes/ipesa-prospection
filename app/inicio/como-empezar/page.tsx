@@ -18,7 +18,7 @@ const STEPS = [
 const SECURITY = [
   { icon: Ic.layers, title: 'Datos separados por tienda', text: 'Cada consulta se filtra por tu tienda en el servidor. Ninguna otra tienda puede ver tu información.' },
   { icon: Ic.key, title: 'Tu contraseña es solo tuya', text: 'La creas tú al registrarte o con tu enlace de invitación; nadie más la conoce, ni nosotros.' },
-  { icon: Ic.users, title: 'Roles y permisos', text: 'Cada vendedor ve sus leads y su agenda. Exportar, importar y borrar contactos son solo para el dueño.' },
+  { icon: Ic.users, title: 'Roles y permisos', text: 'Cada vendedor ve sus leads y su agenda. Exportar, importar y borrar contactos son solo para administradores.' },
   { icon: Ic.eyeOff, title: 'Base protegida', text: 'Los vendedores no pueden copiar ni imprimir la información, y su pantalla lleva su nombre en marca de agua.' },
   { icon: Ic.link, title: 'Accesos bajo tu control', text: 'Invitaciones que vencen y la opción de desactivar a quien ya no trabaje contigo.' },
   { icon: Ic.download, title: 'Tu información es tuya', text: 'Si un día te vas, descargas todo en Excel. No borramos nada sin que lo pidas por escrito.' },

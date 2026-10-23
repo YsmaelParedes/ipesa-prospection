@@ -96,7 +96,7 @@ export function ContactPanel({ contactId, initial, today, variant, isAdmin, read
   const [bg, fg] = avatarColors(contact.commercial_status)
   const person = personName(contact)
   const addr = addressOf(contact)
-  const ownerLabel = !contact.owner_id ? 'Sin dueño' : !detail ? null : canWork ? 'Tuyo' : `De ${contact.owner_name || 'otra persona'}`
+  const ownerLabel = !contact.owner_id ? 'Sin asignar' : !detail ? null : canWork ? 'Tuyo' : `De ${contact.owner_name || 'otra persona'}`
 
   const content = (
     <>
@@ -111,6 +111,8 @@ export function ContactPanel({ contactId, initial, today, variant, isAdmin, read
             <StatusChip value={contact.commercial_status} />
             {prob && contact.commercial_status !== 'cliente' && <span className={s.tag}>{Math.round(prob * 100)} %</span>}
             {ownerLabel && <span className={s.tag}>{ownerLabel}</span>}
+            {contact.phone && contact.line_type === 'fijo' && <span className={s.tag}>Fijo</span>}
+            {contact.phone && contact.line_type === 'whatsapp' && <span className={s.tag}>Tiene WhatsApp</span>}
             {contact.no_answer_streak >= NO_ANSWER_LIMIT && <span className={`${s.tag} ${s.tagWarn}`}>No contesta · {contact.no_answer_streak}</span>}
           </div>
         </div>
@@ -121,7 +123,7 @@ export function ContactPanel({ contactId, initial, today, variant, isAdmin, read
 
       <div className={s.actions}>
         {phone && <a href={`tel:${phone}`} className={`${s.act} ${s.actCall} ${s.press}`}><Ico.phone /> Llamar</a>}
-        {waModule && phone.length === 10 && (
+        {waModule && phone.length === 10 && contact.line_type !== 'fijo' && (
           <Link href={`/whatsapp?phone=${phone}`} className={`${s.act} ${s.actWa} ${s.press}`}><Ico.chat /> WhatsApp</Link>
         )}
         <Link href={`/contactos?id=${contact.id}`} className={`${s.act} ${s.actMore} ${s.press}`} aria-label="Ver en Contactos" title="Ver en Contactos"><Ico.user /></Link>
@@ -145,7 +147,7 @@ export function ContactPanel({ contactId, initial, today, variant, isAdmin, read
         <div className={s.section}>
           <div className={s.sectionTitle}>Responsable</div>
           <Select value={contact.owner_id ?? ''} aria-label="Responsable" onChange={reassign}
-            options={[{ value: '', label: 'Sin dueño' }, ...detail.team.map(m => ({ value: m.user_id, label: m.name }))]} />
+            options={[{ value: '', label: 'Sin asignar' }, ...detail.team.map(m => ({ value: m.user_id, label: m.name }))]} />
         </div>
       )}
 

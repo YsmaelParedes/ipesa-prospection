@@ -115,10 +115,17 @@ export function parseFields(
   return { ok: true, data }
 }
 
-/** Log de servidor + aviso al dueño de la plataforma + respuesta genérica (no filtra detalles internos al cliente). */
+/** Log de servidor + aviso al operador de la plataforma + respuesta genérica (no filtra detalles internos al cliente). */
 export function serverError(context: string, err: unknown, message = 'Error interno del servidor') {
   const detail = err instanceof Error ? err.message : (err as { message?: string })?.message ?? err
   console.error(`[${context}]`, detail)
   reportError({ source: 'server', context, error: err })
   return NextResponse.json({ error: message }, { status: 500 })
+}
+
+/** Errores de funciones de la base (raise exception) con un mensaje para el usuario. */
+export function rpcUserError(error: { code?: string; message?: string } | null): { status: number; message: string } | null {
+  if (error?.code === 'P0001') return { status: 409, message: error.message ?? 'No se pudo completar' }
+  if (error?.code === 'P0002') return { status: 404, message: error.message ?? 'No encontrado' }
+  return null
 }

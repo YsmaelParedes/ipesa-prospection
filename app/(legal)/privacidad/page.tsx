@@ -29,7 +29,7 @@ const sections: LegalSection[] = [
     title: 'A quién aplica este aviso',
     body: (
       <>
-        <p>Este aviso aplica a los datos de las personas que crean una cuenta o son invitadas a una tienda (dueños, administradores y vendedores).</p>
+        <p>Este aviso aplica a los datos de las personas que crean una cuenta o son invitadas a una tienda (administradores y vendedores).</p>
         <p>
           La información que cada tienda registra sobre <strong>sus propios clientes</strong> (contactos, oportunidades,
           conversaciones y recordatorios) pertenece a la tienda, que es la responsable de esos datos frente a sus
@@ -84,7 +84,7 @@ const sections: LegalSection[] = [
         <ul>
           <li><strong>Supabase</strong>: base de datos, autenticación y almacenamiento de archivos.</li>
           <li><strong>Vercel</strong>: alojamiento y ejecución de la aplicación.</li>
-          <li><strong>Stripe</strong>: cobro de los planes de paga (nombre de la tienda, correo del dueño y datos de la tarjeta, que tratamos solo a través de Stripe).</li>
+          <li><strong>Stripe</strong>: cobro de los planes de paga (nombre de la tienda, correo del administrador y datos de la tarjeta, que tratamos solo a través de Stripe).</li>
           <li><strong>Meta Platforms</strong> (WhatsApp Business Platform): solo si tu tienda conecta su número, para enviar y recibir mensajes.</li>
           <li><strong>Servicios de notificaciones del navegador</strong> (por ejemplo, de Google, Apple o Mozilla): solo si activas los avisos en tu dispositivo.</li>
         </ul>
@@ -169,9 +169,9 @@ const sections: LegalSection[] = [
       <p>
         Conservamos los datos mientras exista la cuenta de la tienda, aunque haya cancelado su suscripción (en ese
         caso pasa al plan Litro y puede descargar su información completa). Eliminamos o anonimizamos de
-        forma segura la información de una tienda cuando su dueño lo solicita por escrito, salvo lo que debamos
+        forma segura la información de una tienda cuando uno de sus administradores lo solicita por escrito, salvo lo que debamos
         conservar para cumplir obligaciones legales. También eliminamos las tiendas del plan Litro que pasan
-        {' '}{RETENTION_IDLE_MONTHS} meses sin uso, después de avisar a su dueño por correo {RETENTION_NOTICE_DAYS} y {RETENTION_LAST_NOTICE_DAYS} días
+        {' '}{RETENTION_IDLE_MONTHS} meses sin uso, después de avisar a sus administradores por correo {RETENTION_NOTICE_DAYS} y {RETENTION_LAST_NOTICE_DAYS} días
         antes; de una tienda eliminada solo guardamos su nombre y la fecha, sin datos de sus clientes. Los
         registros de cobro los conserva Stripe según sus obligaciones fiscales.
       </p>

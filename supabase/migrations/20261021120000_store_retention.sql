@@ -70,7 +70,7 @@ $$;
 -- Estado de retención de todas las tiendas (panel del dueño y cron).
 create or replace function public.store_retention_status(p_idle_days integer)
 returns table(id uuid, name text, slug text, last_used_at timestamptz, idle boolean, protected boolean,
-              deletion_scheduled_for timestamptz, deletion_notices smallint, owner_emails text[])
+              deletion_scheduled_for timestamptz, deletion_notices smallint, admin_emails text[])
 language sql stable security definer set search_path = ''
 as $$
   select s.id, s.name, s.slug, l.at,
@@ -78,7 +78,7 @@ as $$
          public.store_retention_protected(s),
          s.deletion_scheduled_for, s.deletion_notices,
          array(select u.email::text from public.store_members m join auth.users u on u.id = m.user_id
-               where m.store_id = s.id and m.role = 'owner' and m.status = 'active' and u.email is not null)
+               where m.store_id = s.id and m.role = 'admin' and m.status = 'active' and u.email is not null)
   from public.stores s
   cross join lateral (select public.store_last_used_at(s.id) as at) l
 $$;

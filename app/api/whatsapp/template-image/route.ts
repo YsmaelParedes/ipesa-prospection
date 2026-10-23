@@ -51,7 +51,7 @@ async function GETImpl(req: NextRequest) {
   return NextResponse.json({ url: `${pub.publicUrl}${version}` })
 }
 
-// POST /api/whatsapp/template-image — sube/reemplaza la imagen de una plantilla (dueño/admin)
+// POST /api/whatsapp/template-image — sube/reemplaza la imagen de una plantilla (administrador)
 export async function POST(req: NextRequest) {
   const ctx = await requireStore({ admin: true, module: 'whatsapp', write: true })
   if (ctx instanceof Response) return ctx

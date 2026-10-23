@@ -1,6 +1,6 @@
 /**
  * Plazos de la eliminación de tiendas inactivas (Términos › Cancelación).
- * Compartido por el cron, el panel del dueño y los textos legales.
+ * Compartido por el cron y los textos legales.
  * Si cambias un número, cambia también los Términos y el Aviso de privacidad.
  */
 export const RETENTION_IDLE_MONTHS = 6

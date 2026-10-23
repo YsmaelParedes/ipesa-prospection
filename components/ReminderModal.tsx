@@ -1,18 +1,17 @@
 'use client'
 
-import { useQueryEffect } from '@/lib/useCachedQuery'
 
 import { apiFetch } from '@/lib/apiClient'
 
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   PRIORITY_INFO, REMINDER_PRIORITIES, REMINDER_TYPES, REMINDER_TYPE_INFO,
   type Reminder, type ReminderPriority, type ReminderType,
 } from '@/lib/crm'
 import type { ReminderDefaults } from '@/lib/crmEvents'
 import { QUICK_WHEN, localNow, quickDate, toDbLocal, type QuickWhen } from '@/lib/datetime'
-import { loadSearchIndex, searchContacts, type IndexContact } from '@/lib/searchIndex'
+import { findContacts, type IndexContact } from '@/lib/searchIndex'
 
 const CloseIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 17, height: 17 }}><path d="M18 6 6 18M6 6l12 12" /></svg>
 
@@ -39,7 +38,7 @@ export default function ReminderModal({ reminder, defaults, onClose, onSaved }: 
   const [leadName, setLeadName] = useState((reminder?.lead_id ? reminder.lead_name : defaults?.lead_id ? defaults.lead_name : '') ?? '')
   const [subject, setSubject]   = useState(initialSubject)
   const [leadQ, setLeadQ]       = useState('')
-  const [contacts, setContacts] = useState<IndexContact[]>([])
+  const [contactMatches, setContactMatches] = useState<IndexContact[]>([])
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState('')
   const notaRef = useRef<HTMLTextAreaElement>(null)
@@ -50,9 +49,14 @@ export default function ReminderModal({ reminder, defaults, onClose, onSaved }: 
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
   }, [onClose, saving])
-  useQueryEffect(() => { loadSearchIndex().then(i => setContacts(i.contacts)).catch(() => {}) }, [])
-
-  const contactMatches = useMemo(() => (leadQ.trim() ? searchContacts(contacts, leadQ, 6) : []), [contacts, leadQ])
+  // Busca el cliente en el servidor un momento después de dejar de escribir
+  useEffect(() => {
+    const text = leadQ.trim()
+    if (!text) { setContactMatches([]); return }
+    let alive = true
+    const t = setTimeout(() => { findContacts(text, 6).then(list => { if (alive) setContactMatches(list) }).catch(() => {}) }, 180)
+    return () => { alive = false; clearTimeout(t) }
+  }, [leadQ])
 
   const activeQuick = QUICK_WHEN.find(w => quickDate(w.key) === fecha)?.key
   const canSave = fecha.length >= 16 && (!!nota.trim() || !!leadId || !!subject) && !saving

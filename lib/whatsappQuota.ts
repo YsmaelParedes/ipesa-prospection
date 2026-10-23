@@ -98,7 +98,7 @@ export async function finishTemplateSend(id: string, storeId: string, result: Wh
   }).eq('id', id).eq('store_id', storeId)
   if (error) console.error('[whatsapp/finalizar-envío]', error.message)
   if (result.code === 131050 && contactId) await markOptOut(storeId, contactId)
-  // Un error que afecta a todo el número o la plantilla (token vencido, cuenta restringida…) lo debe saber el dueño de la plataforma
+  // Un error que afecta a todo el número o la plantilla (token vencido, cuenta restringida…) lo debe saber el operador de la plataforma
   if (!result.ok && result.code && STOP_CAMPAIGN_CODES.includes(result.code)) {
     reportError({ source: 'whatsapp', context: `Meta ${result.code} al enviar plantilla`, error: new Error(result.error ?? `Error ${result.code}`), storeId })
   }

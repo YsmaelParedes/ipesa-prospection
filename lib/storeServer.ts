@@ -71,8 +71,7 @@ export function sessionPayload(ctx: StoreContext) {
     store: publicStore(ctx.store),
     role: ctx.role,
     isAdmin: ctx.isAdmin,
-    isOwner: ctx.isOwner,
-    ownerOnlyBlocked: ctx.ownerOnlyBlocked,
+    litroBlocked: ctx.litroBlocked,
     stores: ctx.memberships.map(m => ({ id: m.storeId, name: m.store.name, role: m.role, logoUrl: storeLogoUrl(m.store.logo_path) })),
   }
 }
@@ -89,12 +88,11 @@ export async function setActiveStoreCookie(storeId: string) {
 
 /**
  * Crea una tienda en el plan Litro (gratis) con sus catálogos iniciales y el
- * registro de WhatsApp (sin conectar). Con `ownerId`, ese usuario queda como
- * dueño (registro abierto); sin él, la tienda queda sin dueño hasta que acepte
- * su invitación (alta desde el panel de la plataforma). Si no se puede dar de
- * alta al dueño, la tienda se deshace. El slug se desambigua si ya existe.
+ * registro de WhatsApp (sin conectar). Quien la crea queda como su primer
+ * administrador; si no se puede darlo de alta, la tienda se deshace. El slug se
+ * desambigua si ya existe.
  */
-export async function createStore(createdBy: string, profile: Record<string, unknown>, ownerId: string | null = null): Promise<StoreRow> {
+export async function createStore(createdBy: string, profile: Record<string, unknown>): Promise<StoreRow> {
   const db = getServerSupabase()
   const base = slugify(String(profile.name)) || 'tienda'
   let store: StoreRow | null = null
@@ -113,12 +111,10 @@ export async function createStore(createdBy: string, profile: Record<string, unk
   }
   if (!store) throw new Error('No se pudo generar un identificador único para la tienda')
 
-  if (ownerId) {
-    const { error: ownerError } = await db.from('store_members').insert({ store_id: store.id, user_id: ownerId, role: 'owner', status: 'active' })
-    if (ownerError) {
-      await db.from('stores').delete().eq('id', store.id)
-      throw ownerError
-    }
+  const { error: memberError } = await db.from('store_members').insert({ store_id: store.id, user_id: createdBy, role: 'admin', status: 'active' })
+  if (memberError) {
+    await db.from('stores').delete().eq('id', store.id)
+    throw memberError
   }
 
   const catalogs = [

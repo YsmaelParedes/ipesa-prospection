@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, serverError } from '@/lib/validation'
 
-// DELETE /api/whatsapp/quick-replies/[id] (dueño/admin)
+// DELETE /api/whatsapp/quick-replies/[id] (administrador)
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await requireStore({ admin: true, write: true, module: 'whatsapp' })
   if (ctx instanceof Response) return ctx

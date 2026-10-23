@@ -8,7 +8,7 @@ import { APP_NAME } from './brand'
  * Ambos textos deben revisarse con un abogado antes de vender el servicio.
  */
 /**
- * Correos de Matices. Todos llegan al buzón del dueño de la plataforma
+ * Correos de Matices. Todos llegan al buzón del operador de la plataforma
  * (Cloudflare Email Routing); separarlos permite saber de qué se trata:
  *  · hola: ventas y dudas generales (sitio, redes)
  *  · soporte: tiendas que ya usan Matices (botón Ayuda, respuestas a correos automáticos)

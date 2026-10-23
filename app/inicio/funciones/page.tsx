@@ -120,14 +120,14 @@ export default function FuncionesPage() {
           <div className={s.panels} aria-hidden="true">
             <div className={s.panel}>
               <div className={s.panelHead}><strong>Equipo</strong><small>3 de {MAX_USERS} usuarios</small></div>
-              <div className={s.memberRow}><span className={`${s.av} ${s.avBrand}`}>AM</span><span>Ana Martínez</span><em className={s.roleOwner}>Dueño</em></div>
+              <div className={s.memberRow}><span className={`${s.av} ${s.avBrand}`}>AM</span><span>Ana Martínez</span><em className={s.roleOwner}>Administrador</em></div>
               <div className={s.memberRow}><span className={`${s.av} ${s.avCyan}`}>LH</span><span>Luis Herrera</span><em>Vendedor</em></div>
               <div className={s.memberRow}><span className={`${s.av} ${s.avAmber}`}>SR</span><span>Sofía Ramos</span><em>Vendedor</em></div>
             </div>
             <div className={`${s.panel} ${s.panelTeam}`}>
               <div className={s.panelHead}><strong>Permisos del vendedor</strong></div>
-              <div className={s.permRow}><Ic.download /><span>Exportar a Excel</span><em className={s.permNo}>Solo dueño</em></div>
-              <div className={s.permRow}><Ic.lock /><span>Borrar contactos</span><em className={s.permNo}>Solo dueño</em></div>
+              <div className={s.permRow}><Ic.download /><span>Exportar a Excel</span><em className={s.permNo}>Solo administradores</em></div>
+              <div className={s.permRow}><Ic.lock /><span>Borrar contactos</span><em className={s.permNo}>Solo administradores</em></div>
               <div className={s.permRow}><Ic.eyeOff /><span>Copiar e imprimir</span><em className={s.permNo}>Bloqueado</em></div>
               <div className={s.permRow}><Ic.contacts /><span>Atender a los clientes</span><em className={s.permYes}>Permitido</em></div>
             </div>

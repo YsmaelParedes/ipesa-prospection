@@ -1121,17 +1121,20 @@ function NewConversationModal({ onClose, onPick }: { onClose: () => void; onPick
   const [loading, setLoading]   = useState(true)
   const [q, setQ]               = useState('')
 
-  useQueryEffect(() => {
-    apiFetch('/api/data/contacts').then(r => r.json()).then(d => setContacts(d.contacts ?? [])).catch(() => {}).finally(() => setLoading(false))
-  }, [])
+  // Los contactos con teléfono que coinciden, de a 80, buscados en el servidor
+  const text = q.trim()
+  useEffect(() => {
+    let alive = true
+    const t = setTimeout(() => {
+      apiFetch(`/api/data/contacts?${new URLSearchParams({ fields: 'lite', line: 'con_telefono', limit: '80', q: text })}`)
+        .then(r => r.json()).then(d => { if (alive) setContacts(d.contacts ?? []) }).catch(() => {}).finally(() => { if (alive) setLoading(false) })
+    }, text ? 180 : 0)
+    return () => { alive = false; clearTimeout(t) }
+  }, [text])
 
   const digits = q.replace(/\D/g, '')
   const typedPhone = normalizePhone(digits)
-  const filtered = useMemo(() => {
-    const n = q.trim().toLowerCase()
-    const list = n ? contacts.filter(c => c.name.toLowerCase().includes(n) || (digits.length >= 3 && c.phone.includes(digits))) : contacts
-    return list.slice(0, 80)
-  }, [contacts, q, digits])
+  const filtered = contacts
 
   return (
     <div className="modal" onClick={onClose}>

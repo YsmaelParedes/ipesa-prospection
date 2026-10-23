@@ -4,7 +4,7 @@ import { serverError } from '@/lib/validation'
 
 /**
  * GET /api/billing/usage — cuánto usa la tienda de lo que incluye su plan
- * (Configuración → Plan): contactos y usuarios activos. Dueño/admin.
+ * (Configuración → Plan): contactos y usuarios activos. administrador.
  */
 export async function GET() {
   const ctx = await requireStore({ admin: true })

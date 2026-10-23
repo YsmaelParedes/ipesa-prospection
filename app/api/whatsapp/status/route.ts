@@ -5,7 +5,7 @@ import { GRAPH_VERSION, getPhoneHealth } from '@/lib/whatsapp'
 import { credsFromRow, getStoreWhatsAppRow } from '@/lib/storeWhatsApp'
 
 /**
- * GET /api/whatsapp/status (dueño/admin) — si la tienda tiene WhatsApp
+ * GET /api/whatsapp/status (administrador) — si la tienda tiene WhatsApp
  * conectado + salud del número en Meta: calificación de calidad, nivel de
  * mensajería y health_status (AVAILABLE / LIMITED / BLOCKED).
  */

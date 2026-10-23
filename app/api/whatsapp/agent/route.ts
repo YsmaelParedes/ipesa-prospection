@@ -8,7 +8,7 @@ import { withContactNames } from '@/lib/agentTestNumbers'
 import { jsonError, readJson } from '@/lib/validation'
 
 /**
- * GET /api/whatsapp/agent (dueño/admin) — estado del agente de IA de Meta:
+ * GET /api/whatsapp/agent (administrador) — estado del agente de IA de Meta:
  *  · state "ready": ajustes + números de prueba
  *  · state "inactive": el número aún no tiene agente (se puede activar)
  *  · state "not_eligible": Meta dice que este número no puede usarlo

@@ -3,7 +3,7 @@ import type Stripe from 'stripe'
 import { readBoundedBody } from '@/lib/boundedBody'
 import { getServerSupabase } from '@/lib/supabase-server'
 import { getStripe } from '@/lib/stripe'
-import { NOT_A_STORE, notifyStoreOwner, syncSubscription } from '@/lib/stripeSync'
+import { NOT_A_STORE, notifyStoreAdmins, syncSubscription } from '@/lib/stripeSync'
 import { reportError } from '@/lib/errorReport'
 
 export const dynamic = 'force-dynamic'
@@ -103,13 +103,13 @@ async function handleEvent(event: Stripe.Event) {
         const text = event.type === 'invoice.payment_failed'
           ? 'No pudimos cobrar tu plan. Actualiza tu tarjeta en Configuración → Plan para no perderlo.'
           : 'Tu banco pide confirmar el cobro de tu plan. Entra a Configuración → Plan para confirmarlo.'
-        after(() => notifyStoreOwner(result.storeId, text))
+        after(() => notifyStoreAdmins(result.storeId, text))
       }
       return
     }
     case 'charge.dispute.created':
     case 'radar.early_fraud_warning.created': {
-      // Te avisa a ti (dueño de la plataforma) para revisarlo en el panel de Stripe
+      // Te avisa a ti (operador de la plataforma) para revisarlo en el panel de Stripe
       const what = event.type === 'charge.dispute.created' ? 'Contracargo abierto' : 'Alerta temprana de fraude'
       reportError({ source: 'webhook', context: 'stripe/riesgo', error: new Error(`${what}: revísalo en el panel de Stripe (${event.data.object.id})`) })
       return

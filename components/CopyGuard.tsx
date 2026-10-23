@@ -11,7 +11,7 @@ import { useEffect, useMemo } from 'react'
  *
  * Es una barrera en la pantalla, no una garantía: una foto o una captura
  * siguen siendo posibles. Lo que de verdad no debe tener un vendedor lo cuida
- * el servidor (exportar, importar y borrar son solo para dueño/administrador).
+ * el servidor (exportar, importar y borrar son solo para administrador).
  */
 
 const EDITABLE = 'input, textarea, select, [contenteditable="true"], [contenteditable=""]'

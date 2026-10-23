@@ -8,7 +8,7 @@ import { TURNSTILE_SITE_KEY, Turnstile, type TurnstileHandle } from '@/component
 
 /**
  * Registro abierto: la cuenta nace sin tienda; al confirmar el correo,
- * /bienvenida crea la tienda en el plan Litro (gratis) y su dueño decide
+ * /bienvenida crea la tienda en el plan Litro (gratis) y su administrador decide
  * después si cambia a Galón o Cubeta.
  */
 const LITRO = PLANS.litro

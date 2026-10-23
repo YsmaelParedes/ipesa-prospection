@@ -31,7 +31,7 @@ const SAMPLE = [
 /**
  * WhatsApp "Por activar": presentación del servicio para una tienda que aún
  * no lo tiene. Viene en el plan Cubeta: en Litro y Galón se ofrece cambiar de
- * plan; en Cubeta el dueño/admin lo solicita, queda el aviso en el panel de la
+ * plan; en Cubeta un administrador lo solicita, llega un correo a la
  * plataforma y un asesor conecta el número (la tienda no puede activarlo).
  */
 export function WhatsAppOffer() {
@@ -64,7 +64,7 @@ export function WhatsAppOffer() {
       <div className="wa-card wa-empty">
         <span className="wa-empty-icon"><WaIcon.whatsapp size={34} /></span>
         <div className="wa-empty-title">WhatsApp aún no está activo en tu tienda</div>
-        <div>Cuando el dueño de la tienda lo active, aquí verás los chats de tus clientes.</div>
+        <div>Cuando un administrador de la tienda lo active, aquí verás los chats de tus clientes.</div>
       </div>
     )
   }
@@ -120,9 +120,9 @@ export function WhatsAppOffer() {
         <div className="wa-offer-foot">
           {!inPlan ? (
             <>
-              {session?.isOwner
+              {session?.isAdmin
                 ? <Link href="/configuracion?tab=plan" className="btn btn-primary wa-offer-btn"><WaIcon.whatsapp size={17} /> Cambiar a Cubeta</Link>
-                : <span className="wa-offer-note">Pídele al dueño de la tienda que cambie al plan Cubeta.</span>}
+                : <span className="wa-offer-note">Pídele a un administrador de la tienda que cambie al plan Cubeta.</span>}
               <span className="wa-offer-note">WhatsApp viene en el plan Cubeta; al cambiar, un asesor conecta el número de tu tienda.</span>
             </>
           ) : requested ? (

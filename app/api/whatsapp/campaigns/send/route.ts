@@ -56,10 +56,10 @@ type Outcome = {
 /** Envía la plantilla a un destinatario respetando bajas, "sin WhatsApp" y el límite de Meta. */
 async function sendOne(ctx: StoreContext, creds: WhatsAppCreds, shared: Shared, target: { contactId?: string; phone?: string; force?: boolean }): Promise<Outcome> {
   const supabase = getServerSupabase()
-  let contact: { id: string; name: string; phone: string; wa_opt_out: boolean } | null = null
+  let contact: { id: string; name: string; phone: string; wa_opt_out: boolean; line_type?: string | null } | null = null
   let phone = ''
   if (target.contactId) {
-    const { data } = await supabase.from('contacts').select('id, name, phone, wa_opt_out')
+    const { data } = await supabase.from('contacts').select('id, name, phone, wa_opt_out, line_type')
       .eq('id', target.contactId).eq('store_id', ctx.storeId).maybeSingle()
     if (!data) return { contactId: target.contactId, ok: false, error: 'Contacto no encontrado' }
     contact = data
@@ -72,6 +72,8 @@ async function sendOne(ctx: StoreContext, creds: WhatsAppCreds, shared: Shared, 
   if (!/^\d{10}$/.test(phone)) return { contactId, ok: false, error: 'Sin teléfono válido registrado' }
 
   if (contact?.wa_opt_out) return { contactId, ok: false, skipped: true, error: 'Pidió no recibir campañas (dado de baja)' }
+  // Marcado como fijo en su ficha: no tiene WhatsApp
+  if (target.contactId && contact?.line_type === 'fijo') return { contactId, ok: false, skipped: true, noWhatsApp: true, error: 'Sin WhatsApp: está marcado como teléfono fijo.' }
 
   // Sin WhatsApp: no se le vuelve a mandar nada (puede ser un teléfono fijo).
   // En campañas nunca; desde el chat solo si se confirma "intentar de todos modos".
@@ -114,7 +116,7 @@ function stopReasonOf(o: Outcome): string | null {
 }
 
 /**
- * POST /api/whatsapp/campaigns/send — envía una plantilla (dueño/admin: toca
+ * POST /api/whatsapp/campaigns/send — envía una plantilla (administrador: toca
  * el número real de la tienda y su reputación con Meta).
  * Body común: { template, language, category?, headerImageUrl?, bodyPreview,
  *               personalize?, bodyParams?: string[] }

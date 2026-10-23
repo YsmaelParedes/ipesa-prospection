@@ -126,7 +126,7 @@ export function outcomeText(result: CallResult): string {
 export type CommercialContact = {
   id: string; name: string; phone: string | null; email: string | null; company: string | null
   address: string | null; postal_code: string | null; segment: string | null; acquisition_channel: string | null
-  colonia: string | null; zone: string | null; owner_id: string | null; owner_name?: string | null
+  colonia: string | null; zone: string | null; line_type?: string | null; owner_id: string | null; owner_name?: string | null
   priority: Priority; potential_monthly: number | string | null; origin: string | null
   commercial_status: CommercialStatus; next_action: string | null; next_action_at: string | null
   last_activity_at: string | null; last_result: string | null; last_note: string | null
@@ -183,7 +183,7 @@ export function parseGoals(raw: unknown): Goals {
 
 /**
  * Metas guardadas en stores.commercial_goals: las de la tienda en la raíz
- * (forma de siempre) y, si el dueño las cambió para alguien, en byUser.
+ * (forma de siempre) y, si un administrador las cambió para alguien, en byUser.
  */
 export type GoalsConfig = { team: Goals; byUser: Record<string, Goals> }
 export function parseGoalsConfig(raw: unknown): GoalsConfig {

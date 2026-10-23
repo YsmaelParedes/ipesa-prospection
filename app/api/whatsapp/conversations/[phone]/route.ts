@@ -53,7 +53,7 @@ async function GETImpl(req: NextRequest, { params }: Ctx) {
     const linkedId = lastInbound?.contact_id ?? messages.find(m => m.contact_id)?.contact_id ?? null
     const contact = await contactForPhone(ctx.storeId, phone, linkedId)
 
-    // Sistema comercial: el detalle (próxima acción y nota) solo para su responsable o el dueño/admin
+    // Sistema comercial: el detalle (próxima acción y nota) solo para su responsable o el administrador
     let commercial: { status: string; next_action: string | null; next_action_at: string | null; last_note: string | null; mine: boolean } | null = null
     if (contact) {
       const { data } = await supabase.from('contacts')

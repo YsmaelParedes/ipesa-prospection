@@ -1,7 +1,7 @@
 /**
  * Eliminación de tiendas inactivas (solo servidor). La corre el cron diario
  * (/api/cron/retention). Por cada tienda en Litro sin uso en 6 meses:
- *   1. Primer aviso al dueño por correo y se programa a 30 días.
+ *   1. Primer aviso a los administradores por correo y se programa a 30 días.
  *   2. Último aviso 7 días antes (si sale tarde, la fecha se recorre para
  *      dejar siempre 7 días desde el aviso).
  *   3. Al llegar la fecha se elimina con todos sus datos, sus archivos y las
@@ -22,7 +22,7 @@ const MAX_DELETIONS_PER_RUN = 10
 
 type StatusRow = {
   id: string; name: string; slug: string; last_used_at: string; idle: boolean; protected: boolean
-  deletion_scheduled_for: string | null; deletion_notices: number; owner_emails: string[]
+  deletion_scheduled_for: string | null; deletion_notices: number; admin_emails: string[]
 }
 
 export type RetentionResult = {
@@ -91,8 +91,8 @@ export async function runRetention({ origin, dryRun = false, now = Date.now() }:
         const deleteAt = now + RETENTION_NOTICE_DAYS * DAY
         result.firstNotice.push(label)
         if (dryRun) continue
-        if (st.owner_emails.length) {
-          await sendEmail({ to: st.owner_emails, ...noticeEmail(st, deleteAt, false, origin), idempotencyKey: `retention-1-${st.id}-${new Date(now).toISOString().slice(0, 10)}` })
+        if (st.admin_emails.length) {
+          await sendEmail({ to: st.admin_emails, ...noticeEmail(st, deleteAt, false, origin), idempotencyKey: `retention-1-${st.id}-${new Date(now).toISOString().slice(0, 10)}` })
         }
         // Solo si sigue sin uso (alguien pudo entrar mientras se enviaba el correo)
         const { error: e } = await db.from('stores')
@@ -103,8 +103,8 @@ export async function runRetention({ origin, dryRun = false, now = Date.now() }:
         const deleteAt = Math.max(scheduled, now + RETENTION_LAST_NOTICE_DAYS * DAY)
         result.lastNotice.push(label)
         if (dryRun) continue
-        if (st.owner_emails.length) {
-          await sendEmail({ to: st.owner_emails, ...noticeEmail(st, deleteAt, true, origin), idempotencyKey: `retention-2-${st.id}-${st.deletion_scheduled_for}` })
+        if (st.admin_emails.length) {
+          await sendEmail({ to: st.admin_emails, ...noticeEmail(st, deleteAt, true, origin), idempotencyKey: `retention-2-${st.id}-${st.deletion_scheduled_for}` })
         }
         const { error: e } = await db.from('stores')
           .update({ deletion_scheduled_for: new Date(deleteAt).toISOString(), deletion_notices: 2 })

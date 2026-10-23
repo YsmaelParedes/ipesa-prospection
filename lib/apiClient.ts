@@ -25,7 +25,7 @@ export const subscribeQueryStatus = (fn: () => void) => { updates.add(fn); retur
 const announce = () => { for (const fn of updates) fn() }
 
 export function sessionScope(s: Session | null | undefined) {
-  return s ? JSON.stringify([s.user.id, s.store?.id, s.role, s.platformAdmin, s.store?.modules, s.store?.access, s.store?.status, s.store?.plan]) : ''
+  return s ? JSON.stringify([s.user.id, s.store?.id, s.role, s.store?.modules, s.store?.access, s.store?.status, s.store?.plan]) : ''
 }
 export function setQueryContext(s: Session | null) {
   const next = sessionScope(s)
@@ -179,13 +179,12 @@ async function fetchWithCache(input: string | URL | Request, init?: RequestInit)
 
 const prefetchRoutes: Record<string, string[]> = {
   '/': ['/api/data/dashboard?includeWhatsApp=0', '/api/data/reminders'],
-  '/contactos': ['/api/data/contacts', '/api/data/config'],
+  '/contactos': ['/api/data/contacts?facets=1&limit=50', '/api/data/config'],
   '/comercial': ['/api/data/commercial'],
   '/recordatorios': ['/api/data/reminders', '/api/data/commercial'],
   '/formulas': ['/api/formulas'],
   '/whatsapp': ['/api/whatsapp/conversations?filter=all'],
   '/configuracion': ['/api/data/config'],
-  '/admin': ['/api/platform/stores', '/api/platform/billing'], '/admin/tiendas': ['/api/platform/stores'],
 }
 const prefetchAllowed = new Set(Object.values(prefetchRoutes).flat())
 const prefetchQueue = new Set<string>()
@@ -204,6 +203,6 @@ export function prefetchQuery(path: string) {
 }
 export async function prefetchRoute(href: string) {
   const path = href.split('?')[0], session = await loadSession()
-  if (!session || path.startsWith('/admin') && !session.platformAdmin || !path.startsWith('/admin') && !session.store || path === '/formulas' && !session.store?.modules.formulas || path === '/whatsapp' && !session.store?.modules.whatsapp) return
+  if (!session || !session.store || path === '/formulas' && !session.store?.modules.formulas || path === '/whatsapp' && !session.store?.modules.whatsapp) return
   for (const url of prefetchRoutes[path] ?? []) prefetchQuery(url)
 }

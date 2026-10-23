@@ -85,7 +85,7 @@ export function OportunidadesView({ isAdmin, onOpen }: { isAdmin: boolean; onOpe
                       {o.days_idle !== null && <span className={s.mobileOnly} style={{ color: stale ? 'var(--danger)' : undefined }}>{o.days_idle === 0 ? 'Hoy' : `${o.days_idle} días sin contacto`}</span>}
                     </span>
                   </span>
-                  <span className={s.optional}>{team ? (o.owner_name ?? 'Sin dueño') : (o.zone ?? '—')}</span>
+                  <span className={s.optional}>{team ? (o.owner_name ?? 'Sin asignar') : (o.zone ?? '—')}</span>
                   <span className={`${s.optional} ${s.num}`}>{o.quoted_at ? fmtDay(o.quoted_at.slice(0, 10)) : '—'}</span>
                   <span className={`${s.optional} ${s.num}`} style={{ color: stale ? 'var(--danger)' : undefined, fontWeight: stale ? 800 : undefined }}>
                     {o.days_idle === null ? '—' : `${o.days_idle} días`}

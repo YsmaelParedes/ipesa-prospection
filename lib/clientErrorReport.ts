@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Manda a /api/client-errors los errores del navegador (los ve el dueño de la
- * plataforma en /admin). Solo se manda el mensaje y la ruta (sin parámetros).
+ * Manda a /api/client-errors los errores del navegador (se guardan para el
+ * operador de la plataforma). Solo se manda el mensaje y la ruta (sin parámetros).
  * Cada mensaje se manda una vez por carga de página y como máximo 5 por
  * carga, para que un error en bucle no inunde al servidor.
  */

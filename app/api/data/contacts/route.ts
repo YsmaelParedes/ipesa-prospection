@@ -6,22 +6,86 @@ import { CONTACT_COLUMNS, duplicateContactMessage, linkWhatsAppMessages, parseCo
 import { fetchPaged } from '@/lib/paged'
 import { parsePlanLimitError, planLimitMessage, planLimitResponse, remainingSlots } from '@/lib/planLimits'
 import { planOf } from '@/lib/stores'
+import { normalizePhone } from '@/lib/phone'
+import { isPhoneFilter } from '@/lib/lineType'
 
 const MAX_BULK = 500
 
-// GET /api/data/contacts — base de contactos de la tienda (compartida por su equipo), completa
-async function GETImpl() {
+const PAGE = 50
+const MAX_PAGE = 200
+/** Columnas para buscar o elegir un contacto (buscador, recordatorios, campañas, bandeja). */
+const LITE_COLUMNS = 'id, name, phone, email, company, segment, acquisition_channel, zone, wa_opt_out, line_type, commercial_status'
+
+/** "José Pérez" → ['jose', 'perez'] (como contacts.search_text: minúsculas y sin acentos) */
+const searchWords = (q: string) => q.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/[^a-z0-9ñ@. ]+/g, ' ').split(/\s+/).filter(Boolean).slice(0, 6)
+
+/**
+ * GET /api/data/contacts — la base de la tienda, de a poco:
+ *  · Lista (Contactos): ?offset=&limit= (50 por página) con filtros ?q=, ?segment=,
+ *    ?channel=, ?zone=, ?line=whatsapp|fijo|sin_verificar|sin_telefono. Devuelve
+ *    { contacts, total } y, con ?facets=1, los conteos de toda la base para los filtros.
+ *  · Búsqueda rápida: ?q=…&fields=lite&limit=8 (buscador, recordatorios, bandeja).
+ *  · Duplicado: ?phone=2221234567 → el contacto con ese número, si existe.
+ *  · Campañas: ?fields=lite&all=1&line=con_telefono → todos los que tienen teléfono, columnas mínimas.
+ *  · Exportar (administradores): ?all=1 con los mismos filtros → todo, con todas las columnas.
+ */
+async function GETImpl(req: NextRequest) {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
 
+  const sp = req.nextUrl.searchParams
+  const lite = sp.get('fields') === 'lite'
+  const columns = lite ? LITE_COLUMNS : CONTACT_COLUMNS
+  const supabase = getServerSupabase()
+
   try {
-    const contacts = await fetchPaged((from, to) => getServerSupabase()
-      .from('contacts')
-      .select(CONTACT_COLUMNS)
-      .eq('store_id', ctx.storeId)
-      .order('created_at', { ascending: false }).order('id', { ascending: false })
-      .range(from, to), 100000)
-    return NextResponse.json({ contacts })
+    const phone = sp.get('phone')
+    if (phone !== null) {
+      const p = normalizePhone(phone)
+      if (p.length !== 10) return NextResponse.json({ contacts: [], total: 0 })
+      const { data, error } = await supabase.from('contacts').select(columns).eq('store_id', ctx.storeId).eq('phone', p).limit(1)
+      if (error) throw error
+      return NextResponse.json({ contacts: data ?? [], total: data?.length ?? 0 })
+    }
+
+    // Filtros comunes a la lista y a "todos" (el tipo del constructor de consultas se conserva)
+    const filtered = <Q,>(query: Q): Q => {
+      let r = query as any
+      for (const [param, column] of [['segment', 'segment'], ['channel', 'acquisition_channel'], ['zone', 'zone']] as const) {
+        const v = sp.get(param)
+        if (v) r = r.eq(column, v.slice(0, 100))
+      }
+      const line = sp.get('line')
+      if (line === 'sin_telefono') r = r.is('phone', null)
+      else if (line === 'con_telefono') r = r.not('phone', 'is', null)
+      else if (line === 'sin_verificar') r = r.not('phone', 'is', null).is('line_type', null)
+      else if (isPhoneFilter(line)) r = r.not('phone', 'is', null).eq('line_type', line)
+      const raw = (sp.get('q') ?? '').slice(0, 80)
+      const digits = raw.replace(/\D/g, '')
+      if (digits.length >= 3 && !/[a-zA-ZÀ-ſ]/.test(raw)) r = r.ilike('phone', `%${digits}%`)
+      else for (const w of searchWords(raw)) r = r.ilike('search_text', `%${w}%`)
+      return r
+    }
+
+    if (sp.get('all') === '1') {
+      // Completo (todas las columnas) solo para exportar: administradores
+      if (!lite && !ctx.isAdmin) return jsonError('Solo un administrador puede exportar contactos', 403)
+      const contacts = await fetchPaged((from, to) => filtered(supabase.from('contacts').select(columns).eq('store_id', ctx.storeId))
+        .order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to), 100000)
+      return NextResponse.json({ contacts, total: contacts.length })
+    }
+
+    const limit = Math.max(1, Math.min(Number(sp.get('limit')) || PAGE, MAX_PAGE))
+    const offset = Math.max(0, Math.min(Number(sp.get('offset')) || 0, 1_000_000))
+    const [list, facets] = await Promise.all([
+      filtered(supabase.from('contacts').select(columns, { count: 'exact' }).eq('store_id', ctx.storeId))
+        .order('created_at', { ascending: false }).order('id', { ascending: false }).range(offset, offset + limit - 1),
+      sp.get('facets') === '1' ? supabase.rpc('contact_facets', { p_store: ctx.storeId }) : Promise.resolve(null),
+    ])
+    if (list.error) throw list.error
+    if (facets?.error) throw facets.error
+    return NextResponse.json({ contacts: list.data ?? [], total: list.count ?? 0, ...(facets ? { facets: facets.data } : {}) })
   } catch (error) {
     return serverError('GET /api/data/contacts', error, 'Error al obtener contactos')
   }
@@ -31,7 +95,7 @@ async function GETImpl() {
  * POST /api/data/contacts
  *  - Un objeto → crea un contacto.
  *  - { contacts: [...] } → importación masiva (hasta 500 por petición; solo
- *    dueño/administrador). Los teléfonos ya registrados se omiten en vez de
+ *    administrador). Los teléfonos ya registrados se omiten en vez de
  *    fallar todo el lote.
  * En el plan Litro (máximo de contactos) la importación se recorta a los
  * lugares que quedan; la base hace cumplir el límite de todas formas.
@@ -45,8 +109,8 @@ export async function POST(req: NextRequest) {
   const supabase = getServerSupabase()
 
   if (Array.isArray(body.contacts)) {
-    // Importar listas: solo dueño/administrador
-    if (!ctx.isAdmin) return jsonError('Solo el dueño o un administrador puede importar contactos', 403)
+    // Importar listas: solo administrador
+    if (!ctx.isAdmin) return jsonError('Solo un administrador puede importar contactos', 403)
     const list = body.contacts as unknown[]
     if (list.length === 0 || list.length > MAX_BULK) return jsonError(`Se permiten de 1 a ${MAX_BULK} contactos por petición`)
 
@@ -107,7 +171,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.ok) return jsonError(parsed.error)
 
   // Responsable en el sistema comercial: quien lo da de alta (los importados quedan sin asignar).
-  // El dueño/admin puede elegir a otra persona activa del equipo, o dejarlo sin asignar (null).
+  // El administrador puede elegir a otra persona activa del equipo, o dejarlo sin asignar (null).
   let ownerId: string | null = ctx.uid
   if (ctx.isAdmin && 'owner_id' in body && body.owner_id !== ctx.uid) {
     if (body.owner_id === null) ownerId = null
@@ -142,7 +206,7 @@ export async function POST(req: NextRequest) {
 }
 
 // DELETE /api/data/contacts — borrado masivo { ids: string[] }
-// Borrar contactos: solo dueño/administrador (los vendedores no borran la base)
+// Borrar contactos: solo administrador (los vendedores no borran la base)
 export async function DELETE(req: NextRequest) {
   const ctx = await requireStore({ admin: true, write: true })
   if (ctx instanceof Response) return ctx

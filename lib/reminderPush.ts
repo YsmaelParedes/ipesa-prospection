@@ -11,7 +11,7 @@ import { DEFAULT_TZ, naiveIso, zonedIso } from './datetime'
  * reminder_date no lleva zona: es la hora LOCAL de la tienda tal cual se
  * eligió, así que "ahora" se expresa igual (zonedIso) y se compara como texto.
  * Recorren todas las tiendas a propósito: cada recordatorio es personal y solo
- * va a los dispositivos de su dueño.
+ * va a los dispositivos de quien lo creó.
  */
 
 /* ── Quién puede llamar a los crons ─────────────────────────────────────── */

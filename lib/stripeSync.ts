@@ -71,13 +71,13 @@ export async function syncSubscription(subscriptionId: string): Promise<SyncResu
   })
 }
 
-/** Aviso al celular del dueño de la tienda (cobro fallido o que requiere su confirmación). */
-export async function notifyStoreOwner(storeId: string, body: string): Promise<void> {
+/** Aviso al celular de los administradores de la tienda (cobro fallido o que requiere su confirmación). */
+export async function notifyStoreAdmins(storeId: string, body: string): Promise<void> {
   const { configureWebPush, sendPushToSubscriptions } = await import('./push')
   if (!configureWebPush()) return
   const db = getServerSupabase()
-  const { data: owners } = await db.from('store_members').select('user_id').eq('store_id', storeId).eq('role', 'owner').eq('status', 'active')
-  const ids = (owners ?? []).map(o => o.user_id as string)
+  const { data: admins } = await db.from('store_members').select('user_id').eq('store_id', storeId).eq('role', 'admin').eq('status', 'active')
+  const ids = (admins ?? []).map(o => o.user_id as string)
   if (!ids.length) return
   const { data: subs } = await db.from('push_subscriptions').select('endpoint, p256dh, auth').in('user_id', ids)
   if (!subs?.length) return

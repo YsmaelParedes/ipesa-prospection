@@ -19,7 +19,7 @@ type Member = {
 type Invitation = { id: string; email: string; role: 'admin' | 'employee'; expiresAt: string; status: 'valid' | 'expired' | 'used' | 'revoked' }
 type NewLink = { email: string; link: string }
 
-const ROLE_BADGE: Record<StoreRole, string> = { owner: s.bBrand, admin: s.bTrial, employee: s.bMuted }
+const ROLE_BADGE: Record<StoreRole, string> = { admin: s.bTrial, employee: s.bMuted }
 
 function lastSeen(iso: string | null) {
   if (!iso) return 'Aún no entra'
@@ -30,7 +30,7 @@ function lastSeen(iso: string | null) {
   return `Último acceso: ${fmtDate(iso, { day: 'numeric', month: 'short', year: 'numeric' })}`
 }
 
-export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boolean }) {
+export function TeamTab({ store }: { store: ClientStore }) {
   const [toast, showToast] = useToast()
   const [members, setMembers]   = useState<Member[] | null>(null)
   const [invites, setInvites]   = useState<Invitation[]>([])
@@ -115,7 +115,7 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
   return (
     <>
       {store.maxUsers <= 1 ? (
-      <Panel icon={Ico.userPlus} title="Invitar a alguien" subtitle={`El plan ${store.planLabel} incluye solo al dueño.`}>
+      <Panel icon={Ico.userPlus} title="Invitar a alguien" subtitle={`El plan ${store.planLabel} incluye solo al administrador.`}>
         <Note kind="info">
           Para sumar a tu equipo cambia a Galón (hasta 3 usuarios) o Cubeta (hasta 5, con administradores).{' '}
           <Link href="/configuracion?tab=plan" className="auth-link strong">Ver planes</Link>
@@ -128,7 +128,7 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
             placeholder="correo@ejemplo.com" aria-label="Correo de la persona" autoComplete="off" />
           <div className={s.seg} role="radiogroup" aria-label="Rol">
             <button type="button" role="radio" aria-checked={role === 'employee'} className={cx(role === 'employee' && s.segOn)} onClick={() => setRole('employee')}>Vendedor</button>
-            {isOwner && store.allowAdmins && <button type="button" role="radio" aria-checked={role === 'admin'} className={cx(role === 'admin' && s.segOn)} onClick={() => setRole('admin')}>Administrador</button>}
+            {store.allowAdmins && <button type="button" role="radio" aria-checked={role === 'admin'} className={cx(role === 'admin' && s.segOn)} onClick={() => setRole('admin')}>Administrador</button>}
           </div>
           <button type="submit" className="btn btn-primary" disabled={inviting || !email.trim()}>
             <Ico.link style={{ width: 14, height: 14 }} />{inviting ? 'Creando…' : 'Crear invitación'}
@@ -174,14 +174,14 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
                     <small>{m.email} · {off ? 'Acceso desactivado' : lastSeen(m.last_sign_in_at)}</small>
                   </div>
                   <div className={s.memberActions}>
-                    {m.canManage && m.role !== 'owner' ? (
+                    {m.canManage ? (
                       <Select
                         className={s.select} value={m.role} disabled={busyId === m.user_id} aria-label={`Rol de ${name}`}
                         onChange={role => act(m.user_id, () => api('/api/store/members', send('PATCH', { userId: m.user_id, role })), 'Rol actualizado')}
                         options={[
                           { value: 'employee', label: 'Vendedor', hint: 'Trabaja los contactos que le asignes' },
-                          ...(((isOwner && store.allowAdmins) || m.role === 'admin')
-                            ? [{ value: 'admin', label: 'Administrador', hint: 'Configura la tienda y ve todo', disabled: !isOwner || !store.allowAdmins }]
+                          ...((store.allowAdmins || m.role === 'admin')
+                            ? [{ value: 'admin', label: 'Administrador', hint: 'Configura la tienda y ve todo', disabled: !store.allowAdmins }]
                             : []),
                         ]}
                       />
@@ -218,7 +218,6 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
             {pending.map(inv => {
               const tone = avatarTone(inv.email)
               const expired = inv.status === 'expired'
-              const canTouch = isOwner || inv.role === 'employee'
               return (
                 <div key={inv.id} className={s.member}>
                   <span className={s.avatar} style={{ background: tone.bg, color: tone.fg }}>{initialsOf(inv.email)}</span>
@@ -228,20 +227,14 @@ export function TeamTab({ store, isOwner }: { store: ClientStore; isOwner: boole
                   </div>
                   <div className={s.memberActions}>
                     {expired && <span className={cx(s.badge, s.bWarn)}>Vencida</span>}
-                    {canTouch ? (
-                      <>
-                        <button className="btn btn-ghost" style={{ padding: '6px 11px', fontSize: 12.5 }} disabled={busyId === inv.id}
-                          onClick={() => act(inv.id, () => createInvite(inv.email, inv.role), 'Enlace nuevo generado')}>
-                          Nuevo enlace
-                        </button>
-                        <button className="icon-btn icon-btn-delete" title="Cancelar invitación" aria-label={`Cancelar invitación de ${inv.email}`} disabled={busyId === inv.id}
-                          onClick={() => act(inv.id, () => api(`/api/store/invitations/${inv.id}`, { method: 'DELETE' }), 'Invitación cancelada')}>
-                          <Ico.trash />
-                        </button>
-                      </>
-                    ) : (
-                      <span className={cx(s.badge, s.bMuted)}>La gestiona el dueño</span>
-                    )}
+                    <button className="btn btn-ghost" style={{ padding: '6px 11px', fontSize: 12.5 }} disabled={busyId === inv.id}
+                      onClick={() => act(inv.id, () => createInvite(inv.email, inv.role), 'Enlace nuevo generado')}>
+                      Nuevo enlace
+                    </button>
+                    <button className="icon-btn icon-btn-delete" title="Cancelar invitación" aria-label={`Cancelar invitación de ${inv.email}`} disabled={busyId === inv.id}
+                      onClick={() => act(inv.id, () => api(`/api/store/invitations/${inv.id}`, { method: 'DELETE' }), 'Invitación cancelada')}>
+                      <Ico.trash />
+                    </button>
                   </div>
                 </div>
               )

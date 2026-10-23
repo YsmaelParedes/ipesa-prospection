@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { isPlatformAdmin } from '@/lib/supabase-server'
 import { readJson } from '@/lib/validation'
 import { TURNSTILE_ERROR, verifyTurnstile } from '@/lib/turnstile'
 
@@ -106,9 +105,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // Pantalla de inicio: el dueño de la plataforma entra a su panel; los demás, a su tienda
-  const home = data.user && await isPlatformAdmin(data.user.id).catch(() => false) ? '/admin' : '/'
-  const res = NextResponse.json({ ok: true, home })
+  const res = NextResponse.json({ ok: true, home: '/' })
   sessionCookies.forEach(({ name, value, options }) => res.cookies.set(name, value, options))
   return res
 }

@@ -49,16 +49,16 @@ beforeEach(async () => {
       ('${OWNER}', 'dueno@x.mx', now() - interval '1 year'), ('${SHARED}', 'socio@x.mx', null), ('${ADMIN}', 'yo@x.mx', null);
     insert into public.platform_admins values ('${ADMIN}');
     insert into public.store_members values
-      ('${STORE}', '${OWNER}', 'owner', 'active'), ('${STORE}', '${SHARED}', 'employee', 'active'),
-      ('${OTHER}', '${SHARED}', 'owner', 'active'), ('${STORE}', '${ADMIN}', 'admin', 'active');
+      ('${STORE}', '${OWNER}', 'admin', 'active'), ('${STORE}', '${SHARED}', 'employee', 'active'),
+      ('${OTHER}', '${SHARED}', 'admin', 'active'), ('${STORE}', '${ADMIN}', 'employee', 'active');
     set role service_role;`)
 })
 
-test('a free store unused for six months is a candidate and lists its owner', async () => {
+test('a free store unused for six months is a candidate and lists its admins', async () => {
   const s = await status(STORE)
   assert.equal(s.idle, true)
   assert.equal(s.protected, false)
-  assert.deepEqual(s.owner_emails, ['dueno@x.mx'])
+  assert.deepEqual(s.admin_emails, ['dueno@x.mx'])
 })
 
 test('any recent use keeps it: sign-in, contact, activity, WhatsApp or opening the CRM', async () => {

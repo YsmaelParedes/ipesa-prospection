@@ -4,28 +4,21 @@ import {
   getServerSupabase, getStoreMembers, invalidateStoreMembers, requireStore, type StoreContext,
 } from '@/lib/supabase-server'
 import { PLANS, planOf, type StoreRole } from '@/lib/stores'
-import { rpcUserError } from '@/lib/platformEvents'
-import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
+import { isUUID, jsonError, readJson, rpcUserError, serverError } from '@/lib/validation'
 
 /**
  * Equipo de la tienda.
- *  · El dueño administra a todos (menos a sí mismo).
- *  · Un administrador solo administra vendedores.
+ *  · Un administrador administra a todos menos a sí mismo.
+ *  · Los vendedores no administran a nadie.
  */
-function canManage(ctx: StoreContext, targetRole: StoreRole) {
-  if (targetRole === 'owner') return false
-  if (ctx.isOwner) return true
-  return ctx.isAdmin && targetRole === 'employee'
-}
-
-// GET /api/store/members — dueño/admin
+// GET /api/store/members — administradores
 async function GETImpl() {
   const ctx = await requireStore({ admin: true })
   if (ctx instanceof Response) return ctx
   try {
     const members = await getStoreMembers(ctx.storeId)
     return NextResponse.json({
-      members: members.map(m => ({ ...m, isMe: m.user_id === ctx.uid, canManage: m.user_id !== ctx.uid && canManage(ctx, m.role) })),
+      members: members.map(m => ({ ...m, isMe: m.user_id === ctx.uid, canManage: m.user_id !== ctx.uid })),
     }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     return serverError('GET /api/store/members', error, 'No se pudo cargar el equipo')
@@ -49,15 +42,13 @@ export async function PATCH(req: NextRequest) {
   const target = await targetMember(ctx, body.userId)
   if (!target) return jsonError('Usuario no encontrado', 404)
   if (target.user_id === ctx.uid) return jsonError('No puedes cambiar tu propio acceso')
-  if (!canManage(ctx, target.role)) return jsonError('No tienes permiso para cambiar a este usuario', 403)
 
   const updates: Record<string, unknown> = {}
   if (body.role !== undefined) {
     if (body.role !== 'admin' && body.role !== 'employee') return jsonError('Rol inválido')
     if (body.role === 'admin' && !planOf(ctx.plan).allowAdmins) {
-      return jsonError('Tu plan incluye un solo administrador: el dueño.', 403)
+      return jsonError('Tu plan incluye un solo administrador.', 403)
     }
-    if (body.role === 'admin' && !ctx.isOwner) return jsonError('Solo el dueño puede nombrar administradores', 403)
     updates.role = body.role
   }
   if (body.status !== undefined) {
@@ -89,7 +80,6 @@ export async function DELETE(req: NextRequest) {
   const target = await targetMember(ctx, body?.userId)
   if (!target) return jsonError('Usuario no encontrado', 404)
   if (target.user_id === ctx.uid) return jsonError('No puedes quitarte a ti mismo')
-  if (!canManage(ctx, target.role)) return jsonError('No tienes permiso para quitar a este usuario', 403)
 
   const { error } = await getServerSupabase().rpc('manage_store_member', {
     p_store: ctx.storeId, p_actor: ctx.uid, p_target: target.user_id,

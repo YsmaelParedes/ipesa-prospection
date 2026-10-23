@@ -228,7 +228,7 @@ export default function AgendaPage() {
   const pending = reminders.filter(r => !r.completado).sort((a, b) => a.fecha_recordatorio.localeCompare(b.fecha_recordatorio))
   const done    = reminders.filter(r =>  r.completado).sort((a, b) => String(b.completado_at || b.created_at).localeCompare(String(a.completado_at || a.created_at)))
   const applyTypeFilter = (list: Reminder[]) => typeFilter === 'all' ? list : list.filter(r => (r.type || 'task') === typeFilter)
-  // Seguimientos del sistema comercial con fecha de hoy o vencida (los míos y los sin dueño con fecha)
+  // Seguimientos del sistema comercial con fecha de hoy o vencida (los míos y los sin asignar con fecha)
   const followUps = useMemo(() => {
     if (!commercial?.due) return []
     return [...commercial.due].sort((a, b) => String(a.next_action_at).localeCompare(String(b.next_action_at)))

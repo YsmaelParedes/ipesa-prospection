@@ -25,9 +25,9 @@ const fmtCount = (n: number) => n.toLocaleString('es-MX')
 /**
  * Configuración → Plan: plan actual con su uso, los tres planes y el cobro
  * con Stripe (Checkout para suscribirse, portal para cambiar, cancelar,
- * tarjeta y facturas). Solo el dueño paga o cambia de plan.
+ * tarjeta y facturas). Los administradores pagan o cambian de plan.
  */
-export function PlanTab({ store, isOwner }: { store: ClientStore; isOwner: boolean }) {
+export function PlanTab({ store }: { store: ClientStore }) {
   const params = useSearchParams()
   const justPaid = params.get('pago') === 'ok'
   const { data: usage } = useCachedQuery<Usage>('/api/billing/usage')
@@ -150,7 +150,7 @@ export function PlanTab({ store, isOwner }: { store: ClientStore; isOwner: boole
         </Panel>
       ) : (
         <Panel icon={Ico.card} title="Planes"
-          subtitle={!isOwner ? 'Solo el dueño de la tienda puede cambiar el plan.' : 'Pago mensual con tarjeta a través de Stripe. Cambia o cancela cuando quieras.'}>
+          subtitle="Pago mensual con tarjeta a través de Stripe. Cambia o cancela cuando quieras.">
           <div className={s.plans}>
             {PUBLIC_PLANS.map(id => {
               const copy = PLAN_COPY[id]
@@ -158,7 +158,7 @@ export function PlanTab({ store, isOwner }: { store: ClientStore; isOwner: boole
               const price = id === 'litro' ? null : prices[id]
               let action: React.ReactNode
               if (current) action = <button className="btn btn-ghost" disabled>Tu plan actual</button>
-              else if (!isOwner || readonly) action = null
+              else if (readonly) action = null
               else if (id === 'litro') action = paying ? <button className="btn btn-ghost" disabled={!!busy} onClick={portal}>{busy === 'portal' ? 'Abriendo…' : 'Cancelar suscripción'}</button> : null
               else if (paying) action = <button className="btn btn-dark" disabled={!!busy} onClick={portal}>{busy === 'portal' ? 'Abriendo…' : `Cambiar a ${PLANS[id].label}`}</button>
               else if (store.plan === 'interno') action = null
@@ -187,7 +187,7 @@ export function PlanTab({ store, isOwner }: { store: ClientStore; isOwner: boole
               )
             })}
           </div>
-          {isOwner && store.billingPortal && (
+          {store.billingPortal && (
             <div className={s.billingRow}>
               <span>Facturas, tarjeta y cancelación</span>
               <button className="btn btn-ghost" disabled={!!busy} onClick={portal}>

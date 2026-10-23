@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
-import { isUUID, jsonError, parseFields, readJson, serverError, type Schema } from '@/lib/validation'
+import { isUUID, jsonError, parseFields, readJson, rpcUserError, serverError, type Schema } from '@/lib/validation'
 import { ACTIVITY_COLUMNS, COMMERCIAL_COLUMNS, getVisibleContact, zonedDayStart } from '@/lib/commercialServer'
 import { ACTIVITY_KINDS, COMMERCIAL_STATUSES, RESULTS, addDays, todayISO } from '@/lib/commercial'
-import { rpcUserError } from '@/lib/platformEvents'
 
 const LOG_LIMIT = 500
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -12,7 +11,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
  * GET /api/data/commercial/activities?contact_id=uuid — historial del contacto.
  * GET /api/data/commercial/activities?from=AAAA-MM-DD&to=AAAA-MM-DD[&user=&kind=&result=]
  *   — bitácora de actividades (hasta 500, las más recientes). Vendedor: solo
- *   las suyas. Dueño/administrador: el equipo o una persona.
+ *   las suyas. administrador: el equipo o una persona.
  */
 export async function GET(req: NextRequest) {
   const ctx = await requireStore()

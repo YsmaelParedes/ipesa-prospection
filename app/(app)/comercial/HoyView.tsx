@@ -19,7 +19,7 @@ function whenOf(c: ListContact, today: string): { label: string; cls: string } {
 }
 
 /**
- * "Hoy": lo vencido, lo de hoy y prospectos nuevos (sin dueño) para completar
+ * "Hoy": lo vencido, lo de hoy y prospectos nuevos (sin asignar) para completar
  * la meta de llamadas. En computadora la ficha queda a la derecha con el
  * registro siempre visible; en celular se abre al picar Llamar o WhatsApp.
  */
@@ -95,7 +95,7 @@ export function HoyView({ data, wide, zone, query, readonly, waModule, loadingMo
 
   const empty = !all.length && (
     <div className={s.emptyList}>
-      {query || zone ? 'Nada coincide con el filtro.' : 'No tienes pendientes para hoy y ya no quedan prospectos sin dueño. ¡Buen trabajo!'}
+      {query || zone ? 'Nada coincide con el filtro.' : 'No tienes pendientes para hoy y ya no quedan prospectos sin asignar. ¡Buen trabajo!'}
     </div>
   )
 
@@ -103,7 +103,7 @@ export function HoyView({ data, wide, zone, query, readonly, waModule, loadingMo
     <span className={s.tags}>
       <StatusChip value={c.commercial_status} />
       {c.quote_amount ? <span className={s.tag}>{money(c.quote_amount)}</span> : null}
-      {!c.owner_id && <span className={s.tag}>Sin dueño</span>}
+      {!c.owner_id && <span className={s.tag}>Sin asignar</span>}
       {c.no_answer_streak >= NO_ANSWER_LIMIT && <span className={`${s.tag} ${s.tagWarn}`}>No contesta · {c.no_answer_streak}</span>}
     </span>
   )
@@ -140,7 +140,7 @@ export function HoyView({ data, wide, zone, query, readonly, waModule, loadingMo
                       <span className={s.quick}>
                         {phone && <a href={`tel:${phone}`} className={`${s.qbtn} ${s.qCall} ${s.press}`} aria-label={`Llamar a ${bizName(c)}`}
                           onClick={e => { e.stopPropagation(); onOpen({ id: c.id, kind: 'llamada' }) }}><Ico.phone /></a>}
-                        {waModule && phone.length === 10 && (
+                        {waModule && phone.length === 10 && c.line_type !== 'fijo' && (
                           <button className={`${s.qbtn} ${s.qWa} ${s.press}`} aria-label={`WhatsApp a ${bizName(c)}`}
                             onClick={e => { e.stopPropagation(); onOpen({ id: c.id, kind: 'whatsapp' }) }}><Ico.chat /></button>
                         )}
@@ -203,7 +203,7 @@ export function HoyView({ data, wide, zone, query, readonly, waModule, loadingMo
                     {!readonly && (
                       <div className={s.actions}>
                         {phone && <a href={`tel:${phone}`} className={`${s.act} ${s.actCall} ${s.press}`} onClick={() => onOpen({ id: c.id, kind: 'llamada' })}><Ico.phone /> Llamar</a>}
-                        {waModule && phone.length === 10 && (
+                        {waModule && phone.length === 10 && c.line_type !== 'fijo' && (
                           <button className={`${s.act} ${s.actWa} ${s.press}`} onClick={() => onOpen({ id: c.id, kind: 'whatsapp' })}><Ico.chat /> WhatsApp</button>
                         )}
                         <button className={`${s.act} ${s.actMore} ${s.press}`} aria-label={`Registrar visita a ${bizName(c)}`} onClick={() => onOpen({ id: c.id, kind: 'visita' })}><Ico.pin /></button>

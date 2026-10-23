@@ -17,7 +17,7 @@ async function GETImpl() {
   return NextResponse.json({ items: data ?? [] })
 }
 
-// POST /api/whatsapp/quick-replies — { title, body } (dueño/admin)
+// POST /api/whatsapp/quick-replies — { title, body } (administrador)
 export async function POST(req: NextRequest) {
   const ctx = await requireStore({ admin: true, write: true, module: 'whatsapp' })
   if (ctx instanceof Response) return ctx

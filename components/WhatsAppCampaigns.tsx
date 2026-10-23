@@ -19,7 +19,7 @@ import { fmtPhone, normalizePhone } from '@/lib/phone'
 import { MARKETING_RETRY_HOURS, tierLabel } from '@/lib/whatsappSafety'
 import { PERSON_STATES, PERSON_STATE_ORDER, type PersonState } from '@/lib/campaignKinds'
 
-type Contact = { id: string; name: string; phone: string; segment?: string | null; wa_opt_out?: boolean }
+type Contact = { id: string; name: string; phone: string; segment?: string | null; wa_opt_out?: boolean; line_type?: string | null }
 
 /** Reintento desde Resultados: plantilla y contactos que se preseleccionan (el envío se confirma como siempre). */
 export type CampaignPreset = { template: string; contactIds: string[]; label: string }
@@ -109,7 +109,7 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
   const { phase, total, done, sent, failed, skipped, outcomes, stopReason, askConfirm, backToForm, run, cancel, reset } = useCampaignSend()
 
   useQueryEffect(() => {
-    apiFetch('/api/data/contacts')
+    apiFetch('/api/data/contacts?fields=lite&all=1&line=con_telefono')
       .then(r => r.json())
       .then(d => setContacts((d.contacts || []).filter((c: Contact) => normalizePhone(c.phone).length === 10)))
       .catch(() => {})
@@ -140,7 +140,7 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
     c.wa_opt_out ? 'opt_out' : stats?.states?.[normalizePhone(c.phone)] ?? 'never'
   const blockedReason = (c: Contact): string | null => {
     if (c.wa_opt_out) return 'Dado de baja'
-    if (historyOf(c) === 'no_whatsapp') return 'Sin WhatsApp'
+    if (historyOf(c) === 'no_whatsapp' || c.line_type === 'fijo') return 'Sin WhatsApp'
     if (holdPhones.has(normalizePhone(c.phone))) return `Meta pidió esperar ${MARKETING_RETRY_HOURS} h`
     return null
   }

@@ -58,7 +58,6 @@ const Icon = {
   flask:     stroke(<><path d="M9 2v6.3a2 2 0 0 1-.3 1L3.5 18a2 2 0 0 0 1.7 3h13.6a2 2 0 0 0 1.7-3l-5.2-8.7a2 2 0 0 1-.3-1V2" /><path d="M7 2h10M6 14h12" /></>),
   store:     stroke(<><path d="M3 9 4.5 4h15L21 9" /><path d="M3 9h18v1a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9Z" /><path d="M5 13v7h14v-7" /><path d="M10 20v-4h4v4" /></>),
   chevrons:  stroke(<path d="m7 15 5 5 5-5M7 9l5-5 5 5" />),
-  shield:    stroke(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />),
   lock:      stroke(<><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></>),
   bellOff:   stroke(<><path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0M2 2l20 20" /></>),
   whatsapp:  (p: IconProps) => <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...p}><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.8.9-1 1.1c-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.4-.9-.8-1.5-1.8-1.7-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.3-.7.3-1.2.2-1.4 0-.1-.3-.2-.6-.4Zm-5.5 7.5c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.5 4.4-9.9 9.9-9.9s9.9 4.4 9.9 9.9-4.5 9.9-10 9.9Zm8.4-18.3C18.2 1.5 15.2.3 12 .3 5.4.3.1 5.6.1 12.2c0 2.1.6 4.2 1.6 6L0 24l5.9-1.5c1.7 1 3.7 1.5 5.7 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4Z" /></svg>,
@@ -165,9 +164,9 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  /* Sin tienda todavía, o el dueño no terminó de configurarla → asistente de alta */
+  /* Sin tienda todavía, o un administrador no terminó de configurarla → asistente de alta */
   useEffect(() => {
-    if (session && (!session.store || (session.isOwner && !session.store.onboardingCompleted))) router.replace('/bienvenida')
+    if (session && (!session.store || (session.isAdmin && !session.store.onboardingCompleted))) router.replace('/bienvenida')
   }, [session, router])
 
   /* Cambiar de tienda (solo si pertenece a varias) */
@@ -317,17 +316,16 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const isActive     = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   const fill         = FILL_ROUTES.some(r => pathname.startsWith(r))
   // Menú según los módulos activos de la tienda (mientras carga, todo visible).
-  // WhatsApp apagado se le muestra al dueño/admin como "Por activar" para ofrecerlo.
+  // WhatsApp apagado se le muestra al administrador como "Por activar" para ofrecerlo.
   const waOff        = !!store && !store.modules.whatsapp
   const withModule   = (it: NavItem) => !it.module || !store || store.modules[it.module] || (it.id === 'whatsapp' && !!session?.isAdmin)
   const navItems     = NAV_ITEMS.filter(withModule)
   const toolItems    = TOOL_ITEMS.filter(withModule)
   const readonly     = store?.access === 'readonly'
   // Una sola tienda por cuenta: el menú aparece si hay a dónde cambiar (alguien en varias tiendas)
-  // o para que el dueño de la plataforma vuelva a su panel (/admin).
-  const hasStoreMenu = !!session && (session.stores.length > 1 || session.platformAdmin)
-  // Stripe no pudo cobrar: el dueño ve el aviso para actualizar su tarjeta
-  const paymentIssue = !!session?.isOwner && !!store?.subscription && (store.subscription.status === 'past_due' || store.subscription.status === 'unpaid')
+  const hasStoreMenu = !!session && session.stores.length > 1
+  // Stripe no pudo cobrar: los administradores ven el aviso para actualizar la tarjeta
+  const paymentIssue = !!session?.isAdmin && !!store?.subscription && (store.subscription.status === 'past_due' || store.subscription.status === 'unpaid')
   const showFab      = !readonly && pathname in FAB_ROUTES
   const helpMailto   = `mailto:${EMAILS.soporte}?subject=${encodeURIComponent(`Ayuda · ${store?.name ?? APP_NAME}`)}&body=${encodeURIComponent(
     `Hola, necesito ayuda con:
@@ -389,11 +387,6 @@ Pantalla: ${pathname}`,
               </button>
               {storeMenuOpen && session && (
                 <div className="store-menu" role="menu">
-                  {session.platformAdmin && (
-                    <Link href="/admin" role="menuitem" className="store-menu-item store-menu-admin" onClick={() => setStoreMenuOpen(false)}>
-                      <span><Icon.shield />Panel del dueño</span>
-                    </Link>
-                  )}
                   {session.stores.map(s => (
                     <button key={s.id} role="menuitem" className={`store-menu-item ${s.id === store.id ? 'current' : ''}`} onClick={() => switchStore(s.id)}>
                       <span>{s.name}</span>
@@ -579,7 +572,7 @@ Pantalla: ${pathname}`,
           </div>
         )}
 
-        <div className="content"><QueryBoundary>{session?.ownerOnlyBlocked && store ? <OwnerOnlyNotice storeName={store.name} /> : children}</QueryBoundary></div>
+        <div className="content"><QueryBoundary>{session?.litroBlocked && store ? <LitroNotice storeName={store.name} /> : children}</QueryBoundary></div>
       </main>
 
       {/* ── Bottom nav (celular) ── */}
@@ -602,7 +595,7 @@ Pantalla: ${pathname}`,
       {showFab && <QuickCreateFab kind={FAB_ROUTES[pathname]} />}
       <QuickCreateHost />
 
-      {/* Vendedores: sin seleccionar/copiar/imprimir y con marca de agua (dueño y administradores, sin restricción) */}
+      {/* Vendedores: sin seleccionar/copiar/imprimir y con marca de agua (administradores, sin restricción) */}
       <CopyGuard
         active={!!store && !!session && !session.isAdmin}
         label={[displayName || session?.user.email, store?.name].filter(Boolean).join(' · ')}
@@ -657,14 +650,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return <SessionScope><AppShellContent>{children}</AppShellContent></SessionScope>
 }
 
-/** Plan Litro: solo entra el dueño. El resto del equipo ve esto en lugar de la app. */
-function OwnerOnlyNotice({ storeName }: { storeName: string }) {
+/** Plan Litro: solo entra el administrador. Los vendedores ven esto en lugar de la app. */
+function LitroNotice({ storeName }: { storeName: string }) {
   return (
     <div className="plan-locked" role="status">
       <h2>Tu tienda está en el plan Litro</h2>
       <p>
-        El plan Litro de {storeName} incluye solo al dueño. Tu información sigue guardada: en cuanto el dueño cambie a
-        Galón o Cubeta podrás volver a entrar.
+        El plan Litro de {storeName} incluye solo al administrador. Tu información sigue guardada: en cuanto el administrador
+        cambie a Galón o Cubeta podrás volver a entrar.
       </p>
       <button className="btn btn-ghost" onClick={() => { invalidateSession(); window.location.reload() }}>Volver a revisar</button>
     </div>

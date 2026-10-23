@@ -2,9 +2,10 @@ import { getServerSupabase } from './supabase-server'
 import { parseFields, type ParseResult, type Schema } from './validation'
 import { normalizePhone } from './phone'
 import { PRIORITIES } from './commercial'
+import { LINE_TYPES } from './lineType'
 
 /** Columnas que se devuelven al cliente (sin columnas heredadas sin uso). */
-export const CONTACT_COLUMNS = 'id, name, phone, email, company, address, postal_code, colonia, zone, segment, acquisition_channel, wa_opt_out, owner_id, commercial_status, next_action, next_action_at, last_note, priority, potential_monthly, origin, created_at, updated_at'
+export const CONTACT_COLUMNS = 'id, name, phone, email, company, address, postal_code, colonia, zone, segment, acquisition_channel, wa_opt_out, line_type, owner_id, commercial_status, next_action, next_action_at, last_note, priority, potential_monthly, origin, created_at, updated_at'
 
 /** Columnas editables de `contacts` (lista blanca + validación). */
 export const CONTACT_SCHEMA: Schema = {
@@ -17,6 +18,8 @@ export const CONTACT_SCHEMA: Schema = {
   postal_code:         { type: 'text', max: 10,  nullable: true, label: 'C.P.' },
   colonia:             { type: 'text', max: 120, nullable: true, label: 'Colonia' },
   zone:                { type: 'text', max: 60,  nullable: true, label: 'Zona' },
+  // null = sin verificar; WhatsApp lo marca solo al escribir o recibir mensajes
+  line_type:           { type: 'enum', values: LINE_TYPES, nullable: true, label: 'Tipo de línea' },
   priority:            { type: 'enum', values: PRIORITIES, label: 'Prioridad' },
   potential_monthly:   { type: 'number', min: 0, max: 1_000_000_000, nullable: true, label: 'Potencial mensual' },
   origin:              { type: 'text', max: 60, nullable: true, label: 'Origen' },

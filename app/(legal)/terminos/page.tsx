@@ -44,7 +44,7 @@ const sections: LegalSection[] = [
       <ul>
         <li>Debes proporcionar información verdadera y mantenerla actualizada.</li>
         <li>Cada persona usa su propio usuario; no compartas tu contraseña. Eres responsable de lo que se haga con tu cuenta.</li>
-        <li>El dueño de la tienda decide quién forma parte del equipo y con qué rol, y puede desactivar accesos en cualquier momento.</li>
+        <li>Los administradores de la tienda deciden quién forma parte del equipo y con qué rol, y puede desactivar accesos en cualquier momento.</li>
         <li>Avísanos de inmediato si sospechas de un uso no autorizado de tu cuenta.</li>
       </ul>
     ),
@@ -57,7 +57,7 @@ const sections: LegalSection[] = [
         <p>
           Cualquier tienda puede crear su cuenta. Toda tienda empieza en el plan <strong>Litro</strong>, gratuito, con
           límites de uso ({PLANS.litro.maxContacts} contactos y solo el usuario
-          del dueño). Los planes <strong>Galón</strong> y <strong>Cubeta</strong> son de
+          del administrador). Los planes <strong>Galón</strong> y <strong>Cubeta</strong> son de
           paga y su precio vigente se muestra en el sitio y antes de pagar.
         </p>
         <p>
@@ -69,7 +69,7 @@ const sections: LegalSection[] = [
         <p>
           Al bajar de plan no se borra información: lo que pase de los límites del nuevo plan se conserva y se puede
           consultar, pero no se pueden registrar más contactos o cotizaciones hasta quedar dentro del límite o subir de
-          plan. Si el nuevo plan incluye menos usuarios, los accesos más recientes se desactivan y el dueño puede elegir
+          plan. Si el nuevo plan incluye menos usuarios, los accesos más recientes se desactivan y un administrador puede elegir
           a quién reactivar. La bandeja de WhatsApp solo está disponible en el plan Cubeta.
         </p>
         <p>
@@ -168,12 +168,12 @@ const sections: LegalSection[] = [
         Puedes cancelar tu suscripción en cualquier momento desde Configuración → Plan («Administrar suscripción»).
         Conservas el plan pagado hasta el final del periodo ya cobrado y después tu tienda pasa al plan Litro; no
         hacemos reembolsos de periodos parciales salvo que la ley lo exija. Tu información se conserva: puedes
-        descargarla completa en Excel desde Configuración → Tienda, o pedirnos una copia a <ContactEmail kind="soporte" />. La eliminamos cuando su dueño nos lo pide por escrito. También podemos terminar el servicio
+        descargarla completa en Excel desde Configuración → Tienda, o pedirnos una copia a <ContactEmail kind="soporte" />. La eliminamos cuando uno de sus administradores nos lo pide por escrito. También podemos terminar el servicio
         si se incumplen estos términos, avisándote previamente cuando sea posible.
       </p>
       <p>
         <strong>Tiendas sin uso.</strong> Si una tienda del plan Litro, sin suscripción ni cortesía, pasa {RETENTION_IDLE_MONTHS} meses
-        sin que nadie de su equipo la use, avisamos a su dueño por correo {RETENTION_NOTICE_DAYS} y {RETENTION_LAST_NOTICE_DAYS} días antes de eliminarla.
+        sin que nadie de su equipo la use, avisamos a sus administradores por correo {RETENTION_NOTICE_DAYS} y {RETENTION_LAST_NOTICE_DAYS} días antes de eliminarla.
         Para conservarla basta con entrar antes de la fecha del aviso. Si nadie entra, la eliminamos con toda su
         información y las cuentas de su equipo que no pertenezcan a otra tienda; no se puede recuperar. Las tiendas con
         un plan de paga no se eliminan por falta de uso.

@@ -10,7 +10,7 @@ type Row = Record<string, unknown> & { id: string; owner_id: string | null; last
 /**
  * GET /api/data/commercial/opportunities[?scope=team] — cotizaciones abiertas,
  * la más vieja primero, con el monto y la fecha de la última cotización.
- * Vendedor: las suyas. Dueño/administrador: las suyas o, con scope=team, las
+ * Vendedor: las suyas. administrador: las suyas o, con scope=team, las
  * de todo el equipo.
  */
 export async function GET(req: NextRequest) {

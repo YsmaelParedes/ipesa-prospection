@@ -14,8 +14,8 @@ const searchTerm = (q: string | null) => (q ?? '').replace(/[^\p{L}\p{N} ]+/gu, 
 
 /**
  * GET /api/data/commercial[?zone=&q=&offset=] — la lista de "Hoy":
- *  · due: mis seguimientos con fecha de hoy o vencida (y los sin dueño con fecha)
- *  · fresh: prospectos con teléfono que nadie ha trabajado (sin dueño), de a 30, por zona o búsqueda
+ *  · due: mis seguimientos con fecha de hoy o vencida (y los sin asignar con fecha)
+ *  · fresh: prospectos con teléfono que nadie ha trabajado (sin asignar), de a 30, por zona o búsqueda
  *  · visit: los que no tienen teléfono ("Para visita"), primeros 20 y el total
  *  · counts/goals: lo que llevo hoy contra mi meta
  * Quien registra la primera actividad de un prospecto se queda con él.

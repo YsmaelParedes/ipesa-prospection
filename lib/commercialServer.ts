@@ -2,7 +2,7 @@ import { getServerSupabase, type StoreContext } from './supabase-server'
 import { planOf } from './stores'
 
 export const COMMERCIAL_COLUMNS =
-  'id, name, phone, email, company, address, postal_code, colonia, zone, segment, acquisition_channel, owner_id, commercial_status, ' +
+  'id, name, phone, email, company, address, postal_code, colonia, zone, segment, acquisition_channel, line_type, owner_id, commercial_status, ' +
   'next_action, next_action_at, last_activity_at, last_result, last_note, no_answer_streak, priority, potential_monthly, origin, created_at'
 
 export const ACTIVITY_COLUMNS =
@@ -19,8 +19,8 @@ export function salesTeamRequired(): Response {
 }
 
 /**
- * ¿Puede ver este contacto en el sistema comercial? Dueño/administrador: todos
- * los de la tienda. Vendedor: los suyos y los que aún no tienen dueño (el
+ * ¿Puede ver este contacto en el sistema comercial? administrador: todos
+ * los de la tienda. Vendedor: los suyos y los que aún no tienen responsable (el
  * primero que registra una actividad se queda con él). Devuelve el contacto o null.
  */
 export async function getVisibleContact(ctx: StoreContext, contactId: string) {

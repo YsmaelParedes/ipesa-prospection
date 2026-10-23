@@ -103,7 +103,7 @@ export function AccountTab({ session }: { session: Session }) {
             <div key={st.id} className={s.storeRow}>
               <img src={st.logoUrl || BRAND_MARK} alt="" />
               <strong>{st.name}</strong>
-              <span className={cx(s.badge, st.role === 'owner' ? s.bBrand : st.role === 'admin' ? s.bTrial : s.bMuted)}>{ROLE_LABELS[st.role]}</span>
+              <span className={cx(s.badge, st.role === 'admin' ? s.bTrial : s.bMuted)}>{ROLE_LABELS[st.role]}</span>
               {st.id === session.store?.id && <span className={cx(s.badge, s.bActive)}>Activa</span>}
             </div>
           ))}

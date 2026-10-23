@@ -17,7 +17,7 @@ import s from './bienvenida.module.css'
 /**
  * Asistente de alta de una tienda: datos de la sucursal → logo → equipo →
  * listo (las herramientas no se eligen: cada tienda tiene las básicas). La
- * tienda ya existe (la da de alta el panel del dueño; una sola por cuenta).
+ * tienda ya existe (una sola por cuenta).
  * Cada paso guarda en la API, que valida permisos.
  */
 
@@ -134,8 +134,6 @@ function Wizard() {
 
   if (!session || step === null) return <Loader />
 
-  const isOwner = !store || session.store?.id !== store.id || !!session.isOwner
-
   return (
     <div className={s.page}>
       <div className="brand-line" aria-hidden="true" />
@@ -169,7 +167,7 @@ function Wizard() {
               )}
               {step === 2 && store && (
                 <TeamStep
-                  store={store} canInviteAdmins={isOwner && store.allowAdmins} invites={invites}
+                  store={store} canInviteAdmins={store.allowAdmins} invites={invites}
                   locked={store.access === 'readonly' ? 'readonly' : store.maxUsers <= 1 ? 'plan' : null}
                   onInvite={inv => setInvites(list => [inv, ...list.filter(i => i.email !== inv.email)])}
                   onBack={() => setStep(1)} onNext={() => setStep(DONE)}
@@ -457,7 +455,7 @@ function TeamStep({ store, canInviteAdmins, invites, locked, onInvite, onBack, o
       {locked ? (
         <AuthAlert kind="info">
           {locked === 'plan'
-            ? <>El plan {store.planLabel} incluye solo al dueño. Para invitar a tu equipo cambia a Galón o Cubeta desde Configuración → Plan.</>
+            ? <>El plan {store.planLabel} incluye solo al administrador. Para invitar a tu equipo cambia a Galón o Cubeta desde Configuración → Plan.</>
             : <>Tu tienda está en solo lectura: por ahora no puedes invitar a tu equipo.</>}
         </AuthAlert>
       ) : (<>
@@ -621,7 +619,7 @@ function TeamPreview({ owner, store, invites }: { owner: { name: string; email: 
       <div className={s.team}>
         <div className={s.member}>
           <span className={cx(s.inviteAvatar, s.ownerAvatar)}>{(owner.name || owner.email)[0]?.toUpperCase()}</span>
-          <span className={s.inviteWho}><strong>{owner.name || owner.email}</strong><small>Dueño · tú</small></span>
+          <span className={s.inviteWho}><strong>{owner.name || owner.email}</strong><small>Administrador · tú</small></span>
         </div>
         {invites.map(inv => (
           <div key={inv.id} className={s.member}>

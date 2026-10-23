@@ -23,7 +23,7 @@ export type ClientStore = {
   plan: PlanId
   planLabel: string
   maxUsers: number
-  /** El plan permite nombrar administradores además del dueño */
+  /** El plan permite más de un administrador */
   allowAdmins: boolean
   /** Límites del plan (null = sin límite) */
   limits: { contacts: number | null }
@@ -48,11 +48,9 @@ export type Session = {
   store: ClientStore | null
   role?: StoreRole
   isAdmin?: boolean
-  isOwner?: boolean
-  /** Plan Litro: solo entra el dueño; el resto del equipo ve un aviso */
-  ownerOnlyBlocked?: boolean
+  /** Plan Litro: solo entra el administrador; los vendedores ven un aviso */
+  litroBlocked?: boolean
   stores: { id: string; name: string; role: StoreRole; logoUrl: string | null }[]
-  platformAdmin: boolean
 }
 
 const EVENT = 'crm:session-changed'

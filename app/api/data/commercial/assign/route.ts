@@ -6,7 +6,7 @@ import { hasSalesTeam, salesTeamRequired } from '@/lib/commercialServer'
 const MAX_IDS = 500
 
 /**
- * POST /api/data/commercial/assign — reparte contactos (solo dueño o administrador).
+ * POST /api/data/commercial/assign — reparte contactos (solo administradores).
  *   { ids, owner: uuid | null }  → todos a esa persona (null = "Sin asignar")
  *   { ids, split: uuid[] }       → en partes iguales, en el orden de ids
  */

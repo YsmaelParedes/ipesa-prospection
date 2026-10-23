@@ -6,10 +6,9 @@ import { jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 
 /**
  * POST /api/stores — alta de la tienda de una cuenta nueva (asistente
- * /bienvenida). Quien la crea queda como dueño y la tienda nace en el plan
- * Litro (gratis). Una sola tienda por cuenta: quien ya pertenece a una tienda
- * (como dueño o del equipo) no puede abrir otra; otra sucursal se da de alta
- * desde el panel de la plataforma.
+ * /bienvenida). Quien la crea queda como administrador y la tienda nace en el
+ * plan Litro (gratis). Una sola tienda por cuenta: quien ya pertenece a una
+ * tienda no puede abrir otra.
  */
 export async function POST(req: NextRequest) {
   const user = await requireUser()
@@ -28,7 +27,7 @@ export async function POST(req: NextRequest) {
     if ((await getMemberships(user.id)).length > 0) {
       return jsonError('Tu cuenta ya pertenece a una tienda. Para abrir otra sucursal, escríbenos.', 403)
     }
-    const store = await createStore(user.id, parsed.data, user.id)
+    const store = await createStore(user.id, parsed.data)
     await setActiveStoreCookie(store.id)
     return NextResponse.json({ store: publicStore(store) }, { status: 201 })
   } catch (error) {

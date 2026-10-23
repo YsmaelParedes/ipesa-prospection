@@ -4,7 +4,7 @@
  */
 import { PLANS, type PlanId } from './stores'
 
-const users = (n: number) => (n === 1 ? 'Solo el dueño (1 usuario)' : `Hasta ${n} usuarios: tú y ${n - 1} vendedores`)
+const users = (n: number) => (n === 1 ? '1 usuario: el administrador' : `Hasta ${n} usuarios: tú y ${n - 1} vendedores`)
 
 export type PlanCopy = { tagline: string; features: string[]; highlight?: boolean }
 
@@ -51,7 +51,7 @@ export const PLAN_COMPARE: { label: string; values: Record<'litro' | 'galon' | '
   { label: 'Oportunidades, metas por vendedor y pantalla Equipo', values: { litro: false, galon: true, cubeta: true } },
   { label: 'Agenda y avisos en el celular', values: { litro: true, galon: true, cubeta: true } },
   { label: 'Importar desde Excel', values: { litro: true, galon: true, cubeta: true } },
-  { label: 'Administradores además del dueño', values: { litro: false, galon: false, cubeta: true } },
+  { label: 'Más de un administrador', values: { litro: false, galon: false, cubeta: true } },
   { label: 'Bandeja de WhatsApp', values: { litro: false, galon: false, cubeta: true } },
 ]
 

@@ -8,7 +8,7 @@ import { contactForPhone } from '@/lib/whatsappInbox'
 import { normalizePhone } from '@/lib/phone'
 
 // POST /api/whatsapp/test-send — envía una plantilla a un número de prueba
-// (dueño/admin, para verificar que la integración de Meta quedó bien configurada).
+// (administrador, para verificar que la integración de Meta quedó bien configurada).
 // Cuenta para el límite de Meta, respeta las bajas y queda en el historial.
 export async function POST(req: NextRequest) {
   const ctx = await requireStore({ admin: true, module: 'whatsapp', write: true })

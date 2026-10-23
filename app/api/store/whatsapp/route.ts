@@ -5,9 +5,9 @@ import { credsFromRow, getStoreWhatsAppRow } from '@/lib/storeWhatsApp'
 import { jsonError } from '@/lib/validation'
 
 /**
- * GET /api/store/whatsapp (dueño/admin) — si el número de la tienda ya está
+ * GET /api/store/whatsapp (administrador) — si el número de la tienda ya está
  * conectado. Sin datos técnicos: la conexión (credenciales y webhook) la hace
- * el asesor desde el panel de la plataforma (/api/platform/stores/[id]/whatsapp).
+ * el asesor directamente en la base.
  */
 async function GETImpl() {
   const ctx = await requireStore({ admin: true, module: 'whatsapp' })

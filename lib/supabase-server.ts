@@ -84,17 +84,16 @@ export type StoreContext = {
   user: User
   storeId: string
   role: StoreRole
-  /** Dueño o administrador de la tienda activa */
+  /** Administrador de la tienda activa */
   isAdmin: boolean
-  isOwner: boolean
   store: StoreRow
   access: StoreAccess
   /** Plan que aplica hoy (una cortesía vencida cuenta como Litro) */
   plan: PlanId
   /** Módulos que la tienda puede usar: los de su plan y encendidos por el asesor */
   modules: StoreModules
-  /** Plan Litro: solo entra el dueño; el resto del equipo queda en espera */
-  ownerOnlyBlocked: boolean
+  /** Plan Litro: solo entra el administrador; los vendedores quedan en espera */
+  litroBlocked: boolean
   memberships: Membership[]
 }
 
@@ -128,18 +127,17 @@ export async function resolveStoreContext(user: User): Promise<StoreContext | nu
     storeId: m.storeId,
     role: m.role,
     isAdmin: isStoreAdminRole(m.role),
-    isOwner: m.role === 'owner',
     store: m.store,
     access: storeAccess(m.store),
     plan,
     modules: effectiveModules(m.store),
-    ownerOnlyBlocked: plan === 'litro' && m.role !== 'owner',
+    litroBlocked: plan === 'litro' && m.role !== 'admin',
     memberships,
   }
 }
 
 // ─── Respuestas estándar ─────────────────────────────────────────────────────
-type ErrorCode = 'UNAUTHENTICATED' | 'NO_STORE' | 'FORBIDDEN' | 'MODULE_DISABLED' | 'STORE_READONLY' | 'PLAN_OWNER_ONLY'
+type ErrorCode = 'UNAUTHENTICATED' | 'NO_STORE' | 'FORBIDDEN' | 'MODULE_DISABLED' | 'STORE_READONLY' | 'PLAN_ADMIN_ONLY'
 
 function errorResponse(status: number, code: ErrorCode, error: string) {
   return Response.json({ error, code }, { status })
@@ -161,10 +159,8 @@ export async function requireUser(): Promise<User | Response> {
 export type RequireStoreOptions = {
   /** La operación escribe datos: se rechaza si la tienda está en solo lectura. */
   write?: boolean
-  /** Solo dueño o administrador de la tienda. */
+  /** Solo administradores de la tienda. */
   admin?: boolean
-  /** Solo el dueño de la tienda. */
-  owner?: boolean
   /** Módulo que debe estar activo en la tienda. */
   module?: StoreModule
 }
@@ -185,10 +181,9 @@ export async function requireStore(opts: RequireStoreOptions = {}): Promise<Stor
     return Response.json({ error: 'Error al cargar la tienda' }, { status: 500 })
   }
   if (!ctx) return errorResponse(403, 'NO_STORE', 'Tu cuenta no pertenece a ninguna tienda todavía')
-  if (ctx.ownerOnlyBlocked) {
-    return errorResponse(403, 'PLAN_OWNER_ONLY', 'Tu tienda está en el plan Litro, que solo incluye al dueño.')
+  if (ctx.litroBlocked) {
+    return errorResponse(403, 'PLAN_ADMIN_ONLY', 'Tu tienda está en el plan Litro, que solo incluye al administrador.')
   }
-  if (opts.owner && !ctx.isOwner) return forbiddenResponse('Solo el dueño de la tienda puede hacer esto')
   if (opts.admin && !ctx.isAdmin) return forbiddenResponse()
   if (opts.module && !ctx.modules[opts.module]) {
     return errorResponse(403, 'MODULE_DISABLED', 'Este módulo no está incluido o activado para tu tienda')
@@ -200,20 +195,7 @@ export async function requireStore(opts: RequireStoreOptions = {}): Promise<Stor
   return ctx
 }
 
-// ─── Plataforma (dueño del SaaS) ──────────────────────────────────────────────
-export async function isPlatformAdmin(uid: string): Promise<boolean> {
-  const { data } = await getServerSupabase().from('platform_admins').select('user_id').eq('user_id', uid).maybeSingle()
-  return !!data
-}
-
-export async function requirePlatformAdmin(): Promise<User | Response> {
-  const user = await getSessionUser()
-  if (!user) return unauthorizedResponse()
-  if (!(await isPlatformAdmin(user.id))) return forbiddenResponse('Solo para administradores de la plataforma')
-  return user
-}
-
-// ─── Equipo de la tienda (nombres para mostrar dueño de leads) ────────────────
+// ─── Equipo de la tienda (nombres para mostrar responsables) ─────────────────
 export type StoreMember = {
   user_id: string; email: string; display_name: string; role: StoreRole; status: string
   joined_at: string; last_sign_in_at: string | null

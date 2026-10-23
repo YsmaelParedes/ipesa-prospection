@@ -1,7 +1,7 @@
 import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse, after } from 'next/server'
 import {
-  displayNameOf, getServerSupabase, getSessionUser, invalidateStoreMembers, isPlatformAdmin,
+  displayNameOf, getServerSupabase, getSessionUser, invalidateStoreMembers,
   resolveStoreContext, unauthorizedResponse,
 } from '@/lib/supabase-server'
 import { sessionPayload } from '@/lib/storeServer'
@@ -16,15 +16,15 @@ async function GETImpl() {
   const user = await getSessionUser()
   if (!user) return unauthorizedResponse()
   try {
-    const [ctx, platformAdmin] = await Promise.all([resolveStoreContext(user), isPlatformAdmin(user.id)])
+    const ctx = await resolveStoreContext(user)
     const me = { id: user.id, email: user.email ?? '', name: displayNameOf(user) }
-    if (!ctx) return NextResponse.json({ user: me, store: null, stores: [], platformAdmin }, { headers: { 'Cache-Control': 'no-store' } })
+    if (!ctx) return NextResponse.json({ user: me, store: null, stores: [] }, { headers: { 'Cache-Control': 'no-store' } })
     const storeId = ctx.storeId
     after(async () => {
       const { error } = await getServerSupabase().rpc('touch_store_seen', { p_store: storeId })
       if (error) console.error('[GET /api/me] touch_store_seen', error.message)
     })
-    return NextResponse.json({ user: me, platformAdmin, ...sessionPayload(ctx) }, { headers: { 'Cache-Control': 'no-store' } })
+    return NextResponse.json({ user: me, ...sessionPayload(ctx) }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     return serverError('GET /api/me', error, 'Error al cargar tu sesión')
   }

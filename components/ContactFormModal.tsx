@@ -1,6 +1,5 @@
 'use client'
 
-import { useQueryEffect } from '@/lib/useCachedQuery'
 
 import { apiFetch } from '@/lib/apiClient'
 
@@ -9,7 +8,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useCatalogs } from '@/lib/catalogs'
 import type { ContactLite } from '@/lib/crm'
-import { findContactByPhone, loadSearchIndex, type IndexContact } from '@/lib/searchIndex'
+import { findContactWithPhone, type IndexContact } from '@/lib/searchIndex'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
 import { segmentColor } from '@/components/CrmUI'
 import { Select, toOptions } from '@/components/Select'
@@ -41,11 +40,10 @@ export default function ContactFormModal({ initialName = '', initialPhone = '', 
   const [moreOpen, setMoreOpen] = useState(false)
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState('')
-  const [contacts, setContacts] = useState<IndexContact[]>([])
+  const [duplicate, setDuplicate] = useState<IndexContact | null>(null)
   const nameRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { setTimeout(() => nameRef.current?.focus(), 80) }, [])
-  useQueryEffect(() => { loadSearchIndex().then(i => setContacts(i.contacts)).catch(() => {}) }, [])
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !saving) onClose() }
     window.addEventListener('keydown', h)
@@ -53,7 +51,13 @@ export default function ContactFormModal({ initialName = '', initialPhone = '', 
   }, [onClose, saving])
 
   const upd = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }))
-  const duplicate = findContactByPhone(contacts, form.phone)
+  // ¿Ese número ya es de alguien? Se pregunta al servidor al completar los 10 dígitos
+  useEffect(() => {
+    if (form.phone.length !== 10) { setDuplicate(null); return }
+    let alive = true
+    findContactWithPhone(form.phone).then(c => { if (alive) setDuplicate(c) }).catch(() => {})
+    return () => { alive = false }
+  }, [form.phone])
   const phoneShort = form.phone.length > 0 && form.phone.length < 10
   // Con catálogos configurados, segmento y canal son obligatorios (sirven para filtrar campañas)
   const needSegment = segments.length > 0

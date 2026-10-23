@@ -12,7 +12,7 @@ async function GETImpl() {
 }
 
 /**
- * PATCH /api/store — dueño/admin: datos de la tienda y "terminé la
+ * PATCH /api/store — administrador: datos de la tienda y "terminé la
  * configuración inicial". Los módulos (WhatsApp, Campañas, Fórmulas) ya no se
  * cambian desde la tienda; el estado, plan y fechas de pago solo los cambia
  * el administrador de la plataforma.

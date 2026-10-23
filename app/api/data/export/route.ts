@@ -10,7 +10,7 @@ import { jsonError, serverError } from '@/lib/validation'
  * pasar de 4.5 MB): el navegador pide página por página y arma el Excel.
  * EXPORT_PAGE no puede pasar de 1000: Supabase corta ahí cada consulta y una
  * página corta se tomaría como la última.
- * Solo dueño/administrador. Funciona también en solo lectura (es consulta):
+ * Solo administrador. Funciona también en solo lectura (es consulta):
  * así una tienda que cancela o vence puede llevarse su información.
  */
 const EXPORT_PAGE = 1000

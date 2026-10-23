@@ -26,7 +26,7 @@ export default function WhatsAppPage() {
       ['campanas', 'Campañas', <WaIcon.megaphone key="i" />],
       ['resultados', 'Resultados', <WaIcon.chart key="i" />],
     ] : []),
-    // Agente de IA de Meta: lo configuran el dueño y los administradores
+    // Agente de IA de Meta: lo configuran los administradores
     ...(isAdmin ? [['agente', 'Agente IA', <WaIcon.bolt key="i" />]] : []),
   ] as [Tab, string, React.ReactNode][])
   const current: Tab = tabs.some(([key]) => key === tab) ? tab : 'bandeja'

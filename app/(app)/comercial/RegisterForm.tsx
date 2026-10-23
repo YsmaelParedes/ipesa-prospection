@@ -40,7 +40,7 @@ function dateChoices(result: ResultChoice, today: string): { value: string; labe
 /**
  * Registrar una actividad en 3 pasos: tipo → resultado (con monto si es
  * cotización o venta) → nota y fecha sugerida. Al guardar, el contacto pasa
- * al avance que corresponde y quien lo registra se queda con él si no tenía dueño.
+ * al avance que corresponde y quien lo registra se queda con él si no tenía responsable.
  */
 export function RegisterForm({ contact, today, initialKind = 'llamada', initialResult, wide, onSaved, nextName }: {
   contact: CommercialContact

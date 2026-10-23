@@ -1,26 +1,39 @@
 import { apiFetch } from '@/lib/apiClient'
 /**
- * Índice en memoria de contactos para el buscador global, el selector de
- * cliente y la detección de duplicados. Se descarga la primera vez que se usa
- * y se vuelve a pedir cuando cambian los contactos.
- * Busca sin acentos ni mayúsculas ("maria" encuentra "María").
+ * Búsqueda de contactos para el buscador global, el selector de cliente y la
+ * detección de duplicados. Ya no se baja toda la base: el servidor filtra
+ * (sin acentos ni mayúsculas: "maria" encuentra "María") y aquí se ordenan
+ * los resultados por qué tan bien coinciden.
  */
 import { normalizePhone } from './phone'
 
 export type IndexContact = {
   id: string; name: string; phone: string | null; email: string | null; company: string | null
   segment: string | null; acquisition_channel: string | null; wa_opt_out?: boolean
-  commercial_status?: string
+  commercial_status?: string; line_type?: string | null
 }
-export type SearchIndex = { contacts: IndexContact[] }
 
 export const normText = (s: string | null | undefined) =>
   (s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
 
-export function loadSearchIndex(): Promise<SearchIndex> {
-  return apiFetch('/api/data/contacts')
+const fetchContacts = (params: Record<string, string>): Promise<IndexContact[]> =>
+  apiFetch(`/api/data/contacts?${new URLSearchParams({ fields: 'lite', ...params })}`)
     .then(r => (r.ok ? r.json() : { contacts: [] }))
-    .then(c => ({ contacts: c.contacts ?? [] }))
+    .then(d => d.contacts ?? [])
+
+/** Los que coinciden con lo escrito, mejores primero. Con `withPhone`, solo los que tienen teléfono. */
+export async function findContacts(q: string, limit = 6, opts: { withPhone?: boolean } = {}): Promise<IndexContact[]> {
+  const text = q.trim()
+  if (!text) return []
+  const list = await fetchContacts({ q: text, limit: '50', ...(opts.withPhone ? { line: 'con_telefono' } : {}) })
+  return searchContacts(list, text, limit)
+}
+
+/** El contacto que ya tiene ese número (10 dígitos), o null. */
+export async function findContactWithPhone(phone: string): Promise<IndexContact | null> {
+  const p = normalizePhone(phone)
+  if (p.length !== 10) return null
+  return (await fetchContacts({ phone: p }))[0] ?? null
 }
 
 const tokens = (text: string) => normText(text).split(/[\s.,;:()/@_-]+/).filter(Boolean)

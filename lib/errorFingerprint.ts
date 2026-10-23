@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 
 /**
- * Limpieza y "huella" de los errores que se reportan al dueño de la plataforma.
+ * Limpieza y "huella" de los errores que se reportan al operador de la plataforma.
  * Solo servidor y pruebas (usa node:crypto). Funciones puras.
  */
 

@@ -25,7 +25,7 @@ const RESULT_COLOR: Record<string, string> = {
 }
 const tone = (ratio: number) => ratio >= 0.8 ? s.ok : ratio >= 0.4 ? s.mid : s.low
 
-/** "Equipo" (dueño/administrador): cada vendedor contra su meta del día y del mes, y los totales de la tienda. */
+/** "Equipo" (administrador): cada vendedor contra su meta del día y del mes, y los totales de la tienda. */
 export function EquipoView({ today }: { today: string }) {
   const [date, setDate] = useState(today)
   const [data, setData] = useState<Data | null>(null)

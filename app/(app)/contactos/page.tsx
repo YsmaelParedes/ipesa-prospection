@@ -20,6 +20,7 @@ import { reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
 import { fmtDue, isOverdue } from '@/lib/datetime'
 import { normText } from '@/lib/searchIndex'
+import { PHONE_FILTERS, PHONE_FILTER_LABELS, phoneKind, type PhoneFilter } from '@/lib/lineType'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
 import { useWhatsAppCampaignQuota, CampaignQuotaNote, isOverQuota } from '@/components/WhatsAppCampaignQuota'
 import { useCampaignSend, CampaignConfirmPanel, CampaignProgressPanel, CampaignResultsPanel } from '@/components/WhatsAppCampaignSend'
@@ -50,6 +51,16 @@ const CAMPO_LABELS: Record<string, string> = {
 }
 const firstName = (name: string) => (name || '').trim().split(/\s+/)[0] || name
 
+/** Contactos por página y lo más que se vuelve a pedir de una vez al refrescar. */
+const PAGE = 50
+const MAX_PAGE = 200
+/** Conteos de toda la base para los filtros (función contact_facets de la base). */
+type Facets = {
+  total: number
+  segment: Record<string, number>; channel: Record<string, number>; zone: Record<string, number>
+  line: Record<PhoneFilter, number>
+}
+
 export default function ContactosPage() {
   // useSearchParams (?id= ficha directa, ?q= búsqueda) requiere Suspense
   return <Suspense fallback={null}><ContactosContent /></Suspense>
@@ -63,17 +74,39 @@ function ContactosContent() {
   const session      = useSession()
   const isAdmin      = !!session?.isAdmin
   const readonly     = session?.store?.access === 'readonly'
-  // Exportar, importar, borrar y seleccionar en lote: solo dueño/administrador (el servidor también lo valida)
+  // Exportar, importar, borrar y seleccionar en lote: solo administrador (el servidor también lo valida)
   const canManage    = isAdmin && !readonly
   const waModule     = !session?.store || session.store.modules.whatsapp
   const canCampaign  = isAdmin && waModule && (!session?.store || session.store.modules.campaigns)
 
-  const [contacts, setContacts]       = useState<any[]>(() => cachedQueryData('/api/data/contacts')?.contacts ?? [])
+  // Filtros: se aplican en el servidor (la base completa no se baja)
   const [segF, setSegF]               = useState('Todos')
   const [canalF, setCanalF]           = useState('Todos')
   const [zoneF, setZoneF]             = useState('Todos')
+  const [lineF, setLineF]             = useState('Todos')
   const [search, setSearch]           = useState(urlQuery ?? '')
-  const [loading, setLoading]         = useState(() => !cachedQueryData('/api/data/contacts'))
+  const [query, setQuery]             = useState((urlQuery ?? '').trim())
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(search.trim()), 250)
+    return () => clearTimeout(t)
+  }, [search])
+  const filterParams = useMemo(() => {
+    const p: Record<string, string> = {}
+    if (segF !== 'Todos') p.segment = segF
+    if (canalF !== 'Todos') p.channel = canalF
+    if (zoneF !== 'Todos') p.zone = zoneF
+    if (lineF !== 'Todos') p.line = lineF
+    if (query) p.q = query
+    return p
+  }, [segF, canalF, zoneF, lineF, query])
+  const firstPageUrl = `/api/data/contacts?${new URLSearchParams({ ...filterParams, limit: String(PAGE), facets: '1' })}`
+
+  const cached = cachedQueryData(firstPageUrl)
+  const [contacts, setContacts]       = useState<any[]>(() => cached?.contacts ?? [])
+  const [total, setTotal]             = useState<number>(() => cached?.total ?? 0)
+  const [facets, setFacets]           = useState<Facets | null>(() => cached?.facets ?? null)
+  const [loading, setLoading]         = useState(() => !cached)
+  const [loadingMore, setLoadingMore] = useState(false)
   useDataReady(loading, 'contactos')
   const [selected, setSelected]       = useState<any | null>(null)
   const [showImport, setShowImport]   = useState(false)
@@ -89,18 +122,36 @@ function ContactosContent() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2400) }
 
-  const load = useCallback(async () => {
+  /**
+   * reset: primera página con los filtros actuales · more: la siguiente página ·
+   * refresh: vuelve a pedir lo que ya se ve (tras crear, editar o borrar).
+   */
+  const shownRef = useRef(contacts.length)
+  shownRef.current = contacts.length
+  const requestRef = useRef(0)
+  const load = useCallback(async (mode: 'reset' | 'more' | 'refresh') => {
+    const id = ++requestRef.current
+    const offset = mode === 'more' ? shownRef.current : 0
+    const limit = mode === 'refresh' ? Math.min(Math.max(PAGE, shownRef.current), MAX_PAGE) : PAGE
+    const url = mode === 'reset' ? firstPageUrl
+      : `/api/data/contacts?${new URLSearchParams({ ...filterParams, limit: String(limit), ...(offset ? { offset: String(offset) } : { facets: '1' }) })}`
+    if (mode === 'more') setLoadingMore(true)
     try {
-      const r = await apiFetch('/api/data/contacts')
+      const r = await apiFetch(url)
       const d = await r.json()
+      if (id !== requestRef.current) return
       const list: any[] = d.contacts || []
-      setContacts(list)
+      setContacts(prev => (mode === 'more' ? [...prev, ...list.filter(c => !prev.some(p => p.id === c.id))] : list))
+      setTotal(d.total ?? 0)
+      if (d.facets) setFacets(d.facets)
       setSelected((prev: any) => prev ? (list.find(c => c.id === prev.id) ?? prev) : prev)
-    } catch {} finally { setLoading(false) }
-  }, [])
+    } catch {} finally {
+      if (id === requestRef.current) { setLoading(false); setLoadingMore(false) }
+    }
+  }, [firstPageUrl, filterParams])
 
-  useQueryEffect(() => { load() }, [load])
-  useDataChanged(['contact'], load)
+  useQueryEffect(() => { load('reset') }, [load])
+  useDataChanged(['contact'], () => load('refresh'))
 
   /* ?q= desde el buscador global */
   useEffect(() => { if (urlQuery !== null) setSearch(urlQuery) }, [urlQuery])
@@ -118,35 +169,16 @@ function ContactosContent() {
     if (deepId) router.replace('/contactos', { scroll: false })
   }
 
-  // Cálculos derivados memoizados: con cientos de contactos, recalcularlos en
-  // cada tecla/clic hacía lenta la lista.
-  const segmentCounts = useMemo(() => countBy(contacts, 'segment'), [contacts])
-  const canalCounts   = useMemo(() => countBy(contacts, 'acquisition_channel'), [contacts])
-  const zoneCounts    = useMemo(() => countBy(contacts, 'zone'), [contacts])
-  const segmentOptions = useMemo(() => [...segmentCounts.keys()].sort(), [segmentCounts])
-  const canalOptions   = useMemo(() => [...canalCounts.keys()].sort(), [canalCounts])
-  const zoneOptions    = useMemo(() => [...zoneCounts.keys()].sort(), [zoneCounts])
+  // Opciones de los filtros y sus conteos: de toda la base (no solo lo cargado)
+  const segmentOptions = useMemo(() => Object.keys(facets?.segment ?? {}).sort(), [facets])
+  const canalOptions   = useMemo(() => Object.keys(facets?.channel ?? {}).sort(), [facets])
+  const zoneOptions    = useMemo(() => Object.keys(facets?.zone ?? {}).sort(), [facets])
+  const baseTotal      = facets?.total ?? total
+  // Lo que se ve en la tabla: las páginas ya cargadas con los filtros actuales
+  const filtered = contacts
 
-  const filtered = useMemo(() => {
-    const q = normText(search)
-    const words = q ? q.split(/\s+/) : []
-    const digits = search.replace(/\D/g, '')
-    return contacts.filter(c => {
-      if (segF !== 'Todos' && c.segment !== segF) return false
-      if (canalF !== 'Todos' && c.acquisition_channel !== canalF) return false
-      if (zoneF !== 'Todos' && c.zone !== zoneF) return false
-      if (words.length) {
-        const hay = normText(`${c.name} ${c.email || ''} ${c.company || ''} ${c.acquisition_channel || ''} ${c.segment || ''}`)
-        const byText = words.every(w => hay.includes(w))
-        const byPhone = digits.length >= 3 && normalizePhone(c.phone).includes(digits)
-        if (!byText && !byPhone) return false
-      }
-      return true
-    })
-  }, [contacts, search, segF, canalF, zoneF])
-
-  const filtersOn = segF !== 'Todos' || canalF !== 'Todos' || zoneF !== 'Todos' || !!search.trim()
-  const clearFilters = () => { setSegF('Todos'); setCanalF('Todos'); setZoneF('Todos'); setSearch('') }
+  const filtersOn = segF !== 'Todos' || canalF !== 'Todos' || zoneF !== 'Todos' || lineF !== 'Todos' || !!search.trim()
+  const clearFilters = () => { setSegF('Todos'); setCanalF('Todos'); setZoneF('Todos'); setLineF('Todos'); setSearch('') }
 
   /* ── Selección múltiple ── */
   const someChecked        = checkedIds.size > 0
@@ -213,7 +245,7 @@ function ContactosContent() {
 
   return (
     <>
-      <PlanLimitHint kind="contacts" used={contacts.length} />
+      <PlanLimitHint kind="contacts" used={baseTotal} />
       <div className="section-head">
         {someChecked ? (
           /* ── Barra de selección ── */
@@ -253,10 +285,10 @@ function ContactosContent() {
           /* ── Cabecera normal ── */
           <>
             <h2>Contactos</h2>
-            {!loading && <span className="count">{filtersOn ? `${filtered.length} de ${contacts.length}` : contacts.length.toLocaleString('es-MX')}</span>}
+            {!loading && <span className="count">{filtersOn ? `${total.toLocaleString('es-MX')} de ${baseTotal.toLocaleString('es-MX')}` : baseTotal.toLocaleString('es-MX')}</span>}
             <div className="section-actions">
               {canManage && <button className="btn btn-ghost" onClick={() => setShowImport(true)} title="Importar desde Excel o CSV"><Ico.upload /> <span className="hide-sm">Importar</span></button>}
-              {isAdmin && <button className="btn btn-ghost" onClick={() => setShowExport(true)} disabled={!contacts.length} title="Exportar a Excel"><Ico.download /> <span className="hide-sm">Exportar</span></button>}
+              {isAdmin && <button className="btn btn-ghost" onClick={() => setShowExport(true)} disabled={!baseTotal} title="Exportar a Excel"><Ico.download /> <span className="hide-sm">Exportar</span></button>}
               {!readonly && <button className="btn btn-primary page-primary" onClick={() => openQuickCreate({ kind: 'contact' })}><Ico.plus /> Nuevo contacto</button>}
             </div>
           </>
@@ -273,21 +305,27 @@ function ContactosContent() {
         <div className="filter-bar">
           {segmentOptions.length > 0 && (
             <FilterDropdown value={segF} options={segmentOptions} onChange={setSegF}
-              countFor={v => v === 'Todos' ? contacts.length : (segmentCounts.get(v) ?? 0)}
+              countFor={v => v === 'Todos' ? baseTotal : (facets?.segment[v] ?? 0)}
               triggerLabel={v => v === 'Todos' ? 'Segmento' : v} optionLabel={v => v === 'Todos' ? 'Todos los segmentos' : v} searchPlaceholder="Buscar segmento…" />
           )}
           {canalOptions.length > 0 && (
             <FilterDropdown value={canalF} options={canalOptions} onChange={setCanalF}
-              countFor={v => v === 'Todos' ? contacts.length : (canalCounts.get(v) ?? 0)}
+              countFor={v => v === 'Todos' ? baseTotal : (facets?.channel[v] ?? 0)}
               triggerLabel={v => v === 'Todos' ? 'Canal' : v} optionLabel={v => v === 'Todos' ? 'Todos los canales' : v} searchPlaceholder="Buscar canal…" />
           )}
           {zoneOptions.length > 0 && (
             <FilterDropdown value={zoneF} options={zoneOptions} onChange={setZoneF}
-              countFor={v => v === 'Todos' ? contacts.length : (zoneCounts.get(v) ?? 0)}
+              countFor={v => v === 'Todos' ? baseTotal : (facets?.zone[v] ?? 0)}
               triggerLabel={v => v === 'Todos' ? 'Zona' : v} optionLabel={v => v === 'Todos' ? 'Todas las zonas' : v} searchPlaceholder="Buscar zona…" />
           )}
-          {(segF !== 'Todos' || canalF !== 'Todos' || zoneF !== 'Todos') && (
-            <button className="filter-pill" onClick={() => { setSegF('Todos'); setCanalF('Todos'); setZoneF('Todos') }}>Limpiar filtros</button>
+          {facets && (
+            <FilterDropdown value={lineF} options={[...PHONE_FILTERS]} onChange={setLineF} searchable={false}
+              countFor={v => v === 'Todos' ? baseTotal : (facets.line[v as PhoneFilter] ?? 0)}
+              triggerLabel={v => v === 'Todos' ? 'Teléfono' : PHONE_FILTER_LABELS[v as PhoneFilter]}
+              optionLabel={v => v === 'Todos' ? 'Todos los teléfonos' : PHONE_FILTER_LABELS[v as PhoneFilter]} />
+          )}
+          {(segF !== 'Todos' || canalF !== 'Todos' || zoneF !== 'Todos' || lineF !== 'Todos') && (
+            <button className="filter-pill" onClick={() => { setSegF('Todos'); setCanalF('Todos'); setZoneF('Todos'); setLineF('Todos') }}>Limpiar filtros</button>
           )}
         </div>
       </div>
@@ -349,7 +387,7 @@ function ContactosContent() {
                         </div>
                       </div>
                     </td>
-                    <td data-label="Teléfono" className="cell-mono" style={{ whiteSpace: 'nowrap' }}>{fmtPhone(c.phone)}</td>
+                    <td data-label="Teléfono" style={{ whiteSpace: 'nowrap' }}><PhoneCell contact={c} /></td>
                     <td data-label="Segmento">{c.segment ? <TipoChip value={c.segment} small /> : <span className="cell-muted">—</span>}</td>
                     <td data-label="Canal">{c.acquisition_channel ? <CanalChip value={c.acquisition_channel} small /> : <span className="cell-muted">—</span>}</td>
                     <td data-label="Registro" className="cell-muted col-secondary" style={{ whiteSpace: 'nowrap' }}>{fmtDateLong(c.created_at?.slice(0, 10) || '')}</td>
@@ -361,6 +399,14 @@ function ContactosContent() {
               })}
             </tbody>
           </table>
+          {contacts.length < total && (
+            <div className="list-more">
+              <span>Mostrando {contacts.length.toLocaleString('es-MX')} de {total.toLocaleString('es-MX')}</span>
+              <button className="btn btn-ghost" onClick={() => load('more')} disabled={loadingMore}>
+                {loadingMore ? 'Cargando…' : `Ver más contactos`}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -390,12 +436,12 @@ function ContactosContent() {
       {showImport && (
         <ImportModal
           onClose={() => setShowImport(false)}
-          onDone={(msg) => { setShowImport(false); load(); notifyDataChanged('contact'); showToast(msg) }}
+          onDone={(msg) => { setShowImport(false); notifyDataChanged('contact'); showToast(msg) }}
         />
       )}
 
       {showExport && (
-        <ExportModal all={contacts} visible={filtered} filtered={filtersOn} onClose={() => setShowExport(false)} />
+        <ExportModal filterParams={filterParams} total={baseTotal} visibleTotal={total} filtered={filtersOn} onClose={() => setShowExport(false)} />
       )}
 
       {showWhatsAppCampaign && (
@@ -415,12 +461,6 @@ function ContactosContent() {
       )}
     </>
   )
-}
-
-function countBy(list: any[], key: string): Map<string, number> {
-  const m = new Map<string, number>()
-  for (const item of list) if (item[key]) m.set(item[key], (m.get(item[key]) ?? 0) + 1)
-  return m
 }
 
 /* ── Ficha del contacto ── */
@@ -620,13 +660,15 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
 
               {waModule && phone.length === 10 && <ContactWhatsApp contact={c} readonly={readonly} onUpdated={onUpdated} />}
 
+              {phone.length === 10 && <LineTypeField contact={c} readonly={readonly} onUpdated={onUpdated} />}
+
               <div className="detail-section">
                 <div className="detail-section-head">
                   <h4>Datos</h4>
                   {!readonly && <button className="link-btn" onClick={() => { setEditing(true); setConfirmDel(false) }}><Ico.edit /> Editar</button>}
                 </div>
                 <div className="kv-grid">
-                  <div className="kv"><div className="k">Teléfono</div><div className="v" style={{ fontFamily: 'var(--font-mono)' }}>{fmtPhone(c.phone) || 'Sin teléfono · para visita'}</div></div>
+                  <div className="kv"><div className="k">Teléfono</div><div className="v">{c.phone ? <PhoneCell contact={c} /> : 'Sin teléfono · para visita'}</div></div>
                   {c.zone && <div className="kv"><div className="k">Zona</div><div className="v">{c.zone}</div></div>}
                   <div className="kv"><div className="k">Correo</div><div className="v" style={{ fontSize: 13, wordBreak: 'break-all' }}>{c.email || '—'}</div></div>
                   <div className="kv"><div className="k">Empresa</div><div className="v">{c.company || '—'}</div></div>
@@ -727,30 +769,93 @@ function ContactWhatsApp({ contact: c, readonly, onUpdated }: { contact: any; re
   )
 }
 
-/* ── Exportar a Excel: lo que estás viendo o toda la base ── */
-function ExportModal({ all, visible, filtered, onClose }: { all: any[]; visible: any[]; filtered: boolean; onClose: () => void }) {
+/* ── Teléfono con su tipo de línea ── */
+function PhoneCell({ contact: c }: { contact: any }) {
+  const kind = phoneKind(c)
+  if (kind === 'sin_telefono') return <span className="cell-muted">Sin teléfono</span>
+  return (
+    <span className="phone-cell">
+      <span className="cell-mono">{fmtPhone(c.phone)}</span>
+      {kind === 'whatsapp' && <span className="line-chip wa" title="Tiene WhatsApp"><Ico.whatsapp />WhatsApp</span>}
+      {kind === 'fijo' && <span className="line-chip fijo" title="No tiene WhatsApp: llámale">Fijo</span>}
+    </span>
+  )
+}
+
+/* ── ¿Tiene WhatsApp? Lo marca quien le llama; los mensajes de WhatsApp lo marcan solos ── */
+function LineTypeField({ contact: c, readonly, onUpdated }: { contact: any; readonly: boolean; onUpdated: (c: any) => void }) {
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const current: string | null = c.line_type ?? null
+  const set = async (line_type: string | null) => {
+    if (line_type === current) return
+    setSaving(true); setError('')
+    try {
+      const r = await apiFetch(`/api/data/contacts/${c.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ line_type }),
+      })
+      if (r.ok) { const d = await r.json(); onUpdated(Array.isArray(d) ? d[0] : d) }
+      else setError('No se pudo guardar. Intenta de nuevo.')
+    } finally { setSaving(false) }
+  }
+  const options: { value: string | null; label: string }[] = [
+    { value: 'whatsapp', label: 'Celular con WhatsApp' },
+    { value: 'fijo', label: 'Fijo / sin WhatsApp' },
+    { value: null, label: 'No sé' },
+  ]
+  return (
+    <div className="detail-section">
+      <div className="detail-section-head"><h4>¿Tiene WhatsApp?</h4></div>
+      <div className="line-seg" role="group" aria-label="Tipo de línea">
+        {options.map(o => (
+          <button key={o.label} type="button" aria-pressed={current === o.value} disabled={readonly || saving} onClick={() => set(o.value)}>{o.label}</button>
+        ))}
+      </div>
+      {error && <div className="field-error" style={{ marginTop: 6 }}>{error}</div>}
+    </div>
+  )
+}
+
+/* ── Exportar a Excel: lo que estás viendo o toda la base (se pide al servidor al descargar) ── */
+function ExportModal({ filterParams, total, visibleTotal, filtered, onClose }: {
+  filterParams: Record<string, string>; total: number; visibleTotal: number; filtered: boolean; onClose: () => void
+}) {
   const [mode, setMode] = useState<'visible' | 'all'>(filtered ? 'visible' : 'all')
-  const data = mode === 'visible' ? visible : all
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const count = mode === 'visible' ? visibleTotal : total
 
   const doExport = async () => {
-    const rows = data.map(c => ({
-      'Nombre':         c.name || '',
-      'Teléfono':       normalizePhone(c.phone),
-      'Para SMS (52+)': c.phone ? `52${normalizePhone(c.phone)}` : '',
-      'Correo':         c.email || '',
-      'Empresa':        c.company || '',
-      'Segmento':       c.segment || '',
-      'Canal':          c.acquisition_channel || '',
-      'Dirección':      c.address || '',
-      'C.P.':           c.postal_code || '',
-      'Fecha registro': c.created_at?.slice(0, 10) || '',
-    }))
-    const XLSX = await import('xlsx')
-    const ws = XLSX.utils.json_to_sheet(rows)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Contactos')
-    XLSX.writeFile(wb, `contactos${mode === 'visible' && filtered ? '-filtrados' : ''}-${new Date().toLocaleDateString('en-CA')}.xlsx`)
-    onClose()
+    setBusy(true); setError('')
+    try {
+      const params = new URLSearchParams({ ...(mode === 'visible' ? filterParams : {}), all: '1' })
+      const r = await apiFetch(`/api/data/contacts?${params}`)
+      if (!r.ok) throw new Error()
+      const data: any[] = (await r.json()).contacts ?? []
+      const rows = data.map(c => ({
+        'Nombre':         c.name || '',
+        'Teléfono':       normalizePhone(c.phone),
+        'Tipo de línea':  PHONE_FILTER_LABELS[phoneKind(c)],
+        'Para SMS (52+)': c.phone ? `52${normalizePhone(c.phone)}` : '',
+        'Correo':         c.email || '',
+        'Empresa':        c.company || '',
+        'Segmento':       c.segment || '',
+        'Canal':          c.acquisition_channel || '',
+        'Zona':           c.zone || '',
+        'Dirección':      c.address || '',
+        'C.P.':           c.postal_code || '',
+        'Fecha registro': c.created_at?.slice(0, 10) || '',
+      }))
+      const XLSX = await import('xlsx')
+      const ws = XLSX.utils.json_to_sheet(rows)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Contactos')
+      XLSX.writeFile(wb, `contactos${mode === 'visible' && filtered ? '-filtrados' : ''}-${new Date().toLocaleDateString('en-CA')}.xlsx`)
+      onClose()
+    } catch {
+      setError('No se pudo preparar el archivo. Intenta de nuevo.')
+      setBusy(false)
+    }
   }
 
   const option = (key: 'visible' | 'all', title: string, sub: string) => (
@@ -769,17 +874,18 @@ function ExportModal({ all, visible, filtered, onClose }: { all: any[]; visible:
         </div>
         <div className="modal-body">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {filtered && option('visible', `Los ${visible.length.toLocaleString('es-MX')} que estás viendo`, 'Con la búsqueda y los filtros actuales')}
-            {option('all', 'Toda la base', `${all.length.toLocaleString('es-MX')} contactos`)}
+            {filtered && option('visible', `Los ${visibleTotal.toLocaleString('es-MX')} que coinciden`, 'Con la búsqueda y los filtros actuales')}
+            {option('all', 'Toda la base', `${total.toLocaleString('es-MX')} contactos`)}
           </div>
           <div className="soft-note" style={{ marginTop: 14, marginBottom: 0 }}>
-            Columnas: nombre, teléfono, teléfono para SMS, correo, empresa, segmento, canal, dirección, C.P. y fecha de registro.
+            Columnas: nombre, teléfono, tipo de línea, teléfono para SMS, correo, empresa, segmento, canal, zona, dirección, C.P. y fecha de registro.
           </div>
+          {error && <div className="field-error" style={{ marginTop: 10 }}>{error}</div>}
         </div>
         <div className="modal-foot">
-          <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
-          <button className="btn btn-primary" onClick={doExport} disabled={data.length === 0}>
-            <Ico.download /> Descargar {data.length.toLocaleString('es-MX')}
+          <button className="btn btn-ghost" onClick={onClose} disabled={busy}>Cancelar</button>
+          <button className="btn btn-primary" onClick={doExport} disabled={count === 0 || busy}>
+            <Ico.download /> {busy ? 'Preparando…' : `Descargar ${count.toLocaleString('es-MX')}`}
           </button>
         </div>
       </div>

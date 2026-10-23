@@ -26,7 +26,7 @@ const GROUPS: { id: string; title: string; items: { q: string; a: string }[] }[]
       { q: '¿Cuánto cuesta?', a: `El plan Litro es gratis (${PLANS.litro.maxContacts} contactos). Galón y Cubeta se pagan cada mes; consulta los precios en la página de Precios.` },
       { q: '¿Cómo se paga?', a: 'Con tarjeta de crédito o débito, cada mes, a través de Stripe. Nosotros nunca vemos los datos de tu tarjeta. Si un cobro no pasa, Stripe lo reintenta; si al final no se cobra, tu tienda vuelve al plan Litro sin borrar nada.' },
       { q: '¿Puedo cancelar?', a: 'Cuando quieras, desde Configuración → Plan. Conservas tu plan hasta el final del mes pagado y después pasas a Litro.' },
-      { q: '¿Cuántas personas pueden usarlo?', a: `Litro es solo para el dueño. Galón incluye hasta ${PLANS.galon.maxUsers} usuarios y Cubeta hasta ${PLANS.cubeta.maxUsers}, con administradores. Cada quien con su propio acceso.` },
+      { q: '¿Cuántas personas pueden usarlo?', a: `Litro es para una sola persona, el administrador. Galón incluye hasta ${PLANS.galon.maxUsers} usuarios y Cubeta hasta ${PLANS.cubeta.maxUsers}, con administradores. Cada quien con su propio acceso.` },
       { q: 'Tengo varias sucursales, ¿cómo funciona?', a: 'Cada cuenta es una sucursal, con su propio plan, equipo y datos. Si tienes otra, escríbenos y la damos de alta aparte.' },
     ],
   },
@@ -34,7 +34,7 @@ const GROUPS: { id: string; title: string; items: { q: string; a: string }[] }[]
     id: 'informacion', title: 'Tu información',
     items: [
       { q: '¿Otras tiendas pueden ver mis clientes?', a: 'No. Cada tienda tiene su propia información y solo la ve su equipo. Ninguna otra tienda puede acceder a ella.' },
-      { q: '¿Mis vendedores pueden llevarse mi base?', a: 'Exportar a Excel, importar y borrar contactos son solo para el dueño. Los vendedores no pueden seleccionar, copiar ni imprimir la información, y su pantalla lleva su nombre en marca de agua.' },
+      { q: '¿Mis vendedores pueden llevarse mi base?', a: 'Exportar a Excel, importar y borrar contactos son solo para administradores. Los vendedores no pueden seleccionar, copiar ni imprimir la información, y su pantalla lleva su nombre en marca de agua.' },
       { q: '¿Qué pasa si dejo de pagar o bajo de plan?', a: 'Tu tienda pasa al plan Litro: lo que pase del límite se conserva y lo sigues viendo, y puedes descargar toda tu información en Excel. No borramos nada a menos que lo pidas por escrito.' },
     ],
   },

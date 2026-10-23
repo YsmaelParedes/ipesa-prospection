@@ -27,7 +27,7 @@ async function call(url: string, init?: RequestInit): Promise<{ ok: boolean; dat
   }
 }
 
-/** Pestaña «Agente IA» de WhatsApp (dueño/admin): configura el agente de IA de Meta del número. */
+/** Pestaña «Agente IA» de WhatsApp (administrador): configura el agente de IA de Meta del número. */
 export function WhatsAppAgent() {
   const [data, setData] = useState<AgentState | null>(null)
   const [error, setError] = useState('')

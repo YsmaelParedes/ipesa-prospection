@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
-import { logPlatformEvent } from '@/lib/platformEvents'
+import { emailConfigured, escapeHtml, sendEmail } from '@/lib/email'
+import { EMAILS } from '@/lib/legal'
 import { jsonError, serverError } from '@/lib/validation'
 import { planOf } from '@/lib/stores'
 
 /**
- * POST /api/store/whatsapp-request — "Quiero activarlo" (dueño/admin).
- * Deja la solicitud en el panel de la plataforma para que un asesor contacte
- * a la tienda; la tienda no puede activar WhatsApp por su cuenta. Repetirla
+ * POST /api/store/whatsapp-request — "Quiero activarlo" (administradores).
+ * Guarda la fecha en la tienda y avisa por correo a hola@ para que un asesor
+ * contacte a la tienda; la tienda no puede activar WhatsApp por su cuenta. Repetirla
  * no cambia la fecha original. Se permite aunque la tienda esté en solo lectura.
  * Solo en planes que incluyen WhatsApp (Cubeta, Interno).
  */
@@ -26,7 +27,16 @@ export async function POST() {
       .eq('id', ctx.storeId).is('whatsapp_requested_at', null)
       .select('whatsapp_requested_at')
     if (error) throw error
-    if (data?.length) await logPlatformEvent(ctx.storeId, ctx.uid, 'whatsapp_request')
+    if (data?.length && emailConfigured()) {
+      const who = ctx.user.email ?? ctx.uid
+      await sendEmail({
+        to: [EMAILS.hola],
+        subject: `Solicitud de WhatsApp: ${ctx.store.name}`,
+        text: `${ctx.store.name} (${ctx.storeId}) pidió activar WhatsApp. Lo pidió: ${who}.`,
+        html: `<p><strong>${escapeHtml(ctx.store.name)}</strong> (${ctx.storeId}) pidió activar WhatsApp.</p><p>Lo pidió: ${escapeHtml(who)}</p>`,
+        idempotencyKey: `whatsapp-request-${ctx.storeId}`,
+      }).catch(e => console.error('[whatsapp-request] correo', e))
+    }
     return NextResponse.json({ ok: true, requestedAt: data?.[0]?.whatsapp_requested_at ?? requestedAt })
   } catch (error) {
     return serverError('POST /api/store/whatsapp-request', error, 'No se pudo enviar la solicitud')

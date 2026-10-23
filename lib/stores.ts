@@ -14,7 +14,7 @@ const DAY = 24 * 60 * 60 * 1000
  * la tienda en solo lectura.
  */
 export type StoreStatus = 'pending' | 'trial' | 'active' | 'suspended' | 'cancelled'
-export type StoreRole = 'owner' | 'admin' | 'employee'
+export type StoreRole = 'admin' | 'employee'
 export type StoreAccess = 'full' | 'readonly'
 
 export const STORE_MODULES = ['whatsapp', 'campaigns', 'formulas'] as const
@@ -23,7 +23,7 @@ export type StoreModules = Record<StoreModule, boolean>
 /**
  * Módulos de una tienda nueva:
  *  · whatsapp: la bandeja de chats. Viene en el plan Cubeta, pero además el
- *    asesor tiene que conectar el número y encenderla desde /admin.
+ *    asesor tiene que conectar el número y encenderla en la base.
  *  · campaigns y formulas: extras que NO se ofrecen en la plataforma (las
  *    fórmulas son de IPESA y las campañas se venden aparte). Las tiendas
  *    nuevas nacen sin ellos y solo se encienden a mano en la base
@@ -37,20 +37,19 @@ export const STATUS_LABELS: Record<StoreStatus, string> = {
 }
 
 export const ROLE_LABELS: Record<StoreRole, string> = {
-  owner: 'Dueño', admin: 'Administrador', employee: 'Vendedor',
+  admin: 'Administrador', employee: 'Vendedor',
 }
 
 /**
  * Planes. El precio vive en Stripe (precios con lookup_key, lib/stripe.ts);
  * aquí solo lo que incluye cada uno.
- *  · maxUsers: usuarios activos de la tienda, contando al dueño (Litro: solo él).
- *  · allowAdmins: si el dueño puede nombrar administradores.
+ *  · maxUsers: usuarios activos de la tienda, contando a los administradores (Litro: solo uno).
+ *  · allowAdmins: si puede haber más de un administrador (sin él, solo quien abrió la tienda).
  *  · maxContacts: null = sin límite. El mismo número está en la función
  *    plan_quota() de la base, que lo hace cumplir: cambia los dos.
  *  · whatsapp: incluye la bandeja de WhatsApp (las campañas son un extra aparte).
  *  · paid: se cobra con Stripe.
- * Interno = la tienda propia (IPESA): cortesía con todo, la asigna el dueño de
- * la plataforma desde la ficha.
+ * Interno = la tienda propia (IPESA): cortesía con todo, se asigna a mano en la base.
  */
 export type PlanId = 'litro' | 'galon' | 'cubeta' | 'interno'
 export type PlanDef = {
@@ -110,7 +109,7 @@ export const DEFAULT_CANALES = ['WhatsApp', 'Visita en tienda', 'Recomendación'
 
 /**
  * Qué puede hacer una tienda: 'full' o 'readonly'. Solo una tienda suspendida
- * o cancelada por el dueño de la plataforma queda en solo lectura (puede
+ * o cancelada a mano en la base queda en solo lectura (puede
  * consultar y exportar, pero no registrar ni enviar nada). Dejar de pagar ya no
  * bloquea: la tienda baja al plan Litro.
  */
@@ -134,4 +133,4 @@ export function normalizeModules(value: unknown): StoreModules {
   return Object.fromEntries(STORE_MODULES.map(m => [m, v[m] === undefined ? DEFAULT_MODULES[m] : v[m] === true])) as StoreModules
 }
 
-export const isStoreAdminRole = (role: StoreRole) => role === 'owner' || role === 'admin'
+export const isStoreAdminRole = (role: StoreRole) => role === 'admin'

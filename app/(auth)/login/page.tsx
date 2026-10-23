@@ -39,7 +39,7 @@ function LoginForm() {
       const data = await res.json().catch(() => ({}))
       if (data.code === 'EMAIL_NOT_CONFIRMED') { setUnconfirmed(email.trim().toLowerCase()); turnstile.current?.reset(); return }
       if (!res.ok) { setError(data.error || 'No pudimos iniciar sesión.'); turnstile.current?.reset(); return }
-      // Sin ?next=, cada quien a su inicio (el dueño de la plataforma, a /admin)
+      // Sin ?next=, al inicio
       window.location.href = nextParam ? safeNext(nextParam) : safeNext(data.home)
     } catch {
       setError('Error de conexión. Intenta de nuevo.')

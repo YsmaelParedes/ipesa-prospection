@@ -3,8 +3,8 @@ import { getServerSupabase, type StoreContext } from './supabase-server'
 /**
  * Leads quedó como archivo (lo reemplazó el sistema comercial): solo se usa
  * para validar los recordatorios viejos ligados a un lead. Solo leads de la
- * tienda activa. Dueño/admin: todos. Vendedor: los suyos y los heredados sin
- * dueño (user_id NULL). Devuelve el lead (id, user_id, name) o null.
+ * tienda activa. administrador: todos. Vendedor: los suyos y los heredados sin
+ * responsable (user_id NULL). Devuelve el lead (id, user_id, name) o null.
  */
 export async function getAccessibleLead(ctx: StoreContext, leadId: string) {
   const { data } = await getServerSupabase().from('leads').select('id, user_id, name')

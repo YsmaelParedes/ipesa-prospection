@@ -8,7 +8,7 @@ type Ctx = { params: Promise<{ id: string }> }
 
 /**
  * GET /api/data/commercial/contacts/[id] — ficha comercial de un contacto:
- * datos, responsable y si quien pregunta puede registrar. Para el dueño o un
+ * datos, responsable y si quien pregunta puede registrar. Para un
  * administrador, también el equipo (para reasignar).
  */
 export async function GET(_req: NextRequest, { params }: Ctx) {
@@ -49,7 +49,7 @@ const SCHEMA: Schema = {
 /**
  * PATCH /api/data/commercial/contacts/[id] — cambia a mano el estado, la
  * próxima acción, la prioridad o el potencial mensual (su responsable o el
- * dueño/administrador). Reasignar (owner_id) solo el dueño o un administrador.
+ * administrador). Reasignar (owner_id) solo un administrador.
  */
 export async function PATCH(req: NextRequest, { params }: Ctx) {
   const ctx = await requireStore({ write: true })
@@ -69,7 +69,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
   const supabase = getServerSupabase()
   if ('owner_id' in parsed.data) {
-    if (!ctx.isAdmin) return jsonError('Solo el dueño o un administrador puede reasignar', 403)
+    if (!ctx.isAdmin) return jsonError('Solo un administrador puede reasignar', 403)
     const owner = parsed.data.owner_id as string | null
     if (owner) {
       const { data: member } = await supabase.from('store_members').select('user_id')

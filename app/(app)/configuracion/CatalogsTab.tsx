@@ -126,7 +126,7 @@ function CatalogPanel({ type, title, singular, subtitle, icon, tone, canEdit }: 
 export function CatalogsTab({ canEdit }: { canEdit: boolean }) {
   return (
     <>
-      {!canEdit && <Note>Solo el dueño o un administrador puede cambiar estas opciones, porque afectan a todo el equipo.</Note>}
+      {!canEdit && <Note>Solo un administrador puede cambiar estas opciones, porque afectan a todo el equipo.</Note>}
       <div className={s.grid3}>
         <CatalogPanel type="segment" title="Segmentos" singular="segmento" icon={Ico.tag} canEdit={canEdit}
           subtitle="Tipos de cliente para tus contactos." />

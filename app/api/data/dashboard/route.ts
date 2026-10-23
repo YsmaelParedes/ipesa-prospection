@@ -82,7 +82,7 @@ async function GETImpl(req: NextRequest) {
         return (isAdmin && !salesTeam ? q.or(`owner_id.eq.${ctx.uid},owner_id.is.null`) : q.eq('owner_id', ctx.uid))
           .order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, to)
       }, 100000),
-      // Actividad comercial desde el mes pasado: toda la tienda (dueño/admin) o la propia (vendedor)
+      // Actividad comercial desde el mes pasado: toda la tienda (administrador) o la propia (vendedor)
       fetchPaged<ActivityRow>((from, to) => {
         let q = supabase.from('commercial_activities')
           .select('id, contact_id, user_id, kind, result, note, quote_amount, sale_amount, is_followup, created_at')

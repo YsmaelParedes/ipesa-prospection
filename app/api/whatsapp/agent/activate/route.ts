@@ -5,7 +5,7 @@ import { agentFetch } from '@/lib/metaAgent'
 import { jsonError } from '@/lib/validation'
 
 /**
- * POST /api/whatsapp/agent/activate (dueño/admin) — crea el agente de IA del
+ * POST /api/whatsapp/agent/activate (administrador) — crea el agente de IA del
  * número y lo deja contestando solo a números de prueba. Meta lo crea con el
  * público "todos" (con costo), así que se cambia de inmediato.
  */

@@ -1,8 +1,8 @@
 /**
- * Avisos de errores en producción para el dueño de la plataforma.
+ * Avisos de errores en producción para el operador de la plataforma.
  * Cada error distinto se guarda una vez (con su contador) en platform_errors y,
  * si toca avisar (reglas anti-ruido en la función report_platform_error), llega
- * un aviso push a los dispositivos del dueño. Nunca lanza error ni bloquea la
+ * un aviso push a los dispositivos del operador. Nunca lanza error ni bloquea la
  * respuesta: reportar un fallo jamás debe causar otro.
  *
  * Los módulos pesados (Supabase, web-push) se cargan dentro de la función para
@@ -36,7 +36,7 @@ async function activeStoreFromCookie(): Promise<string | null> {
   }
 }
 
-/** Manda el aviso al celular del dueño (o dueños) de la plataforma. Devuelve a cuántos dispositivos llegó. */
+/** Manda el aviso al celular del operador de la plataforma. Devuelve a cuántos dispositivos llegó. */
 async function notifyPlatformAdmins(input: { fingerprint: string; context: string; message: string; storeId: string | null; test: boolean }): Promise<number> {
   const { getServerSupabase } = await import('./supabase-server')
   const { configureWebPush, sendPushToSubscriptions } = await import('./push')
@@ -57,7 +57,7 @@ async function notifyPlatformAdmins(input: { fingerprint: string; context: strin
   const result = await sendPushToSubscriptions(subs, {
     title: input.test ? `Prueba de aviso · ${APP_NAME}` : `Error en ${APP_NAME}`,
     body,
-    url: '/admin',
+    url: '/',
     tag: `err-${input.fingerprint.slice(0, 12)}`,
     renotify: true,
   }, { urgency: 'high', ttl: 60 * 60 })

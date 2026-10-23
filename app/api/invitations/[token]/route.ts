@@ -4,9 +4,8 @@ import {
 } from '@/lib/supabase-server'
 import { setActiveStoreCookie, storeLogoUrl } from '@/lib/storeServer'
 import { findInvitationByToken, invitationStatus, maskEmail, passwordProblem, siteOrigin } from '@/lib/invitations'
-import { rpcUserError } from '@/lib/platformEvents'
 import { PLANS } from '@/lib/stores'
-import { jsonError, readJson, serverError } from '@/lib/validation'
+import { jsonError, readJson, rpcUserError, serverError } from '@/lib/validation'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -98,7 +97,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     }
 
     // Todo o nada, con la tienda bloqueada: revisa el plan vigente (lugares,
-    // administradores, dueño único), marca la invitación y crea la membresía
+    // administradores), marca la invitación y crea la membresía
     const { error: acceptError } = await db.rpc('accept_store_invitation', { p_invitation: inv.id, p_user: userId, p_plans: PLANS })
     const known = rpcUserError(acceptError)
     if (known) return jsonError(known.message, known.status)
