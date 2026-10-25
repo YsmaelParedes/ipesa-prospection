@@ -5,11 +5,13 @@ import { WHATSAPP_NOT_CONNECTED, getStoreWhatsAppCreds } from '@/lib/storeWhatsA
 import { agentFetch, settingsPayload, toSettings } from '@/lib/metaAgent'
 import { normalizePhone } from '@/lib/phone'
 import { withContactNames } from '@/lib/agentTestNumbers'
+import { EMPTY_BUSINESS_INFO, listOf, toBusinessInfo, toFaq, toKnowledgeFile, toSkill, toWebsite } from '@/lib/agentKnowledge'
 import { jsonError, readJson } from '@/lib/validation'
 
 /**
  * GET /api/whatsapp/agent (administrador) — estado del agente de IA de Meta:
- *  · state "ready": ajustes + números de prueba
+ *  · state "ready": ajustes, números de prueba, lo que sabe la IA (información
+ *    de la tienda, preguntas, archivos y página web) y sus reglas
  *  · state "inactive": el número aún no tiene agente (se puede activar)
  *  · state "not_eligible": Meta dice que este número no puede usarlo
  */
@@ -28,7 +30,17 @@ async function GETImpl() {
     return NextResponse.json({ state }, { headers: { 'Cache-Control': 'no-store' } })
   }
 
-  const allowlist = await agentFetch<any[]>(creds, 'agent_config/allowlist')
+  const [allowlist, info, faqs, files, websites, skills] = await Promise.all([
+    agentFetch<any[]>(creds, 'agent_config/allowlist'),
+    agentFetch(creds, 'agent_config/business_info'),
+    agentFetch(creds, 'agent_config/faq'),
+    agentFetch(creds, 'agent_config/files'),
+    agentFetch(creds, 'agent_config/websites'),
+    agentFetch(creds, `agent_config/skills${settings.agentId ? `?agent_id=${settings.agentId}` : ''}`),
+  ])
+  // Si Meta falla en una parte, el resto se muestra igual y se avisa qué no cargó
+  const failed = ([[info, 'la información de la tienda'], [faqs, 'las preguntas'], [files, 'los archivos'], [websites, 'la página web'], [skills, 'las reglas']] as const)
+    .filter(([res]) => !res.ok && res.status !== 404).map(([, label]) => label)
   const entries = allowlist.ok && Array.isArray(allowlist.data)
     ? allowlist.data
       .filter(e => typeof e?.id === 'string' && e.consumer_phone_number)
@@ -39,6 +51,13 @@ async function GETImpl() {
     settings,
     testNumbers: await withContactNames(ctx.storeId, entries),
     testNumbersError: allowlist.ok ? null : allowlist.error,
+    // null: no se pudo leer (así no se guarda encima con campos vacíos)
+    businessInfo: info.ok ? toBusinessInfo(info.data) : info.status === 404 ? EMPTY_BUSINESS_INFO : null,
+    faqs: faqs.ok ? listOf(faqs.data, toFaq) : [],
+    files: files.ok ? listOf(files.data, toKnowledgeFile) : [],
+    websites: websites.ok ? listOf(websites.data, toWebsite) : [],
+    skills: skills.ok ? listOf(skills.data, toSkill) : [],
+    knowledgeError: failed.length ? `Meta no regresó ${failed.join(', ')}. Recarga en un momento.` : null,
   }, { headers: { 'Cache-Control': 'no-store' } })
 }
 

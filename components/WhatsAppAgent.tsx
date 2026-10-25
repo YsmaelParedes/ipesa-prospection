@@ -6,12 +6,18 @@ import { fmtPhone } from '@/lib/phone'
 import { WaIcon } from '@/components/WhatsAppUI'
 import type { AgentAudience, AgentSettings, HandoffSelection } from '@/lib/metaAgent'
 import type { TestNumber } from '@/lib/agentTestNumbers'
+import type { BusinessInfo, Faq, KnowledgeFile, Skill, Website } from '@/lib/agentKnowledge'
+import { Knowledge, Rules, StoreInfoForm } from '@/components/WhatsAppAgentKnowledge'
 
 type AgentState =
-  | { state: 'ready'; settings: AgentSettings; testNumbers: TestNumber[]; testNumbersError: string | null }
+  | {
+      state: 'ready'; settings: AgentSettings; testNumbers: TestNumber[]; testNumbersError: string | null
+      businessInfo: BusinessInfo | null; faqs: Faq[]; files: KnowledgeFile[]; websites: Website[]; skills: Skill[]
+      knowledgeError: string | null
+    }
   | { state: 'inactive' | 'not_eligible' }
 
-type Section = 'ajustes' | 'prueba'
+type Section = 'tienda' | 'conocimientos' | 'reglas' | 'ajustes' | 'prueba'
 
 const INTERVALS: [number, string][] = [
   [300, '5 minutos'], [900, '15 minutos'], [1800, '30 minutos'], [3600, '1 hora'],
@@ -31,7 +37,7 @@ async function call(url: string, init?: RequestInit): Promise<{ ok: boolean; dat
 export function WhatsAppAgent() {
   const [data, setData] = useState<AgentState | null>(null)
   const [error, setError] = useState('')
-  const [section, setSection] = useState<Section>('ajustes')
+  const [section, setSection] = useState<Section>('tienda')
   const [toast, setToast] = useState('')
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2600) }
 
@@ -57,6 +63,8 @@ export function WhatsAppAgent() {
   const { settings } = data
   const setSettings = (s: AgentSettings) => setData({ ...data, settings: s })
   const setTestNumbers = (testNumbers: TestNumber[]) => setData({ ...data, testNumbers })
+  const patch = (p: Partial<typeof data>) => setData({ ...data, ...p })
+  const knowledgeCount = data.faqs.length + data.files.length + data.websites.length
 
   return (
     <div className="wa-scroll">
@@ -64,7 +72,14 @@ export function WhatsAppAgent() {
         <aside className="wa-card ag-nav">
           <AgentStatus settings={settings} testCount={data.testNumbers.length} onChange={setSettings} toast={showToast} />
           <nav className="ag-nav-group" aria-label="Opciones del agente">
+            <div className="ag-nav-label">Lo que sabe tu IA</div>
+            <NavItem active={section === 'tienda'} onClick={() => setSection('tienda')} icon="🏪"
+              title="Información de tu tienda" text="Qué vendes, horario, pagos, envíos" />
+            <NavItem active={section === 'conocimientos'} onClick={() => setSection('conocimientos')} icon="📚"
+              title="Conocimientos" text="Preguntas frecuentes, archivos y tu página web" badge={knowledgeCount ? String(knowledgeCount) : undefined} />
             <div className="ag-nav-label">Qué hace y cómo responde</div>
+            <NavItem active={section === 'reglas'} onClick={() => setSection('reglas')} icon="📋"
+              title="Reglas" text="Cómo contestar en cada situación" badge={data.skills.length ? String(data.skills.length) : undefined} />
             <NavItem active={section === 'ajustes'} onClick={() => setSection('ajustes')} icon="⚙️"
               title="Ajustes de respuestas" text="A quién contesta y cuándo pasa el chat al equipo" />
             <NavItem active={section === 'prueba'} onClick={() => setSection('prueba')} icon="🧪"
@@ -73,6 +88,15 @@ export function WhatsAppAgent() {
         </aside>
 
         <section className="wa-card ag-panel">
+          {data.knowledgeError && (section === 'tienda' || section === 'conocimientos' || section === 'reglas') && (
+            <p className="field-error" role="alert">{data.knowledgeError}</p>
+          )}
+          {section === 'tienda' && <StoreInfoForm key={JSON.stringify(data.businessInfo)} info={data.businessInfo} onSaved={businessInfo => patch({ businessInfo })} toast={showToast} />}
+          {section === 'conocimientos' && (
+            <Knowledge faqs={data.faqs} files={data.files} websites={data.websites} toast={showToast}
+              onFaqs={faqs => patch({ faqs })} onFiles={files => patch({ files })} onWebsites={websites => patch({ websites })} />
+          )}
+          {section === 'reglas' && <Rules list={data.skills} agentId={settings.agentId} onChange={skills => patch({ skills })} toast={showToast} />}
           {section === 'ajustes' && <AgentSettingsForm key={JSON.stringify(settings)} settings={settings} onSaved={setSettings} toast={showToast} />}
           {section === 'prueba' && <TestNumbers list={data.testNumbers} error={data.testNumbersError} onChange={setTestNumbers} toast={showToast} />}
         </section>

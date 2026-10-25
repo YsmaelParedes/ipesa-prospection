@@ -36,6 +36,18 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.7.0',
+    date: '24 de octubre, 2026',
+    title: 'Agente de IA: lo que sabe y sus reglas',
+    module: 'whatsapp',
+    items: [
+      'En WhatsApp → Agente IA ya puedes escribir la información de tu tienda: qué vendes, formas de pago, cómo comprar, envíos, devoluciones, horario y dirección.',
+      'Nuevo apartado «Conocimientos»: agrega preguntas frecuentes, sube archivos (PDF, Word o imágenes, como tu lista de precios) y la dirección de tu página web para que la IA conteste con eso.',
+      'Nuevo apartado «Reglas»: dile a la IA qué hacer en situaciones concretas. Hay dos listas para encender con un toque: pedir los datos del cliente antes de cotizar y no dar precios exactos.',
+      'Cada regla muestra si ya está activa, si Meta la está revisando o si la rechazó.',
+    ],
+  },
+  {
     version: '4.6.0',
     date: '24 de octubre, 2026',
     title: 'Contactos más rápido y guías de inicio',

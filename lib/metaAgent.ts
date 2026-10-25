@@ -5,6 +5,7 @@
  *  · settings:   GET/PUT {entity}/agent_config/settings
  *  · allowlist:  GET/POST {entity}/agent_config/allowlist, DELETE …/{entry_id}
  *  · onboarding: POST {entity}/agent_onboarding · eligibility: GET {entity}/agent_eligibility
+ * Conocimientos y reglas: lib/agentKnowledge.ts
  */
 import { externalFetch } from './serverTiming'
 import type { WhatsAppCreds } from './whatsapp'
@@ -39,11 +40,12 @@ export async function agentFetch<T = any>(creds: Pick<WhatsAppCreds, 'token' | '
       headers: {
         Authorization: `Bearer ${creds.token}`,
         'X-API-Version': '2.0.0',
-        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        // Con FormData (archivos), fetch pone solo el multipart con su boundary
+        ...(typeof init.body === 'string' ? { 'Content-Type': 'application/json' } : {}),
         ...(init.headers ?? {}),
       },
       cache: 'no-store',
-      signal: init.signal ?? AbortSignal.timeout(15_000),
+      signal: init.signal ?? AbortSignal.timeout(init.body instanceof FormData ? 60_000 : 15_000),
     })
     const data = res.status === 204 ? null : await res.json().catch(() => null)
     if (res.ok) return { ok: true, status: res.status, data: data as T }

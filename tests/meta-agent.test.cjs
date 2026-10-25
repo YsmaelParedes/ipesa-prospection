@@ -72,3 +72,42 @@ test('errores legibles y número en E.164', () => {
   assert.match(agentError(429, {}), /Espera/)
   assert.equal(toE164('2224105762'), '+522224105762')
 })
+
+const k = require('../lib/agentKnowledge.ts')
+
+test('información de la tienda: se manda completa con el contacto anidado', () => {
+  const body = k.businessInfoPayload({ description: ' Pinturas ', payment: 'Efectivo', hours: '9 a 7', email: 'a@b.mx' })
+  assert.deepEqual(body, {
+    business_description: 'Pinturas', payment_method: 'Efectivo', purchase_info: '', delivery_and_shipping: '', return_policy: '',
+    contact_info: { hours_of_operation: '9 a 7', email: 'a@b.mx', address: '' },
+  })
+  assert.match(k.businessInfoPayload({ email: 'no-es-correo' }), /correo/)
+  assert.equal(k.toBusinessInfo({ business_description: 'X', contact_info: null }).description, 'X')
+  assert.equal(k.toBusinessInfo(null).hours, '')
+})
+
+test('preguntas frecuentes y reglas se validan como pide Meta', () => {
+  assert.deepEqual(k.faqPayload({ question: ' ¿Igualan colores? ', answer: 'Sí' }), { question: '¿Igualan colores?', answer: 'Sí' })
+  assert.match(k.faqPayload({ question: 'x', answer: '' }), /respuesta/)
+  assert.equal(k.skillSlug('Promoción del mes!'), 'promocion-del-mes')
+  assert.equal(k.skillSlug('  '), 'regla')
+  assert.equal(k.skillSlug('a'.repeat(80)).length, 64)
+  assert.equal(k.skillName('cotizaciones-de-obra'), 'Cotizaciones de obra')
+  assert.deepEqual(k.skillPayload({ name: 'Datos de factura', description: 'Cuando pidan factura', skill: 'Pide el RFC' }),
+    { title: 'datos-de-factura', description: 'Cuando pidan factura', skill: 'Pide el RFC' })
+  assert.match(k.skillPayload({ name: 'x', description: 'y'.repeat(1025), skill: 'z' }), /1024/)
+  assert.equal(k.toSkill({ id: '1', title: 'a-b', skill: 's', status: 'raro' }).status, 'pending_review')
+  for (const p of k.SKILL_PRESETS) assert.equal(k.skillSlug(p.title), p.title)
+})
+
+test('página web y archivos', () => {
+  assert.equal(k.websiteUrl('tutienda.mx'), 'https://tutienda.mx/')
+  assert.equal(k.websiteUrl('http://x.com/precios'), 'http://x.com/precios')
+  assert.equal(k.websiteUrl('hola'), null)
+  assert.equal(k.websiteUrl('javascript:alert(1)'), null)
+  const w = k.toWebsite({ id: 'w', url: 'https://x.mx', crawl_status: 'completed', pages_crawled: 18, last_crawled_at: 1760000000 })
+  assert.equal(w.pages, 18)
+  assert.equal(w.lastCrawledAt.slice(0, 4), '2025')
+  assert.equal(k.fileExtension('Lista de precios.PDF'), 'pdf')
+  assert.deepEqual(k.listOf([{ id: 'a', file_name: 'x.pdf' }, { nope: 1 }], k.toKnowledgeFile), [{ id: 'a', name: 'x.pdf' }])
+})
