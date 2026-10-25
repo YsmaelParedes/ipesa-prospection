@@ -1,6 +1,8 @@
 'use client'
 
 import { PlanLimitHint } from '@/components/PlanLimitHint'
+import { GuideButton, GuideModal, useGuide } from '@/components/GuideModal'
+import { CONTACTS_GUIDE } from '@/components/Guides'
 import { useDataReady, useQueryEffect } from '@/lib/useCachedQuery'
 
 
@@ -176,6 +178,8 @@ function ContactosContent() {
   const baseTotal      = facets?.total ?? total
   // Lo que se ve en la tabla: las páginas ya cargadas con los filtros actuales
   const filtered = contacts
+  // Guía de inicio: sola la primera vez (no si se llegó a una ficha o a una búsqueda)
+  const guide = useGuide('contactos', !loading && !deepId && !urlQuery)
 
   const filtersOn = segF !== 'Todos' || canalF !== 'Todos' || zoneF !== 'Todos' || lineF !== 'Todos' || !!search.trim()
   const clearFilters = () => { setSegF('Todos'); setCanalF('Todos'); setZoneF('Todos'); setLineF('Todos'); setSearch('') }
@@ -287,6 +291,7 @@ function ContactosContent() {
             <h2>Contactos</h2>
             {!loading && <span className="count">{filtersOn ? `${total.toLocaleString('es-MX')} de ${baseTotal.toLocaleString('es-MX')}` : baseTotal.toLocaleString('es-MX')}</span>}
             <div className="section-actions">
+              <GuideButton onClick={guide.show} />
               {canManage && <button className="btn btn-ghost" onClick={() => setShowImport(true)} title="Importar desde Excel o CSV"><Ico.upload /> <span className="hide-sm">Importar</span></button>}
               {isAdmin && <button className="btn btn-ghost" onClick={() => setShowExport(true)} disabled={!baseTotal} title="Exportar a Excel"><Ico.download /> <span className="hide-sm">Exportar</span></button>}
               {!readonly && <button className="btn btn-primary page-primary" onClick={() => openQuickCreate({ kind: 'contact' })}><Ico.plus /> Nuevo contacto</button>}
@@ -452,6 +457,8 @@ function ContactosContent() {
           onDone={() => { setShowWhatsAppCampaign(false); clearSelection() }}
         />
       )}
+
+      {guide.open && <GuideModal title="Cómo usar Contactos" steps={CONTACTS_GUIDE} onClose={guide.close} />}
 
       {toast && (
         <div className="toast-fixed">

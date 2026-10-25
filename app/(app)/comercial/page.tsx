@@ -11,6 +11,8 @@ import { HoyView, type Opened } from './HoyView'
 import { OportunidadesView } from './OportunidadesView'
 import { EquipoView } from './EquipoView'
 import { ContactPanel } from './ContactPanel'
+import { GuideButton, GuideModal, useGuide } from '@/components/GuideModal'
+import { commercialGuide } from '@/components/Guides'
 import { Ico, bizName, useWide, type TodayData } from './ui'
 import s from './comercial.module.css'
 
@@ -118,18 +120,24 @@ function ComercialContent() {
     ...(salesTeam && isAdmin ? [{ key: 'equipo' as Tab, label: 'Equipo' }] : []),
   ]
   const current: Tab = TABS.some(t => t.key === tab) ? tab : 'hoy'
+  // Guía de inicio: sola la primera vez (no si se llegó directo a una ficha)
+  const guide = useGuide('comercial', !loading && !!data && !deepId)
 
   return (
     <>
-      {TABS.length > 1 && (
-        <div className={s.tabs} role="tablist" aria-label="Sistema comercial">
-          {TABS.map(t => (
-            <button key={t.key} role="tab" aria-selected={current === t.key} className={`${s.tab} ${s.press}`} onClick={() => setTab(t.key)}>
-              {t.label}{t.count ? <span className={`${s.tabCount} ${s.num}`}>{t.count}</span> : null}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className={s.tabsRow}>
+        {TABS.length > 1 && (
+          <div className={s.tabs} role="tablist" aria-label="Sistema comercial">
+            {TABS.map(t => (
+              <button key={t.key} role="tab" aria-selected={current === t.key} className={`${s.tab} ${s.press}`} onClick={() => setTab(t.key)}>
+                {t.label}{t.count ? <span className={`${s.tabCount} ${s.num}`}>{t.count}</span> : null}
+              </button>
+            ))}
+          </div>
+        )}
+        <GuideButton onClick={guide.show} />
+      </div>
+      {guide.open && <GuideModal title="Cómo usar Comercial" steps={commercialGuide({ isAdmin, salesTeam })} onClose={guide.close} />}
 
       {loading || !data ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>

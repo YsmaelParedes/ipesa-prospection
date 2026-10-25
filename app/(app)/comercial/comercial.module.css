@@ -11,7 +11,8 @@
 .press { -webkit-tap-highlight-color: transparent; }
 
 /* ── Encabezado y pestañas ── */
-.tabs { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--paper-2); margin-bottom: 12px; max-width: 460px; }
+.tabsRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.tabs { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--paper-2); flex: 1 1 auto; max-width: 460px; }
 .tab { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 10px; border-radius: 10px; font-weight: 700; font-size: 13px; color: var(--muted); }
 .tab[aria-selected='true'] { background: var(--card); color: var(--ink); box-shadow: 0 0 0 1px rgba(19, 19, 19, .06), 0 1px 2px rgba(19, 19, 19, .05); }
 .tabCount { font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: var(--brand-soft); color: var(--brand-strong); }

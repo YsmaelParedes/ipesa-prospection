@@ -479,6 +479,68 @@ a { color: inherit; text-decoration: none; }
 .line-seg button { padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--ink-2); background: var(--paper); border: 1px solid var(--line-strong); transition-property: background-color, color, border-color; transition-duration: 150ms; }
 .line-seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .line-seg button:disabled { opacity: 0.6; }
+
+/* ---------- Guía de inicio (components/GuideModal.tsx) ---------- */
+.modal-card.guide { max-width: 460px; }
+.guide-head { display: flex; align-items: center; gap: 10px; padding: 18px 22px 0; }
+.guide-kicker { font-size: 12px; font-weight: 800; color: var(--brand-strong); letter-spacing: 0.02em; }
+.guide-count { margin-left: auto; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.guide-step { transition-property: opacity; transition-duration: 150ms; overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+.guide-step.fading { opacity: 0; }
+.guide-art { position: relative; margin: 14px 22px 0; height: 164px; border-radius: 14px; background: var(--paper); display: grid; place-items: center; overflow: hidden; }
+.guide-art::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--spectrum); }
+.guide-body { padding: 16px 22px 4px; }
+.guide-body h3 { margin: 0 0 8px; font-family: var(--font-display); font-size: 21px; line-height: 1.2; letter-spacing: -0.02em; text-wrap: balance; }
+.guide-body p { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--ink-2); text-wrap: pretty; }
+.guide-dots { display: flex; gap: 6px; padding: 12px 22px 0; }
+.guide-dots i { width: 7px; height: 7px; border-radius: 999px; background: var(--line-strong); transition-property: width, background-color; transition-duration: 150ms; }
+.guide-dots i.on { width: 20px; background: var(--brand); }
+.guide-foot { display: flex; align-items: center; gap: 8px; padding: 16px 22px calc(18px + env(safe-area-inset-bottom)); }
+.guide-btn { font: inherit; font-size: 14px; font-weight: 700; min-height: 44px; padding: 10px 16px; border-radius: 12px; border: 1px solid transparent; -webkit-tap-highlight-color: transparent; transition-property: background-color, scale; transition-duration: 150ms; transition-timing-function: ease-out; }
+.guide-btn.ghost { background: transparent; color: var(--muted); }
+.guide-btn.soft { background: var(--paper); color: var(--ink-2); box-shadow: 0 0 0 1px var(--line-strong); }
+.guide-btn.primary { margin-left: auto; min-width: 128px; background: var(--brand); color: #fff; box-shadow: var(--shadow-brand); }
+@media (hover: hover) {
+  .guide-btn.ghost:hover, .guide-btn.soft:hover { background: var(--paper-2); }
+  .guide-btn.primary:hover { background: var(--brand-strong); }
+  .guide-how:hover { background: var(--paper); }
+}
+@media (prefers-reduced-motion: no-preference) { .guide-btn:active, .guide-how:active { scale: 0.96; } }
+.guide-how { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; font-weight: 700; color: var(--ink-2); background: var(--card); border: 1px solid transparent; border-radius: 999px; padding: 7px 12px; min-height: 36px; box-shadow: 0 0 0 1px var(--line-strong); -webkit-tap-highlight-color: transparent; transition-property: background-color, scale; transition-duration: 150ms; transition-timing-function: ease-out; white-space: nowrap; }
+.guide-how svg { width: 15px; height: 15px; }
+/* En la cabecera de Contactos (celular) solo el ícono */
+@media (max-width: 600px) { .section-actions .guide-how-text { display: none; } .section-actions .guide-how { padding: 7px 9px; } }
+
+/* Dibujos de la guía: mini pantallas */
+.g-mini { width: 78%; display: flex; flex-direction: column; gap: 7px; }
+.g-center { align-items: center; gap: 12px; }
+.g-card { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--card); box-shadow: 0 0 0 1px var(--line), 0 2px 6px -3px rgba(19, 19, 19, 0.12); font-size: 11.5px; font-weight: 700; }
+.g-dot { width: 22px; height: 22px; flex-shrink: 0; border-radius: 999px; background: var(--paper-2); }
+.g-line { flex: 1; height: 7px; border-radius: 4px; background: var(--paper-2); }
+.g-mono { flex: 1; font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.g-tag { padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 800; white-space: nowrap; }
+.g-tag.red { background: var(--brand-soft); color: var(--brand-strong); }
+.g-tag.warn { background: var(--warning-soft); color: var(--warning); }
+.g-tag.info { background: var(--info-soft); color: var(--info); }
+.g-tag.wa { background: var(--success-soft); color: var(--success); }
+.g-tag.fijo { background: var(--paper); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.g-prog { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.g-track { flex: 1; height: 7px; border-radius: 999px; background: var(--paper-2); overflow: hidden; }
+.g-track b { display: block; width: 40%; height: 100%; border-radius: 999px; background: var(--success-fill); }
+.g-chips { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; }
+.g-chips span { padding: 6px 11px; border-radius: 999px; background: var(--card); font-size: 11.5px; font-weight: 800; box-shadow: 0 0 0 1px var(--line-strong); }
+.g-chips span.on { background: var(--ink); color: var(--card); box-shadow: none; }
+.g-chips em { font-style: normal; font-weight: 800; color: var(--muted-2); }
+.g-save { padding: 7px 14px; border-radius: 10px; background: var(--brand); color: #fff; font-size: 11.5px; font-weight: 800; }
+.g-more { align-self: center; padding: 7px 14px; border-radius: 10px; background: var(--card); color: var(--ink-2); font-size: 11.5px; font-weight: 800; box-shadow: 0 0 0 1px var(--line-strong); }
+.g-menu { width: 190px; display: flex; flex-direction: column; gap: 2px; padding: 6px; border-radius: 12px; background: var(--card); box-shadow: 0 0 0 1px var(--line), 0 10px 24px -12px rgba(19, 19, 19, 0.25); }
+.g-menu span { padding: 6px 8px; border-radius: 8px; font-size: 11.5px; font-weight: 700; }
+.g-menu span.on { background: var(--paper); }
+.g-bars { width: 78%; display: flex; flex-direction: column; gap: 9px; }
+.g-bars div { display: grid; grid-template-columns: 72px 1fr 38px; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.g-bars i { display: block; height: 8px; border-radius: 999px; background: var(--paper-2); overflow: hidden; }
+.g-bars b { display: block; height: 100%; border-radius: 999px; background: var(--success-fill); }
+@media (max-width: 960px) { .guide-art { height: 150px; } .modal-card.guide { max-width: 100%; } }
 .cell-name .nm { font-weight: 700; color: var(--ink); }
 .cell-name .em { font-size: 11.5px; color: var(--muted); }
 .cell-mono { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink-2); letter-spacing: 0.01em; }
@@ -873,7 +935,7 @@ a { color: inherit; text-decoration: none; }
   .modal-card::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 999px; background: var(--line-strong); margin: 10px auto 0; }
   .modal-head { padding-top: 12px; }
   .modal-foot { padding-bottom: max(14px, env(safe-area-inset-bottom)); }
-  .filter-bar { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; margin-left: -16px; margin-right: -16px; padding: 0 16px 4px; -webkit-overflow-scrolling: touch; }
+  .filter-bar { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; margin-left: -16px; margin-right: -16px; padding: 0 16px 4px; -webkit-overflow-scrolling: touch; max-width: calc(100% + 32px); }
   .filter-bar::-webkit-scrollbar { display: none; }
   .filter-bar > * { flex-shrink: 0; }
   .kanban { grid-template-columns: repeat(var(--kanban-cols, 5), 84vw); gap: 10px; overflow-x: auto; margin: 0 -16px; padding: 0 16px 6px; }
@@ -887,7 +949,7 @@ a { color: inherit; text-decoration: none; }
   .topbar { padding: 11px 14px 10px; }
   .content { padding: 14px 14px 100px; }
   /* Sangrado a sangre: debe igualar el padding de .content (si no, desborda 2 px) */
-  .filter-bar { margin-left: -14px; margin-right: -14px; padding: 0 14px 4px; }
+  .filter-bar { margin-left: -14px; margin-right: -14px; padding: 0 14px 4px; max-width: calc(100% + 28px); }
   .kanban { margin: 0 -14px; padding: 0 14px 6px; }
   .table-wrap { background: transparent; border: none; border-radius: 0; box-shadow: none; overflow: visible; }
   .table, .table thead, .table tbody, .table tr, .table td { display: block; }

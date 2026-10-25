@@ -6,8 +6,8 @@
  * Las leen TODAS las tiendas y todo su equipo. Solo va lo que el usuario
  * puede ver y usar, en sus palabras. Nunca: detalles de seguridad o de cómo
  * se protege algo, proveedores e infraestructura, base de datos, migraciones,
- * cifras o datos de una tienda en particular, ni nada del panel del dueño de
- * la plataforma.
+ * cifras o datos de una tienda en particular, ni nada de la operación de la
+ * plataforma.
  *
  * Lo que solo existe en algunas tiendas lleva `module` (en la entrada o en el
  * renglón): WhatsApp, Campañas o Fórmulas. changelogFor() lo oculta a las
@@ -35,6 +35,19 @@ export type ChangelogEntry = {
 export type VisibleEntry = { version: string; date: string; title: string; items: string[] }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '4.6.0',
+    date: '24 de octubre, 2026',
+    title: 'Contactos más rápido y guías de inicio',
+    items: [
+      'Ahora solo hay dos roles: Administrador y Vendedor. Quien era Dueño ahora es Administrador y conserva todo lo que podía hacer.',
+      'Contactos carga de 50 en 50 y abajo tienes «Ver más contactos». La búsqueda y los filtros revisan toda tu base.',
+      'Nuevo filtro «Teléfono» en Contactos: con WhatsApp, fijo, sin verificar o sin teléfono.',
+      'Junto a cada número ves si tiene WhatsApp (verde) o si es fijo. Se marca solo cuando hay mensajes de WhatsApp, y en la ficha puedes marcarlo tú en «¿Tiene WhatsApp?».',
+      { text: 'En el sistema comercial ya no aparece el botón de WhatsApp en los números marcados como fijos.', module: 'whatsapp' },
+      'Guías de inicio en Comercial y Contactos: salen la primera vez y las vuelves a abrir con «¿Cómo funciona?».',
+    ],
+  },
   {
     version: '4.5.0',
     date: '23 de octubre, 2026',
