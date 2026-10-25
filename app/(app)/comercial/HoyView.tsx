@@ -87,11 +87,14 @@ export function HoyView({ data, wide, zone, query, readonly, waModule, loadingMo
     </div>
   )
 
-  const moreButton = data.fresh.length < data.freshTotal && (
+  // Hasta 300 a la vez; con más, se acota con la zona o la búsqueda
+  const moreButton = data.fresh.length < data.freshTotal && (data.fresh.length >= 300 ? (
+    <p className={s.loadMore}>Elige una zona o busca para ver otros prospectos.</p>
+  ) : (
     <button className={`${s.loadMore} ${s.press}`} onClick={onMore} disabled={loadingMore}>
       {loadingMore ? 'Cargando…' : `Ver más prospectos (${(data.freshTotal - data.fresh.length).toLocaleString('es-MX')} más)`}
     </button>
-  )
+  ))
 
   const empty = !all.length && (
     <div className={s.emptyList}>

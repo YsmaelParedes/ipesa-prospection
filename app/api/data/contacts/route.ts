@@ -8,6 +8,7 @@ import { parsePlanLimitError, planLimitMessage, planLimitResponse, remainingSlot
 import { planOf } from '@/lib/stores'
 import { normalizePhone } from '@/lib/phone'
 import { isPhoneFilter } from '@/lib/lineType'
+import { withContactSearch } from '@/lib/contactSearch'
 
 const MAX_BULK = 500
 
@@ -16,16 +17,13 @@ const MAX_PAGE = 200
 /** Columnas para buscar o elegir un contacto (buscador, recordatorios, campañas, bandeja). */
 const LITE_COLUMNS = 'id, name, phone, email, company, segment, acquisition_channel, zone, wa_opt_out, line_type, commercial_status'
 
-/** "José Pérez" → ['jose', 'perez'] (como contacts.search_text: minúsculas y sin acentos) */
-const searchWords = (q: string) => q.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-  .replace(/[^a-z0-9ñ@. ]+/g, ' ').split(/\s+/).filter(Boolean).slice(0, 6)
-
 /**
  * GET /api/data/contacts — la base de la tienda, de a poco:
  *  · Lista (Contactos): ?offset=&limit= (50 por página) con filtros ?q=, ?segment=,
  *    ?channel=, ?zone=, ?line=whatsapp|fijo|sin_verificar|sin_telefono. Devuelve
  *    { contacts, total } y, con ?facets=1, los conteos de toda la base para los filtros.
- *  · Búsqueda rápida: ?q=…&fields=lite&limit=8 (buscador, recordatorios, bandeja).
+ *  · Búsqueda rápida: ?q=…&fields=lite&limit=8 (buscador, recordatorios, bandeja); con
+ *    ?prefix=1 solo los que empiezan con la primera palabra.
  *  · Duplicado: ?phone=2221234567 → el contacto con ese número, si existe.
  *  · Campañas: ?fields=lite&all=1&line=con_telefono → todos los que tienen teléfono, columnas mínimas.
  *  · Exportar (administradores): ?all=1 con los mismos filtros → todo, con todas las columnas.
@@ -61,11 +59,7 @@ async function GETImpl(req: NextRequest) {
       else if (line === 'con_telefono') r = r.not('phone', 'is', null)
       else if (line === 'sin_verificar') r = r.not('phone', 'is', null).is('line_type', null)
       else if (isPhoneFilter(line)) r = r.not('phone', 'is', null).eq('line_type', line)
-      const raw = (sp.get('q') ?? '').slice(0, 80)
-      const digits = raw.replace(/\D/g, '')
-      if (digits.length >= 3 && !/[a-zA-ZÀ-ſ]/.test(raw)) r = r.ilike('phone', `%${digits}%`)
-      else for (const w of searchWords(raw)) r = r.ilike('search_text', `%${w}%`)
-      return r
+      return withContactSearch(r, sp.get('q'), { prefix: sp.get('prefix') === '1' })
     }
 
     if (sp.get('all') === '1') {

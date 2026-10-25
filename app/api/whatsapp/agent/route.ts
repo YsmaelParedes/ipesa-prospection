@@ -1,7 +1,6 @@
 import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
-import { requireStore } from '@/lib/supabase-server'
-import { WHATSAPP_NOT_CONNECTED, getStoreWhatsAppCreds } from '@/lib/storeWhatsApp'
+import { agentIdParam, requireAgent } from '@/lib/agentRoute'
 import { agentFetch, settingsPayload, toSettings } from '@/lib/metaAgent'
 import { normalizePhone } from '@/lib/phone'
 import { withContactNames } from '@/lib/agentTestNumbers'
@@ -16,10 +15,9 @@ import { jsonError, readJson } from '@/lib/validation'
  *  · state "not_eligible": Meta dice que este número no puede usarlo
  */
 async function GETImpl() {
-  const ctx = await requireStore({ admin: true, module: 'whatsapp' })
-  if (ctx instanceof Response) return ctx
-  const creds = await getStoreWhatsAppCreds(ctx.storeId)
-  if (!creds) return jsonError(WHATSAPP_NOT_CONNECTED, 409)
+  const auth = await requireAgent()
+  if (auth instanceof Response) return auth
+  const { ctx, creds } = auth
 
   const res = await agentFetch(creds, 'agent_config/settings')
   if (!res.ok && res.status !== 404) return jsonError(res.error, 502)
@@ -36,7 +34,7 @@ async function GETImpl() {
     agentFetch(creds, 'agent_config/faq'),
     agentFetch(creds, 'agent_config/files'),
     agentFetch(creds, 'agent_config/websites'),
-    agentFetch(creds, `agent_config/skills${settings.agentId ? `?agent_id=${settings.agentId}` : ''}`),
+    agentFetch(creds, `agent_config/skills${agentIdParam(settings.agentId) ? `?agent_id=${settings.agentId}` : ''}`),
   ])
   // Si Meta falla en una parte, el resto se muestra igual y se avisa qué no cargó
   const failed = ([[info, 'la información de la tienda'], [faqs, 'las preguntas'], [files, 'los archivos'], [websites, 'la página web'], [skills, 'las reglas']] as const)
@@ -63,18 +61,15 @@ async function GETImpl() {
 
 // PUT /api/whatsapp/agent — cambia los ajustes (solo lo que venga en el cuerpo)
 export async function PUT(req: NextRequest) {
-  const ctx = await requireStore({ admin: true, module: 'whatsapp', write: true })
-  if (ctx instanceof Response) return ctx
+  const auth = await requireAgent(true)
+  if (auth instanceof Response) return auth
   const input = await readJson(req)
   if (!input) return jsonError('Cuerpo inválido')
   const body = settingsPayload(input)
   if (typeof body === 'string') return jsonError(body)
 
-  const creds = await getStoreWhatsAppCreds(ctx.storeId)
-  if (!creds) return jsonError(WHATSAPP_NOT_CONNECTED, 409)
-
-  const agentId = typeof input.agentId === 'string' && /^\w{1,64}$/.test(input.agentId) ? input.agentId : null
-  const res = await agentFetch(creds, `agent_config/settings${agentId ? `?agent_id=${agentId}` : ''}`, {
+  const agentId = agentIdParam(input.agentId)
+  const res = await agentFetch(auth.creds, `agent_config/settings${agentId ? `?agent_id=${agentId}` : ''}`, {
     method: 'PUT',
     body: JSON.stringify(body),
   })

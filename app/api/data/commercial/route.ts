@@ -3,17 +3,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { jsonError, serverError } from '@/lib/validation'
 import { COMMERCIAL_COLUMNS, hasSalesTeam, zonedDayStart } from '@/lib/commercialServer'
+import { withContactSearch } from '@/lib/contactSearch'
 import { addDays, countActivities, goalsFor, parseGoalsConfig, todayISO, type ActivityForCount } from '@/lib/commercial'
 
 const FRESH_PAGE = 30
+/** Al refrescar se pide de una vez lo que ya se veía (hasta este tope). */
+const MAX_FRESH = 300
 const VISIT_PAGE = 20
 const MAX_DUE = 500
 
-/** Texto de búsqueda seguro para un filtro "or" de PostgREST (sin comas, paréntesis ni comodines). */
-const searchTerm = (q: string | null) => (q ?? '').replace(/[^\p{L}\p{N} ]+/gu, ' ').trim().slice(0, 60)
 
 /**
- * GET /api/data/commercial[?zone=&q=&offset=] — la lista de "Hoy":
+ * GET /api/data/commercial[?zone=&q=&offset=&limit=] — la lista de "Hoy":
  *  · due: mis seguimientos con fecha de hoy o vencida (y los sin asignar con fecha)
  *  · fresh: prospectos con teléfono que nadie ha trabajado (sin asignar), de a 30, por zona o búsqueda
  *  · visit: los que no tienen teléfono ("Para visita"), primeros 20 y el total
@@ -27,35 +28,36 @@ async function GETImpl(req: NextRequest) {
   const sp = req.nextUrl.searchParams
   const zone = sp.get('zone')
   if (zone !== null && zone.length > 60) return jsonError('Zona inválida')
-  const q = searchTerm(sp.get('q'))
+  const q = (sp.get('q') ?? '').trim().slice(0, 80)
   const offset = Math.max(0, Math.min(Number(sp.get('offset')) || 0, 100000))
+  // Prospectos nuevos por página; al refrescar, los que ya se veían (sin acentos ni mayúsculas en la búsqueda)
+  const freshLimit = Math.max(FRESH_PAGE, Math.min(Number(sp.get('limit')) || FRESH_PAGE, MAX_FRESH))
   const tz = ctx.store.timezone || 'America/Mexico_City'
   const today = todayISO(tz)
   const supabase = getServerSupabase()
-  const textFilter = `name.ilike.%${q}%,company.ilike.%${q}%,phone.ilike.%${q}%`
 
   try {
     let due = supabase.from('contacts').select(COMMERCIAL_COLUMNS).eq('store_id', ctx.storeId)
       .or(`owner_id.eq.${ctx.uid},owner_id.is.null`)
       .not('next_action_at', 'is', null).lte('next_action_at', today).neq('commercial_status', 'depurar')
     if (zone) due = due.eq('zone', zone)
-    if (q) due = due.or(textFilter)
+    if (q) due = withContactSearch(due, q)
 
     let fresh = supabase.from('contacts').select(COMMERCIAL_COLUMNS, { count: 'exact' }).eq('store_id', ctx.storeId)
       .is('owner_id', null).is('last_activity_at', null).is('next_action_at', null).eq('commercial_status', 'nuevo')
       .not('phone', 'is', null)
     if (zone) fresh = fresh.eq('zone', zone)
-    if (q) fresh = fresh.or(textFilter)
+    if (q) fresh = withContactSearch(fresh, q)
 
     let visit = supabase.from('contacts').select(COMMERCIAL_COLUMNS, { count: 'exact' }).eq('store_id', ctx.storeId)
       .is('owner_id', null).is('last_activity_at', null).is('phone', null)
     if (zone) visit = visit.eq('zone', zone)
-    if (q) visit = visit.or(textFilter)
+    if (q) visit = withContactSearch(visit, q)
 
     const [dueRes, freshRes, visitRes, activities, store, zones] = await Promise.all([
       due.order('next_action_at', { ascending: true }).order('id', { ascending: true }).limit(MAX_DUE),
       fresh.order('no_answer_streak', { ascending: true }).order('created_at', { ascending: true }).order('id', { ascending: true })
-        .range(offset, offset + FRESH_PAGE - 1),
+        .range(offset, offset + freshLimit - 1),
       visit.order('created_at', { ascending: true }).order('id', { ascending: true }).limit(VISIT_PAGE),
       supabase.from('commercial_activities').select('kind, result, is_followup, quote_amount, sale_amount')
         .eq('store_id', ctx.storeId).eq('user_id', ctx.uid)

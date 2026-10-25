@@ -92,7 +92,7 @@ export type StoreContext = {
   plan: PlanId
   /** Módulos que la tienda puede usar: los de su plan y encendidos por el asesor */
   modules: StoreModules
-  /** Plan Litro: solo entra el administrador; los vendedores quedan en espera */
+  /** Plan Litro: solo entra el administrador principal; los demás quedan en espera */
   litroBlocked: boolean
   memberships: Membership[]
 }
@@ -114,6 +114,24 @@ export async function getMemberships(uid: string): Promise<Membership[]> {
   return list
 }
 
+/**
+ * Administrador principal: quien abrió la tienda (stores.created_by) si sigue
+ * como administrador activo; si no, el administrador activo más antiguo.
+ * Nadie más puede quitarlo ni cambiarle el rol, y en el plan Litro (1 usuario)
+ * es el único que entra.
+ */
+export async function getMainAdmin(storeId: string): Promise<string | null> {
+  const db = getServerSupabase()
+  const [store, admins] = await Promise.all([
+    db.from('stores').select('created_by').eq('id', storeId).maybeSingle(),
+    db.from('store_members').select('user_id').eq('store_id', storeId).eq('role', 'admin').eq('status', 'active')
+      .order('created_at', { ascending: true }).order('user_id', { ascending: true }),
+  ])
+  const ids = (admins.data ?? []).map(a => a.user_id as string)
+  const creator = store.data?.created_by as string | null | undefined
+  return creator && ids.includes(creator) ? creator : (ids[0] ?? null)
+}
+
 /** Tienda activa: la de la cookie si el usuario pertenece a ella; si no, la más antigua. */
 export async function resolveStoreContext(user: User): Promise<StoreContext | null> {
   const memberships = await getMemberships(user.id)
@@ -121,6 +139,8 @@ export async function resolveStoreContext(user: User): Promise<StoreContext | nu
   const wanted = (await cookies()).get(ACTIVE_STORE_COOKIE)?.value
   const m = memberships.find(x => x.storeId === wanted) ?? memberships[0]
   const plan = effectivePlan(m.store)
+  // Litro incluye 1 usuario: solo el administrador principal (si hay más administradores, quedan en espera)
+  const litroBlocked = plan === 'litro' && (m.role !== 'admin' || (await getMainAdmin(m.storeId)) !== user.id)
   return {
     uid: user.id,
     user,
@@ -131,7 +151,7 @@ export async function resolveStoreContext(user: User): Promise<StoreContext | nu
     access: storeAccess(m.store),
     plan,
     modules: effectiveModules(m.store),
-    litroBlocked: plan === 'litro' && m.role !== 'admin',
+    litroBlocked,
     memberships,
   }
 }

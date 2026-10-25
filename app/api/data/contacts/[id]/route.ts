@@ -39,10 +39,16 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   }
   if (Object.keys(updates).length === 0) return jsonError('No se proporcionaron campos válidos para actualizar')
 
-  // Número nuevo: lo que se sabía del anterior (WhatsApp o fijo) ya no aplica
-  if ('phone' in updates && !('line_type' in updates)) {
-    const { data: prev } = await getServerSupabase().from('contacts').select('phone').eq('id', id).eq('store_id', ctx.storeId).maybeSingle()
-    if (prev && prev.phone !== updates.phone) updates.line_type = null
+  if ('phone' in updates || 'address' in updates) {
+    const { data: prev } = await getServerSupabase().from('contacts').select('phone, address').eq('id', id).eq('store_id', ctx.storeId).maybeSingle()
+    if (prev) {
+      // Sin teléfono tiene que quedar la dirección para visitarlo
+      const phone = 'phone' in updates ? updates.phone : prev.phone
+      const address = String(('address' in updates ? updates.address : prev.address) ?? '').trim()
+      if (!phone && !address) return jsonError('Escribe el teléfono o, si no tiene, la dirección para visitarlo')
+      // Número nuevo: lo que se sabía del anterior (WhatsApp o fijo) ya no aplica
+      if ('phone' in updates && !('line_type' in updates) && prev.phone !== updates.phone) updates.line_type = null
+    }
   }
 
   const { data, error } = await getServerSupabase()

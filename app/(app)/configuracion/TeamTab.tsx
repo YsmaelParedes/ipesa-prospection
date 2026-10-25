@@ -14,7 +14,7 @@ import s from './configuracion.module.css'
 
 type Member = {
   user_id: string; email: string; display_name: string; role: StoreRole; status: 'active' | 'disabled' | string
-  joined_at: string; last_sign_in_at: string | null; isMe: boolean; canManage: boolean
+  joined_at: string; last_sign_in_at: string | null; isMe: boolean; isMain?: boolean; canManage: boolean
 }
 type Invitation = { id: string; email: string; role: 'admin' | 'employee'; expiresAt: string; status: 'valid' | 'expired' | 'used' | 'revoked' }
 type NewLink = { email: string; link: string }
@@ -186,7 +186,7 @@ export function TeamTab({ store }: { store: ClientStore }) {
                         ]}
                       />
                     ) : (
-                      <span className={cx(s.badge, ROLE_BADGE[m.role])}>{ROLE_LABELS[m.role]}</span>
+                      <span className={cx(s.badge, ROLE_BADGE[m.role])}>{m.isMain ? 'Administrador principal' : ROLE_LABELS[m.role]}</span>
                     )}
                     {off && <span className={cx(s.badge, s.bDanger, s.offBadge)}>Desactivado</span>}
                     {m.canManage && (confirmId === m.user_id ? (

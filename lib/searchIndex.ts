@@ -25,8 +25,11 @@ const fetchContacts = (params: Record<string, string>): Promise<IndexContact[]> 
 export async function findContacts(q: string, limit = 6, opts: { withPhone?: boolean } = {}): Promise<IndexContact[]> {
   const text = q.trim()
   if (!text) return []
-  const list = await fetchContacts({ q: text, limit: '50', ...(opts.withPhone ? { line: 'con_telefono' } : {}) })
-  return searchContacts(list, text, limit)
+  // Con muchas coincidencias, los 50 más recientes podrían no traer el mejor: se piden aparte los que empiezan así
+  const base = { q: text, ...(opts.withPhone ? { line: 'con_telefono' } : {}) }
+  const [starts, any] = await Promise.all([fetchContacts({ ...base, prefix: '1', limit: '20' }), fetchContacts({ ...base, limit: '50' })])
+  const seen = new Set(starts.map(c => c.id))
+  return searchContacts([...starts, ...any.filter(c => !seen.has(c.id))], text, limit)
 }
 
 /** El contacto que ya tiene ese número (10 dígitos), o null. */

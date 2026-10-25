@@ -133,6 +133,7 @@ test('normalization, side-effect exclusions and mutation dependencies', () => {
   assert.equal(queryPolicy('/api/whatsapp/conversations/1234567890'), null)
   assert.equal(queryPolicy('/api/data/export'), null)
   assert.equal(queryPolicy('/api/whatsapp/media/123'), null)
-  assert.ok(mutationResources('/api/data/reminders/123').includes('/api/data/leads'))
+  assert.ok(mutationResources('/api/data/reminders/123').includes('/api/data/dashboard'))
+  assert.ok(mutationResources('/api/data/contacts/123').includes('/api/data/commercial'))
   assert.ok(mutationResources('/api/whatsapp/campaigns/send').includes('/api/data/dashboard'))
 })

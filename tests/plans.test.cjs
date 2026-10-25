@@ -11,7 +11,6 @@ const NOW = Date.parse('2026-10-18T12:00:00Z')
 test('the plans match what was agreed', () => {
   assert.deepEqual([PLANS.litro.maxUsers, PLANS.galon.maxUsers, PLANS.cubeta.maxUsers], [1, 3, 5])
   assert.equal(PLANS.litro.maxContacts, 50)
-  assert.equal(PLANS.litro.maxLeads, 10)
   assert.equal(PLANS.galon.whatsapp, false)
   assert.equal(PLANS.cubeta.whatsapp, true)
   assert.equal(planOf('profesional').label, 'Litro', 'unknown plans fall back to Litro')
@@ -77,7 +76,7 @@ test('Stripe prices and subscriptions map to plans', () => {
 test('the database limit error becomes a clear message', () => {
   assert.deepEqual(parsePlanLimitError({ code: 'P0001', message: 'PLAN_LIMIT:contacts:50' }), { kind: 'contacts', limit: 50 })
   assert.equal(parsePlanLimitError({ code: '23505', message: 'duplicate key' }), null)
-  assert.match(planLimitMessage('leads', 10), /10 leads del plan Litro/)
+  assert.match(planLimitMessage('contacts', 50), /50 contactos del plan Litro/)
   assert.equal(remainingSlots(50, 48), 2)
   assert.equal(remainingSlots(50, 60), 0)
   assert.equal(remainingSlots(null, 999), null)

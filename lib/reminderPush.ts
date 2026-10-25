@@ -6,7 +6,9 @@ import { DEFAULT_TZ, naiveIso, zonedIso } from './datetime'
 
 /**
  * Avisos push de la Agenda: el resumen de la mañana, que el cron diario de
- * Vercel pide a /api/cron/agenda. (Los avisos a la hora de cada recordatorio
+ * Vercel pide a /api/cron/agenda. Junta los recordatorios de cada persona y
+ * sus seguimientos del sistema comercial (contacts.next_action_at de los
+ * clientes a su cargo), igual que la pantalla Agenda. (Los avisos a la hora de cada recordatorio
  * se quitaron el 22 de octubre de 2026; volverán con un plan mayor de Supabase.)
  * reminder_date no lleva zona: es la hora LOCAL de la tienda tal cual se
  * eligió, así que "ahora" se expresa igual (zonedIso) y se compara como texto.
@@ -36,7 +38,7 @@ type Row = {
 const uniq = <T>(list: T[]) => [...new Set(list)]
 
 /** Zona de cada tienda, quién sigue en su equipo y los dispositivos de cada persona. */
-async function loadAudience(rows: Row[], now: Date) {
+async function loadAudience(rows: { store_id: string; user_id: string }[], now: Date) {
   const storeIds = uniq(rows.map(r => r.store_id))
   const userIds  = uniq(rows.map(r => r.user_id))
   const supabase = getServerSupabase()
@@ -64,9 +66,9 @@ async function loadAudience(rows: Row[], now: Date) {
   const nowByZone = new Map<string, string>()
   return {
     devices,
-    canNotify: (r: Row) => allowed.has(`${r.store_id}:${r.user_id}`),
+    canNotify: (r: { store_id: string; user_id: string }) => allowed.has(`${r.store_id}:${r.user_id}`),
     /** "Ahora" en la hora local de la tienda del recordatorio. */
-    nowFor(r: Row) {
+    nowFor(r: { store_id: string }) {
       const tz = zone.get(r.store_id) ?? DEFAULT_TZ
       let iso = nowByZone.get(tz)
       if (!iso) { iso = zonedIso(now, tz); nowByZone.set(tz, iso) }
@@ -102,11 +104,21 @@ function actionFor(r: Row): string | null {
   return (VERB[r.type ?? ''] ?? VERB.task)(name)
 }
 
-type Day = { today: Row[]; overdue: number; recent: number }
+/** Lo de hoy de una persona: cada renglón con su orden (la hora; los seguimientos, sin hora, al final). */
+export type AgendaDay = { today: { sort: string; line: string }[]; overdue: number; recent: number }
 
-function agendaPayload({ today, overdue }: Day): PushPayload {
+type FollowUp = { id: string; store_id: string; owner_id: string; name: string; company: string | null; next_action: string | null; next_action_at: string }
+
+const reminderLine = (r: Row) => ({
+  sort: naiveIso(r.reminder_date).slice(11, 16),
+  line: `${hhmm(r.reminder_date)} ${clip(actionFor(r) ?? (r.nota?.trim() || 'Recordatorio'), 46)}`,
+})
+const followupLine = (c: FollowUp) => ({ sort: '99:99', line: clip(`${c.next_action?.trim() || 'Seguimiento'}: ${c.company?.trim() || c.name}`, 52) })
+
+export function agendaPayload({ today: items, overdue }: AgendaDay): PushPayload {
   const s = (n: number) => (n === 1 ? '' : 's')
-  const lines = today.slice(0, 3).map(r => `${hhmm(r.reminder_date)} ${clip(actionFor(r) ?? (r.nota?.trim() || 'Recordatorio'), 46)}`)
+  const today = [...items].sort((a, b) => a.sort.localeCompare(b.sort))
+  const lines = today.slice(0, 3).map(t => t.line)
   const extra = [
     today.length > 3 ? `y ${today.length - 3} más` : '',
     overdue ? `${overdue} vencido${s(overdue)}` : '',
@@ -124,20 +136,37 @@ export async function sendMorningAgenda(now = new Date()) {
   const supabase = getServerSupabase()
   // Hasta el fin del día en la zona más adelantada (UTC+14 → 38 h desde ahora)
   const bound = new Date(now.getTime() + 38 * 3600_000).toISOString().slice(0, 19)
-  const { data, error } = await supabase
-    .from('reminders')
-    .select('id, store_id, user_id, lead_name, nota, reminder_date, type, push_sent')
-    .eq('completado', false)
-    .not('user_id', 'is', null)
-    .lte('reminder_date', bound)
-    .order('reminder_date', { ascending: true })
-    .limit(5000)
+  const [reminders, followups] = await Promise.all([
+    supabase.from('reminders')
+      .select('id, store_id, user_id, lead_name, nota, reminder_date, type, push_sent')
+      .eq('completado', false)
+      .not('user_id', 'is', null)
+      .lte('reminder_date', bound)
+      .order('reminder_date', { ascending: true })
+      .limit(5000),
+    // Seguimientos comerciales con fecha de hoy o vencida, de quien tiene al cliente
+    supabase.from('contacts')
+      .select('id, store_id, owner_id, name, company, next_action, next_action_at')
+      .not('owner_id', 'is', null)
+      .not('next_action_at', 'is', null)
+      .lte('next_action_at', bound.slice(0, 10))
+      .neq('commercial_status', 'depurar')
+      .order('next_action_at', { ascending: true })
+      .limit(5000),
+  ])
+  const error = reminders.error ?? followups.error
   if (error) throw error
-  const rows = (data ?? []) as Row[]
-  if (!rows.length) return { users: 0, sent: 0, missed: 0 }
+  const rows = (reminders.data ?? []) as Row[]
+  const due = (followups.data ?? []) as FollowUp[]
+  if (!rows.length && !due.length) return { users: 0, sent: 0, missed: 0, followups: 0 }
 
-  const aud = await loadAudience(rows, now)
-  const days = new Map<string, Day>()
+  const aud = await loadAudience([...rows, ...due.map(c => ({ store_id: c.store_id, user_id: c.owner_id }))], now)
+  const days = new Map<string, AgendaDay>()
+  const dayOf = (userId: string) => {
+    const day = days.get(userId) ?? { today: [], overdue: 0, recent: 0 }
+    days.set(userId, day)
+    return day
+  }
   // Vencidos que nunca se avisaron uno por uno: el resumen cuenta como su aviso
   const missed: string[] = []
   for (const r of rows) {
@@ -148,13 +177,29 @@ export async function sendMorningAgenda(now = new Date()) {
     if (overdue && !r.push_sent) missed.push(r.id)
     if (!aud.canNotify(r)) continue
 
-    const day = days.get(r.user_id) ?? { today: [], overdue: 0, recent: 0 }
-    if (!overdue) day.today.push(r)
+    const day = dayOf(r.user_id)
+    if (!overdue) day.today.push(reminderLine(r))
     else {
       day.overdue++
       if (msBetween(remLoc, nowLoc) <= 24 * 3600_000) day.recent++
     }
-    days.set(r.user_id, day)
+  }
+
+  // Seguimientos: la fecha es un día (sin hora) en la zona de la tienda
+  let followupCount = 0
+  for (const c of due) {
+    const target = { store_id: c.store_id, user_id: c.owner_id }
+    if (!aud.canNotify(target)) continue
+    const todayLoc = aud.nowFor(c).slice(0, 10)
+    if (c.next_action_at > todayLoc) continue  // en esta zona todavía es de mañana
+    followupCount++
+    const day = dayOf(c.owner_id)
+    if (c.next_action_at === todayLoc) day.today.push(followupLine(c))
+    else {
+      day.overdue++
+      // Vencido desde ayer cuenta como "nuevo" (sí despierta el aviso)
+      if (msBetween(`${c.next_action_at}T00:00:00`, `${todayLoc}T00:00:00`) <= 24 * 3600_000) day.recent++
+    }
   }
 
   let users = 0, sent = 0
@@ -168,5 +213,5 @@ export async function sendMorningAgenda(now = new Date()) {
     sent += result.sent
   }
   await markSent(missed)
-  return { users, sent, missed: missed.length }
+  return { users, sent, missed: missed.length, followups: followupCount }
 }

@@ -1,14 +1,15 @@
 import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import {
-  getServerSupabase, getStoreMembers, invalidateStoreMembers, requireStore, type StoreContext,
+  getMainAdmin, getServerSupabase, getStoreMembers, invalidateStoreMembers, requireStore, type StoreContext,
 } from '@/lib/supabase-server'
 import { PLANS, planOf, type StoreRole } from '@/lib/stores'
 import { isUUID, jsonError, readJson, rpcUserError, serverError } from '@/lib/validation'
 
 /**
  * Equipo de la tienda.
- *  · Un administrador administra a todos menos a sí mismo.
+ *  · Un administrador administra a todos menos a sí mismo y al administrador
+ *    principal (el más antiguo, quien abrió la tienda).
  *  · Los vendedores no administran a nadie.
  */
 // GET /api/store/members — administradores
@@ -16,9 +17,9 @@ async function GETImpl() {
   const ctx = await requireStore({ admin: true })
   if (ctx instanceof Response) return ctx
   try {
-    const members = await getStoreMembers(ctx.storeId)
+    const [members, main] = await Promise.all([getStoreMembers(ctx.storeId), getMainAdmin(ctx.storeId)])
     return NextResponse.json({
-      members: members.map(m => ({ ...m, isMe: m.user_id === ctx.uid, canManage: m.user_id !== ctx.uid })),
+      members: members.map(m => ({ ...m, isMe: m.user_id === ctx.uid, isMain: m.user_id === main, canManage: m.user_id !== ctx.uid && m.user_id !== main })),
     }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     return serverError('GET /api/store/members', error, 'No se pudo cargar el equipo')
@@ -42,6 +43,7 @@ export async function PATCH(req: NextRequest) {
   const target = await targetMember(ctx, body.userId)
   if (!target) return jsonError('Usuario no encontrado', 404)
   if (target.user_id === ctx.uid) return jsonError('No puedes cambiar tu propio acceso')
+  if (target.user_id === await getMainAdmin(ctx.storeId)) return jsonError('Es el administrador principal de la tienda: nadie puede quitarlo ni cambiarle el acceso.', 403)
 
   const updates: Record<string, unknown> = {}
   if (body.role !== undefined) {
@@ -80,6 +82,7 @@ export async function DELETE(req: NextRequest) {
   const target = await targetMember(ctx, body?.userId)
   if (!target) return jsonError('Usuario no encontrado', 404)
   if (target.user_id === ctx.uid) return jsonError('No puedes quitarte a ti mismo')
+  if (target.user_id === await getMainAdmin(ctx.storeId)) return jsonError('Es el administrador principal de la tienda: nadie puede quitarlo ni cambiarle el acceso.', 403)
 
   const { error } = await getServerSupabase().rpc('manage_store_member', {
     p_store: ctx.storeId, p_actor: ctx.uid, p_target: target.user_id,

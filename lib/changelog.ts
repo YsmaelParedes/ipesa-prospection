@@ -36,6 +36,19 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.7.1',
+    date: '24 de octubre, 2026',
+    title: 'Ajustes y correcciones',
+    items: [
+      'El resumen de las 8:00 de la mañana ahora también incluye tus seguimientos del sistema comercial de ese día, no solo los recordatorios.',
+      'En Comercial → Hoy, la búsqueda encuentra sin importar acentos ni el orden de las palabras («jose» encuentra «José»).',
+      'Hoy ya no regresa a los primeros prospectos cada vez que guardas una llamada, y «Ver más prospectos» no se salta ninguno.',
+      'El buscador de arriba muestra primero los contactos cuyo nombre empieza con lo que escribes.',
+      'El administrador principal de la tienda (quien la abrió) ya no se puede quitar ni cambiar desde Equipo.',
+      'Al editar un contacto ya no se pueden borrar a la vez el teléfono y la dirección.',
+    ],
+  },
+  {
     version: '4.7.0',
     date: '24 de octubre, 2026',
     title: 'Agente de IA: lo que sabe y sus reglas',

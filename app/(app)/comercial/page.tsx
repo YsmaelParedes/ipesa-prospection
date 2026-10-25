@@ -17,6 +17,9 @@ import { Ico, bizName, useWide, type TodayData } from './ui'
 import s from './comercial.module.css'
 
 const PATH = '/api/data/commercial'
+/** Prospectos nuevos por página y lo más que se pide de una vez (igual que el servidor). */
+const FRESH_PAGE = 30
+const MAX_FRESH = 300
 type Tab = 'hoy' | 'oportunidades' | 'equipo'
 const TAB_KEYS: Tab[] = ['hoy', 'oportunidades', 'equipo']
 
@@ -60,33 +63,38 @@ function ComercialContent() {
     return () => clearTimeout(t)
   }, [query])
 
-  const url = useCallback((offset = 0) => {
+  // limit: cuántos prospectos nuevos traer desde el principio (el servidor topa en 300)
+  const url = useCallback((limit = 0) => {
     const qs = new URLSearchParams()
     if (zone) qs.set('zone', zone)
     if (search) qs.set('q', search)
-    if (offset) qs.set('offset', String(offset))
+    if (limit > FRESH_PAGE) qs.set('limit', String(Math.min(limit, MAX_FRESH)))
     const str = qs.toString()
     return str ? `${PATH}?${str}` : PATH
   }, [zone, search])
 
-  const load = useCallback(async () => {
+  // Cuántos prospectos nuevos se ven: al refrescar (por un guardado) se conservan los ya cargados
+  const freshShown = useRef(0)
+  freshShown.current = data?.fresh.length ?? 0
+  const load = useCallback(async (keep = false) => {
     try {
-      const r = await apiFetch(url())
+      const r = await apiFetch(url(keep ? freshShown.current : 0))
       if (r.ok) setData(await r.json())
     } catch {} finally { setLoading(false) }
   }, [url])
   useQueryEffect(() => { load() }, [load])
-  useDataChanged(['contact', 'commercial'], load)
+  useDataChanged(['contact', 'commercial'], () => load(true))
   useEffect(() => { if (deepId) setOverlay({ id: deepId }) }, [deepId])
 
   async function loadMore() {
     if (!data) return
     setLoadingMore(true)
     try {
-      const r = await apiFetch(url(data.fresh.length))
+      // Se vuelve a pedir desde el principio: si alguien ya tomó prospectos de la lista, no se salta ninguno
+      const r = await apiFetch(url(data.fresh.length + FRESH_PAGE))
       if (r.ok) {
         const more: TodayData = await r.json()
-        setData(d => d ? { ...d, fresh: [...d.fresh, ...more.fresh.filter(c => !d.fresh.some(x => x.id === c.id))], freshTotal: more.freshTotal } : d)
+        setData(d => d ? { ...d, fresh: more.fresh, freshTotal: more.freshTotal } : d)
       }
     } finally { setLoadingMore(false) }
   }
