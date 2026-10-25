@@ -267,6 +267,8 @@ function tierOf(value: unknown): string | undefined {
 // health_status también reporta llamadas (SIP), que no afectan el envío de mensajes
 const CALLING_NOTE = /\bSIP\b|\bcalling\b/i
 const DISPLAY_NAME_NOTE = /display name has not been approved/i
+// name_status con el nombre visible ya utilizable
+const NAME_APPROVED = new Set(['APPROVED', 'AVAILABLE_WITHOUT_REVIEW'])
 // Lo demás llega en inglés y con términos técnicos: a la tienda solo se le da un aviso general
 const GENERIC_NOTE = 'Meta reportó una restricción en tu número. Tu asesor la revisará contigo.'
 
@@ -298,6 +300,8 @@ export async function getPhoneHealth(creds: WhatsAppCreds): Promise<PhoneHealth 
     ...(Array.isArray(e?.errors) ? e.errors.map((x: any) => [x?.error_description, x?.possible_solution].filter(Boolean).join(' ')) : []),
     ...(Array.isArray(e?.additional_info) ? e.additional_info : typeof e?.additional_info === 'string' ? [e.additional_info] : []),
   ]).filter((n): n is string => typeof n === 'string' && !!n.trim() && !CALLING_NOTE.test(n))
+    // Si el nombre ya está aprobado, ese motivo es un dato atrasado de Meta: no se muestra
+    .filter(n => !(DISPLAY_NAME_NOTE.test(n) && NAME_APPROVED.has(String(base.name_status))))
     .map(n => (DISPLAY_NAME_NOTE.test(n) ? 'Meta aún no aprueba el nombre visible del número; el límite de mensajes subirá cuando lo apruebe.' : GENERIC_NOTE))
 
   return {

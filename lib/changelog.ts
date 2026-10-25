@@ -36,6 +36,15 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.7.2',
+    date: '24 de octubre, 2026',
+    title: 'Sistema Comercial',
+    items: [
+      'La sección «Comercial» ahora se llama «Sistema Comercial» en el menú (abajo, en el celular, sigue diciendo «Comercial» para que quepa).',
+      { text: 'Ya no aparece el aviso de que Meta no ha aprobado el nombre de tu número cuando el nombre ya está aprobado.', module: 'whatsapp' },
+    ],
+  },
+  {
     version: '4.7.1',
     date: '24 de octubre, 2026',
     title: 'Ajustes y correcciones',

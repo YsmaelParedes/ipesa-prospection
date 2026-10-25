@@ -558,7 +558,7 @@ function DoneStep({ store, modules, invites }: { store: ClientStore; modules: St
 const PREVIEW_NAV: { label: string; icon: (p: IconProps) => React.ReactElement; module?: StoreModule }[] = [
   { label: 'Dashboard', icon: Ic.dashboard },
   { label: 'Contactos', icon: Ic.contacts },
-  { label: 'Comercial', icon: Ic.leads },
+  { label: 'Sistema Comercial', icon: Ic.leads },
   { label: 'WhatsApp', icon: Ic.chat, module: 'whatsapp' },
   { label: 'Recordatorios', icon: Ic.clock },
   { label: 'Fórmulas', icon: Ic.flask, module: 'formulas' },

@@ -135,7 +135,7 @@ function ComercialContent() {
     <>
       <div className={s.tabsRow}>
         {TABS.length > 1 && (
-          <div className={s.tabs} role="tablist" aria-label="Sistema comercial">
+          <div className={s.tabs} role="tablist" aria-label="Sistema Comercial">
             {TABS.map(t => (
               <button key={t.key} role="tab" aria-selected={current === t.key} className={`${s.tab} ${s.press}`} onClick={() => setTab(t.key)}>
                 {t.label}{t.count ? <span className={`${s.tabCount} ${s.num}`}>{t.count}</span> : null}
@@ -145,7 +145,7 @@ function ComercialContent() {
         )}
         <GuideButton onClick={guide.show} />
       </div>
-      {guide.open && <GuideModal title="Cómo usar Comercial" steps={commercialGuide({ isAdmin, salesTeam })} onClose={guide.close} />}
+      {guide.open && <GuideModal title="Cómo usar el Sistema Comercial" steps={commercialGuide({ isAdmin, salesTeam })} onClose={guide.close} />}
 
       {loading || !data ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>

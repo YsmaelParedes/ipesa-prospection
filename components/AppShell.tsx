@@ -67,13 +67,13 @@ function initials(name: string) {
   return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 }
 
-/* Menú en el orden del día a día. Mismo nombre en computadora y celular. */
-type NavItem = { id: string; href: string; label: string; icon: (p: IconProps) => React.ReactElement; mobile: boolean; module?: StoreModule }
+/* Menú en el orden del día a día. Mismo nombre en computadora y celular (`short` solo si no cabe abajo en el celular). */
+type NavItem = { id: string; href: string; label: string; short?: string; icon: (p: IconProps) => React.ReactElement; mobile: boolean; module?: StoreModule }
 const NAV_ITEMS: NavItem[] = [
   { id: 'inicio',    href: '/',              label: 'Inicio',    icon: Icon.home,     mobile: true },
   { id: 'whatsapp',  href: '/whatsapp',      label: 'WhatsApp',  icon: Icon.whatsapp, mobile: true, module: 'whatsapp' },
   { id: 'contactos', href: '/contactos',     label: 'Contactos', icon: Icon.contacts, mobile: true },
-  { id: 'comercial', href: '/comercial',     label: 'Comercial', icon: Icon.commercial, mobile: true },
+  { id: 'comercial', href: '/comercial',     label: 'Sistema Comercial', short: 'Comercial', icon: Icon.commercial, mobile: true },
   { id: 'agenda',    href: '/recordatorios', label: 'Agenda',    icon: Icon.calendar, mobile: true },
 ]
 const TOOL_ITEMS: NavItem[] = [
@@ -84,7 +84,7 @@ const TITLE_MAP: Record<string, { t: string; s: string }> = {
   '/':               { t: 'Inicio',        s: 'Lo que hay que atender hoy'         },
   '/whatsapp':       { t: 'WhatsApp',      s: 'Conversaciones con tus clientes'    },
   '/contactos':      { t: 'Contactos',     s: 'Tu base de clientes'                },
-  '/comercial':      { t: 'Sistema comercial', s: 'Hoy, oportunidades y equipo'     },
+  '/comercial':      { t: 'Sistema Comercial', s: 'Hoy, oportunidades y equipo'     },
   '/recordatorios':  { t: 'Agenda',        s: 'Recordatorios y seguimientos'       },
   '/formulas':       { t: 'Fórmulas',      s: 'Igualación de colores'              },
   '/configuracion':  { t: 'Configuración', s: 'Tu tienda, equipo e integraciones'  },
@@ -583,7 +583,7 @@ Pantalla: ${pathname}`,
           return (
             <Link key={it.id} href={it.href} className={isActive(it.href) ? 'active' : ''} aria-current={isActive(it.href) ? 'page' : undefined}>
               <Ic />
-              <span>{it.label}</span>
+              <span>{it.short ?? it.label}</span>
               {badge && <span className={`bn-badge ${badge.cls}`}>{badge.n > 99 ? '99+' : badge.n}</span>}
               {pendingSetup(it.id) && <span className="bn-badge off" title="Por activar"><span className="sr-only">Por activar</span></span>}
             </Link>

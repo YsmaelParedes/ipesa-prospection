@@ -90,7 +90,7 @@ export const CONTACTS_GUIDE: GuideStep[] = [
   },
   {
     title: 'Sin teléfono = para visita',
-    text: 'Los negocios sin número se trabajan en persona: los encuentras en Comercial → Hoy → Para visita.',
+    text: 'Los negocios sin número se trabajan en persona: los encuentras en Sistema Comercial → Hoy → Para visita.',
     art: <div className="g-mini"><Card tag="Para visita" tone="info" /><Card tag="Para visita" tone="info" /></div>,
   },
 ]
