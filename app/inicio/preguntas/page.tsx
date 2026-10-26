@@ -57,7 +57,6 @@ export default function PreguntasPage() {
       {/* Las mismas preguntas y respuestas que se ven en la página */}
       <JsonLd data={[faqJsonLd(GROUPS.flatMap(g => g.items)), breadcrumbJsonLd('Preguntas frecuentes', '/inicio/preguntas')]} />
       <PageHero
-        kicker="Preguntas frecuentes"
         title={<>Lo que suelen <span className={s.spectrumText}>preguntarnos</span></>}
         lead="Si no encuentras tu respuesta, escríbenos y platicamos de tu tienda."
       >

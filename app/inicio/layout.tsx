@@ -3,7 +3,7 @@ import { EMAILS } from '@/lib/legal'
 import { BrandLogo } from '@/components/Brand'
 import { APP_NAME, APP_TAGLINE } from '@/lib/brand'
 import { SiteNav } from './SiteNav'
-import { SITE_LINKS } from './links'
+import { ALL_LINKS } from './links'
 import s from './inicio.module.css'
 
 /* Sitio de presentación (público): menú y pie compartidos por todas sus páginas. */
@@ -22,7 +22,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           </div>
           <nav className={s.footCol} aria-label="Sitio">
             <strong>Sitio</strong>
-            {SITE_LINKS.map(l => <Link key={l.href} href={l.href}>{l.label}</Link>)}
+            {ALL_LINKS.map(l => <Link key={l.href} href={l.href}>{l.label}</Link>)}
           </nav>
           <nav className={s.footCol} aria-label="Cuenta">
             <strong>Cuenta</strong>

@@ -26,7 +26,6 @@ export default function PreciosPage() {
     <>
       <JsonLd data={breadcrumbJsonLd('Precios', '/inicio/precios')} />
       <PageHero
-        kicker="Precios"
         title={<>Empieza gratis, <span className={s.spectrumText}>crece cuando quieras</span></>}
         lead="Tres planes para cada etapa de tu tienda. Pago mensual con tarjeta, sin plazos forzosos."
       />
@@ -40,14 +39,14 @@ export default function PreciosPage() {
 
       <section className={`${s.section} ${s.sectionAlt}`}>
         <div className={s.wrap}>
-          <SectionHead kicker="Compara" title="Lo que incluye cada plan" />
+          <SectionHead title="Lo que incluye cada plan" />
           <PricingCompare />
         </div>
       </section>
 
       <section className={s.section}>
         <div className={s.wrap}>
-          <SectionHead kicker="Dudas" title="Sobre los pagos" />
+          <SectionHead title="Sobre los pagos" />
           <div className={s.priceNotes}>
             {NOTES.map(n => (
               <div key={n.q} className={s.priceNote}>

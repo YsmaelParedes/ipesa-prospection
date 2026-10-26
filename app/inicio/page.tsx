@@ -2,11 +2,11 @@ import type { Metadata } from 'next'
 import { organizationJsonLd, pageMeta } from '@/lib/site'
 import { JsonLd } from '@/components/JsonLd'
 import Link from 'next/link'
-import { BrandLogo } from '@/components/Brand'
 import { APP_NAME, APP_TAGLINE } from '@/lib/brand'
 import { PLANS } from '@/lib/stores'
 import { CtaBand, Ic, MoreLink, SectionHead } from './_ui'
-import { LeadsDemo } from './LeadsDemo'
+import { DemoTabs } from './demos/DemoTabs'
+import { HeroVideo } from './demos/HeroVideo'
 import { PricingCards } from './Pricing'
 import s from './inicio.module.css'
 
@@ -17,17 +17,15 @@ export const metadata: Metadata = pageMeta({
   path: '/',
 })
 
-const DEMO_STORE = 'Pinturas La Paleta'
-
 /* Inicio del sitio de presentación: lo ve quien entra a "/" sin sesión (ver proxy.ts). */
 
 const FEATURES = [
-  { icon: Ic.contacts,  tone: s.tCyan,    title: 'Contactos y segmentos', text: 'Hogar, constructor, arquitecto, pintor o empresa. Encuentra a cualquier cliente en segundos.', href: '/inicio/funciones#contactos' },
-  { icon: Ic.leads,     tone: s.tBrand,   title: 'Cotizaciones con seguimiento', text: 'De nuevo a cotizado y ganado. Cada oportunidad con su monto y su siguiente paso.', href: '/inicio/funciones#leads' },
-  { icon: Ic.grid,      tone: s.tAmber,   title: 'Lo que toca hoy', text: 'Al abrir, tu equipo ve a quién llamar, qué cotización espera respuesta y qué visitas tiene.', href: '/inicio/funciones#agenda' },
-  { icon: Ic.users,     tone: s.tMagenta, title: 'Tu equipo y tu base, protegidos', text: 'Cada vendedor con su usuario. Exportar y borrar, solo tú.', href: '/inicio/funciones#equipo' },
-  { icon: Ic.bell,      tone: s.tTeal,    title: 'Avisos en tu celular', text: 'El resumen de tus pendientes cada mañana, aunque la app esté cerrada.', href: '/inicio/funciones#avisos' },
-  { icon: Ic.chat,      tone: s.tWa,      title: 'WhatsApp en el CRM', text: 'En el plan Cubeta: atiende a tus clientes desde el número de tu tienda.', href: '/inicio/whatsapp' },
+  { icon: Ic.grid,      tone: s.tBrand,   title: 'Sistema Comercial', text: 'Hoy, Oportunidades y Equipo: a quién llamar, cotizaciones abiertas y metas por vendedor.', href: '/inicio/sistema-comercial' },
+  { icon: Ic.contacts,  tone: s.tCyan,    title: 'Contactos', text: 'Tu base por zonas, con WhatsApp o fijo, importada desde Excel y lista para visitar.', href: '/inicio/contactos' },
+  { icon: Ic.chat,      tone: s.tWa,      title: 'WhatsApp en el CRM', text: 'En el plan Cubeta: atiende a tus clientes desde el número de tu tienda, con todo tu equipo.', href: '/inicio/whatsapp' },
+  { icon: Ic.layers,    tone: s.tMagenta, title: 'Agente de IA', text: 'Contesta WhatsApp a cualquier hora con la información de tu tienda y pasa el chat a tu equipo.', href: '/inicio/agente-ia' },
+  { icon: Ic.bell,      tone: s.tTeal,    title: 'Agenda y avisos', text: 'El resumen de tus pendientes cada mañana en tu celular, aunque la app esté cerrada.', href: '/inicio/funciones#agenda' },
+  { icon: Ic.users,     tone: s.tAmber,   title: 'Tu equipo y tu base, protegidos', text: 'Administradores y vendedores, cada quien con su usuario. Exportar y borrar, solo administradores.', href: '/inicio/funciones#equipo' },
 ]
 
 const STEPS = [
@@ -44,11 +42,10 @@ export default function LandingPage() {
       <section className={s.hero}>
         <div className={`${s.wrap} ${s.heroGrid}`}>
           <div className={s.heroCopy}>
-            <span className={s.eyebrow}><span className={s.eyebrowDot} />Para tiendas de pintura</span>
             <h1 className={s.h1}>El CRM hecho para tiendas <span className={s.spectrumText}>de pintura</span></h1>
             <p className={s.lead}>
-              Contactos, cotizaciones, agenda y avisos en un solo lugar. Tu equipo sabe a quién darle
-              seguimiento hoy y tú ves cómo va la venta de tu sucursal.
+              Tu equipo sabe a quién llamar hoy, registra cada llamada en 3 toques y tú ves cómo va la
+              venta de tu sucursal. Con WhatsApp y un agente de IA que contesta por ti.
             </p>
             <div className={s.heroCtas}>
               <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>
@@ -63,57 +60,9 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className={s.visual} aria-hidden="true">
-            <div className={s.swirl}><i className={s.b1} /><i className={s.b2} /><i className={s.b3} /><i className={s.b4} /><i className={s.b5} /></div>
-
-            <div className={s.window}>
-              <div className={s.winBar}><i /><i /><i /><span>{APP_NAME}</span></div>
-              <div className={s.winBody}>
-                <div className={s.winSide}>
-                  <BrandLogo className={s.winLogo} />
-                  <span className={s.winStore}><Ic.store />{DEMO_STORE}</span>
-                  <span className={`${s.winNav} ${s.winNavOn}`}><Ic.grid />Inicio</span>
-                  <span className={s.winNav}><Ic.contacts />Contactos</span>
-                  <span className={s.winNav}><Ic.leads />Leads</span>
-                  <span className={s.winNav}><Ic.bell />Agenda<b>3</b></span>
-                  <span className={s.winNav}><Ic.users />Equipo</span>
-                </div>
-                <div className={s.winMain}>
-                  <div className={s.dashHead}>
-                    <div><small>Buenos días, Ana</small><strong>Inicio</strong></div>
-                    <span className={s.weekPill}>Esta semana</span>
-                  </div>
-                  <div className={s.kpis}>
-                    <div className={s.kpi}><small>Leads activos</small><strong>48</strong><em className={s.up}>+12% este mes</em></div>
-                    <div className={s.kpi}><small>En cotización</small><strong>$186,400</strong><em>23 oportunidades</em></div>
-                    <div className={s.kpi}><small>Cerrados</small><strong>21</strong><em className={s.up}>32% de cierre</em></div>
-                  </div>
-                  <div className={s.pipe}>
-                    <div className={s.pipeTop}><strong>Pipeline</strong><small>148 leads</small></div>
-                    <div className={s.pipeBar}><i className={s.pNuevo} /><i className={s.pSeg} /><i className={s.pCot} /><i className={s.pCer} /></div>
-                    <div className={s.pipeLegend}>
-                      <span><b className={s.pNuevo} />Nuevo</span><span><b className={s.pSeg} />Seguimiento</span>
-                      <span><b className={s.pCot} />Cotizado</span><span><b className={s.pCer} />Ganado</span>
-                    </div>
-                  </div>
-                  <div className={s.rows}>
-                    <div className={s.row}><span className={`${s.av} ${s.avBrand}`}>KL</span><span className={s.rowName}>Karen López<small>Hogar</small></span><span className={`${s.stage} ${s.pCot}`}>Cotizado</span><strong>$4,850</strong></div>
-                    <div className={s.row}><span className={`${s.av} ${s.avAmber}`}>CR</span><span className={s.rowName}>Constructora Ríos<small>Constructor</small></span><span className={`${s.stage} ${s.pSeg}`}>Seguimiento</span><strong>$38,200</strong></div>
-                    <div className={s.row}><span className={`${s.av} ${s.avCyan}`}>AS</span><span className={s.rowName}>Arq. Andrea Solís<small>Arquitecto</small></span><span className={`${s.stage} ${s.pCer}`}>Ganado</span><strong>$12,600</strong></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className={`${s.float} ${s.chat}`}>
-              <div className={s.chatHead}>
-                <span className={`${s.waBadge} ${s.todayBadge}`}><Ic.bell /></span>
-                <div><strong>Para hoy</strong><small>3 seguimientos</small></div>
-              </div>
-              <p className={s.msgIn}>11:00 · Llamar a Karen López para confirmar su cotización de vinílica arena</p>
-              <p className={s.msgIn}>13:30 · Enviar precio a Constructora Ríos</p>
-              <div className={s.chatLinked}><Ic.link />Ligado a su lead · $4,850</div>
-            </div>
+          <div className={s.visual}>
+            <div className={s.swirl} aria-hidden="true"><i className={s.b1} /><i className={s.b2} /><i className={s.b3} /><i className={s.b4} /><i className={s.b5} /></div>
+            <HeroVideo />
           </div>
         </div>
       </section>
@@ -128,15 +77,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Demo de Leads ── */}
+      {/* ── Demos ── */}
       <section id="demo" className={`${s.section} ${s.sectionAlt}`}>
         <div className={s.wrap}>
           <SectionHead
-            kicker="Pruébalo aquí mismo"
-            title="Mueve una cotización y mira cómo cambia tu venta"
-            sub="Así se ven tus oportunidades en Matices. Toca una tarjeta para cambiarla de etapa (o arrástrala en computadora): las cifras se actualizan al momento."
+            title="Pruébalo aquí mismo, sin crear cuenta"
+            sub="Cuatro pantallas de Matices con clientes de ejemplo. Toca, escribe y guarda: nada se guarda de verdad."
           />
-          <div className={s.demoWrap}><LeadsDemo /></div>
+          <div className={s.demoWrap}><DemoTabs /></div>
         </div>
       </section>
 
@@ -144,8 +92,7 @@ export default function LandingPage() {
       <section className={s.section}>
         <div className={s.wrap}>
           <SectionHead
-            kicker="Funciones"
-            title="Todo lo que pasa en el mostrador, ordenado"
+            title="Conoce cada parte de Matices"
             sub="Pensado para cómo vende una tienda de pinturas: muchos clientes, cotizaciones que van y vienen y seguimientos todo el día."
           />
           <div className={s.features}>
@@ -164,7 +111,7 @@ export default function LandingPage() {
       {/* ── Cómo empezar ── */}
       <section className={`${s.section} ${s.sectionAlt}`}>
         <div className={s.wrap}>
-          <SectionHead kicker="Cómo empezar" title="Empieza hoy, en tres pasos" />
+          <SectionHead title="Empieza hoy, en tres pasos" />
           <ol className={s.steps}>
             {STEPS.map((st, i) => (
               <li key={st.title} className={s.stepCard}>
@@ -181,7 +128,7 @@ export default function LandingPage() {
       {/* ── Precios ── */}
       <section className={s.section}>
         <div className={s.wrap}>
-          <SectionHead kicker="Precios" title="Empieza gratis, crece cuando quieras" sub="Pago mensual con tarjeta. Cambia o cancela cuando quieras desde tu CRM." />
+          <SectionHead title="Empieza gratis, crece cuando quieras" sub="Pago mensual con tarjeta. Cambia o cancela cuando quieras desde tu CRM." />
           <div style={{ marginTop: 44 }}><PricingCards /></div>
           <div className={s.centerLink}><MoreLink href="/inicio/precios">Compara los planes</MoreLink></div>
         </div>

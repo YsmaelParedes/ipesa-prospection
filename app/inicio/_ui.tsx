@@ -34,12 +34,11 @@ export const Ic = {
 }
 
 /** Encabezado de las páginas interiores: etiqueta, título y bajada, con el remolino de color de fondo. */
-export function PageHero({ kicker, title, lead, children }: { kicker: string; title: React.ReactNode; lead: string; children?: React.ReactNode }) {
+export function PageHero({ title, lead, children }: { title: React.ReactNode; lead: string; children?: React.ReactNode }) {
   return (
     <section className={s.pageHero}>
       <div className={s.pageHeroSwirl} aria-hidden="true"><i className={s.b1} /><i className={s.b3} /><i className={s.b4} /></div>
       <div className={`${s.wrap} ${s.pageHeroInner}`}>
-        <span className={s.eyebrow}><span className={s.eyebrowDot} />{kicker}</span>
         <h1 className={s.pageH1}>{title}</h1>
         <p className={s.lead}>{lead}</p>
         {children}
@@ -69,11 +68,19 @@ export function CtaBand({ title = 'Tu sucursal, organizada desde hoy', text = 'C
   )
 }
 
+/** Lista con palomitas. */
+export function Bullets({ items }: { items: string[] }) {
+  return (
+    <ul className={s.bullets}>
+      {items.map(b => <li key={b}><span className={s.bulletIcon}><Ic.check /></span>{b}</li>)}
+    </ul>
+  )
+}
+
 /** Título centrado de sección. */
-export function SectionHead({ kicker, title, sub }: { kicker: string; title: React.ReactNode; sub?: string }) {
+export function SectionHead({ title, sub }: { title: React.ReactNode; sub?: string }) {
   return (
     <div className={s.center}>
-      <span className={s.kicker}>{kicker}</span>
       <h2 className={s.h2}>{title}</h2>
       {sub && <p className={s.sub}>{sub}</p>}
     </div>

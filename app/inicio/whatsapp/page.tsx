@@ -3,7 +3,8 @@ import { breadcrumbJsonLd, pageMeta } from '@/lib/site'
 import { JsonLd } from '@/components/JsonLd'
 import Link from 'next/link'
 import { APP_NAME } from '@/lib/brand'
-import { CtaBand, Ic, PageHero, SectionHead } from '../_ui'
+import { CtaBand, Ic, MoreLink, PageHero, SectionHead } from '../_ui'
+import { SingleDemo } from '../demos/DemoTabs'
 import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
@@ -30,7 +31,6 @@ export default function WhatsAppPage() {
     <>
       <JsonLd data={breadcrumbJsonLd('WhatsApp en tu CRM', '/inicio/whatsapp')} />
       <PageHero
-        kicker="Plan Cubeta"
         title={<>Atiende y vende por <span className={s.waText}>WhatsApp</span> desde tu CRM</>}
         lead="El WhatsApp de tu tienda, conectado a tus clientes y cotizaciones. Lo dejamos listo por ti con el número de tu tienda."
       >
@@ -64,7 +64,6 @@ export default function WhatsAppPage() {
             </div>
           </div>
           <div>
-            <span className={s.kicker}>Bandeja de WhatsApp</span>
             <h2 className={s.h2}>Cada conversación, conectada con su venta</h2>
             <div className={s.pointList}>
               {POINTS.map(p => (
@@ -80,7 +79,15 @@ export default function WhatsAppPage() {
 
       <section className={`${s.section} ${s.sectionAlt}`}>
         <div className={s.wrap}>
-          <SectionHead kicker="Cómo se activa" title="Tú lo pides, nosotros lo dejamos listo" sub="Sin formularios técnicos ni configuraciones: un asesor conecta el número de tu tienda." />
+          <SectionHead title="Y un agente de IA que contesta por ti" sub="Pregunta como cliente: la IA contesta con la información de tu tienda y pasa el chat a tu equipo cuando hace falta." />
+          <div className={s.demoWrap}><SingleDemo k="whatsapp" /></div>
+          <div className={s.centerLink}><MoreLink href="/inicio/agente-ia">Conoce el agente de IA</MoreLink></div>
+        </div>
+      </section>
+
+      <section className={s.section}>
+        <div className={s.wrap}>
+          <SectionHead title="Tú lo pides, nosotros lo dejamos listo" sub="Sin formularios técnicos ni configuraciones: un asesor conecta el número de tu tienda." />
           <ol className={s.steps}>
             {STEPS.map((st, i) => (
               <li key={st.title} className={s.stepCard}>

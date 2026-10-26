@@ -16,7 +16,14 @@ export const SITE_DESCRIPTION =
 /** Páginas que sí deben aparecer en Google. "/" es la portada (/inicio es la misma página, sin duplicarla). */
 export const PUBLIC_PAGES: { path: string; priority: number; changeFrequency: 'weekly' | 'monthly' | 'yearly' }[] = [
   { path: '/', priority: 1, changeFrequency: 'weekly' },
-  { path: '/inicio/funciones', priority: 0.9, changeFrequency: 'monthly' },
+  { path: '/inicio/sistema-comercial', priority: 0.9, changeFrequency: 'monthly' },
+  { path: '/inicio/contactos', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/inicio/agente-ia', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/inicio/para-tu-tienda', priority: 0.7, changeFrequency: 'monthly' },
+  { path: '/inicio/para-tu-tienda/tiendas-de-pintura', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/inicio/para-tu-tienda/ferreterias', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/inicio/para-tu-tienda/distribuidores', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/inicio/funciones', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/inicio/precios', priority: 0.9, changeFrequency: 'monthly' },
   { path: '/inicio/whatsapp', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/inicio/como-empezar', priority: 0.7, changeFrequency: 'monthly' },

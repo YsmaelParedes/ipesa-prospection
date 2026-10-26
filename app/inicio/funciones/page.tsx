@@ -3,37 +3,28 @@ import { breadcrumbJsonLd, pageMeta } from '@/lib/site'
 import { JsonLd } from '@/components/JsonLd'
 import { APP_NAME } from '@/lib/brand'
 import { PLANS } from '@/lib/stores'
-import { CtaBand, Ic, PageHero } from '../_ui'
-import { LeadsDemo } from '../LeadsDemo'
+import { Bullets, CtaBand, Ic, MoreLink, PageHero } from '../_ui'
+import { SingleDemo } from '../demos/DemoTabs'
 import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
   title: `Funciones · ${APP_NAME}`,
-  description: 'Contactos con segmentos, cotizaciones con seguimiento, agenda del día, equipo con permisos y avisos en el celular.',
+  description: 'Contactos por zonas, Sistema Comercial con metas por vendedor, agenda del día, equipo con permisos y avisos en el celular.',
   path: '/inicio/funciones',
 })
 
 const MAX_USERS = PLANS.galon.maxUsers
 
 const JUMPS = [
-  ['#contactos', 'Contactos'], ['#leads', 'Cotizaciones'], ['#agenda', 'Agenda'],
+  ['#contactos', 'Contactos'], ['#comercial', 'Sistema Comercial'], ['#agenda', 'Agenda'],
   ['#equipo', 'Equipo y permisos'], ['#avisos', 'Avisos'],
 ]
-
-function Bullets({ items }: { items: string[] }) {
-  return (
-    <ul className={s.bullets}>
-      {items.map(b => <li key={b}><span className={s.bulletIcon}><Ic.check /></span>{b}</li>)}
-    </ul>
-  )
-}
 
 export default function FuncionesPage() {
   return (
     <>
       <JsonLd data={breadcrumbJsonLd('Funciones', '/inicio/funciones')} />
       <PageHero
-        kicker="Funciones"
         title={<>Todo tu mostrador, <span className={s.spectrumText}>en un solo lugar</span></>}
         lead="Cada parte de Matices está pensada para cómo vende una tienda de pinturas: muchos clientes, cotizaciones que van y vienen y seguimientos todo el día."
       >
@@ -46,10 +37,10 @@ export default function FuncionesPage() {
       <section id="contactos" className={s.section}>
         <div className={`${s.wrap} ${s.split}`}>
           <div>
-            <span className={s.kicker}>Contactos</span>
             <h2 className={s.h2}>Tus clientes, ordenados por tipo</h2>
-            <p className={s.sub}>Hogar, constructor, arquitecto, pintor o empresa: cada cliente con su segmento, cómo te conoció y su historial de cotizaciones.</p>
-            <Bullets items={['Búsqueda por nombre o teléfono en segundos', 'Segmentos y canales a la medida de tu tienda', 'Importa tu lista de Excel en un paso', 'Toda la historia del cliente en su ficha']} />
+            <p className={s.sub}>Hogar, constructor, arquitecto, pintor o empresa: cada cliente con su segmento, su zona, cómo te conoció y su historial.</p>
+            <Bullets items={['Búsqueda sin acentos por nombre o teléfono', 'Sabes quién tiene WhatsApp y quién es fijo', 'Importa tu lista de Excel en un paso', 'Toda la historia del cliente en su ficha']} />
+            <MoreLink href="/inicio/contactos">Conoce Contactos</MoreLink>
           </div>
           <div className={s.mock} aria-hidden="true">
             <div className={s.mockSearch}><Ic.search />Buscar nombre o teléfono…</div>
@@ -69,15 +60,15 @@ export default function FuncionesPage() {
         </div>
       </section>
 
-      {/* Cotizaciones */}
-      <section id="leads" className={`${s.section} ${s.sectionAlt}`}>
+      {/* Sistema Comercial */}
+      <section id="comercial" className={`${s.section} ${s.sectionAlt}`}>
         <div className={s.wrap}>
           <div className={s.center}>
-            <span className={s.kicker}>Cotizaciones</span>
-            <h2 className={s.h2}>Cada cotización, con su siguiente paso</h2>
-            <p className={s.sub}>De nuevo a cotizado y ganado. Ves cuánto tienes en juego, qué espera respuesta y cuánto vendiste. Pruébalo:</p>
+            <h2 className={s.h2}>Cada llamada, registrada en 3 toques</h2>
+            <p className={s.sub}>Tu equipo abre la app y ve a quién llamar hoy. Registra cómo le fue y Matices le sugiere cuándo volver a contactar. Pruébalo:</p>
           </div>
-          <div className={s.demoWrap}><LeadsDemo /></div>
+          <div className={s.demoWrap}><SingleDemo k="call" /></div>
+          <div className={s.centerLink}><MoreLink href="/inicio/sistema-comercial">Conoce el Sistema Comercial</MoreLink></div>
         </div>
       </section>
 
@@ -85,7 +76,6 @@ export default function FuncionesPage() {
       <section id="agenda" className={s.section}>
         <div className={`${s.wrap} ${s.split} ${s.splitRev}`}>
           <div>
-            <span className={s.kicker}>Agenda</span>
             <h2 className={s.h2}>Lo que toca hoy, al abrir la app</h2>
             <p className={s.sub}>Llamadas, visitas y cotizaciones que esperan respuesta, con hora. Nada se queda en un papelito.</p>
             <Bullets items={['"Para hoy" con lo vencido y lo del día', 'Recordatorios ligados al cliente y a su cotización', 'Resumen cada mañana en tu celular']} />
@@ -111,11 +101,10 @@ export default function FuncionesPage() {
       <section id="equipo" className={`${s.section} ${s.sectionAlt}`}>
         <div className={`${s.wrap} ${s.split}`}>
           <div>
-            <span className={s.kicker}>Equipo y permisos</span>
-            <h2 className={s.h2}>Tu equipo vende. Tu base se queda contigo.</h2>
-            <p className={s.sub}>{`Tú y ${MAX_USERS - 1} vendedores, cada uno con su usuario. Cada vendedor trabaja sus leads y su agenda; tú ves todo.`}</p>
+            <h2 className={s.h2}>Tu equipo vende. Tu base se queda en tu tienda.</h2>
+            <p className={s.sub}>{`Tú y ${MAX_USERS - 1} vendedores, cada uno con su usuario. Cada vendedor trabaja sus clientes y su agenda; los administradores ven todo.`}</p>
             <Bullets items={[
-              'Exportar a Excel, importar y borrar contactos: solo tú',
+              'Exportar a Excel, importar y borrar contactos: solo administradores',
               'Los vendedores no pueden seleccionar, copiar ni imprimir la información',
               'Marca de agua con el nombre de cada vendedor en su pantalla',
               'Desactiva el acceso de quien ya no trabaje contigo',
@@ -143,7 +132,6 @@ export default function FuncionesPage() {
       <section id="avisos" className={s.section}>
         <div className={`${s.wrap} ${s.split} ${s.splitRev}`}>
           <div>
-            <span className={s.kicker}>Avisos en tu celular</span>
             <h2 className={s.h2}>Tus pendientes en el celular, aunque la app esté cerrada</h2>
             <p className={s.sub}>Instálala como app en tu celular y recibe cada mañana el resumen de tu día.</p>
             <Bullets items={['Resumen de pendientes cada mañana', 'Funciona en Android y en iPhone (agregada a la pantalla de inicio)']} />
