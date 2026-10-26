@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import { organizationJsonLd, pageMeta } from '@/lib/site'
+import { JsonLd } from '@/components/JsonLd'
 import Link from 'next/link'
 import { BrandLogo } from '@/components/Brand'
 import { APP_NAME, APP_TAGLINE } from '@/lib/brand'
@@ -8,10 +10,12 @@ import { LeadsDemo } from './LeadsDemo'
 import { PricingCards } from './Pricing'
 import s from './inicio.module.css'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: `${APP_NAME} · ${APP_TAGLINE}`,
   description: 'Contactos, cotizaciones, agenda y equipo en un solo lugar para tu tienda de pinturas. Empieza gratis.',
-}
+  // /inicio es la misma página que la portada "/": Google guarda solo "/"
+  path: '/',
+})
 
 const DEMO_STORE = 'Pinturas La Paleta'
 
@@ -35,6 +39,7 @@ const STEPS = [
 export default function LandingPage() {
   return (
     <>
+      <JsonLd data={organizationJsonLd()} />
       {/* ── Presentación ── */}
       <section className={s.hero}>
         <div className={`${s.wrap} ${s.heroGrid}`}>

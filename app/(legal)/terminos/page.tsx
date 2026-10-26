@@ -1,14 +1,16 @@
 import type { Metadata } from 'next'
+import { pageMeta } from '@/lib/site'
 import Link from 'next/link'
 import { LEGAL } from '@/lib/legal'
 import { PLANS } from '@/lib/stores'
 import { RETENTION_IDLE_MONTHS, RETENTION_LAST_NOTICE_DAYS, RETENTION_NOTICE_DAYS } from '@/lib/retention'
 import { ContactEmail, LegalDoc, type LegalSection } from '../LegalDoc'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: `Términos de uso · ${LEGAL.product}`,
   description: `Condiciones para usar ${LEGAL.product}: cuentas, planes y pagos con tarjeta, información de la tienda y comunicaciones con tus clientes.`,
-}
+  path: '/terminos',
+})
 
 const sections: LegalSection[] = [
   {

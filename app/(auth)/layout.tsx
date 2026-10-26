@@ -1,5 +1,10 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
+import { NO_INDEX } from '@/lib/site'
 import { BrandLogo } from '@/components/Brand'
+
+// Solo /registro sale en Google (su layout lo vuelve a abrir); el resto es de cada persona
+export const metadata: Metadata = NO_INDEX
 
 /**
  * Pantallas de acceso: panel de marca (escritorio) + formulario.

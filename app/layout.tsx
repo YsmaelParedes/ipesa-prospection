@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Manrope, Outfit } from 'next/font/google'
-import { APP_NAME } from '@/lib/brand'
+import { APP_NAME, APP_TAGLINE } from '@/lib/brand'
+import { SHARE_IMAGE, SITE_DESCRIPTION, SITE_URL } from '@/lib/site'
 import './globals.css'
 
 // Fuentes auto-hospedadas por Next (sin @import a Google Fonts que bloqueaba
@@ -20,8 +21,15 @@ const body = Manrope({
 })
 
 export const metadata: Metadata = {
-  title: APP_NAME,
-  description: 'CRM para tiendas de pintura: contactos, cotizaciones, agenda y equipo.',
+  // Con esto, las direcciones relativas (canonical, imágenes) salen completas
+  metadataBase: new URL(SITE_URL),
+  title: `${APP_NAME} · ${APP_TAGLINE}`,
+  description: SITE_DESCRIPTION,
+  applicationName: APP_NAME,
+  openGraph: { type: 'website', siteName: APP_NAME, locale: 'es_MX', title: `${APP_NAME} · ${APP_TAGLINE}`, description: SITE_DESCRIPTION, url: '/', images: [SHARE_IMAGE] },
+  twitter: { card: 'summary_large_image', title: `${APP_NAME} · ${APP_TAGLINE}`, description: SITE_DESCRIPTION, images: [SHARE_IMAGE.url] },
+  // Search Console: el código lo da Google al agregar el sitio (variable en Vercel, opcional)
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } } : {}),
   manifest: '/manifest.json',
   icons: { apple: { url: '/apple-touch-icon.png', sizes: '180x180' } },
   appleWebApp: {

@@ -14,7 +14,7 @@ import { createServerClient } from '@supabase/ssr'
  */
 
 // Páginas que no requieren sesión
-const PUBLIC_PATHS    = ['/inicio', '/login', '/registro', '/recuperar', '/restablecer', '/terminos', '/privacidad']
+const PUBLIC_PATHS    = ['/inicio', '/login', '/registro', '/recuperar', '/restablecer', '/terminos', '/privacidad', '/robots.txt', '/sitemap.xml', '/og']  // /og: imagen al compartir un enlace
 const PUBLIC_PREFIXES = ['/invitacion/', '/auth/', '/inicio/']  // /inicio/*: páginas del sitio de presentación
 // Con sesión no tiene sentido verlas: se manda al panel
 const GUEST_ONLY      = ['/login', '/registro', '/recuperar']
@@ -127,6 +127,6 @@ export const config = {
   // excepto internos de Next y archivos estáticos de /public
   matcher: [
     '/api/:path*',
-    '/((?!api/|_next/static|_next/image|favicon\\.ico|sw\\.js|manifest\\.json|.*\\.(?:png|jpe?g|gif|svg|ico|webp|avif|woff2?|ttf|css|js|txt|mp4|webm)$).*)',
+    '/((?!api/|_next/static|_next/image|favicon\\.ico|sw\\.js|manifest\\.json|.*\\.(?:png|jpe?g|gif|svg|ico|webp|avif|woff2?|ttf|css|js|txt|xml|mp4|webm)$).*)',
   ],
 }

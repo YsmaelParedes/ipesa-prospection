@@ -1,13 +1,16 @@
 import type { Metadata } from 'next'
+import { breadcrumbJsonLd, faqJsonLd, pageMeta } from '@/lib/site'
+import { JsonLd } from '@/components/JsonLd'
 import { APP_NAME } from '@/lib/brand'
 import { PLANS } from '@/lib/stores'
 import { CtaBand, Ic, PageHero } from '../_ui'
 import s from '../inicio.module.css'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: `Preguntas frecuentes · ${APP_NAME}`,
   description: 'Cómo empezar, cómo se paga, cuántos usuarios incluye, cómo se protege tu información y cómo funciona WhatsApp en Matices.',
-}
+  path: '/inicio/preguntas',
+})
 
 
 const GROUPS: { id: string; title: string; items: { q: string; a: string }[] }[] = [
@@ -51,6 +54,8 @@ const GROUPS: { id: string; title: string; items: { q: string; a: string }[] }[]
 export default function PreguntasPage() {
   return (
     <>
+      {/* Las mismas preguntas y respuestas que se ven en la página */}
+      <JsonLd data={[faqJsonLd(GROUPS.flatMap(g => g.items)), breadcrumbJsonLd('Preguntas frecuentes', '/inicio/preguntas')]} />
       <PageHero
         kicker="Preguntas frecuentes"
         title={<>Lo que suelen <span className={s.spectrumText}>preguntarnos</span></>}

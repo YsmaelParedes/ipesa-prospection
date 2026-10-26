@@ -1,7 +1,7 @@
 {
   "name": "Matices",
   "short_name": "Matices",
-  "description": "CRM para tiendas de pintura: contactos, leads, agenda y fórmulas de color",
+  "description": "CRM para tiendas de pintura: contactos, cotizaciones, agenda y equipo",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

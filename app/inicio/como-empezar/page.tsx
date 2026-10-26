@@ -1,13 +1,16 @@
 import type { Metadata } from 'next'
+import { breadcrumbJsonLd, pageMeta } from '@/lib/site'
+import { JsonLd } from '@/components/JsonLd'
 import { APP_NAME } from '@/lib/brand'
 import { CtaBand, Ic, PageHero, SectionHead } from '../_ui'
 import { PricingCards } from '../Pricing'
 import s from '../inicio.module.css'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: `Cómo empezar · ${APP_NAME}`,
   description: 'Crea tu cuenta gratis, configura tu tienda, invita a tu equipo y elige el plan que necesitas. Tu información, separada y protegida.',
-}
+  path: '/inicio/como-empezar',
+})
 
 const STEPS = [
   { title: 'Crea tu cuenta gratis', text: 'Con tu correo, en un minuto y sin tarjeta. Empiezas en el plan Litro.' },
@@ -33,6 +36,7 @@ const NEEDS = [
 export default function ComoEmpezarPage() {
   return (
     <>
+      <JsonLd data={breadcrumbJsonLd('Cómo empezar', '/inicio/como-empezar')} />
       <PageHero
         kicker="Cómo empezar"
         title={<>Empieza <span className={s.spectrumText}>sin complicaciones</span></>}

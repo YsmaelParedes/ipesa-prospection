@@ -1,12 +1,14 @@
 import type { Metadata } from 'next'
+import { pageMeta } from '@/lib/site'
 import { LEGAL } from '@/lib/legal'
 import { RETENTION_IDLE_MONTHS, RETENTION_LAST_NOTICE_DAYS, RETENTION_NOTICE_DAYS } from '@/lib/retention'
 import { ContactEmail, LegalDoc, type LegalSection } from '../LegalDoc'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: `Aviso de privacidad · ${LEGAL.product}`,
   description: `Cómo ${LEGAL.product} trata los datos personales de los usuarios y de la información que registran las tiendas.`,
-}
+  path: '/privacidad',
+})
 
 const sections: LegalSection[] = [
   {

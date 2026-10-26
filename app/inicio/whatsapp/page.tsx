@@ -1,13 +1,16 @@
 import type { Metadata } from 'next'
+import { breadcrumbJsonLd, pageMeta } from '@/lib/site'
+import { JsonLd } from '@/components/JsonLd'
 import Link from 'next/link'
 import { APP_NAME } from '@/lib/brand'
 import { CtaBand, Ic, PageHero, SectionHead } from '../_ui'
 import s from '../inicio.module.css'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: `WhatsApp en tu CRM · ${APP_NAME}`,
   description: 'Atiende el WhatsApp de tu tienda desde el CRM, con cada chat ligado a su cliente y su cotización. Incluido en el plan Cubeta.',
-}
+  path: '/inicio/whatsapp',
+})
 
 const POINTS = [
   { icon: Ic.chat, tone: s.tWa, title: 'Una bandeja para todo el equipo', text: 'Los chats del número de tu tienda en el CRM, sin pasarse el celular.' },
@@ -25,6 +28,7 @@ const STEPS = [
 export default function WhatsAppPage() {
   return (
     <>
+      <JsonLd data={breadcrumbJsonLd('WhatsApp en tu CRM', '/inicio/whatsapp')} />
       <PageHero
         kicker="Plan Cubeta"
         title={<>Atiende y vende por <span className={s.waText}>WhatsApp</span> desde tu CRM</>}

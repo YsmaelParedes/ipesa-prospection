@@ -1,14 +1,17 @@
 import type { Metadata } from 'next'
+import { breadcrumbJsonLd, pageMeta } from '@/lib/site'
+import { JsonLd } from '@/components/JsonLd'
 import { APP_NAME } from '@/lib/brand'
 import { PLANS } from '@/lib/stores'
 import { CtaBand, Ic, PageHero } from '../_ui'
 import { LeadsDemo } from '../LeadsDemo'
 import s from '../inicio.module.css'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: `Funciones · ${APP_NAME}`,
   description: 'Contactos con segmentos, cotizaciones con seguimiento, agenda del día, equipo con permisos y avisos en el celular.',
-}
+  path: '/inicio/funciones',
+})
 
 const MAX_USERS = PLANS.galon.maxUsers
 
@@ -28,6 +31,7 @@ function Bullets({ items }: { items: string[] }) {
 export default function FuncionesPage() {
   return (
     <>
+      <JsonLd data={breadcrumbJsonLd('Funciones', '/inicio/funciones')} />
       <PageHero
         kicker="Funciones"
         title={<>Todo tu mostrador, <span className={s.spectrumText}>en un solo lugar</span></>}

@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import { breadcrumbJsonLd, pageMeta } from '@/lib/site'
+import { JsonLd } from '@/components/JsonLd'
 import { APP_NAME } from '@/lib/brand'
 import { PLANS } from '@/lib/stores'
 import { EMAILS } from '@/lib/legal'
@@ -6,10 +8,11 @@ import { CtaBand, PageHero, SectionHead } from '../_ui'
 import { PricingCards, PricingCompare } from '../Pricing'
 import s from '../inicio.module.css'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMeta({
   title: `Precios · ${APP_NAME}`,
   description: 'Plan Litro gratis para empezar, Galón para tu equipo sin límites y Cubeta con WhatsApp. Pago mensual con tarjeta; cambia o cancela cuando quieras.',
-}
+  path: '/inicio/precios',
+})
 
 const NOTES = [
   { q: '¿Necesito tarjeta para empezar?', a: `No. El plan Litro es gratis para siempre: ${PLANS.litro.maxContacts} contactos, tu cola de llamadas, agenda y avisos en el celular.` },
@@ -21,6 +24,7 @@ const NOTES = [
 export default function PreciosPage() {
   return (
     <>
+      <JsonLd data={breadcrumbJsonLd('Precios', '/inicio/precios')} />
       <PageHero
         kicker="Precios"
         title={<>Empieza gratis, <span className={s.spectrumText}>crece cuando quieras</span></>}
