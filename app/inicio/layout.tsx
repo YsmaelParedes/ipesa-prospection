@@ -3,7 +3,7 @@ import { EMAILS } from '@/lib/legal'
 import { BrandLogo } from '@/components/Brand'
 import { APP_NAME, APP_TAGLINE } from '@/lib/brand'
 import { SiteNav } from './SiteNav'
-import { ALL_LINKS } from './links'
+import { FOOTER_GROUPS } from './links'
 import s from './inicio.module.css'
 
 /* Sitio de presentación (público): menú y pie compartidos por todas sus páginas. */
@@ -20,15 +20,12 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             <BrandLogo className={s.footLogo} />
             <span>{APP_TAGLINE}.</span>
           </div>
-          <nav className={s.footCol} aria-label="Sitio">
-            <strong>Sitio</strong>
-            {ALL_LINKS.map(l => <Link key={l.href} href={l.href}>{l.label}</Link>)}
-          </nav>
-          <nav className={s.footCol} aria-label="Cuenta">
-            <strong>Cuenta</strong>
-            <Link href="/login">Iniciar sesión</Link>
-            <Link href="/registro">Crear cuenta gratis</Link>
-          </nav>
+          {FOOTER_GROUPS.map(g => (
+            <nav key={g.title} className={s.footCol} aria-label={g.title}>
+              <strong>{g.title}</strong>
+              {g.links.map(l => <Link key={l.href} href={l.href}>{l.label}</Link>)}
+            </nav>
+          ))}
           <nav className={s.footCol} aria-label="Contacto">
             <strong>Contacto</strong>
             <a href={`mailto:${EMAILS.hola}`}>{EMAILS.hola}</a>

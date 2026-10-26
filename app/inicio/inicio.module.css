@@ -38,15 +38,41 @@
 .navLinks a { padding: 8px 12px; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--ink-3); transition: background .14s, color .14s; }
 .navLinks a:hover { background: var(--paper); color: var(--ink); }
 .navCta { margin-left: auto; display: flex; align-items: center; gap: 6px; }
-/* "Más" del menú */
-.navMore { position: relative; }
-.navMore > button { padding: 8px 12px; border-radius: 9px; border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink-3); cursor: pointer; transition-property: background-color, color; transition-duration: 150ms; }
-.navMore > button.navActive, .navMore > button[aria-expanded='true'] { color: var(--ink); background: var(--paper); }
-@media (hover: hover) { .navMore > button:hover { background: var(--paper); color: var(--ink); } }
-.navMoreMenu { position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; min-width: 210px; padding: 6px; border-radius: 14px; background: var(--card); border: 1px solid transparent; box-shadow: 0 0 0 1px var(--line), 0 24px 40px -20px rgba(19, 19, 19, .35); display: flex; flex-direction: column; }
-.navMoreMenu[hidden] { display: none; }
-.navLinks .navMoreMenu a { padding: 10px 12px; }
-.navLinks .navMoreMenu a.navActive::after { display: none; }
+/* Menús con panel (Producto, Para tu tienda) */
+.navMenu { display: flex; }
+.navMenuBtn { display: inline-flex; align-items: center; gap: 4px; padding: 8px 12px; border-radius: 9px; border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink-3); cursor: pointer; transition-property: background-color, color; transition-duration: 150ms; }
+.navMenuBtn svg { width: 14px; height: 14px; transition: rotate 150ms ease-out; }
+.navMenuBtn[aria-expanded='true'] { color: var(--ink); background: var(--paper); }
+.navMenuBtn[aria-expanded='true'] svg { rotate: 180deg; }
+.navMenuBtn.navActive { color: var(--ink); }
+@media (hover: hover) { .navMenuBtn:hover { background: var(--paper); color: var(--ink); } }
+.mega {
+  position: absolute; top: calc(100% - 6px); left: 50%; translate: -50% 0; z-index: 60; width: min(1040px, calc(100vw - 32px));
+  padding: 22px 22px 0; border-radius: 20px; background: var(--card); border: 1px solid transparent;
+  box-shadow: 0 0 0 1px var(--line), 0 32px 64px -28px rgba(19, 19, 19, .4), 0 12px 24px -16px rgba(19, 19, 19, .16);
+}
+.mega[hidden] { display: none; }
+.megaOne { width: min(460px, calc(100vw - 32px)); }
+.megaCols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 20px; padding-bottom: 14px; }
+.megaOne .megaCols { grid-template-columns: minmax(0, 1fr); }
+.megaCol { display: flex; flex-direction: column; gap: 2px; }
+.megaTitle { margin: 0 0 6px; padding: 0 10px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.navLinks .megaItem { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 12px; color: var(--ink); transition-property: background-color; transition-duration: 150ms; }
+.navLinks .megaItem strong { display: block; font-size: 14.5px; font-weight: 700; }
+.navLinks .megaItem small { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; color: var(--muted); line-height: 1.35; }
+.navLinks .megaItem::after { display: none; }
+@media (hover: hover) { .navLinks .megaItem:hover { background: var(--paper); } }
+.megaIcon { width: 38px; height: 38px; flex-shrink: 0; display: grid; place-items: center; border-radius: 11px; }
+.megaIcon svg { width: 19px; height: 19px; }
+.navLinks .megaFoot { display: flex; align-items: center; gap: 6px; margin: 0 -22px; padding: 14px 32px; border-top: 1px solid var(--line); border-radius: 0 0 20px 20px; font-size: 14px; font-weight: 700; color: var(--brand); }
+@media (hover: hover) { .navLinks .megaFoot:hover { background: var(--paper); color: var(--brand-strong); } }
+.navLinks .megaFoot::after { display: none; }
+/* Menú de celular por grupos */
+.mobileGroup { display: flex; flex-direction: column; padding: 14px 0 6px; border-bottom: 1px solid var(--line); }
+.mobileGroup .megaTitle { padding: 0; }
+.mobileMenu a.mobileItem { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 0; font-size: 15.5px; }
+.mobileItem .megaIcon { width: 32px; height: 32px; border-radius: 9px; }
+.mobileItem .megaIcon svg { width: 16px; height: 16px; }
 /* Etapas del Sistema Comercial */
 .stageList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .stageList li { display: flex; gap: 14px; align-items: flex-start; padding: 16px; border-radius: 16px; background: var(--card); box-shadow: 0 0 0 1px var(--line), 0 6px 16px -10px rgba(19, 19, 19, .18); }
@@ -404,7 +430,7 @@ a.feature:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--brand-ring)
 .faqGroup .faq { margin-top: 0; max-width: none; }
 
 /* ── Pie ── */
-.footGrid { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(4, minmax(0, 1fr)); gap: 28px; }
+.footGrid { display: grid; grid-template-columns: minmax(0, 1.3fr) repeat(5, minmax(0, 1fr)); gap: 28px; }
 .footCol a { overflow-wrap: anywhere; }
 .footGrid .footBrand { flex-direction: column; align-items: flex-start; gap: 10px; }
 .footCol { display: flex; flex-direction: column; gap: 9px; font-size: 14px; font-weight: 600; color: var(--ink-3); }
