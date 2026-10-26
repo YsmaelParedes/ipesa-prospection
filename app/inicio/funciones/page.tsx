@@ -8,7 +8,7 @@ import { SingleDemo } from '../demos/DemoTabs'
 import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
-  title: `Funciones · ${APP_NAME}`,
+  title: `Funciones del CRM para tiendas de pintura · ${APP_NAME}`,
   description: 'Contactos por zonas, Sistema Comercial con metas por vendedor, agenda del día, equipo con permisos y avisos en el celular.',
   path: '/inicio/funciones',
 })

@@ -7,7 +7,7 @@ import { PricingCards } from '../Pricing'
 import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
-  title: `Cómo empezar · ${APP_NAME}`,
+  title: `Cómo empezar con ${APP_NAME}, CRM para tiendas de pintura`,
   description: 'Crea tu cuenta gratis, configura tu tienda, invita a tu equipo y elige el plan que necesitas. Tu información, separada y protegida.',
   path: '/inicio/como-empezar',
 })

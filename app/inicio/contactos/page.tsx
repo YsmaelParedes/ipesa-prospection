@@ -7,7 +7,7 @@ import { SingleDemo } from '../demos/DemoTabs'
 import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
-  title: `Contactos y base de clientes · ${APP_NAME}`,
+  title: `Contactos y base de clientes para tu tienda · ${APP_NAME}`,
   description: 'Tu base de clientes por zonas, con WhatsApp o fijo, importada desde Excel y lista para visitar. Busca sin acentos y encuentra a cualquier cliente en segundos.',
   path: '/inicio/contactos',
 })

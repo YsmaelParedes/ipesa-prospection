@@ -7,7 +7,7 @@ import { SingleDemo } from '../demos/DemoTabs'
 import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
-  title: `Agente de IA para WhatsApp · ${APP_NAME}`,
+  title: `Agente de IA para el WhatsApp de tu tienda · ${APP_NAME}`,
   description: 'Un agente de IA que contesta el WhatsApp de tu tienda de pinturas a cualquier hora con tu información, y pasa el chat a tu equipo cuando hace falta.',
   path: '/inicio/agente-ia',
 })

@@ -12,7 +12,7 @@ import s from './inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
   title: `${APP_NAME} · ${APP_TAGLINE}`,
-  description: 'Contactos, cotizaciones, agenda y equipo en un solo lugar para tu tienda de pinturas. Empieza gratis.',
+  description: 'El CRM para tiendas de pintura: a quién llamar hoy, cotizaciones con seguimiento, metas por vendedor y WhatsApp con agente de IA. Empieza gratis.',
   // /inicio es la misma página que la portada "/": Google guarda solo "/"
   path: '/',
 })
@@ -40,7 +40,7 @@ export default function LandingPage() {
       <JsonLd data={organizationJsonLd()} />
       {/* ── Presentación ── */}
       <section className={s.hero}>
-        <div className={`${s.wrap} ${s.heroGrid}`}>
+        <div className={`${s.wrap} ${s.heroGrid} ${s.heroStack}`}>
           <div className={s.heroCopy}>
             <h1 className={s.h1}>El CRM hecho para tiendas <span className={s.spectrumText}>de pintura</span></h1>
             <p className={s.lead}>

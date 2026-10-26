@@ -7,7 +7,7 @@ import { CtaBand, Ic, PageHero } from '../_ui'
 import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
-  title: `Preguntas frecuentes · ${APP_NAME}`,
+  title: `Preguntas frecuentes sobre el CRM · ${APP_NAME}`,
   description: 'Cómo empezar, cómo se paga, cuántos usuarios incluye, cómo se protege tu información y cómo funciona WhatsApp en Matices.',
   path: '/inicio/preguntas',
 })

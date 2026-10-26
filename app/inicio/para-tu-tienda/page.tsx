@@ -8,7 +8,7 @@ import { GIROS } from './giros'
 import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
-  title: `Para tu tienda · ${APP_NAME}`,
+  title: `CRM por tipo de negocio: pintura y ferretería · ${APP_NAME}`,
   description: 'Matices para tiendas de pintura, ferreterías y distribuidores: el mismo CRM, pensado para cómo vende cada negocio.',
   path: '/inicio/para-tu-tienda',
 })

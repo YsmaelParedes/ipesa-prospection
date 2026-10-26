@@ -11,7 +11,7 @@ import { APP_NAME, APP_TAGLINE } from './brand'
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.matices.app').replace(/\/+$/, '')
 
 export const SITE_DESCRIPTION =
-  'Contactos, cotizaciones, agenda y equipo en un solo lugar para tu tienda de pinturas. Empieza gratis.'
+  'El CRM para tiendas de pintura: a quién llamar hoy, cotizaciones con seguimiento, metas por vendedor y WhatsApp con agente de IA. Empieza gratis.'
 
 /** Páginas que sí deben aparecer en Google. "/" es la portada (/inicio es la misma página, sin duplicarla). */
 export const PUBLIC_PAGES: { path: string; priority: number; changeFrequency: 'weekly' | 'monthly' | 'yearly' }[] = [
@@ -98,6 +98,25 @@ export function organizationJsonLd() {
       inLanguage: 'es-MX',
       // Hay un plan gratis (Litro); los planes de paga se cobran al mes con tarjeta
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'MXN', description: 'Plan Litro gratis' },
+      featureList: [
+        'Sistema Comercial: lista de llamadas del día, oportunidades y metas por vendedor',
+        'Contactos por zonas, con WhatsApp o teléfono fijo',
+        'Bandeja de WhatsApp para todo el equipo',
+        'Agente de IA que contesta WhatsApp',
+        'Agenda y resumen diario en el celular',
+      ],
+    },
+    {
+      // Video del hero: así Google puede mostrarlo en resultados de video
+      '@context': 'https://schema.org',
+      '@type': 'VideoObject',
+      name: `Así se usa ${APP_NAME}`,
+      description: 'Recorrido de Matices con datos de ejemplo: registrar una llamada, el agente de IA contestando en WhatsApp, buscar un contacto y las metas del equipo.',
+      thumbnailUrl: `${SITE_URL}/video/matices-demo.jpg`,
+      contentUrl: `${SITE_URL}/video/matices-demo.mp4`,
+      uploadDate: '2026-10-26',
+      duration: 'PT26S',
+      inLanguage: 'es-MX',
     },
   ]
 }

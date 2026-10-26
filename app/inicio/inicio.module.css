@@ -102,6 +102,13 @@
 }
 .lead { max-width: 560px; margin: 0 0 32px; font-size: clamp(16px, 1.35vw, 19px); line-height: 1.6; color: var(--ink-3); }
 .heroCtas { display: flex; flex-wrap: wrap; gap: 12px; }
+/* Portada: texto centrado arriba y el video grande abajo */
+.heroStack { grid-template-columns: minmax(0, 1fr); gap: 28px; justify-items: center; text-align: center; }
+.heroStack .heroCopy { max-width: 880px; }
+.heroStack .lead { margin-left: auto; margin-right: auto; }
+.heroStack .heroCtas, .heroStack .checks { justify-content: center; }
+.heroStack .visual { width: 100%; max-width: 1000px; padding: 12px 0 0; }
+.heroStack .swirl { inset: 8% -8% -8% -8%; }
 .checks { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 24px; font-size: 13.5px; font-weight: 600; color: var(--ink-3); }
 .checks span { display: inline-flex; align-items: center; gap: 6px; }
 .checks svg { width: 17px; height: 17px; color: var(--success-fill); stroke-width: 2.6; }

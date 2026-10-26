@@ -8,7 +8,7 @@ import { SingleDemo } from '../demos/DemoTabs'
 import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
-  title: `WhatsApp en tu CRM · ${APP_NAME}`,
+  title: `WhatsApp para tiendas de pintura en tu CRM · ${APP_NAME}`,
   description: 'Atiende el WhatsApp de tu tienda desde el CRM, con cada chat ligado a su cliente y su cotización. Incluido en el plan Cubeta.',
   path: '/inicio/whatsapp',
 })
