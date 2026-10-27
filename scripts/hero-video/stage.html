@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=960, initial-scale=1">
+<title>Escenario del video del hero</title>
+<!-- Solo para grabar el video del hero (scripts/hero-video/record.py). No forma parte de la app. -->
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#E50A26;--brand-strong:#C2071E;--brand-soft:#FFE9EC;--spectrum:linear-gradient(90deg,#E2E415 0%,#A2CF6B 16%,#4EC39C 33%,#00BBD9 50%,#E51585 75%,#FD0B2B 100%);
+  --success:#1E7A3C;--success-fill:#2FA855;--success-soft:#E5F6E9;--warning:#8A5F00;--warning-soft:#FFF4D4;--info:#006E87;--info-soft:#DFF6FB;
+  --ink:#131313;--ink-2:#2D2D2C;--muted:#6B6B6A;--bg:#F4F4F5;--paper:#F7F7F8;--paper-2:#EFEFF1;--line:rgba(19,19,19,.08);
+  --display:"Outfit",system-ui,sans-serif;--body:"Manrope",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:960px;height:640px;overflow:hidden;background:#fff;font-family:var(--body);color:var(--ink);-webkit-font-smoothing:antialiased}
+.stage{position:relative;width:960px;height:640px;overflow:hidden;background:
+  radial-gradient(600px 380px at 85% 10%,rgba(0,187,217,.14),transparent 60%),
+  radial-gradient(520px 360px at 5% 95%,rgba(229,21,133,.10),transparent 60%),#FBFBFC}
+.bar{position:absolute;top:0;left:0;right:0;height:5px;background:var(--spectrum);z-index:5}
+.scene{position:absolute;inset:0;display:grid;grid-template-columns:330px 1fr;align-items:center;gap:30px;padding:0 48px;opacity:0;transition:opacity .6s ease}
+.scene.on{opacity:1}
+.cap{font-family:var(--display);font-weight:800;font-size:40px;line-height:1.05;letter-spacing:-.03em}
+.cap small{display:block;margin-bottom:12px;font-family:var(--body);font-size:15px;font-weight:800;letter-spacing:.02em;color:var(--brand)}
+.cap .spec{background:linear-gradient(90deg,#FD0B2B,#E51585 45%,#00A9C7);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{margin-top:14px;font-family:var(--body);font-size:16px;line-height:1.5;letter-spacing:0;color:var(--muted);font-weight:600}
+.rise{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .6s cubic-bezier(.2,0,0,1)}
+.on .rise{opacity:1;transform:none}
+.on .d1{transition-delay:.15s}.on .d2{transition-delay:.3s}.on .d3{transition-delay:.45s}
+.win{background:#fff;border-radius:18px;box-shadow:0 0 0 1px var(--line),0 30px 60px -28px rgba(19,19,19,.35),0 10px 22px -12px rgba(19,19,19,.14);overflow:hidden}
+.winTop{display:flex;align-items:center;gap:7px;padding:11px 14px;border-bottom:1px solid var(--line);font-size:12px;font-weight:700;color:var(--muted)}
+.winTop i{width:9px;height:9px;border-radius:50%;background:var(--paper-2)}
+.logo{display:inline-flex;align-items:center;gap:8px;font-family:var(--display);font-weight:800;color:var(--ink)}
+.mark{width:20px;height:20px;border-radius:6px;overflow:hidden;display:flex;flex-direction:column}.mark b{flex:1}
+.av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;flex-shrink:0}
+.tag{font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.track{height:10px;border-radius:999px;background:var(--paper-2);overflow:hidden}
+.track b{display:block;height:100%;width:0;border-radius:999px;background:var(--success-fill);transition:width 1.4s cubic-bezier(.2,0,0,1)}
+
+/* 1 · celular */
+.phone{justify-self:center;width:270px;height:540px;border-radius:44px;background:#0d0d0f;padding:10px;box-shadow:0 30px 60px -24px rgba(0,0,0,.5)}
+.screen{position:relative;height:100%;border-radius:35px;overflow:hidden;background:linear-gradient(160deg,#2b1f4a,#0f3a52 55%,#7a1238)}
+.clock{position:absolute;top:70px;left:0;right:0;text-align:center;color:#fff}
+.clock b{display:block;font-family:var(--display);font-size:70px;font-weight:600;letter-spacing:-2px}
+.clock span{font-size:14px;font-weight:600;opacity:.85}
+.notif{position:absolute;left:12px;right:12px;top:230px;padding:12px;border-radius:18px;background:rgba(255,255,255,.88);backdrop-filter:blur(8px);transform:translateY(-30px);opacity:0;transition:transform .6s cubic-bezier(.2,0,0,1),opacity .4s}
+.notif.show{transform:none;opacity:1}
+.notif .h{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;color:var(--muted);margin-bottom:5px}
+.notif strong{display:block;font-size:13.5px}
+.notif p{margin:3px 0 0;font-size:12.5px;line-height:1.4;color:var(--ink-2)}
+
+/* 2 · inicio */
+.dash{padding:18px}
+.hello{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px}
+.hello small{display:block;font-size:12.5px;color:var(--muted);font-weight:700}
+.hello strong{font-family:var(--display);font-size:24px}
+.ringWrap{display:flex;gap:18px;align-items:center;padding:14px;border-radius:14px;background:var(--paper);margin-bottom:14px}
+.ring{width:96px;height:96px;flex-shrink:0}
+.ring circle{fill:none;stroke-width:10}
+.ring .fg{stroke:var(--success-fill);stroke-linecap:round;stroke-dasharray:251;stroke-dashoffset:251;transition:stroke-dashoffset 1.6s cubic-bezier(.2,0,0,1);transform:rotate(-90deg);transform-origin:50% 50%}
+.ringTxt b{display:block;font-family:var(--display);font-size:30px}
+.ringTxt > span{font-size:13px;color:var(--muted);font-weight:700}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kpi{padding:12px;border-radius:12px;box-shadow:0 0 0 1px var(--line)}
+.kpi small{display:block;font-size:11.5px;font-weight:700;color:var(--muted)}
+.kpi b{display:block;font-family:var(--display);font-size:24px;margin-top:4px;font-variant-numeric:tabular-nums}
+
+/* 3 · whatsapp de noche */
+.wa{display:grid;grid-template-columns:200px 1fr;height:430px}
+.waList{border-right:1px solid var(--line);padding:10px}
+.waRow{display:flex;gap:9px;align-items:center;padding:9px;border-radius:10px;font-size:12.5px;font-weight:700}
+.waRow small{display:block;font-weight:600;color:var(--muted);font-size:11.5px}
+.waRow.new{background:var(--success-soft)}
+.dot{margin-left:auto;flex-shrink:0;width:18px;height:18px;border-radius:50%;background:var(--success-fill);color:#fff;font-size:10px;display:grid;place-items:center}
+.waChat{display:flex;flex-direction:column;gap:8px;padding:14px;background:#EFE7DD}
+.waHead{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:800;margin:-14px -14px 4px;padding:10px 14px;background:#fff}
+.moon{font-size:12px;font-weight:800;color:#6D28D9;background:#EDE9FE;padding:4px 9px;border-radius:999px}
+.msg{max-width:82%;padding:8px 11px;border-radius:12px;font-size:13px;line-height:1.45;box-shadow:0 1px 1px rgba(0,0,0,.08);opacity:0;transform:translateY(8px);transition:opacity .35s,transform .45s cubic-bezier(.2,0,0,1)}
+.msg.show{opacity:1;transform:none}
+.in{background:#fff;align-self:flex-start}.ai{background:#EDE9FE;align-self:flex-end}
+.ai small{display:block;font-size:10.5px;font-weight:800;color:#6D28D9;margin-bottom:2px}
+.typing{align-self:flex-end;font-size:12px;font-weight:700;color:#6D28D9;opacity:0;transition:opacity .3s}.typing.show{opacity:1}
+
+/* 4 · oportunidades */
+.opp{padding:16px}
+.oppTop{display:flex;gap:10px;margin-bottom:14px}
+.stat{flex:1;padding:12px;border-radius:12px;background:var(--paper)}
+.stat small{display:block;font-size:11.5px;font-weight:700;color:var(--muted)}
+.stat b{display:block;font-family:var(--display);font-size:24px;margin-top:3px;font-variant-numeric:tabular-nums}
+.stat.won b{color:var(--success)}
+.oRow{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;box-shadow:0 0 0 1px var(--line);margin-bottom:8px;font-size:13.5px;font-weight:700;transition:background-color .4s,box-shadow .4s}
+.oRow small{display:block;font-size:11.5px;color:var(--muted);font-weight:600}
+.oRow .amt{margin-left:auto;font-variant-numeric:tabular-nums}
+.oRow.win{background:var(--success-soft);box-shadow:0 0 0 2px var(--success-fill)}
+.wonTag{opacity:0;transform:scale(.6);transition:opacity .3s,transform .4s cubic-bezier(.2,0,0,1)}
+.win .wonTag{opacity:1;transform:none}
+
+/* 5 · equipo + cierre */
+.team{padding:18px}
+.member{margin-bottom:16px}
+.member .who{display:flex;justify-content:space-between;font-size:13.5px;font-weight:800;margin-bottom:7px}
+.end{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#fff;opacity:0;transition:opacity .6s}
+.end.on{opacity:1}
+.end .big{display:flex;align-items:center;gap:14px;font-family:var(--display);font-weight:800;font-size:56px;letter-spacing:-1.5px}
+.end .big .mark{width:52px;height:52px;border-radius:14px}
+.end p{margin:0;font-family:var(--display);font-size:28px;font-weight:700}
+.end .cta{margin-top:6px;padding:13px 24px;border-radius:12px;background:var(--brand);color:#fff;font-weight:800;font-size:17px;box-shadow:0 12px 26px -12px rgba(229,10,38,.9)}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="bar"></div>
+
+  <!-- 1 -->
+  <section class="scene" id="s1">
+    <div class="cap rise"><small>8:00 a. m.</small>Te llega <span class="spec">tu día</span><div class="sub">El resumen de tus pendientes, aunque la app esté cerrada.</div></div>
+    <div class="phone rise d1"><div class="screen">
+      <div class="clock"><b>8:00</b><span>martes 27 de octubre</span></div>
+      <div class="notif" id="notif">
+        <div class="h"><span class="mark"><b style="background:#E2E415"></b><b style="background:#00BBD9"></b><b style="background:#E51585"></b><b style="background:#E50A26"></b></span>MATICES · ahora</div>
+        <strong>📋 Hoy tienes 6 pendientes</strong>
+        <p>9:00 Llamar a Ferretería Arce<br>11:30 Cotizar a Hotel Sol<br>y 4 más · 1 vencido</p>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 2 -->
+  <section class="scene" id="s2">
+    <div class="cap rise">Abres y <span class="spec">ya sabes qué sigue</span><div class="sub">Tu meta del día y cómo va tu tienda, en una sola pantalla.</div></div>
+    <div class="win rise d1">
+      <div class="winTop"><i></i><i></i><i></i><span class="logo" style="margin-left:8px"><span class="mark"><b style="background:#E2E415"></b><b style="background:#00BBD9"></b><b style="background:#E51585"></b><b style="background:#E50A26"></b></span>Matices</span></div>
+      <div class="dash">
+        <div class="hello"><div><small>Buenos días</small><strong>Valeria</strong></div><span class="tag" style="background:var(--warning-soft);color:var(--warning)">6 para hoy</span></div>
+        <div class="ringWrap">
+          <svg class="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" stroke="#EFEFF1"/><circle class="fg" id="ring" cx="50" cy="50" r="40"/></svg>
+          <div class="ringTxt"><b><span id="callsN">0</span> / 30</b><span>llamadas de tu meta de hoy</span></div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><small>Contactados</small><b id="k1">0</b></div>
+          <div class="kpi"><small>Cotizaciones</small><b id="k2">0</b></div>
+          <div class="kpi"><small>Cotizado</small><b id="k3">$0</b></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="scene" id="s3">
+    <div class="cap rise"><small>23:14</small>Un cliente escribe <span class="spec">de noche</span><div class="sub">El agente de IA contesta con la información de tu tienda.</div></div>
+    <div class="win rise d1"><div class="wa">
+      <div class="waList">
+        <div class="waRow new"><span class="av" style="background:#DFF6FB;color:#006E87">LM</span><span>Luis Mora<small>¿Tienen impermeabilizante…</small></span><span class="dot">1</span></div>
+        <div class="waRow"><span class="av" style="background:#FFE9EC;color:#C2071E">KR</span><span>Karla Ruiz<small>Gracias, mañana paso</small></span></div>
+        <div class="waRow"><span class="av" style="background:#E5F6E9;color:#1E7A3C">CA</span><span>Const. Ávila<small>Cotización recibida</small></span></div>
+      </div>
+      <div class="waChat">
+        <div class="waHead"><span>Luis Mora</span><span class="moon">🌙 Tienda cerrada</span></div>
+        <div class="msg in" id="m1">¿Tienen impermeabilizante de 5 años? ¿Cuánto rinde?</div>
+        <div class="typing" id="typ">El agente IA está escribiendo…</div>
+        <div class="msg ai" id="m2"><small>Agente IA</small>¡Sí! El de 5 años rinde de 1 a 1.2 m² por litro a dos manos. Mañana desde las 9:00 te apartamos tu cubeta.</div>
+        <div class="msg in" id="m3">Perfecto, mañana paso 🙌</div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- 4 -->
+  <section class="scene" id="s4">
+    <div class="cap rise">Cierras <span class="spec">la venta</span><div class="sub">Cada cotización con su monto, hasta que se gana.</div></div>
+    <div class="win rise d1"><div class="opp">
+      <div class="oppTop"><div class="stat"><small>Cotizado abierto</small><b id="open">$89,705</b></div><div class="stat won"><small>Vendido este mes</small><b id="sold">$42,300</b></div></div>
+      <div class="oRow" id="o1"><span class="av" style="background:#FFE9EC;color:#C2071E">FA</span><span>Ferretería Arce<small>Vinílica 19 L × 12 · hace 3 días</small></span><span class="tag wonTag" style="background:var(--success-fill);color:#fff;margin-left:10px">✓ Ganada</span><span class="amt">$17,005</span></div>
+      <div class="oRow"><span class="av" style="background:#E5F6E9;color:#1E7A3C">CA</span><span>Constructora Ávila<small>Esmalte y sellador · hace 5 días</small></span><span class="amt">$54,000</span></div>
+      <div class="oRow"><span class="av" style="background:#DFF6FB;color:#006E87">HS</span><span>Hotel Sol<small>Mantenimiento anual · ayer</small></span><span class="amt">$18,700</span></div>
+    </div></div>
+  </section>
+
+  <!-- 5 -->
+  <section class="scene" id="s5">
+    <div class="cap rise">Y ves cómo va <span class="spec">tu equipo</span><div class="sub">Cumplimiento del mes de cada vendedor.</div></div>
+    <div class="win rise d1"><div class="team">
+      <div class="member"><div class="who"><span>Valeria</span><span id="p1">0 %</span></div><div class="track"><b id="b1"></b></div></div>
+      <div class="member"><div class="who"><span>Karen</span><span id="p2">0 %</span></div><div class="track"><b id="b2"></b></div></div>
+      <div class="member"><div class="who"><span>Luis</span><span id="p3">0 %</span></div><div class="track"><b id="b3"></b></div></div>
+      <div class="member" style="margin-bottom:0"><div class="who"><span>Equipo</span><span id="p4">0 %</span></div><div class="track"><b id="b4" style="background:var(--brand)"></b></div></div>
+    </div></div>
+  </section>
+
+  <div class="end" id="end">
+    <div class="big"><span class="mark"><b style="background:#E2E415"></b><b style="background:#00BBD9"></b><b style="background:#E51585"></b><b style="background:#E50A26"></b></span>Matices</div>
+    <p>El CRM para tiendas de pintura</p>
+    <span class="cta">Empieza gratis</span>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id)
+const show = id => $(id).classList.add('on'), hide = id => $(id).classList.remove('on')
+const fmt = n => '$' + Math.round(n).toLocaleString('es-MX')
+function count(el, from, to, ms, f = n => Math.round(n)) {
+  const t0 = performance.now()
+  const step = now => { const p = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - p, 3); el.textContent = f(from + (to - from) * e); if (p < 1) requestAnimationFrame(step) }
+  requestAnimationFrame(step)
+}
+const at = (ms, fn) => setTimeout(fn, ms)
+
+// Línea de tiempo (~24 s). window.__done avisa al grabador que terminó.
+window.play = () => {
+  show('s1'); at(900, () => $('notif').classList.add('show'))
+  at(4300, () => { hide('s1'); show('s2') })
+  at(5000, () => { $('ring').style.strokeDashoffset = 251 * (1 - 18 / 30); count($('callsN'), 0, 18, 1600); count($('k1'), 0, 11, 1600); count($('k2'), 0, 4, 1600); count($('k3'), 0, 38450, 1700, fmt) })
+  at(8800, () => { hide('s2'); show('s3') })
+  at(9500, () => $('m1').classList.add('show'))
+  at(10300, () => $('typ').classList.add('show'))
+  at(11500, () => { $('typ').classList.remove('show'); $('m2').classList.add('show') })
+  at(12700, () => $('m3').classList.add('show'))
+  at(14000, () => { hide('s3'); show('s4') })
+  at(15200, () => { $('o1').classList.add('win'); count($('sold'), 42300, 59305, 1300, fmt); count($('open'), 89705, 72700, 1300, fmt) })
+  at(18200, () => { hide('s4'); show('s5') })
+  at(18800, () => {
+    [[1, 86], [2, 64], [3, 47], [4, 66]].forEach(([i, v]) => { $('b' + i).style.width = v + '%'; count($('p' + i), 0, v, 1400, n => Math.round(n) + ' %') })
+  })
+  at(21800, () => show('end'))
+  at(24600, () => { window.__done = true })
+}
+</script>
+</body>
+</html>
