@@ -18,7 +18,7 @@ import { signOut } from '@/lib/signOut'
 import { CURRENT_VERSION, changelogFor } from '@/lib/changelog'
 import { SYSTEM_NOTICE } from '@/lib/systemNotice'
 import { EMAILS } from '@/lib/legal'
-import { ROLE_LABELS, STATUS_LABELS, type StoreModule } from '@/lib/stores'
+import { ROLE_LABELS, STATUS_LABELS, WHATSAPP_OFFERED, type StoreModule } from '@/lib/stores'
 import { reminderSubject, reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
 import { fmtDue, isDueToday, isOverdue } from '@/lib/datetime'
@@ -345,8 +345,8 @@ Pantalla: ${pathname}`,
     : id === 'agenda' && dueCount > 0 ? { n: dueCount, cls: 'due' }
     : null
   const pendingSetup = (id: string) => id === 'whatsapp' && waOff
-  // WhatsApp viene en Cubeta: en Litro y Galón el menú lo ofrece con el nombre del plan
-  const waTag = store?.planIncludesWhatsApp ? 'Por activar' : 'Cubeta'
+  // WhatsApp en desarrollo: "Pronto". Cuando se ofrezca: en Cubeta "Por activar"; en Litro y Galón, el nombre del plan
+  const waTag = !WHATSAPP_OFFERED ? 'Pronto' : store?.planIncludesWhatsApp ? 'Por activar' : 'Cubeta'
 
   const navLink = (it: NavItem) => {
     const Ic = it.icon

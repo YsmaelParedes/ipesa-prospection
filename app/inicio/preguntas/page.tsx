@@ -3,12 +3,13 @@ import { breadcrumbJsonLd, faqJsonLd, pageMeta } from '@/lib/site'
 import { JsonLd } from '@/components/JsonLd'
 import { APP_NAME } from '@/lib/brand'
 import { PLANS } from '@/lib/stores'
+import { EMAILS } from '@/lib/legal'
 import { CtaBand, Ic, PageHero } from '../_ui'
 import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
   title: `Preguntas frecuentes sobre el CRM · ${APP_NAME}`,
-  description: 'Cómo empezar, cómo se paga, cuántos usuarios incluye, cómo se protege tu información y cómo funciona WhatsApp en Matices.',
+  description: 'Cómo empezar, cómo se paga, cuántos usuarios incluye, cómo se protege tu información y cuándo llega WhatsApp a Matices.',
   path: '/inicio/preguntas',
 })
 
@@ -44,9 +45,9 @@ const GROUPS: { id: string; title: string; items: { q: string; a: string }[] }[]
   {
     id: 'whatsapp', title: 'WhatsApp',
     items: [
-      { q: '¿WhatsApp está incluido?', a: 'Sí, en el plan Cubeta. Lo solicitas desde el CRM y un asesor lo configura con el número de tu tienda.' },
-      { q: '¿Tengo que hacer algo técnico?', a: 'No. El asesor se encarga de conectar tu número; tú solo empiezas a atender desde el CRM.' },
-      { q: '¿Meta cobra aparte?', a: 'WhatsApp Business Platform es de Meta y puede cobrar por los mensajes según sus tarifas vigentes. Tu asesor te explica cómo funciona.' },
+      { q: '¿Matices tiene WhatsApp?', a: 'Muy pronto. Estamos terminando la conexión para que vincules el WhatsApp de tu tienda tú mismo, en unos clics, junto con un agente de IA que contesta por ti. Estará en el plan Cubeta.' },
+      { q: '¿Cómo me entero cuando esté listo?', a: `Escríbenos a ${EMAILS.hola} y te avisamos. Si ya tienes cuenta, también lo verás en tu CRM.` },
+      { q: '¿Meta cobra aparte?', a: 'WhatsApp Business Platform es de Meta y puede cobrar por los mensajes según sus tarifas vigentes.' },
     ],
   },
 ]

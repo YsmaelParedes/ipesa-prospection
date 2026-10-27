@@ -63,7 +63,7 @@ export default async function GiroPage({ params }: Props) {
         <div className={s.wrap}>
           <div className={s.center}>
             <h2 className={s.h2}>Pruébalo aquí mismo</h2>
-            <p className={s.sub}>Cuatro pantallas de Matices con clientes de ejemplo. Nada se guarda de verdad.</p>
+            <p className={s.sub}>Tres pantallas de Matices con clientes de ejemplo. Nada se guarda de verdad.</p>
           </div>
           <div className={s.demoWrap}><DemoTabs /></div>
           <div className={s.centerLink}><MoreLink href="/inicio/precios">Ver precios</MoreLink></div>

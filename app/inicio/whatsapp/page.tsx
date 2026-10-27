@@ -3,39 +3,40 @@ import { breadcrumbJsonLd, pageMeta } from '@/lib/site'
 import { JsonLd } from '@/components/JsonLd'
 import Link from 'next/link'
 import { APP_NAME } from '@/lib/brand'
-import { CtaBand, Ic, MoreLink, PageHero, SectionHead } from '../_ui'
-import { SingleDemo } from '../demos/DemoTabs'
+import { EMAILS } from '@/lib/legal'
+import { CtaBand, Ic, PageHero } from '../_ui'
 import s from '../inicio.module.css'
 
+/*
+ * WhatsApp y el agente de IA están en desarrollo (ver WHATSAPP_OFFERED en lib/stores.ts):
+ * esta página solo los anuncia, sin demo ni forma de pedirlos. /inicio/agente-ia redirige aquí.
+ */
 export const metadata: Metadata = pageMeta({
-  title: `WhatsApp para tiendas de pintura en tu CRM · ${APP_NAME}`,
-  description: 'Atiende el WhatsApp de tu tienda desde el CRM, con cada chat ligado a su cliente y su cotización. Incluido en el plan Cubeta.',
+  title: `WhatsApp y agente de IA, próximamente · ${APP_NAME}`,
+  description: 'Muy pronto podrás atender el WhatsApp de tu tienda desde Matices, con un agente de IA que contesta por ti. Escríbenos y te avisamos cuando esté listo.',
   path: '/inicio/whatsapp',
 })
+
+const NOTIFY = `mailto:${EMAILS.hola}?subject=${encodeURIComponent('Avísenme cuando WhatsApp esté listo')}`
 
 const POINTS = [
   { icon: Ic.chat, tone: s.tWa, title: 'Una bandeja para todo el equipo', text: 'Los chats del número de tu tienda en el CRM, sin pasarse el celular.' },
   { icon: Ic.link, tone: s.tBrand, title: 'Cada chat con su cliente', text: 'Mientras respondes ves su historial, sus cotizaciones y su siguiente paso.' },
-  { icon: Ic.megaphone, tone: s.tMagenta, title: 'Respuestas rápidas', text: 'Respuestas guardadas para lo que más te preguntan y plantillas aprobadas por Meta para retomar una conversación.' },
-  { icon: Ic.shield, tone: s.tCyan, title: 'Con las reglas oficiales de Meta', text: 'Respeta la ventana de atención y las esperas que pide Meta, para cuidar tu número.' },
-]
-
-const STEPS = [
-  { title: 'Elige el plan Cubeta', text: 'Desde tu CRM, y luego tocas "Quiero activarlo".' },
-  { title: 'Un asesor lo configura', text: 'Lo conecta con el número de tu tienda. Tú no haces nada técnico.' },
-  { title: 'Empiezas a atender', text: 'Tus chats aparecen en el CRM y tu equipo responde desde ahí.' },
+  { icon: Ic.layers, tone: s.tMagenta, title: 'Un agente de IA que contesta por ti', text: 'Responde a cualquier hora con la información de tu tienda y pasa el chat a tu equipo cuando hace falta.' },
+  { icon: Ic.store, tone: s.tCyan, title: 'Lo conectas tú, en unos clics', text: 'Vinculas el número de tu tienda desde tu CRM, sin trámites técnicos.' },
 ]
 
 export default function WhatsAppPage() {
   return (
     <>
-      <JsonLd data={breadcrumbJsonLd('WhatsApp en tu CRM', '/inicio/whatsapp')} />
+      <JsonLd data={breadcrumbJsonLd('WhatsApp y agente de IA', '/inicio/whatsapp')} />
       <PageHero
-        title={<>Atiende y vende por <span className={s.waText}>WhatsApp</span> desde tu CRM</>}
-        lead="El WhatsApp de tu tienda, conectado a tus clientes y cotizaciones. Lo dejamos listo por ti con el número de tu tienda."
+        title={<><span className={s.waText}>WhatsApp</span> y un agente de IA, <span className={s.spectrumText}>muy pronto</span></>}
+        lead="Estamos terminando la conexión para que vincules el WhatsApp de tu tienda tú mismo. Mientras, ordena tus ventas con el Sistema Comercial y tus Contactos."
       >
         <div className={s.heroCtas}>
-          <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>Quiero WhatsApp en mi tienda <Ic.arrow className={s.btnArrow} /></Link>
+          <a href={NOTIFY} className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>Avísenme cuando esté listo <Ic.arrow className={s.btnArrow} /></a>
+          <Link href="/registro" className={`${s.btn} ${s.btnLight} ${s.btnLg}`}>Crear cuenta gratis</Link>
         </div>
       </PageHero>
 
@@ -64,7 +65,7 @@ export default function WhatsAppPage() {
             </div>
           </div>
           <div>
-            <h2 className={s.h2}>Cada conversación, conectada con su venta</h2>
+            <h2 className={s.h2}>Lo que viene</h2>
             <div className={s.pointList}>
               {POINTS.map(p => (
                 <div key={p.title} className={s.point}>
@@ -75,36 +76,13 @@ export default function WhatsAppPage() {
             </div>
           </div>
         </div>
+        <p className={s.finePrint}>
+          Estará incluido en el plan Cubeta. WhatsApp Business Platform es de Meta y está sujeto a sus
+          políticas; Meta puede cobrar por los mensajes según sus tarifas vigentes.
+        </p>
       </section>
 
-      <section className={`${s.section} ${s.sectionAlt}`}>
-        <div className={s.wrap}>
-          <SectionHead title="Y un agente de IA que contesta por ti" sub="Pregunta como cliente: la IA contesta con la información de tu tienda y pasa el chat a tu equipo cuando hace falta." />
-          <div className={s.demoWrap}><SingleDemo k="whatsapp" /></div>
-          <div className={s.centerLink}><MoreLink href="/inicio/agente-ia">Conoce el agente de IA</MoreLink></div>
-        </div>
-      </section>
-
-      <section className={s.section}>
-        <div className={s.wrap}>
-          <SectionHead title="Tú lo pides, nosotros lo dejamos listo" sub="Sin formularios técnicos ni configuraciones: un asesor conecta el número de tu tienda." />
-          <ol className={s.steps}>
-            {STEPS.map((st, i) => (
-              <li key={st.title} className={s.stepCard}>
-                <span className={`${s.stepNum} ${s[`n${i + 1}`]}`}>{i + 1}</span>
-                <h3>{st.title}</h3>
-                <p>{st.text}</p>
-              </li>
-            ))}
-          </ol>
-          <p className={s.finePrint}>
-            Incluido en el plan Cubeta. WhatsApp Business Platform es de Meta y está sujeto a sus
-            políticas; Meta puede cobrar por los mensajes según sus tarifas vigentes.
-          </p>
-        </div>
-      </section>
-
-      <CtaBand title="Atiende WhatsApp desde tu CRM" text="Crea tu cuenta, cambia al plan Cubeta y lo configuramos con el número de tu tienda." />
+      <CtaBand />
     </>
   )
 }

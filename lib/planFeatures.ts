@@ -32,13 +32,13 @@ export const PLAN_COPY: Record<'litro' | 'galon' | 'cubeta', PlanCopy> = {
     ],
   },
   cubeta: {
-    tagline: 'Todo Matices, con WhatsApp conectado a tus clientes.',
+    tagline: 'Todo Matices, para equipos más grandes.',
     features: [
       `${users(PLANS.cubeta.maxUsers)}, con administradores`,
       'Todo lo del plan Galón',
-      'Bandeja de WhatsApp ligada al CRM',
-      'Cada chat con su cliente y sus cotizaciones',
-      'Un asesor conecta el número de tu tienda',
+      'Varios administradores para repartir el trabajo',
+      // WhatsApp en desarrollo (WHATSAPP_OFFERED): se anuncia sin prometerlo
+      'Próximamente: WhatsApp y agente de IA',
     ],
   },
 }
@@ -52,7 +52,7 @@ export const PLAN_COMPARE: { label: string; values: Record<'litro' | 'galon' | '
   { label: 'Agenda y avisos en el celular', values: { litro: true, galon: true, cubeta: true } },
   { label: 'Importar desde Excel', values: { litro: true, galon: true, cubeta: true } },
   { label: 'Más de un administrador', values: { litro: false, galon: false, cubeta: true } },
-  { label: 'Bandeja de WhatsApp', values: { litro: false, galon: false, cubeta: true } },
+  { label: 'WhatsApp y agente de IA', values: { litro: false, galon: false, cubeta: 'Próximamente' } },
 ]
 
 export const planName = (p: PlanId) => PLANS[p].label

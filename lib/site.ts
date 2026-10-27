@@ -11,21 +11,20 @@ import { APP_NAME, APP_TAGLINE } from './brand'
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.matices.app').replace(/\/+$/, '')
 
 export const SITE_DESCRIPTION =
-  'El CRM para tiendas de pintura: a quién llamar hoy, cotizaciones con seguimiento, metas por vendedor y WhatsApp con agente de IA. Empieza gratis.'
+  'El CRM para tiendas de pintura: a quién llamar hoy, cotizaciones con seguimiento, metas por vendedor y tu base de clientes por zonas. Empieza gratis.'
 
 /** Páginas que sí deben aparecer en Google. "/" es la portada (/inicio es la misma página, sin duplicarla). */
 export const PUBLIC_PAGES: { path: string; priority: number; changeFrequency: 'weekly' | 'monthly' | 'yearly' }[] = [
   { path: '/', priority: 1, changeFrequency: 'weekly' },
   { path: '/inicio/sistema-comercial', priority: 0.9, changeFrequency: 'monthly' },
   { path: '/inicio/contactos', priority: 0.8, changeFrequency: 'monthly' },
-  { path: '/inicio/agente-ia', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/inicio/para-tu-tienda', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/inicio/para-tu-tienda/tiendas-de-pintura', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/inicio/para-tu-tienda/ferreterias', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/inicio/para-tu-tienda/distribuidores', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/inicio/funciones', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/inicio/precios', priority: 0.9, changeFrequency: 'monthly' },
-  { path: '/inicio/whatsapp', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/inicio/whatsapp', priority: 0.4, changeFrequency: 'monthly' },
   { path: '/inicio/como-empezar', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/inicio/preguntas', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/registro', priority: 0.6, changeFrequency: 'yearly' },
@@ -101,8 +100,6 @@ export function organizationJsonLd() {
       featureList: [
         'Sistema Comercial: lista de llamadas del día, oportunidades y metas por vendedor',
         'Contactos por zonas, con WhatsApp o teléfono fijo',
-        'Bandeja de WhatsApp para todo el equipo',
-        'Agente de IA que contesta WhatsApp',
         'Agenda y resumen diario en el celular',
       ],
     },
@@ -111,7 +108,7 @@ export function organizationJsonLd() {
       '@context': 'https://schema.org',
       '@type': 'VideoObject',
       name: `Así se usa ${APP_NAME}`,
-      description: 'Un día con Matices: el resumen de pendientes en el celular, la meta del día, el agente de IA contestando WhatsApp de noche, una venta ganada y el avance del equipo.',
+      description: 'Un día con Matices: el resumen de pendientes en el celular, la meta del día, la búsqueda de un cliente en Contactos, una venta ganada y el avance del equipo.',
       thumbnailUrl: `${SITE_URL}/video/matices-demo.jpg`,
       contentUrl: `${SITE_URL}/video/matices-demo.mp4`,
       uploadDate: '2026-10-27',

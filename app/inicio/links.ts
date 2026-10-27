@@ -30,10 +30,9 @@ const PRODUCT: MenuGroup[] = [
     ],
   },
   {
-    title: 'WhatsApp',
+    title: 'Próximamente',
     items: [
-      { href: '/inicio/whatsapp', label: 'Bandeja de WhatsApp', desc: 'Los chats de tu tienda con todo tu equipo', icon: Ic.chat, tone: s.tWa },
-      { href: '/inicio/agente-ia', label: 'Agente de IA', desc: 'Contesta por ti a cualquier hora', icon: Ic.layers, tone: s.tMagenta },
+      { href: '/inicio/whatsapp', label: 'WhatsApp y agente de IA', desc: 'Muy pronto en tu CRM', icon: Ic.chat, tone: s.tWa },
     ],
   },
 ]
@@ -59,7 +58,7 @@ export const NAV: NavEntry[] = [
 
 /** Pie de página: los mismos grupos, más ayuda. */
 export const FOOTER_GROUPS: { title: string; links: { href: string; label: string }[] }[] = [
-  { title: 'Producto', links: [{ href: '/inicio/sistema-comercial', label: 'Sistema Comercial' }, { href: '/inicio/contactos', label: 'Contactos' }, { href: '/inicio/whatsapp', label: 'WhatsApp' }, { href: '/inicio/agente-ia', label: 'Agente de IA' }, { href: '/inicio/funciones', label: 'Funciones' }] },
+  { title: 'Producto', links: [{ href: '/inicio/sistema-comercial', label: 'Sistema Comercial' }, { href: '/inicio/contactos', label: 'Contactos' }, { href: '/inicio/whatsapp', label: 'WhatsApp · Próximamente' }, { href: '/inicio/funciones', label: 'Funciones' }] },
   { title: 'Para tu tienda', links: STORES[0].items.map(i => ({ href: i.href, label: i.label })) },
   { title: 'Empieza', links: [{ href: '/inicio/precios', label: 'Precios' }, { href: '/inicio/como-empezar', label: 'Cómo empezar' }, { href: '/inicio/preguntas', label: 'Preguntas' }, { href: '/registro', label: 'Crear cuenta gratis' }, { href: '/login', label: 'Iniciar sesión' }] },
 ]

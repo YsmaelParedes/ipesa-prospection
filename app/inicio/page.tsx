@@ -12,7 +12,7 @@ import s from './inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
   title: `${APP_NAME} · ${APP_TAGLINE}`,
-  description: 'El CRM para tiendas de pintura: a quién llamar hoy, cotizaciones con seguimiento, metas por vendedor y WhatsApp con agente de IA. Empieza gratis.',
+  description: 'El CRM para tiendas de pintura: a quién llamar hoy, cotizaciones con seguimiento, metas por vendedor y tu base de clientes por zonas. Empieza gratis.',
   // /inicio es la misma página que la portada "/": Google guarda solo "/"
   path: '/',
 })
@@ -22,10 +22,9 @@ export const metadata: Metadata = pageMeta({
 const FEATURES = [
   { icon: Ic.grid,      tone: s.tBrand,   title: 'Sistema Comercial', text: 'Hoy, Oportunidades y Equipo: a quién llamar, cotizaciones abiertas y metas por vendedor.', href: '/inicio/sistema-comercial' },
   { icon: Ic.contacts,  tone: s.tCyan,    title: 'Contactos', text: 'Tu base por zonas, con WhatsApp o fijo, importada desde Excel y lista para visitar.', href: '/inicio/contactos' },
-  { icon: Ic.chat,      tone: s.tWa,      title: 'WhatsApp en el CRM', text: 'En el plan Cubeta: atiende a tus clientes desde el número de tu tienda, con todo tu equipo.', href: '/inicio/whatsapp' },
-  { icon: Ic.layers,    tone: s.tMagenta, title: 'Agente de IA', text: 'Contesta WhatsApp a cualquier hora con la información de tu tienda y pasa el chat a tu equipo.', href: '/inicio/agente-ia' },
   { icon: Ic.bell,      tone: s.tTeal,    title: 'Agenda y avisos', text: 'El resumen de tus pendientes cada mañana en tu celular, aunque la app esté cerrada.', href: '/inicio/funciones#agenda' },
   { icon: Ic.users,     tone: s.tAmber,   title: 'Tu equipo y tu base, protegidos', text: 'Administradores y vendedores, cada quien con su usuario. Exportar y borrar, solo administradores.', href: '/inicio/funciones#equipo' },
+  { icon: Ic.chat,      tone: s.tWa,      title: 'Próximamente: WhatsApp', text: 'Atiende el WhatsApp de tu tienda desde el CRM, con un agente de IA que contesta por ti.', href: '/inicio/whatsapp' },
 ]
 
 const STEPS = [
@@ -45,7 +44,7 @@ export default function LandingPage() {
             <h1 className={s.h1}>El CRM hecho para tiendas <span className={s.spectrumText}>de pintura</span></h1>
             <p className={s.lead}>
               Tu equipo sabe a quién llamar hoy, registra cada llamada en 3 toques y tú ves cómo va la
-              venta de tu sucursal. Con WhatsApp y un agente de IA que contesta por ti.
+              venta de tu sucursal, desde el celular o la computadora.
             </p>
             <div className={s.heroCtas}>
               <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>
@@ -82,7 +81,7 @@ export default function LandingPage() {
         <div className={s.wrap}>
           <SectionHead
             title="Pruébalo aquí mismo, sin crear cuenta"
-            sub="Cuatro pantallas de Matices con clientes de ejemplo. Toca, escribe y guarda: nada se guarda de verdad."
+            sub="Tres pantallas de Matices con clientes de ejemplo. Toca, escribe y guarda: nada se guarda de verdad."
           />
           <div className={s.demoWrap}><DemoTabs /></div>
         </div>

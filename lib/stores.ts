@@ -30,6 +30,15 @@ export type StoreModules = Record<StoreModule, boolean>
  *    (stores.modules); hoy solo los tiene la tienda IPESA.
  * Lo que la tienda puede usar es la combinación con su plan: effectiveModules().
  */
+/**
+ * WhatsApp para tiendas nuevas: en desarrollo hasta que Meta apruebe el alta
+ * en unos clics (Embedded Signup). Mientras sea false, ninguna tienda puede
+ * pedirlo y el sitio y los planes lo muestran como "Próximamente". Las
+ * tiendas que ya lo tienen encendido a mano (stores.modules.whatsapp, como
+ * IPESA) siguen igual: esto no las toca.
+ */
+export const WHATSAPP_OFFERED = false
+
 export const DEFAULT_MODULES: StoreModules = { whatsapp: false, campaigns: false, formulas: false }
 
 export const STATUS_LABELS: Record<StoreStatus, string> = {

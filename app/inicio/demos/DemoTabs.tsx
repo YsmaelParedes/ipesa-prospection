@@ -3,13 +3,12 @@
 import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { CallDemo } from './CallDemo'
-import { WhatsAppDemo } from './WhatsAppDemo'
 import { ContactsDemo } from './ContactsDemo'
 import { TeamDemo } from './TeamDemo'
 import s from './demos.module.css'
 
-/** Las cuatro demos del sitio. En la portada van en pestañas; cada página de producto muestra la suya. */
-export type DemoKey = 'call' | 'whatsapp' | 'contacts' | 'team'
+/** Las demos del sitio. En la portada van en pestañas; cada página de producto muestra la suya. */
+export type DemoKey = 'call' | 'contacts' | 'team'
 
 const icon = (d: React.ReactNode) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>
 
@@ -23,13 +22,6 @@ const DEMOS: Record<DemoKey, {
     steps: ['Toca a un cliente de tu lista.', 'Elige cómo te fue.', 'Acepta la fecha que te sugerimos y guarda.'],
     tryIt: 'Pruébalo: registra una «Cotización» y mira cómo avanza tu meta.', href: '/inicio/sistema-comercial', more: 'Conoce el Sistema Comercial',
     Demo: CallDemo,
-  },
-  whatsapp: {
-    tab: 'WhatsApp + agente IA', icon: icon(<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z" />),
-    title: 'WhatsApp con agente de IA', text: 'La IA contesta con la información de tu tienda y, cuando hace falta una persona, pasa el chat a tu equipo.',
-    steps: ['Pregunta algo como cliente.', 'Mira cómo contesta la IA.', 'Pide una cotización: el chat pasa al equipo.'],
-    tryIt: 'Pruébalo: toca «Quiero cotizar 15 cubetas».', href: '/inicio/agente-ia', more: 'Conoce el agente de IA',
-    Demo: WhatsAppDemo,
   },
   contacts: {
     tab: 'Contactos', icon: icon(<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>),
@@ -46,7 +38,7 @@ const DEMOS: Record<DemoKey, {
     Demo: TeamDemo,
   },
 }
-const ORDER: DemoKey[] = ['call', 'whatsapp', 'contacts', 'team']
+const ORDER: DemoKey[] = ['call', 'contacts', 'team']
 
 function Side({ k, link }: { k: DemoKey; link: boolean }) {
   const d = DEMOS[k]
@@ -61,7 +53,7 @@ function Side({ k, link }: { k: DemoKey; link: boolean }) {
   )
 }
 
-/** Portada: las cuatro demos en pestañas (flechas para cambiar de pestaña). `bare`: sin la explicación de al lado. */
+/** Portada: las demos en pestañas (flechas para cambiar de pestaña). `bare`: sin la explicación de al lado. */
 export function DemoTabs({ bare = false }: { bare?: boolean }) {
   const [active, setActive] = useState<DemoKey>('call')
   const refs = useRef<Partial<Record<DemoKey, HTMLButtonElement | null>>>({})

@@ -8,6 +8,7 @@ import Link from '@/components/CachedLink'
 import { Avatar } from '@/components/CrmUI'
 import { WaIcon } from '@/components/WhatsAppUI'
 import { invalidateSession, useSession } from '@/lib/profile'
+import { WHATSAPP_OFFERED } from '@/lib/stores'
 
 const BENEFITS = [
   { icon: <WaIcon.chat size={18} />,      title: 'Todos los chats en un solo lugar', text: 'Tu equipo atiende el WhatsApp de la tienda desde el CRM, sin pasarse el celular.' },
@@ -30,7 +31,8 @@ const SAMPLE = [
 
 /**
  * WhatsApp "Por activar": presentación del servicio para una tienda que aún
- * no lo tiene. Viene en el plan Cubeta: en Litro y Galón se ofrece cambiar de
+ * no lo tiene. Mientras WHATSAPP_OFFERED sea false se presenta como
+ * "Próximamente" y no se puede pedir. Viene en el plan Cubeta: en Litro y Galón se ofrece cambiar de
  * plan; en Cubeta un administrador lo solicita, llega un correo a la
  * plataforma y un asesor conecta el número (la tienda no puede activarlo).
  */
@@ -57,6 +59,40 @@ export function WhatsAppOffer() {
     } finally {
       setSending(false)
     }
+  }
+
+  if (!WHATSAPP_OFFERED) {
+    return (
+      <div className="wa-offer">
+        <section className="wa-offer-hero">
+          <div className="wa-offer-copy">
+            <span className="wa-offer-status"><i />Próximamente</span>
+            <h2>WhatsApp y un agente de IA, muy pronto en tu CRM</h2>
+            <ul className="wa-offer-benefits">
+              {BENEFITS.map(b => (
+                <li key={b.title}>
+                  <span className="wa-offer-ico">{b.icon}</span>
+                  <span><strong>{b.title}</strong>{b.text}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="wa-offer-note">Estamos terminando la conexión para que vincules el WhatsApp de tu tienda tú mismo, en unos clics. Te avisaremos cuando esté lista.</p>
+          </div>
+          <div className="wa-offer-preview" aria-hidden="true">
+            <div className="wa-offer-preview-head"><WaIcon.whatsapp size={16} /> Conversaciones</div>
+            {SAMPLE.map(c => (
+              <div className="wa-conv" key={c.name}>
+                <Avatar name={c.name} size={36} />
+                <span className="wa-conv-main">
+                  <span className="wa-conv-top"><span className="wa-conv-name">{c.name}</span><span className="wa-conv-time">{c.time}</span></span>
+                  <span className="wa-conv-bottom"><span className="wa-conv-preview"><span className="wa-ellipsis">{c.text}</span></span></span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    )
   }
 
   if (!canRequest) {

@@ -36,6 +36,14 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.7.3',
+    date: '27 de octubre, 2026',
+    title: 'Planes',
+    items: [
+      'Actualizamos lo que incluye cada plan en Configuración › Plan.',
+    ],
+  },
+  {
     version: '4.7.2',
     date: '24 de octubre, 2026',
     title: 'Sistema Comercial',

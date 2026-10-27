@@ -72,7 +72,7 @@ const sections: LegalSection[] = [
           Al bajar de plan no se borra información: lo que pase de los límites del nuevo plan se conserva y se puede
           consultar, pero no se pueden registrar más contactos o cotizaciones hasta quedar dentro del límite o subir de
           plan. Si el nuevo plan incluye menos usuarios, los accesos más recientes se desactivan y un administrador puede elegir
-          a quién reactivar. La bandeja de WhatsApp solo está disponible en el plan Cubeta.
+          a quién reactivar. La bandeja de WhatsApp, cuando esté disponible, será parte del plan Cubeta.
         </p>
         <p>
           Los precios incluyen los impuestos que se indiquen al pagar. Si necesitas factura fiscal (CFDI), pídela

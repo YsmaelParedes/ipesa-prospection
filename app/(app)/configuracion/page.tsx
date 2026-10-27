@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { BRAND_MARK } from '@/lib/brand'
 import { useSession } from '@/lib/profile'
-import { ROLE_LABELS, STATUS_LABELS, type StoreModule } from '@/lib/stores'
+import { ROLE_LABELS, STATUS_LABELS, WHATSAPP_OFFERED, type StoreModule } from '@/lib/stores'
 import { Ico, Spinner, WhatsAppGlyph, cx } from './ui'
 import { StoreTab } from './StoreTab'
 import { CatalogsTab } from './CatalogsTab'
@@ -81,7 +81,7 @@ function Settings() {
           {tabs.map(t => (
             <button key={t.id} className={cx(s.navItem, tab === t.id && s.navActive)} onClick={() => go(t.id)} aria-current={tab === t.id ? 'page' : undefined}>
               <span className={s.navIcon}><t.icon /></span>
-              <span className={s.navText}><strong>{t.label}</strong><small>{t.id === 'whatsapp' && !store.modules.whatsapp ? (store.planIncludesWhatsApp ? 'Por activar' : 'En el plan Cubeta') : t.hint}</small></span>
+              <span className={s.navText}><strong>{t.label}</strong><small>{t.id === 'whatsapp' && !store.modules.whatsapp ? (!WHATSAPP_OFFERED ? 'Próximamente' : store.planIncludesWhatsApp ? 'Por activar' : 'En el plan Cubeta') : t.hint}</small></span>
             </button>
           ))}
         </nav>

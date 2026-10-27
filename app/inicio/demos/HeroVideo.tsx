@@ -30,7 +30,7 @@ export function HeroVideo() {
     <div className={s.video}>
       <video
         ref={ref} muted loop playsInline preload="metadata" poster="/video/matices-demo.jpg"
-        aria-label="Video: un día con Matices. El resumen de pendientes en el celular, la meta del día, el agente de IA contestando WhatsApp de noche, una venta ganada y el avance del equipo."
+        aria-label="Video: un día con Matices. El resumen de pendientes en el celular, la meta del día, la búsqueda de un cliente en Contactos, una venta ganada y el avance del equipo."
         onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
       >
         <source src="/video/matices-demo.mp4" type="video/mp4" />
