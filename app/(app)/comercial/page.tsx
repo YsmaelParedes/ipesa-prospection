@@ -43,6 +43,7 @@ function ComercialContent() {
   const wanted = params.get('tab') as Tab | null
   const [tab, setTab] = useState<Tab>(wanted && TAB_KEYS.includes(wanted) ? wanted : 'hoy')
   const [zone, setZone] = useState('')
+  const [segment, setSegment] = useState('')
   const [query, setQuery] = useState('')
   const [search, setSearch] = useState('')
   const [loadingMore, setLoadingMore] = useState(false)
@@ -67,11 +68,12 @@ function ComercialContent() {
   const url = useCallback((limit = 0) => {
     const qs = new URLSearchParams()
     if (zone) qs.set('zone', zone)
+    if (segment) qs.set('segment', segment)
     if (search) qs.set('q', search)
     if (limit > FRESH_PAGE) qs.set('limit', String(Math.min(limit, MAX_FRESH)))
     const str = qs.toString()
     return str ? `${PATH}?${str}` : PATH
-  }, [zone, search])
+  }, [zone, segment, search])
 
   // Cuántos prospectos nuevos se ven: al refrescar (por un guardado) se conservan los ya cargados
   const freshShown = useRef(0)
@@ -152,10 +154,10 @@ function ComercialContent() {
           <div style={{ width: 32, height: 32, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         </div>
       ) : current === 'hoy' ? (
-        <HoyView data={data} wide={wide} zone={zone} query={query} readonly={readonly} waModule={waModule} loadingMore={loadingMore}
-          onZone={setZone} onQuery={setQuery} onMore={loadMore} onSaved={onSaved} opened={opened} onOpen={setOpened} />
+        <HoyView data={data} wide={wide} zone={zone} segment={segment} query={query} readonly={readonly} waModule={waModule} loadingMore={loadingMore}
+          onZone={setZone} onSegment={setSegment} onQuery={setQuery} onMore={loadMore} onSaved={onSaved} opened={opened} onOpen={setOpened} />
       ) : current === 'oportunidades' ? (
-        <OportunidadesView isAdmin={isAdmin} onOpen={setOverlay} />
+        <OportunidadesView isAdmin={isAdmin} segments={data.segments ?? []} onOpen={setOverlay} />
       ) : (
         <EquipoView today={data.today} />
       )}

@@ -12,7 +12,7 @@ export type ListContact = CommercialContact & { quote_amount?: number | null }
 /** GET /api/data/commercial — la lista de "Hoy". */
 export type TodayData = {
   today: string; uid: string; isAdmin: boolean; salesTeam: boolean
-  zones: string[]; goals: Goals; counts: DayCounts
+  zones: string[]; segments: string[]; goals: Goals; counts: DayCounts
   due: ListContact[]; fresh: ListContact[]; freshTotal: number; offset: number
   /** Sin teléfono ("Para visita"): los primeros y cuántos hay. */
   visit: ListContact[]; visitTotal: number

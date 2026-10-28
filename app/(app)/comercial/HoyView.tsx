@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { NO_ANSWER_LIMIT, type CommercialContact, type ResultChoice } from '@/lib/commercial'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
+import { Select } from '@/components/Select'
 import { ContactPanel, avatarColors } from './ContactPanel'
 import type { Kind } from './RegisterForm'
 import { Ico, StatusChip, bizName, fmtDay, initials, money, type ListContact, type TodayData } from './ui'
@@ -23,15 +24,17 @@ function whenOf(c: ListContact, today: string): { label: string; cls: string } {
  * la meta de llamadas. En computadora la ficha queda a la derecha con el
  * registro siempre visible; en celular se abre al picar Llamar o WhatsApp.
  */
-export function HoyView({ data, wide, zone, query, readonly, waModule, loadingMore, onZone, onQuery, onMore, onSaved, opened, onOpen }: {
+export function HoyView({ data, wide, zone, segment, query, readonly, waModule, loadingMore, onZone, onSegment, onQuery, onMore, onSaved, opened, onOpen }: {
   data: TodayData
   wide: boolean
   zone: string
+  segment: string
   query: string
   readonly: boolean
   waModule: boolean
   loadingMore: boolean
   onZone: (z: string) => void
+  onSegment: (s: string) => void
   onQuery: (q: string) => void
   onMore: () => void
   onSaved: (c: CommercialContact) => void
@@ -80,6 +83,12 @@ export function HoyView({ data, wide, zone, query, readonly, waModule, loadingMo
           {data.zones.map(z => <button key={z} className={`${s.pill} ${s.press}`} aria-pressed={zone === z} onClick={() => onZone(z)}>{z}</button>)}
         </>
       )}
+      {(data.segments?.length ?? 0) > 0 && (
+        <div className={s.segmentPick}>
+          <Select value={segment} onChange={onSegment} aria-label="Segmento"
+            options={[{ value: '', label: 'Todos los segmentos' }, ...(data.segments ?? []).map(x => ({ value: x, label: x }))]} />
+        </div>
+      )}
       <label className={s.search}>
         <Ico.search />
         <input type="search" value={query} onChange={e => onQuery(e.target.value)} placeholder="Buscar negocio o teléfono" aria-label="Buscar negocio o teléfono" />
@@ -98,7 +107,7 @@ export function HoyView({ data, wide, zone, query, readonly, waModule, loadingMo
 
   const empty = !all.length && (
     <div className={s.emptyList}>
-      {query || zone ? 'Nada coincide con el filtro.' : 'No tienes pendientes para hoy y ya no quedan prospectos sin asignar. ¡Buen trabajo!'}
+      {query || zone || segment ? 'Nada coincide con el filtro.' : 'No tienes pendientes para hoy y ya no quedan prospectos sin asignar. ¡Buen trabajo!'}
     </div>
   )
 

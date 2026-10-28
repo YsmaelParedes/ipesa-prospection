@@ -36,6 +36,14 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.7.4',
+    date: '27 de octubre, 2026',
+    title: 'Sistema Comercial',
+    items: [
+      'En Hoy y en Oportunidades ya puedes filtrar por segmento, además de por zona.',
+    ],
+  },
+  {
     version: '4.7.3',
     date: '27 de octubre, 2026',
     title: 'Planes',

@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { apiFetch } from '@/lib/apiClient'
 import { useQueryEffect } from '@/lib/useCachedQuery'
 import { useDataChanged } from '@/lib/crmEvents'
 import type { ResultChoice } from '@/lib/commercial'
+import { Select } from '@/components/Select'
 import type { Opened } from './HoyView'
 import { bizName, fmtDay, money, type ListContact } from './ui'
 import s from './comercial.module.css'
@@ -17,8 +18,9 @@ type Data = { today: string; team: boolean; opportunities: Opportunity[]; totals
  * "Perdida" abren el registro con el resultado ya elegido (Venta / No
  * interesado); "Seguimiento" lo abre para anotar cualquier otro avance.
  */
-export function OportunidadesView({ isAdmin, onOpen }: { isAdmin: boolean; onOpen: (o: Opened) => void }) {
+export function OportunidadesView({ isAdmin, segments, onOpen }: { isAdmin: boolean; segments: string[]; onOpen: (o: Opened) => void }) {
   const [team, setTeam] = useState(false)
+  const [segment, setSegment] = useState('')
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState('')
 
@@ -37,9 +39,24 @@ export function OportunidadesView({ isAdmin, onOpen }: { isAdmin: boolean; onOpe
 
   const open = (o: Opportunity, result?: ResultChoice) => onOpen({ id: o.id, result })
 
+  // Con segmento elegido se filtra aquí mismo y los totales se recalculan igual que en el servidor
+  const view = useMemo(() => {
+    if (!data || !segment) return data
+    const opportunities = data.opportunities.filter(o => o.segment === segment)
+    const quoted = opportunities.reduce((sum, o) => sum + o.quote_amount, 0)
+    return {
+      ...data, opportunities,
+      totals: {
+        open: opportunities.length, quoted,
+        expected: Math.round(opportunities.reduce((sum, o) => sum + o.quote_amount * o.probability, 0)),
+        stale: opportunities.filter(o => (o.days_idle ?? 0) > 7).length,
+      },
+    }
+  }, [data, segment])
+
   if (error) return <div className={`${s.elev} ${s.emptyList}`} role="alert">{error}</div>
-  if (!data) return <div className={`${s.elev} ${s.emptyList}`}>Cargando…</div>
-  const { totals } = data
+  if (!view) return <div className={`${s.elev} ${s.emptyList}`}>Cargando…</div>
+  const { totals } = view
 
   return (
     <>
@@ -50,17 +67,27 @@ export function OportunidadesView({ isAdmin, onOpen }: { isAdmin: boolean; onOpe
         <div className={`${s.elev} ${s.kpi}`}><small>Más de 7 días sin contacto</small><b className={s.num} style={{ color: totals.stale ? 'var(--danger)' : undefined }}>{totals.stale}</b></div>
       </div>
 
-      {isAdmin && (
+      {(isAdmin || segments.length > 0) && (
         <div className={s.filters}>
-          <button className={`${s.pill} ${s.press}`} aria-pressed={!team} onClick={() => setTeam(false)}>Mías</button>
-          <button className={`${s.pill} ${s.press}`} aria-pressed={team} onClick={() => setTeam(true)}>De todo el equipo</button>
+          {isAdmin && (
+            <>
+              <button className={`${s.pill} ${s.press}`} aria-pressed={!team} onClick={() => setTeam(false)}>Mías</button>
+              <button className={`${s.pill} ${s.press}`} aria-pressed={team} onClick={() => setTeam(true)}>De todo el equipo</button>
+            </>
+          )}
+          {segments.length > 0 && (
+            <div className={s.segmentPick}>
+              <Select value={segment} onChange={setSegment} aria-label="Segmento"
+                options={[{ value: '', label: 'Todos los segmentos' }, ...segments.map(x => ({ value: x, label: x }))]} />
+            </div>
+          )}
         </div>
       )}
 
       <div className={`${s.elev} ${s.listCard}`}>
-        {data.opportunities.length === 0 ? (
+        {view.opportunities.length === 0 ? (
           <div className={s.emptyList}>
-            No hay cotizaciones abiertas. Cuando registres «Cotización enviada», aparecen aquí para darles seguimiento.
+            {segment ? 'No hay cotizaciones abiertas de este segmento.' : <>No hay cotizaciones abiertas. Cuando registres «Cotización enviada», aparecen aquí para darles seguimiento.</>}
           </div>
         ) : (
           <>
@@ -73,7 +100,7 @@ export function OportunidadesView({ isAdmin, onOpen }: { isAdmin: boolean; onOpe
               <span className={`${s.right} ${s.optional}`}>Prob.</span>
               <span />
             </div>
-            {data.opportunities.map(o => {
+            {view.opportunities.map(o => {
               const stale = (o.days_idle ?? 0) > 7
               return (
                 <div key={o.id} className={s.oppRow}>

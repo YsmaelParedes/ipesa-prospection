@@ -14,7 +14,7 @@ const MAX_DUE = 500
 
 
 /**
- * GET /api/data/commercial[?zone=&q=&offset=&limit=] — la lista de "Hoy":
+ * GET /api/data/commercial[?zone=&segment=&q=&offset=&limit=] — la lista de "Hoy":
  *  · due: mis seguimientos con fecha de hoy o vencida (y los sin asignar con fecha)
  *  · fresh: prospectos con teléfono que nadie ha trabajado (sin asignar), de a 30, por zona o búsqueda
  *  · visit: los que no tienen teléfono ("Para visita"), primeros 20 y el total
@@ -28,6 +28,8 @@ async function GETImpl(req: NextRequest) {
   const sp = req.nextUrl.searchParams
   const zone = sp.get('zone')
   if (zone !== null && zone.length > 60) return jsonError('Zona inválida')
+  const segment = sp.get('segment')
+  if (segment !== null && segment.length > 100) return jsonError('Segmento inválido')
   const q = (sp.get('q') ?? '').trim().slice(0, 80)
   const offset = Math.max(0, Math.min(Number(sp.get('offset')) || 0, 100000))
   // Prospectos nuevos por página; al refrescar, los que ya se veían (sin acentos ni mayúsculas en la búsqueda)
@@ -41,20 +43,23 @@ async function GETImpl(req: NextRequest) {
       .or(`owner_id.eq.${ctx.uid},owner_id.is.null`)
       .not('next_action_at', 'is', null).lte('next_action_at', today).neq('commercial_status', 'depurar')
     if (zone) due = due.eq('zone', zone)
+    if (segment) due = due.eq('segment', segment)
     if (q) due = withContactSearch(due, q)
 
     let fresh = supabase.from('contacts').select(COMMERCIAL_COLUMNS, { count: 'exact' }).eq('store_id', ctx.storeId)
       .is('owner_id', null).is('last_activity_at', null).is('next_action_at', null).eq('commercial_status', 'nuevo')
       .not('phone', 'is', null)
     if (zone) fresh = fresh.eq('zone', zone)
+    if (segment) fresh = fresh.eq('segment', segment)
     if (q) fresh = withContactSearch(fresh, q)
 
     let visit = supabase.from('contacts').select(COMMERCIAL_COLUMNS, { count: 'exact' }).eq('store_id', ctx.storeId)
       .is('owner_id', null).is('last_activity_at', null).is('phone', null)
     if (zone) visit = visit.eq('zone', zone)
+    if (segment) visit = visit.eq('segment', segment)
     if (q) visit = withContactSearch(visit, q)
 
-    const [dueRes, freshRes, visitRes, activities, store, zones] = await Promise.all([
+    const [dueRes, freshRes, visitRes, activities, store, catalogs] = await Promise.all([
       due.order('next_action_at', { ascending: true }).order('id', { ascending: true }).limit(MAX_DUE),
       fresh.order('no_answer_streak', { ascending: true }).order('created_at', { ascending: true }).order('id', { ascending: true })
         .range(offset, offset + freshLimit - 1),
@@ -63,9 +68,9 @@ async function GETImpl(req: NextRequest) {
         .eq('store_id', ctx.storeId).eq('user_id', ctx.uid)
         .gte('created_at', zonedDayStart(today, tz).toISOString()).lt('created_at', zonedDayStart(addDays(today, 1), tz).toISOString()),
       supabase.from('stores').select('commercial_goals').eq('id', ctx.storeId).maybeSingle(),
-      supabase.from('app_config').select('label').eq('store_id', ctx.storeId).eq('type', 'zone').order('label'),
+      supabase.from('app_config').select('type, label').eq('store_id', ctx.storeId).in('type', ['zone', 'segment']).order('label'),
     ])
-    for (const r of [dueRes, freshRes, visitRes, activities, store, zones]) if (r.error) throw r.error
+    for (const r of [dueRes, freshRes, visitRes, activities, store, catalogs]) if (r.error) throw r.error
 
     const dueRows = (dueRes.data ?? []) as unknown as Record<string, unknown>[]
     const freshRows = (freshRes.data ?? []) as unknown as Record<string, unknown>[]
@@ -85,7 +90,8 @@ async function GETImpl(req: NextRequest) {
       uid: ctx.uid,
       isAdmin: ctx.isAdmin,
       salesTeam: hasSalesTeam(ctx),
-      zones: (zones.data ?? []).map(z => z.label as string),
+      zones: (catalogs.data ?? []).filter(c => c.type === 'zone').map(c => c.label as string),
+      segments: (catalogs.data ?? []).filter(c => c.type === 'segment').map(c => c.label as string),
       goals: goalsFor(parseGoalsConfig(store.data?.commercial_goals), ctx.uid),
       counts: countActivities((activities.data ?? []) as ActivityForCount[]),
       due: dueRows.map(c => ({ ...c, quote_amount: quotes.get(c.id as string) ?? null })),
