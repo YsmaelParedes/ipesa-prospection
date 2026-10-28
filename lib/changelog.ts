@@ -46,6 +46,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'El buscador de Hoy busca en toda la base, también a quien le toca otro día, y te dice cuándo.',
       'Quien registra una llamada, WhatsApp o visita se queda con el cliente; ya no hay que asignarlo a mano.',
       'Al guardar te quedas en el mismo cliente; el siguiente lo eliges tú.',
+      { text: 'En la Bandeja, cuando pasaron más de 24 h, cualquiera del equipo puede escribirle al cliente con texto libre desde su propio WhatsApp, con un solo botón.', module: 'whatsapp' },
     ],
   },
   {

@@ -763,16 +763,12 @@ function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onSendFile, o
         <div className="wa-closed-banner">
           <WaIcon.clock size={16} />
           <div>
-            <strong>La ventana de 24 h está cerrada.</strong> WhatsApp solo permite escribir libremente durante las 24 h siguientes al último mensaje del cliente. Para retomar la conversación envía una plantilla aprobada.
+            <strong>Aquí solo se puede escribir con una plantilla.</strong> WhatsApp permite el texto libre en esta bandeja únicamente durante las 24 h siguientes al último mensaje del cliente. Para escribirle ya, sin plantilla, hazlo desde tu WhatsApp.
           </div>
         </div>
         <div className="wa-closed-actions">
-          {isAdmin ? (
-            <button className="btn btn-primary" onClick={() => onOpenTemplate()}><WaIcon.template /> Enviar plantilla</button>
-          ) : (
-            <span className="wa-hint">Pide a un administrador que envíe una plantilla.</span>
-          )}
-          <a className="btn btn-ghost" href={`https://wa.me/52${phone}`} target="_blank" rel="noopener noreferrer"><WaIcon.external /> Abrir en mi WhatsApp</a>
+          <a className="btn btn-primary" href={`https://wa.me/52${phone}`} target="_blank" rel="noopener noreferrer"><WaIcon.external /> Escribir desde mi WhatsApp</a>
+          {isAdmin && <button className="btn btn-ghost" onClick={() => onOpenTemplate()}><WaIcon.template /> Enviar plantilla</button>}
         </div>
       </div>
     )
