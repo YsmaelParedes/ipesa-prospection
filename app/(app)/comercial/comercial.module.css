@@ -214,3 +214,18 @@
   .stat { flex: 1; min-width: 0; }
   .goal { grid-template-columns: 110px 1fr 56px; }
 }
+
+/* ── Franja tocable y "Lo que hiciste hoy" ── */
+.stripBtn { display: block; text-align: left; width: 100%; padding: 4px 6px; margin: -4px -6px; border-radius: 10px; cursor: pointer; color: inherit; }
+.stripBtn .bar { display: block; }
+.stat { cursor: pointer; }
+@media (hover: hover) {
+  .stripBtn:hover, .stat:hover { background: var(--paper-2); }
+  .doneRow:hover { background: var(--paper); }
+}
+.doneRow { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 11px 14px; text-align: left; box-shadow: 0 -1px 0 var(--line); color: var(--muted); }
+.doneRow .name { color: var(--ink); display: block; }
+.doneHour { font-size: 12px; font-weight: 800; color: var(--ink-3); }
+.nextBox { margin-top: 10px; padding: 9px 12px; border-radius: 10px; background: var(--paper); font-size: 12.5px; color: var(--ink-3); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nextBox b { color: var(--ink); }
+.nextBox a { margin-left: auto; font-weight: 700; color: var(--brand-strong); }

@@ -14,7 +14,7 @@ import { EquipoView } from './EquipoView'
 import { ContactPanel } from './ContactPanel'
 import { GuideButton, GuideModal, useGuide } from '@/components/GuideModal'
 import { commercialGuide } from '@/components/Guides'
-import { Ico, bizName, useWide, type TodayData } from './ui'
+import { Ico, bizName, useWide, whenPhrase, type TodayData } from './ui'
 import s from './comercial.module.css'
 
 const PATH = '/api/data/commercial'
@@ -57,7 +57,7 @@ function ComercialContent() {
   const showToast = useCallback((msg: string) => {
     setToast(msg)
     clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(() => setToast(''), 2400)
+    toastTimer.current = setTimeout(() => setToast(''), 3600)
   }, [])
 
   // La búsqueda espera a que dejes de escribir
@@ -108,6 +108,7 @@ function ComercialContent() {
     } finally { setLoadingMore(false) }
   }
 
+  const today = data?.today
   // Al guardar: sale de la lista si ya no toca hoy; luego se recargan avance y lista
   const onSaved = useCallback((c: CommercialContact) => {
     setData(d => {
@@ -121,9 +122,12 @@ function ComercialContent() {
         found: d.found && d.found.map(x => x.id === c.id ? { ...x, ...c } : x),
       }
     })
-    showToast(`${bizName(c)}: guardado`)
+    // Dice a dónde se fue: vuelve en su fecha a Pendientes y a la Agenda
+    showToast(c.next_action_at && today && c.commercial_status !== 'depurar'
+      ? `${bizName(c)}: guardado · vuelve ${whenPhrase(c.next_action_at, today)}, también en tu Agenda`
+      : `${bizName(c)}: guardado`)
     notifyDataChanged('commercial')
-  }, [showToast])
+  }, [showToast, today])
 
   const closeOverlay = () => {
     setOverlay(null)

@@ -234,3 +234,8 @@ Cada una: rama → pruebas → visto bueno → `main` → borrar la rama.
 - **Cartera:** `GET /api/data/commercial/portfolio` (avance, zona, segmento, responsable, búsqueda; de a 50) con conteos por avance.
 - **Guardar:** se queda en el mismo cliente; ya no pasa solo al siguiente.
 - Filtro por segmento en Hoy, Cartera y Oportunidades.
+
+### 4.9.0
+- Franja de Hoy tocable: `DoneToday` lista las actividades del día por medida (mismas reglas que `countActivities`) desde `GET /api/data/commercial/activities?from&to&user`.
+- Agenda: `GET /api/data/commercial/agenda` (míos con fecha + sin asignar vencidos); la Agenda los reparte en Vencidos / Hoy / Mañana / Más adelante junto con los recordatorios, con filtro «Sistema comercial».
+- Ficha: caja «Próximo seguimiento» con enlace a la Agenda; el aviso al guardar dice cuándo vuelve.

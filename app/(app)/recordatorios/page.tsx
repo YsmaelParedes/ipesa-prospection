@@ -12,11 +12,14 @@ import { useSession } from '@/lib/profile'
 import { REMINDER_TYPES, REMINDER_TYPE_INFO, remTypeInfo, reminderSubject, reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
 import { MESES, QUICK_WHEN, fmtDue, isSameDay, quickDate, toDbLocal, type QuickWhen } from '@/lib/datetime'
-import type { CommercialContact } from '@/lib/commercial'
+import { addDays, type CommercialContact } from '@/lib/commercial'
 import { StatusChip, nextLabel } from '@/components/CommercialUI'
 
-/** Lo que trae /api/data/commercial (la lista de Hoy); aquí solo se usan los seguimientos con fecha. */
-type CommercialData = { today: string; due: CommercialContact[] }
+/** GET /api/data/commercial/agenda: seguimientos del sistema comercial con su fecha. */
+type CommercialData = { today: string; followUps: CommercialContact[] }
+/** Un renglón de la Agenda: recordatorio o seguimiento comercial, ordenados juntos por fecha. */
+type AgendaItem = { kind: 'rem'; r: Reminder; at: number } | { kind: 'com'; c: CommercialContact; at: number }
+const COMMERCIAL_FILTER = 'commercial'
 
 /* ══════════════════════════════════════════════════════════
    ICONOS SVG
@@ -124,9 +127,31 @@ function RemCard({ r, accent, readonly, onComplete, onDelete, onSnooze }: {
   )
 }
 
+/* ── Seguimiento del sistema comercial: se registra ahí; aquí se ve en su día ── */
+function FollowCard({ c, accent, today }: { c: CommercialContact; accent: string; today: string }) {
+  const next = nextLabel(c.next_action_at, today)
+  return (
+    <Link href={`/comercial?id=${c.id}`} className="rem-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+      <div className="rem-card-bar" style={{ background: accent }} />
+      <div className="rem-card-body">
+        <div className="rem-card-tags">
+          <span className="rem-type" style={{ color: 'var(--brand-strong)', background: 'var(--brand-soft)' }}>🎯 Sistema comercial</span>
+          <StatusChip value={c.commercial_status} />
+        </div>
+        <div className="rem-card-title">{c.next_action || 'Dar seguimiento'}</div>
+        <span className="rem-subject"><Ico.user /> {c.company?.trim() || c.name}{c.last_note ? ` · «${c.last_note}»` : ''}</span>
+        <div className="rem-card-when" style={{ color: accent }}><Ico.clock /> {next.label}</div>
+      </div>
+      <div className="rem-card-actions">
+        <span className="rem-done-btn">Abrir →</span>
+      </div>
+    </Link>
+  )
+}
+
 /* ── Grupo con encabezado ── */
-function RemGroup({ label, color, items, readonly, onComplete, onDelete, onSnooze }: {
-  label: string; color: string; items: Reminder[]; readonly: boolean
+function RemGroup({ label, color, items, today, readonly, onComplete, onDelete, onSnooze }: {
+  label: string; color: string; items: AgendaItem[]; today: string; readonly: boolean
   onComplete: (id: string) => void; onDelete: (id: string) => void; onSnooze: (r: Reminder, when: QuickWhen) => void
 }) {
   if (items.length === 0) return null
@@ -138,39 +163,13 @@ function RemGroup({ label, color, items, readonly, onComplete, onDelete, onSnooz
         <span className="rem-group-count">{items.length}</span>
       </div>
       <div className="rem-group-list">
-        {items.map(r => (
-          <RemCard key={r.id} r={r} accent={color} readonly={readonly}
-            onComplete={() => onComplete(r.id)} onDelete={() => onDelete(r.id)} onSnooze={when => onSnooze(r, when)} />
+        {items.map(it => it.kind === 'com' ? (
+          <FollowCard key={`c-${it.c.id}`} c={it.c} accent={color} today={today} />
+        ) : (
+          <RemCard key={it.r.id} r={it.r} accent={color} readonly={readonly}
+            onComplete={() => onComplete(it.r.id)} onDelete={() => onDelete(it.r.id)} onSnooze={when => onSnooze(it.r, when)} />
         ))}
       </div>
-    </section>
-  )
-}
-
-/* ── Seguimientos del sistema comercial (se registran ahí, aquí solo se ven) ── */
-function CommercialFollowUps({ items, today }: { items: CommercialContact[]; today: string }) {
-  if (items.length === 0) return null
-  return (
-    <section className="rem-group">
-      <div className="rem-group-head">
-        <span className="rem-group-dot" style={{ background: 'var(--brand)' }} />
-        <span className="rem-group-label" style={{ color: 'var(--brand)' }}>Llamadas del sistema comercial</span>
-        <span className="rem-group-count">{items.length}</span>
-        <Link href="/comercial" className="link-btn" style={{ marginLeft: 'auto' }}>Ir a Hoy →</Link>
-      </div>
-      {items.slice(0, 8).map(c => {
-        const next = nextLabel(c.next_action_at, today)
-        return (
-          <Link key={c.id} href={`/comercial?id=${c.id}`} className={`rem-row ${next.tone === 'overdue' ? 'overdue' : ''}`} style={{ textDecoration: 'none' }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="rem-row-when">{next.label}</div>
-              <div className="rem-row-text">{c.next_action || 'Dar seguimiento'} · {c.company?.trim() || c.name}</div>
-            </div>
-            <StatusChip value={c.commercial_status} />
-          </Link>
-        )
-      })}
-      {items.length > 8 && <Link href="/comercial" className="link-btn">Ver las {items.length} en el sistema comercial →</Link>}
     </section>
   )
 }
@@ -182,7 +181,7 @@ export default function AgendaPage() {
   const session  = useSession()
   const readonly = session?.store?.access === 'readonly'
   const [reminders, setReminders] = useState<Reminder[]>(() => cachedQueryData('/api/data/reminders')?.reminders ?? [])
-  const [commercial, setCommercial] = useState<CommercialData | null>(() => cachedQueryData('/api/data/commercial') ?? null)
+  const [commercial, setCommercial] = useState<CommercialData | null>(() => cachedQueryData('/api/data/commercial/agenda') ?? null)
   const [loading,   setLoading]   = useState(() => !cachedQueryData('/api/data/reminders'))
   useDataReady(loading, 'recordatorios')
   const [tab,       setTab]       = useState<'pending' | 'done'>('pending')
@@ -193,7 +192,7 @@ export default function AgendaPage() {
 
   const load = useCallback(async () => {
     try {
-      const [remRes, comRes] = await Promise.all([apiFetch('/api/data/reminders'), apiFetch('/api/data/commercial')])
+      const [remRes, comRes] = await Promise.all([apiFetch('/api/data/reminders'), apiFetch('/api/data/commercial/agenda')])
       const remData = await remRes.json()
       setReminders(remData.reminders || [])
       if (comRes.ok) setCommercial(await comRes.json())
@@ -228,33 +227,41 @@ export default function AgendaPage() {
   const pending = reminders.filter(r => !r.completado).sort((a, b) => a.fecha_recordatorio.localeCompare(b.fecha_recordatorio))
   const done    = reminders.filter(r =>  r.completado).sort((a, b) => String(b.completado_at || b.created_at).localeCompare(String(a.completado_at || a.created_at)))
   const applyTypeFilter = (list: Reminder[]) => typeFilter === 'all' ? list : list.filter(r => (r.type || 'task') === typeFilter)
-  // Seguimientos del sistema comercial con fecha de hoy o vencida (los míos y los sin asignar con fecha)
-  const followUps = useMemo(() => {
-    if (!commercial?.due) return []
-    return [...commercial.due].sort((a, b) => String(a.next_action_at).localeCompare(String(b.next_action_at)))
-  }, [commercial])
+  // Seguimientos del sistema comercial: cada uno en el día que le toca (los míos y los sin asignar ya vencidos)
+  const followUps = commercial?.followUps ?? []
+  const comToday = commercial?.today ?? ''
+  const comTomorrow = comToday ? addDays(comToday, 1) : ''
 
   const pendingF = applyTypeFilter(pending)
+  const remsF    = typeFilter === COMMERCIAL_FILTER ? [] : pendingF
+  const followF  = typeFilter === 'all' || typeFilter === COMMERCIAL_FILTER ? followUps : []
   const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1)
-  const overdue  = pendingF.filter(r => new Date(r.fecha_recordatorio) < now)
-  const todayRem = pendingF.filter(r => { const d = new Date(r.fecha_recordatorio); return d >= now && isSameDay(d, now) })
-  const tomorrowRem = pendingF.filter(r => isSameDay(new Date(r.fecha_recordatorio), tomorrow))
-  const later    = pendingF.filter(r => { const d = new Date(r.fecha_recordatorio); return d >= now && !isSameDay(d, now) && !isSameDay(d, tomorrow) })
+  // Recordatorios (fecha y hora) y seguimientos (solo fecha) juntos, en orden
+  const merge = (rems: Reminder[], coms: CommercialContact[]): AgendaItem[] => [
+    ...rems.map(r => ({ kind: 'rem' as const, r, at: new Date(r.fecha_recordatorio).getTime() })),
+    ...coms.map(c => ({ kind: 'com' as const, c, at: new Date(`${c.next_action_at}T00:00`).getTime() })),
+  ].sort((a, b) => a.at - b.at)
+  const comOn = (pred: (day: string) => boolean) => followF.filter(c => !!c.next_action_at && pred(c.next_action_at))
+  const overdue  = merge(remsF.filter(r => new Date(r.fecha_recordatorio) < now), comOn(d => d < comToday))
+  const todayRem = merge(remsF.filter(r => { const d = new Date(r.fecha_recordatorio); return d >= now && isSameDay(d, now) }), comOn(d => d === comToday))
+  const tomorrowRem = merge(remsF.filter(r => isSameDay(new Date(r.fecha_recordatorio), tomorrow)), comOn(d => d === comTomorrow))
+  const later    = merge(remsF.filter(r => { const d = new Date(r.fecha_recordatorio); return d >= now && !isSameDay(d, now) && !isSameDay(d, tomorrow) }), comOn(d => d > comTomorrow))
   const doneF    = applyTypeFilter(done)
+  const pendingCount = pending.length + followUps.length
   const typeCounts = useMemo(() => {
     const m = new Map<string, number>()
     for (const r of (tab === 'pending' ? pending : done)) m.set(r.type || 'task', (m.get(r.type || 'task') ?? 0) + 1)
     return m
   }, [tab, pending, done])
 
-  const groupProps = { readonly, onComplete: handleComplete, onDelete: handleDelete, onSnooze: handleSnooze }
+  const groupProps = { readonly, today: comToday, onComplete: handleComplete, onDelete: handleDelete, onSnooze: handleSnooze }
 
   return (
     <>
       <div className="section-head">
         <h2>Agenda</h2>
-        {pending.length > 0 && (
-          <span className="count">{overdue.length ? `${overdue.length} vencido${overdue.length !== 1 ? 's' : ''} · ` : ''}{pending.length} pendiente{pending.length !== 1 ? 's' : ''}</span>
+        {pendingCount > 0 && (
+          <span className="count">{overdue.length ? `${overdue.length} vencido${overdue.length !== 1 ? 's' : ''} · ` : ''}{pendingCount} pendiente{pendingCount !== 1 ? 's' : ''}</span>
         )}
         {!readonly && (
           <div className="section-actions">
@@ -266,7 +273,7 @@ export default function AgendaPage() {
       </div>
 
       <div className="status-tabs" role="tablist" aria-label="Recordatorios">
-        {([{ key: 'pending', label: 'Pendientes', count: pending.length }, { key: 'done', label: 'Completados', count: done.length }] as const).map(t => (
+        {([{ key: 'pending', label: 'Pendientes', count: pendingCount }, { key: 'done', label: 'Completados', count: done.length }] as const).map(t => (
           <button key={t.key} role="tab" aria-selected={tab === t.key} className={`status-tab ${tab === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)}>
             {t.label}{!loading && <span className="status-tab-count">{t.count}</span>}
           </button>
@@ -275,6 +282,11 @@ export default function AgendaPage() {
 
       <div className="filter-bar">
         <button className={`filter-pill ${typeFilter === 'all' ? 'active' : ''}`} onClick={() => setTypeFilter('all')}>Todos</button>
+        {tab === 'pending' && followUps.length > 0 && (
+          <button className={`filter-pill ${typeFilter === COMMERCIAL_FILTER ? 'active' : ''}`} onClick={() => setTypeFilter(COMMERCIAL_FILTER)}>
+            🎯 Sistema comercial<span className="count">{followUps.length}</span>
+          </button>
+        )}
         {REMINDER_TYPES.filter(t => typeCounts.has(t) || typeFilter === t).map(t => (
           <button key={t} className={`filter-pill ${typeFilter === t ? 'active' : ''}`} onClick={() => setTypeFilter(t)}>
             {REMINDER_TYPE_INFO[t].emoji} {REMINDER_TYPE_INFO[t].label}
@@ -288,17 +300,16 @@ export default function AgendaPage() {
           <div style={{ width: 28, height: 28, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         </div>
       ) : tab === 'pending' ? (
-        pendingF.length === 0 && followUps.length === 0 ? (
+        remsF.length === 0 && followF.length === 0 ? (
           <div className="empty-state">
             <div style={{ fontSize: 34, marginBottom: 10, opacity: 0.5 }}>✅</div>
             <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, color: 'var(--ink)' }}>
-              {typeFilter === 'all' ? 'Todo al día' : `Sin pendientes de tipo "${remTypeInfo(typeFilter).label}"`}
+              {typeFilter === 'all' ? 'Todo al día' : typeFilter === COMMERCIAL_FILTER ? 'Sin seguimientos del sistema comercial' : `Sin pendientes de tipo "${remTypeInfo(typeFilter).label}"`}
             </div>
             {!readonly && <div>Programa llamadas, visitas o tareas con <button className="link-btn" onClick={() => openQuickCreate({ kind: 'reminder' })}>Nuevo recordatorio</button>.</div>}
           </div>
         ) : (
           <>
-            <CommercialFollowUps items={followUps} today={commercial?.today ?? ''} />
             <RemGroup label="Vencidos" color="var(--danger)" items={overdue} {...groupProps} />
             <RemGroup label="Hoy" color="var(--brand)" items={todayRem} {...groupProps} />
             <RemGroup label="Mañana" color="var(--warning)" items={tomorrowRem} {...groupProps} />

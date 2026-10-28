@@ -10,7 +10,7 @@ import {
 } from '@/lib/commercial'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
 import { RegisterForm, type Kind } from './RegisterForm'
-import { Ico, StatusChip, addressOf, bizName, fmtDay, initials, localDay, money, personName, type ListContact } from './ui'
+import { Ico, StatusChip, addressOf, bizName, fmtDay, initials, localDay, money, personName, whenPhrase, type ListContact } from './ui'
 import s from './comercial.module.css'
 
 type Activity = {
@@ -107,6 +107,13 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
           <button className="detail-close" style={{ position: 'static' }} onClick={onClose} aria-label="Cerrar"><Ico.close /></button>
         )}
       </div>
+
+      {contact.next_action_at && contact.commercial_status !== 'depurar' && (
+        <div className={s.nextBox}>
+          <span>Próximo seguimiento: <b>{contact.next_action || 'Dar seguimiento'}</b> · {whenPhrase(contact.next_action_at, today)}</span>
+          <Link href="/recordatorios">Ver en Agenda</Link>
+        </div>
+      )}
 
       <div className={s.actions}>
         {phone && <a href={`tel:${phone}`} className={`${s.act} ${s.actCall} ${s.press}`}><Ico.phone /> Llamar</a>}

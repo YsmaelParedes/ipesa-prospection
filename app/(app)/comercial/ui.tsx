@@ -62,6 +62,15 @@ export function Filters({ zones, segments, zone, segment, onZone, onSegment, que
   )
 }
 
+/** Cuándo toca, para una frase: "hoy", "mañana", "en 3 días (30 oct)", "el 12 nov" o "vencido desde el 3 oct". */
+export function whenPhrase(day: string, today: string): string {
+  if (day < today) return `vencido desde el ${fmtDay(day)}`
+  if (day === today) return 'hoy'
+  const days = Math.round((Date.parse(`${day}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / 86_400_000)
+  if (days === 1) return 'mañana'
+  return days < 7 ? `en ${days} días (${fmtDay(day)})` : `el ${fmtDay(day)}`
+}
+
 /** Día (AAAA-MM-DD) de un instante, en la hora de quien lo ve (no en UTC: de noche cae al día siguiente). */
 export const localDay = (iso: string) => new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso))
 

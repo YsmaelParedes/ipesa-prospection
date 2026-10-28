@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.9.0',
+    date: '27 de octubre, 2026',
+    title: 'Sistema Comercial y Agenda conectados',
+    items: [
+      'En Hoy puedes tocar Llamadas, Efectivos, Cotizaciones, Seguimientos o Ventas para ver con quién fue cada una.',
+      'Los seguimientos del Sistema Comercial aparecen en la Agenda el día que te tocan (hoy, mañana o más adelante), junto con tus recordatorios, y con su propio filtro.',
+      'Al guardar ves cuándo vuelve el cliente, y su ficha muestra el próximo seguimiento con un acceso a la Agenda.',
+    ],
+  },
+  {
     version: '4.8.0',
     date: '27 de octubre, 2026',
     title: 'Sistema Comercial más fácil',

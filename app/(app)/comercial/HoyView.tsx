@@ -1,5 +1,8 @@
 'use client'
 
+import { useState } from 'react'
+import Link from 'next/link'
+import { DoneToday, type Metric } from './DoneToday'
 import { NO_ANSWER_LIMIT, type CommercialContact, type ResultChoice } from '@/lib/commercial'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
 import { ContactPanel, avatarColors } from './ContactPanel'
@@ -41,6 +44,7 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
   onOpen: (o: Opened | null) => void
 }) {
   const { today, goals, counts } = data
+  const [done, setDone] = useState<Metric | null>(null)
   const searching = data.found !== null && query.trim() !== ''
   const pending = data.due.length
 
@@ -61,22 +65,27 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
   const selectedContact = selected ? all.find(c => c.id === selected.id) : undefined
   const callsPct = goals.calls ? Math.min(100, Math.round(counts.calls / goals.calls * 100)) : 0
 
+  // Cada medida se puede tocar para ver con quién fue
   const strip = (
     <div className={`${s.elev} ${s.strip}`}>
-      <div className={s.bigbar}>
-        <div className={s.progressRow}>
+      <button type="button" className={`${s.bigbar} ${s.stripBtn}`} onClick={() => setDone('calls')} aria-label={`Ver las ${counts.calls} llamadas de hoy`}>
+        <span className={s.progressRow}>
           <span>Llamadas de hoy</span>
           <span><b className={s.num}>{counts.calls}</b> <span className={s.num} style={{ color: 'var(--muted)' }}>/ {goals.calls}</span></span>
-        </div>
-        <div className={s.bar} role="progressbar" aria-valuemin={0} aria-valuemax={goals.calls} aria-valuenow={counts.calls} aria-label="Llamadas de hoy">
+        </span>
+        <span className={s.bar} role="progressbar" aria-valuemin={0} aria-valuemax={goals.calls} aria-valuenow={counts.calls} aria-label="Llamadas de hoy">
           <span style={{ width: `${callsPct}%` }} />
-        </div>
-      </div>
+        </span>
+      </button>
       <div className={s.stats}>
         {([['effective', 'Efectivos'], ['quotes', 'Cotiz.'], ['followups', 'Seguim.'], ['sales', 'Ventas']] as const).map(([k, label]) => (
-          <div key={k} className={s.stat}><b className={s.num}>{counts[k]}<small>/{goals[k]}</small></b>{label}</div>
+          <button key={k} type="button" className={`${s.stat} ${s.press}`} onClick={() => setDone(k)}><b className={s.num}>{counts[k]}<small>/{goals[k]}</small></b>{label}</button>
         ))}
       </div>
+      {done && (
+        <DoneToday today={today} uid={data.uid} initial={done} onClose={() => setDone(null)}
+          onOpen={id => { setDone(null); onOpen({ id }) }} />
+      )}
     </div>
   )
 
@@ -113,7 +122,7 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
   const moreButton = searching ? null
     : sub === 'nuevos' ? more('fresh', data.fresh.length, data.freshTotal)
     : sub === 'visita' ? more('visit', data.visit.length, data.visitTotal)
-    : null
+    : <Link href="/recordatorios" className={`${s.loadMore} ${s.press}`} style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>Ver los próximos días en la Agenda →</Link>
 
   const filtered = !!(zone || segment)
   const empty = !all.length && (
