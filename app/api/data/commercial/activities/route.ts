@@ -99,8 +99,8 @@ const ACTIVITY_SCHEMA: Schema = {
 
 /**
  * POST /api/data/commercial/activities — registra una llamada, WhatsApp,
- * visita o nota y actualiza el contacto en la misma transacción. Solo el
- * responsable del contacto; si no tiene, quien registra se queda con él.
+ * visita o nota y actualiza el contacto en la misma transacción. Quien
+ * registra una llamada, WhatsApp o visita se queda con el contacto.
  */
 export async function POST(req: NextRequest) {
   const ctx = await requireStore({ write: true })

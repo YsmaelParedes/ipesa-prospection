@@ -36,7 +36,7 @@ export function commercialGuide({ isAdmin, salesTeam }: { isAdmin: boolean; sale
   return [
     {
       title: 'Hoy es tu lista del día',
-      text: 'Arriba ves lo vencido, lo de hoy y prospectos nuevos para completar tu meta. La barra te dice cómo vas.',
+      text: 'En «Pendientes» está lo vencido y lo de hoy; en «Nuevos», prospectos para completar tu meta; en «Para visita», los que no tienen teléfono. La barra te dice cómo vas.',
       art: (
         <div className="g-mini">
           <div className="g-prog">Llamadas 12/30<span className="g-track"><b /></span></div>
@@ -46,18 +46,18 @@ export function commercialGuide({ isAdmin, salesTeam }: { isAdmin: boolean; sale
     },
     {
       title: 'Llama o escribe, y registra en 3 toques',
-      text: 'Elige qué hiciste, cómo te fue y la fecha que te sugerimos. Toca «Guardar y siguiente» y pasas al próximo cliente.',
+      text: 'Elige qué hiciste, cómo te fue y la fecha que te sugerimos, y toca «Guardar». Luego eliges tú al siguiente cliente.',
       art: (
         <div className="g-mini g-center">
           <div className="g-chips"><span className="on">Llamada</span><em>›</em><span className="on">Cotización</span><em>›</em><span>Jue 30</span></div>
-          <span className="g-save">Guardar y siguiente</span>
+          <span className="g-save">Guardar</span>
         </div>
       ),
     },
     {
-      title: 'El primero que registra, se queda con el cliente',
-      text: 'Los «Sin asignar» son de quien los trabaje primero. Los que no tienen teléfono están en «Para visita».',
-      art: <div className="g-mini"><Card tag="Sin asignar" tone="fijo" /><Card tag="Tuyo" tone="wa" /><Card tag="Para visita" tone="info" /></div>,
+      title: 'Quien registra, se queda con el cliente',
+      text: 'Al registrar una llamada, WhatsApp o visita, el cliente pasa a ser tuyo. En «Cartera» ves toda la base por avance, zona y segmento.',
+      art: <div className="g-mini"><Card tag="Sin asignar" tone="fijo" /><Card tag="Tuyo" tone="wa" /><Card tag="Cartera" tone="info" /></div>,
     },
     last,
   ]
@@ -91,6 +91,6 @@ export const CONTACTS_GUIDE: GuideStep[] = [
   {
     title: 'Sin teléfono = para visita',
     text: 'Los negocios sin número se trabajan en persona: los encuentras en Sistema Comercial → Hoy → Para visita.',
-    art: <div className="g-mini"><Card tag="Para visita" tone="info" /><Card tag="Para visita" tone="info" /></div>,
+    art: <div className="g-mini"><Card tag="Cartera" tone="info" /><Card tag="Cartera" tone="info" /></div>,
   },
 ]

@@ -226,3 +226,11 @@ Cada una: rama → pruebas → visto bueno → `main` → borrar la rama.
 - **Antes de cada commit:** `tsc`, `npm run build` y las pruebas.
 - **En local:** solo lectura sobre la base de producción, con escrituras simuladas.
 - **En producción:** las rutas nuevas responden 401 sin sesión, y el dueño prueba la cola con su cuenta en IPESA.
+
+## Versión 3 (4.8.0, octubre 2026)
+
+- **Responsable automático:** `log_commercial_activity` con `p_claim = true` deja que cualquiera del equipo registre y le pasa el contacto a quien registra (llamada, WhatsApp o visita; una nota no cambia el responsable). Migración `20261027190000_commercial_owner_follows_activity`. Ya no hay selector de Responsable en la ficha; `getVisibleContact` deja ver toda la base de la tienda.
+- **Hoy:** sub-pestañas Pendientes / Nuevos / Para visita. «Para visita» pagina de a 30 (`vlimit`). Con `q`, la API devuelve `found`: coincidencias en toda la base (máx. 50) con `owner_name`.
+- **Cartera:** `GET /api/data/commercial/portfolio` (avance, zona, segmento, responsable, búsqueda; de a 50) con conteos por avance.
+- **Guardar:** se queda en el mismo cliente; ya no pasa solo al siguiente.
+- Filtro por segmento en Hoy, Cartera y Oportunidades.

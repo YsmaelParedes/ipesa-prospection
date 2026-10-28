@@ -36,11 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: '4.7.4',
+    version: '4.8.0',
     date: '27 de octubre, 2026',
-    title: 'Sistema Comercial',
+    title: 'Sistema Comercial más fácil',
     items: [
-      'En Hoy y en Oportunidades ya puedes filtrar por segmento, además de por zona.',
+      'Hoy se divide en Pendientes, Nuevos y Para visita, y ya puedes ver todos los que no tienen teléfono con «Ver más».',
+      'Nueva pestaña Cartera: toda tu base por avance (prospectos, contactados, en cotización, clientes y no contesta), con filtros de zona y segmento.',
+      'Filtro por segmento en Hoy, Cartera y Oportunidades.',
+      'El buscador de Hoy busca en toda la base, también a quien le toca otro día, y te dice cuándo.',
+      'Quien registra una llamada, WhatsApp o visita se queda con el cliente; ya no hay que asignarlo a mano.',
+      'Al guardar te quedas en el mismo cliente; el siguiente lo eliges tú.',
     ],
   },
   {

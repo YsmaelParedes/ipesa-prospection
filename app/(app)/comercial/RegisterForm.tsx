@@ -6,7 +6,7 @@ import {
   RESULT_CHOICES, RESULT_RULES, addDays, outcomeText, suggestNext,
   type CommercialContact, type ResultChoice,
 } from '@/lib/commercial'
-import { Ico, fmtDay } from './ui'
+import { fmtDay } from './ui'
 import s from './comercial.module.css'
 
 export type Kind = 'llamada' | 'whatsapp' | 'visita'
@@ -40,9 +40,9 @@ function dateChoices(result: ResultChoice, today: string): { value: string; labe
 /**
  * Registrar una actividad en 3 pasos: tipo → resultado (con monto si es
  * cotización o venta) → nota y fecha sugerida. Al guardar, el contacto pasa
- * al avance que corresponde y quien lo registra se queda con él si no tenía responsable.
+ * al avance que corresponde y quien lo registra se queda con él.
  */
-export function RegisterForm({ contact, today, initialKind = 'llamada', initialResult, wide, onSaved, nextName }: {
+export function RegisterForm({ contact, today, initialKind = 'llamada', initialResult, wide, onSaved }: {
   contact: CommercialContact
   today: string
   initialKind?: Kind
@@ -50,8 +50,6 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
   /** Resultados en 3 columnas (ficha de la computadora). */
   wide?: boolean
   onSaved: (contact: CommercialContact) => void
-  /** Nombre del siguiente de la lista (para el botón). */
-  nextName?: string
 }) {
   const [kind, setKind] = useState<Kind>(initialKind)
   const [result, setResult] = useState<ResultChoice | null>(initialResult ?? null)
@@ -164,7 +162,7 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
 
       {error && <p className={s.error} role="alert">{error}</p>}
       <button type="button" className={`${s.save} ${s.press}`} onClick={save} disabled={saving}>
-        {saving ? 'Guardando…' : nextName ? <>Guardar y seguir con el siguiente <Ico.next /></> : 'Guardar'}
+        {saving ? 'Guardando…' : 'Guardar'}
       </button>
       <div className={s.saveSub} aria-live="polite">
         {result ? outcomeText(result) : 'Elige el resultado para ver qué pasa con este cliente'}

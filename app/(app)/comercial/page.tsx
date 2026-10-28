@@ -7,7 +7,8 @@ import { useDataReady, useQueryEffect } from '@/lib/useCachedQuery'
 import { useSession } from '@/lib/profile'
 import { notifyDataChanged, useDataChanged } from '@/lib/crmEvents'
 import type { CommercialContact } from '@/lib/commercial'
-import { HoyView, type Opened } from './HoyView'
+import { HoyView, type Opened, type Sub } from './HoyView'
+import { CarteraView } from './CarteraView'
 import { OportunidadesView } from './OportunidadesView'
 import { EquipoView } from './EquipoView'
 import { ContactPanel } from './ContactPanel'
@@ -20,8 +21,8 @@ const PATH = '/api/data/commercial'
 /** Prospectos nuevos por página y lo más que se pide de una vez (igual que el servidor). */
 const FRESH_PAGE = 30
 const MAX_FRESH = 300
-type Tab = 'hoy' | 'oportunidades' | 'equipo'
-const TAB_KEYS: Tab[] = ['hoy', 'oportunidades', 'equipo']
+type Tab = 'hoy' | 'cartera' | 'oportunidades' | 'equipo'
+const TAB_KEYS: Tab[] = ['hoy', 'cartera', 'oportunidades', 'equipo']
 
 export default function ComercialPage() {
   // ?id= abre un contacto (desde el buscador, Inicio, Contactos o WhatsApp); ?tab= abre una pestaña
@@ -42,6 +43,7 @@ function ComercialContent() {
   useDataReady(loading, 'comercial')
   const wanted = params.get('tab') as Tab | null
   const [tab, setTab] = useState<Tab>(wanted && TAB_KEYS.includes(wanted) ? wanted : 'hoy')
+  const [sub, setSub] = useState<Sub>('pend')
   const [zone, setZone] = useState('')
   const [segment, setSegment] = useState('')
   const [query, setQuery] = useState('')
@@ -64,23 +66,24 @@ function ComercialContent() {
     return () => clearTimeout(t)
   }, [query])
 
-  // limit: cuántos prospectos nuevos traer desde el principio (el servidor topa en 300)
-  const url = useCallback((limit = 0) => {
+  // limit / vlimit: cuántos nuevos y "para visita" traer desde el principio (el servidor topa en 300)
+  const url = useCallback((limit = 0, vlimit = 0) => {
     const qs = new URLSearchParams()
     if (zone) qs.set('zone', zone)
     if (segment) qs.set('segment', segment)
     if (search) qs.set('q', search)
     if (limit > FRESH_PAGE) qs.set('limit', String(Math.min(limit, MAX_FRESH)))
+    if (vlimit > FRESH_PAGE) qs.set('vlimit', String(Math.min(vlimit, MAX_FRESH)))
     const str = qs.toString()
     return str ? `${PATH}?${str}` : PATH
   }, [zone, segment, search])
 
-  // Cuántos prospectos nuevos se ven: al refrescar (por un guardado) se conservan los ya cargados
-  const freshShown = useRef(0)
-  freshShown.current = data?.fresh.length ?? 0
+  // Cuántos se ven: al refrescar (por un guardado) se conservan los ya cargados
+  const shown = useRef({ fresh: 0, visit: 0 })
+  shown.current = { fresh: data?.fresh.length ?? 0, visit: data?.visit?.length ?? 0 }
   const load = useCallback(async (keep = false) => {
     try {
-      const r = await apiFetch(url(keep ? freshShown.current : 0))
+      const r = await apiFetch(keep ? url(shown.current.fresh, shown.current.visit) : url())
       if (r.ok) setData(await r.json())
     } catch {} finally { setLoading(false) }
   }, [url])
@@ -88,15 +91,19 @@ function ComercialContent() {
   useDataChanged(['contact', 'commercial'], () => load(true))
   useEffect(() => { if (deepId) setOverlay({ id: deepId }) }, [deepId])
 
-  async function loadMore() {
+  async function loadMore(which: 'fresh' | 'visit') {
     if (!data) return
     setLoadingMore(true)
     try {
       // Se vuelve a pedir desde el principio: si alguien ya tomó prospectos de la lista, no se salta ninguno
-      const r = await apiFetch(url(data.fresh.length + FRESH_PAGE))
+      const r = await apiFetch(which === 'fresh'
+        ? url(data.fresh.length + FRESH_PAGE, data.visit.length)
+        : url(data.fresh.length, data.visit.length + FRESH_PAGE))
       if (r.ok) {
         const more: TodayData = await r.json()
-        setData(d => d ? { ...d, fresh: more.fresh, freshTotal: more.freshTotal } : d)
+        setData(d => d ? (which === 'fresh'
+          ? { ...d, fresh: more.fresh, freshTotal: more.freshTotal }
+          : { ...d, visit: more.visit, visitTotal: more.visitTotal }) : d)
       }
     } finally { setLoadingMore(false) }
   }
@@ -111,6 +118,7 @@ function ComercialContent() {
         due: stays(c) ? d.due.map(x => x.id === c.id ? { ...x, ...c } : x) : d.due.filter(x => x.id !== c.id),
         fresh: d.fresh.filter(x => x.id !== c.id || (!c.last_activity_at && !c.owner_id)),
         visit: d.visit.filter(x => x.id !== c.id || (!c.last_activity_at && !c.owner_id)),
+        found: d.found && d.found.map(x => x.id === c.id ? { ...x, ...c } : x),
       }
     })
     showToast(`${bizName(c)}: guardado`)
@@ -126,6 +134,7 @@ function ComercialContent() {
   const isAdmin = !!data?.isAdmin
   const TABS: { key: Tab; label: string; count?: number }[] = [
     { key: 'hoy', label: 'Hoy', count: data?.due.length },
+    { key: 'cartera', label: 'Cartera' },
     ...(salesTeam ? [{ key: 'oportunidades' as Tab, label: 'Oportunidades' }] : []),
     ...(salesTeam && isAdmin ? [{ key: 'equipo' as Tab, label: 'Equipo' }] : []),
   ]
@@ -154,8 +163,12 @@ function ComercialContent() {
           <div style={{ width: 32, height: 32, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         </div>
       ) : current === 'hoy' ? (
-        <HoyView data={data} wide={wide} zone={zone} segment={segment} query={query} readonly={readonly} waModule={waModule} loadingMore={loadingMore}
-          onZone={setZone} onSegment={setSegment} onQuery={setQuery} onMore={loadMore} onSaved={onSaved} opened={opened} onOpen={setOpened} />
+        <HoyView data={data} wide={wide} sub={sub} zone={zone} segment={segment} query={query} readonly={readonly} waModule={waModule} loadingMore={loadingMore}
+          onSub={setSub} onZone={setZone} onSegment={setSegment} onQuery={setQuery} onClear={() => { setZone(''); setSegment(''); setQuery('') }}
+          onMore={loadMore} onSaved={onSaved} opened={opened} onOpen={setOpened} />
+      ) : current === 'cartera' ? (
+        <CarteraView uid={data.uid} isAdmin={isAdmin && salesTeam} zones={data.zones} segments={data.segments ?? []}
+          zone={zone} segment={segment} onZone={setZone} onSegment={setSegment} onOpen={setOverlay} />
       ) : current === 'oportunidades' ? (
         <OportunidadesView isAdmin={isAdmin} segments={data.segments ?? []} onOpen={setOverlay} />
       ) : (
@@ -164,8 +177,8 @@ function ComercialContent() {
 
       {overlay && data && (
         <ContactPanel key={`${overlay.id}-${overlay.result ?? ''}`} contactId={overlay.id} today={data.today} variant="overlay"
-          isAdmin={isAdmin} readonly={readonly} waModule={waModule} kind={overlay.kind} result={overlay.result}
-          onSaved={c => { onSaved(c); closeOverlay() }} onChanged={onSaved} onClose={closeOverlay} />
+          readonly={readonly} waModule={waModule} uid={data.uid} kind={overlay.kind} result={overlay.result}
+          onSaved={c => { onSaved(c); closeOverlay() }} onClose={closeOverlay} />
       )}
 
       {toast && <div className="toast-fixed"><Ico.check /> {toast}</div>}

@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { cleanAddress, parseColonia } from '@/lib/address'
 import type { CommercialContact, DayCounts, Goals } from '@/lib/commercial'
+import { Select, type SelectOption } from '@/components/Select'
+import { fmtDay } from '@/components/CommercialUI'
+import s from './comercial.module.css'
 
 export { PriorityChip, StatusChip, fmtDay, nextLabel } from '@/components/CommercialUI'
 
@@ -16,6 +19,47 @@ export type TodayData = {
   due: ListContact[]; fresh: ListContact[]; freshTotal: number; offset: number
   /** Sin teléfono ("Para visita"): los primeros y cuántos hay. */
   visit: ListContact[]; visitTotal: number
+  /** Con búsqueda: coincidencias en toda la base. */
+  found: ListContact[] | null
+}
+
+/** Cuándo le toca: "Hace 3 días", "Ayer", "Hoy", "30 oct" o "Nuevo". */
+export function whenOf(c: ListContact, today: string): { label: string; tone: 'late' | 'soon' | 'fresh' | 'later' } {
+  if (!c.next_action_at) return c.last_activity_at ? { label: 'Sin fecha', tone: 'later' } : { label: 'Nuevo', tone: 'fresh' }
+  if (c.next_action_at === today) return { label: 'Hoy', tone: 'soon' }
+  if (c.next_action_at > today) return { label: fmtDay(c.next_action_at), tone: 'later' }
+  const days = Math.round((Date.parse(`${today}T12:00:00Z`) - Date.parse(`${c.next_action_at}T12:00:00Z`)) / 86_400_000)
+  return { label: days === 1 ? 'Ayer' : `Hace ${days} días`, tone: 'late' }
+}
+
+/** Zona, segmento (y lo que se agregue), buscador y "Quitar filtros". */
+export function Filters({ zones, segments, zone, segment, onZone, onSegment, query, onQuery, placeholder, extra, active, onClear }: {
+  zones: string[]; segments: string[]
+  zone: string; segment: string
+  onZone: (v: string) => void; onSegment: (v: string) => void
+  query: string; onQuery: (v: string) => void; placeholder: string
+  extra?: React.ReactNode
+  /** Hay algún filtro puesto (para mostrar "Quitar filtros"). */
+  active: boolean
+  onClear: () => void
+}) {
+  const opts = (all: string, list: string[]): SelectOption[] => [{ value: '', label: all }, ...list.map(x => ({ value: x, label: x }))]
+  return (
+    <div className={s.filters}>
+      {zones.length > 0 && (
+        <div className={s.segmentPick}><Select value={zone} onChange={onZone} aria-label="Zona" options={opts('Todas las zonas', zones)} /></div>
+      )}
+      {segments.length > 0 && (
+        <div className={s.segmentPick}><Select value={segment} onChange={onSegment} aria-label="Segmento" options={opts('Todos los segmentos', segments)} /></div>
+      )}
+      {extra}
+      {active && <button type="button" className={`${s.clear} ${s.press}`} onClick={onClear}>Quitar filtros</button>}
+      <label className={s.search}>
+        <Ico.search />
+        <input type="search" value={query} onChange={e => onQuery(e.target.value)} placeholder={placeholder} aria-label={placeholder} />
+      </label>
+    </div>
+  )
 }
 
 export const money = (n: number | string | null | undefined) => `$${Number(n || 0).toLocaleString('es-MX')}`

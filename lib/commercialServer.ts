@@ -1,4 +1,4 @@
-import { getServerSupabase, type StoreContext } from './supabase-server'
+import { getServerSupabase, getUserNameMap, type StoreContext } from './supabase-server'
 import { planOf } from './stores'
 
 export const COMMERCIAL_COLUMNS =
@@ -19,16 +19,13 @@ export function salesTeamRequired(): Response {
 }
 
 /**
- * ¿Puede ver este contacto en el sistema comercial? administrador: todos
- * los de la tienda. Vendedor: los suyos y los que aún no tienen responsable (el
- * primero que registra una actividad se queda con él). Devuelve el contacto o null.
+ * Contacto de la tienda para el sistema comercial. Todo el equipo ve toda la
+ * base: quien registra una actividad se queda con el contacto. Devuelve el contacto o null.
  */
 export async function getVisibleContact(ctx: StoreContext, contactId: string) {
   const { data } = await getServerSupabase().from('contacts').select('id, owner_id')
     .eq('id', contactId).eq('store_id', ctx.storeId).maybeSingle()
-  if (!data) return null
-  if (!ctx.isAdmin && data.owner_id !== null && data.owner_id !== ctx.uid) return null
-  return data as { id: string; owner_id: string | null }
+  return (data ?? null) as { id: string; owner_id: string | null } | null
 }
 
 /** Inicio de un día (AAAA-MM-DD) en la zona horaria de la tienda, como instante UTC. */
@@ -39,4 +36,10 @@ export function zonedDayStart(isoDate: string, timeZone: string): Date {
   const m = /GMT([+-])(\d{2}):?(\d{2})?/.exec(offset)
   const minutes = m ? (m[1] === '-' ? -1 : 1) * (Number(m[2]) * 60 + Number(m[3] ?? 0)) : 0
   return new Date(Date.parse(`${isoDate}T00:00:00Z`) - minutes * 60_000)
+}
+
+/** Agrega el nombre del responsable (para "De Ana" en las listas). */
+export async function withOwnerNames<T extends Record<string, unknown>>(storeId: string, rows: T[]): Promise<(T & { owner_name: string | null })[]> {
+  const names = rows.some(r => r.owner_id) ? await getUserNameMap(storeId).catch(() => new Map<string, string>()) : new Map<string, string>()
+  return rows.map(r => ({ ...r, owner_name: r.owner_id ? (names.get(r.owner_id as string) ?? 'Usuario') : null }))
 }

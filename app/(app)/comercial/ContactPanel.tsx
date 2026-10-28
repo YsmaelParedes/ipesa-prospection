@@ -9,9 +9,8 @@ import {
   type ActivityKind, type CommercialContact, type ResultChoice,
 } from '@/lib/commercial'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
-import { Select } from '@/components/Select'
 import { RegisterForm, type Kind } from './RegisterForm'
-import { Ico, StatusChip, addressOf, bizName, fmtDay, initials, money, personName, type ListContact, type Member } from './ui'
+import { Ico, StatusChip, addressOf, bizName, fmtDay, initials, money, personName, type ListContact } from './ui'
 import s from './comercial.module.css'
 
 type Activity = {
@@ -19,7 +18,7 @@ type Activity = {
   quote_amount: number | null; sale_amount: number | null
   next_action_at: string | null; created_at: string; user_name: string | null
 }
-type Detail = { contact: ListContact; canWork: boolean; team: Member[]; today: string }
+type Detail = { contact: ListContact; today: string }
 
 const AVATAR: Record<string, [string, string]> = {
   nuevo: ['var(--c-cyan-soft)', 'var(--c-cyan-ink)'], contactado: ['var(--c-teal-soft)', 'var(--c-teal-ink)'],
@@ -31,22 +30,21 @@ export const avatarColors = (status: string) => AVATAR[status] ?? ['var(--paper-
 /**
  * Ficha comercial de un contacto. En computadora va a la derecha de la lista
  * ("pane"); en celular, o desde Oportunidades y Equipo, se abre encima ("overlay").
+ * Cualquiera del equipo registra; quien registra se queda con el contacto.
  */
-export function ContactPanel({ contactId, initial, today, variant, isAdmin, readonly, waModule, kind, result, nextName, onSaved, onChanged, onClose }: {
+export function ContactPanel({ contactId, initial, today, variant, readonly, waModule, uid, kind, result, onSaved, onClose }: {
   contactId: string
   initial?: ListContact
   today: string
   variant: 'pane' | 'overlay'
-  isAdmin: boolean
   readonly: boolean
   waModule: boolean
+  /** Quien está usando la app (para "Tuyo"). */
+  uid?: string
   kind?: Kind
   result?: ResultChoice
-  nextName?: string
   /** Se registró una actividad. */
   onSaved: (c: CommercialContact) => void
-  /** Otro cambio (reasignar): actualiza la lista sin pasar al siguiente. */
-  onChanged?: (c: CommercialContact) => void
   onClose?: () => void
 }) {
   const [detail, setDetail] = useState<Detail | null>(null)
@@ -74,29 +72,18 @@ export function ContactPanel({ contactId, initial, today, variant, isAdmin, read
     return () => window.removeEventListener('keydown', h)
   }, [variant, onClose])
 
-  async function reassign(owner: string) {
-    const r = await apiFetch(`/api/data/commercial/contacts/${contactId}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ owner_id: owner || null }),
-    })
-    const d = await r.json().catch(() => ({}))
-    if (!r.ok) { setError(d.error || 'No se pudo reasignar'); return }
-    ;(onChanged ?? onSaved)(d.contact)
-    load()
-  }
-
   if (!contact) {
     const body = <div className="empty-state small">{error || 'Cargando…'}</div>
     return variant === 'pane' ? <aside className={`${s.elev} ${s.pane}`}>{body}</aside> : <Overlay onClose={onClose}>{body}</Overlay>
   }
 
   const phone = normalizePhone(contact.phone)
-  // Mientras carga la ficha no se sabe si es suyo: no se muestra ni el registro ni el aviso
-  const canWork = !!detail?.canWork
   const prob = STAGE_PROBABILITY[contact.commercial_status]
   const [bg, fg] = avatarColors(contact.commercial_status)
   const person = personName(contact)
   const addr = addressOf(contact)
-  const ownerLabel = !contact.owner_id ? 'Sin asignar' : !detail ? null : canWork ? 'Tuyo' : `De ${contact.owner_name || 'otra persona'}`
+  const mine = !!uid && contact.owner_id === uid
+  const ownerLabel = !contact.owner_id ? 'Sin asignar' : mine ? 'Tuyo' : contact.owner_name ? `De ${contact.owner_name}` : null
 
   const content = (
     <>
@@ -131,23 +118,13 @@ export function ContactPanel({ contactId, initial, today, variant, isAdmin, read
 
       {error && <p className={s.error} role="alert">{error}</p>}
 
-      {readonly ? null : !detail ? (
-        <p className={s.notice}>Cargando…</p>
-      ) : !canWork ? (
-        <p className={s.notice}>Este cliente lo trabaja {contact.owner_name || 'otra persona del equipo'}. Puedes ver su historial; solo su responsable registra actividades.</p>
-      ) : (
+      {!readonly && (
         <div className={s.section}>
+          {contact.owner_id && !mine && contact.owner_name && (
+            <p className={s.notice}>Lo trabaja {contact.owner_name}. Si registras una actividad, pasa a ser tuyo.</p>
+          )}
           <RegisterForm key={contact.id} contact={contact} today={today} initialKind={kind} initialResult={result}
-            wide={variant === 'pane'} nextName={nextName}
-            onSaved={c => { onSaved(c); load() }} />
-        </div>
-      )}
-
-      {isAdmin && !readonly && detail && detail.team.length > 0 && (
-        <div className={s.section}>
-          <div className={s.sectionTitle}>Responsable</div>
-          <Select value={contact.owner_id ?? ''} aria-label="Responsable" onChange={reassign}
-            options={[{ value: '', label: 'Sin asignar' }, ...detail.team.map(m => ({ value: m.user_id, label: m.name }))]} />
+            wide={variant === 'pane'} onSaved={c => { onSaved(c); load() }} />
         </div>
       )}
 

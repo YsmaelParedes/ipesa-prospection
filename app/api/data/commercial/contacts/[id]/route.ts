@@ -8,8 +8,7 @@ type Ctx = { params: Promise<{ id: string }> }
 
 /**
  * GET /api/data/commercial/contacts/[id] — ficha comercial de un contacto:
- * datos, responsable y si quien pregunta puede registrar. Para un
- * administrador, también el equipo (para reasignar).
+ * datos y responsable. Cualquiera del equipo registra; al hacerlo se queda con él.
  */
 export async function GET(_req: NextRequest, { params }: Ctx) {
   const ctx = await requireStore()
@@ -29,7 +28,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     return NextResponse.json({
       today: todayISO(ctx.store.timezone),
       contact: { ...contact, owner_name: contact.owner_id ? (members.find(m => m.user_id === contact.owner_id)?.display_name ?? 'Usuario') : null },
-      canWork: contact.owner_id === null || contact.owner_id === ctx.uid,
+      canWork: true,
       team: ctx.isAdmin ? active.map(m => ({ user_id: m.user_id, name: m.display_name, role: m.role })) : [],
     })
   } catch (error) {

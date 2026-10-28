@@ -2,22 +2,24 @@ import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { jsonError, serverError } from '@/lib/validation'
-import { COMMERCIAL_COLUMNS, hasSalesTeam, zonedDayStart } from '@/lib/commercialServer'
+import { COMMERCIAL_COLUMNS, hasSalesTeam, withOwnerNames, zonedDayStart } from '@/lib/commercialServer'
 import { withContactSearch } from '@/lib/contactSearch'
 import { addDays, countActivities, goalsFor, parseGoalsConfig, todayISO, type ActivityForCount } from '@/lib/commercial'
 
 const FRESH_PAGE = 30
 /** Al refrescar se pide de una vez lo que ya se veía (hasta este tope). */
 const MAX_FRESH = 300
-const VISIT_PAGE = 20
+const VISIT_PAGE = 30
 const MAX_DUE = 500
+const FOUND_LIMIT = 50
 
 
 /**
- * GET /api/data/commercial[?zone=&segment=&q=&offset=&limit=] — la lista de "Hoy":
+ * GET /api/data/commercial[?zone=&segment=&q=&offset=&limit=&vlimit=] — la lista de "Hoy":
  *  · due: mis seguimientos con fecha de hoy o vencida (y los sin asignar con fecha)
  *  · fresh: prospectos con teléfono que nadie ha trabajado (sin asignar), de a 30, por zona o búsqueda
- *  · visit: los que no tienen teléfono ("Para visita"), primeros 20 y el total
+ *  · visit: los que no tienen teléfono ("Para visita"), de a 30, y el total
+ *  · found: con búsqueda, coincidencias en toda la base (de cualquiera y con cualquier fecha)
  *  · counts/goals: lo que llevo hoy contra mi meta
  * Quien registra la primera actividad de un prospecto se queda con él.
  */
@@ -34,6 +36,7 @@ async function GETImpl(req: NextRequest) {
   const offset = Math.max(0, Math.min(Number(sp.get('offset')) || 0, 100000))
   // Prospectos nuevos por página; al refrescar, los que ya se veían (sin acentos ni mayúsculas en la búsqueda)
   const freshLimit = Math.max(FRESH_PAGE, Math.min(Number(sp.get('limit')) || FRESH_PAGE, MAX_FRESH))
+  const visitLimit = Math.max(VISIT_PAGE, Math.min(Number(sp.get('vlimit')) || VISIT_PAGE, MAX_FRESH))
   const tz = ctx.store.timezone || 'America/Mexico_City'
   const today = todayISO(tz)
   const supabase = getServerSupabase()
@@ -59,24 +62,31 @@ async function GETImpl(req: NextRequest) {
     if (segment) visit = visit.eq('segment', segment)
     if (q) visit = withContactSearch(visit, q)
 
-    const [dueRes, freshRes, visitRes, activities, store, catalogs] = await Promise.all([
+    // Búsqueda en toda la base: también lo que es de otros o toca otro día
+    let found = q ? withContactSearch(supabase.from('contacts').select(COMMERCIAL_COLUMNS).eq('store_id', ctx.storeId), q) : null
+    if (found && zone) found = found.eq('zone', zone)
+    if (found && segment) found = found.eq('segment', segment)
+
+    const [dueRes, freshRes, visitRes, activities, store, catalogs, foundRes] = await Promise.all([
       due.order('next_action_at', { ascending: true }).order('id', { ascending: true }).limit(MAX_DUE),
       fresh.order('no_answer_streak', { ascending: true }).order('created_at', { ascending: true }).order('id', { ascending: true })
         .range(offset, offset + freshLimit - 1),
-      visit.order('created_at', { ascending: true }).order('id', { ascending: true }).limit(VISIT_PAGE),
+      visit.order('created_at', { ascending: true }).order('id', { ascending: true }).limit(visitLimit),
       supabase.from('commercial_activities').select('kind, result, is_followup, quote_amount, sale_amount')
         .eq('store_id', ctx.storeId).eq('user_id', ctx.uid)
         .gte('created_at', zonedDayStart(today, tz).toISOString()).lt('created_at', zonedDayStart(addDays(today, 1), tz).toISOString()),
       supabase.from('stores').select('commercial_goals').eq('id', ctx.storeId).maybeSingle(),
       supabase.from('app_config').select('type, label').eq('store_id', ctx.storeId).in('type', ['zone', 'segment']).order('label'),
+      found ? found.order('name', { ascending: true }).order('id', { ascending: true }).limit(FOUND_LIMIT) : Promise.resolve({ data: null, error: null }),
     ])
-    for (const r of [dueRes, freshRes, visitRes, activities, store, catalogs]) if (r.error) throw r.error
+    for (const r of [dueRes, freshRes, visitRes, activities, store, catalogs, foundRes]) if (r.error) throw r.error
+    const foundRows = (foundRes.data ?? []) as unknown as Record<string, unknown>[]
 
     const dueRows = (dueRes.data ?? []) as unknown as Record<string, unknown>[]
     const freshRows = (freshRes.data ?? []) as unknown as Record<string, unknown>[]
 
     // Monto de la última cotización de los que están en "Cotización"
-    const quoting = dueRows.filter(c => c.commercial_status === 'cotizacion').map(c => c.id as string)
+    const quoting = [...dueRows, ...foundRows].filter(c => c.commercial_status === 'cotizacion').map(c => c.id as string)
     const quotes = new Map<string, number>()
     if (quoting.length) {
       const { data } = await supabase.from('commercial_activities').select('contact_id, quote_amount')
@@ -99,6 +109,7 @@ async function GETImpl(req: NextRequest) {
       freshTotal: freshRes.count ?? freshRows.length,
       visit: visitRes.data ?? [],
       visitTotal: visitRes.count ?? 0,
+      found: q ? await withOwnerNames(ctx.storeId, foundRows.map(c => ({ ...c, quote_amount: quotes.get(c.id as string) ?? null }))) : null,
       offset,
     })
   } catch (error) {
@@ -107,3 +118,4 @@ async function GETImpl(req: NextRequest) {
 }
 
 export const GET = withServerTiming(GETImpl)
+
