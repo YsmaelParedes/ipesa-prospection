@@ -7,7 +7,7 @@ import { useDataChanged } from '@/lib/crmEvents'
 import type { ResultChoice } from '@/lib/commercial'
 import { Select } from '@/components/Select'
 import type { Opened } from './HoyView'
-import { bizName, fmtDay, money, type ListContact } from './ui'
+import { bizName, fmtDay, localDay, money, type ListContact } from './ui'
 import s from './comercial.module.css'
 
 type Opportunity = ListContact & { owner_name: string | null; quote_amount: number; quoted_at: string | null; probability: number; days_idle: number | null }
@@ -113,7 +113,7 @@ export function OportunidadesView({ isAdmin, segments, onOpen }: { isAdmin: bool
                     </span>
                   </span>
                   <span className={s.optional}>{team ? (o.owner_name ?? 'Sin asignar') : (o.zone ?? '—')}</span>
-                  <span className={`${s.optional} ${s.num}`}>{o.quoted_at ? fmtDay(o.quoted_at.slice(0, 10)) : '—'}</span>
+                  <span className={`${s.optional} ${s.num}`}>{o.quoted_at ? fmtDay(localDay(o.quoted_at)) : '—'}</span>
                   <span className={`${s.optional} ${s.num}`} style={{ color: stale ? 'var(--danger)' : undefined, fontWeight: stale ? 800 : undefined }}>
                     {o.days_idle === null ? '—' : `${o.days_idle} días`}
                   </span>

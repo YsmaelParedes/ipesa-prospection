@@ -10,7 +10,7 @@ import {
 } from '@/lib/commercial'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
 import { RegisterForm, type Kind } from './RegisterForm'
-import { Ico, StatusChip, addressOf, bizName, fmtDay, initials, money, personName, type ListContact } from './ui'
+import { Ico, StatusChip, addressOf, bizName, fmtDay, initials, localDay, money, personName, type ListContact } from './ui'
 import s from './comercial.module.css'
 
 type Activity = {
@@ -145,7 +145,7 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
           <div className={s.history}>
             {history.map(a => (
               <div key={a.id} className={s.hItem}>
-                <span className={s.num}>{fmtDay(a.created_at.slice(0, 10))}</span>
+                <span className={s.num}>{fmtDay(localDay(a.created_at))}</span>
                 <div>
                   <b>{KIND_LABELS[a.kind] ?? a.kind}{a.result ? ` · ${resultLabel(a.result)}` : ''}</b>
                   {a.quote_amount ? ` · ${money(a.quote_amount)}` : ''}{a.sale_amount ? ` · vendió ${money(a.sale_amount)}` : ''}

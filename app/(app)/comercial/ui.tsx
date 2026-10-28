@@ -62,6 +62,9 @@ export function Filters({ zones, segments, zone, segment, onZone, onSegment, que
   )
 }
 
+/** Día (AAAA-MM-DD) de un instante, en la hora de quien lo ve (no en UTC: de noche cae al día siguiente). */
+export const localDay = (iso: string) => new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso))
+
 export const money = (n: number | string | null | undefined) => `$${Number(n || 0).toLocaleString('es-MX')}`
 export const pct = (n: number) => `${Math.round(n * 100)} %`
 
