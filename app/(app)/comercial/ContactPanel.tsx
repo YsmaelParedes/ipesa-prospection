@@ -50,6 +50,7 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
   const [detail, setDetail] = useState<Detail | null>(null)
   const [history, setHistory] = useState<Activity[] | null>(null)
   const [error, setError] = useState('')
+  const [closing, setClosing] = useState(false)
   const contact = detail?.contact ?? initial ?? null
 
   const load = useCallback(async () => {
@@ -71,6 +72,22 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
   }, [variant, onClose])
+
+  async function closeFollowUp() {
+    setClosing(true); setError('')
+    try {
+      const r = await apiFetch('/api/data/commercial/close-followup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contact_id: contactId }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok || !d.contact) { setError(d.error || 'No se pudo cerrar el seguimiento'); return }
+      onSaved(d.contact)
+    } catch {
+      setError('Sin conexión. Intenta de nuevo.')
+    } finally {
+      setClosing(false)
+    }
+  }
 
   if (!contact) {
     const body = <div className="empty-state small">{error || 'Cargando…'}</div>
@@ -112,6 +129,11 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
         <div className={s.nextBox}>
           <span>Próximo seguimiento: <b>{contact.next_action || 'Dar seguimiento'}</b> · {whenPhrase(contact.next_action_at, today)}</span>
           <Link href="/recordatorios">Ver en Agenda</Link>
+          {!readonly && (
+            <button type="button" className={`${s.nextClose} ${s.press}`} disabled={closing} onClick={closeFollowUp}>
+              {closing ? 'Cerrando…' : 'Cerrar seguimiento'}
+            </button>
+          )}
         </div>
       )}
 

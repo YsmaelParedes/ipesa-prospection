@@ -36,6 +36,14 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.9.1',
+    date: '29 de octubre, 2026',
+    title: 'Cerrar seguimiento',
+    items: [
+      'En la ficha de un cliente ya puedes cerrar su seguimiento pendiente cuando ya no hace falta darle más vueltas. Deja de salir en Hoy y en la Agenda, y vuelve al flujo en cuanto registres una actividad nueva.',
+    ],
+  },
+  {
     version: '4.9.0',
     date: '27 de octubre, 2026',
     title: 'Sistema Comercial y Agenda conectados',
