@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthClient } from '@/lib/supabase-server'
 import { EMAIL_RE, siteOrigin } from '@/lib/invitations'
-import { clientIp, rateLimit } from '@/lib/rateLimit'
+import { clientIp, DAY, hashKey, HOUR, limitShared, tooMany } from '@/lib/rateLimit'
 import { jsonError, readJson } from '@/lib/validation'
 import { reportError } from '@/lib/errorReport'
 
@@ -10,9 +10,12 @@ export async function POST(req: NextRequest) {
   const body = await readJson(req)
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
   if (!EMAIL_RE.test(email) || email.length > 254) return jsonError('Escribe un correo válido')
-  if (!rateLimit(`resend:${clientIp(req)}`, 5, 60 * 60 * 1000) || !rateLimit(`resend:${email}`, 3, 60 * 60 * 1000)) {
-    return jsonError('Ya reenviamos el correo varias veces. Revisa spam o intenta en una hora.', 429)
-  }
+  const ip = clientIp(req)
+  if (!(await limitShared([
+    { key: `resend:ip:${ip}`, max: 5, windowMs: HOUR },
+    { key: `resend:ipday:${ip}`, max: 15, windowMs: DAY },
+    { key: `resend:acct:${hashKey(email)}`, max: 3, windowMs: HOUR },
+  ]))) return tooMany('Ya reenviamos el correo varias veces. Revisa spam o intenta en una hora.', 60 * 60)
 
   const supabase = await getAuthClient()
   const { error } = await supabase.auth.resend({

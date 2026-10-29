@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthClient } from '@/lib/supabase-server'
 import { EMAIL_RE, passwordProblem, siteOrigin } from '@/lib/invitations'
-import { clientIp, rateLimit } from '@/lib/rateLimit'
+import { clientIp, DAY, HOUR, limitShared, tooMany } from '@/lib/rateLimit'
 import { jsonError, readJson } from '@/lib/validation'
 import { reportError } from '@/lib/errorReport'
 import { TURNSTILE_ERROR, verifyTurnstile } from '@/lib/turnstile'
@@ -17,9 +17,6 @@ export async function POST(req: NextRequest) {
   if (!REGISTRATION_OPEN) {
     return jsonError('Por ahora el registro está cerrado.', 403)
   }
-  if (!rateLimit(`register:${clientIp(req)}`, 5, 60 * 60 * 1000)) {
-    return jsonError('Demasiados registros desde esta conexión. Intenta más tarde.', 429)
-  }
   const body = await readJson(req)
   const name     = typeof body?.name === 'string' ? body.name.trim() : ''
   const email    = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
@@ -30,6 +27,16 @@ export async function POST(req: NextRequest) {
   if (problem) return jsonError(problem)
   if (body?.acceptTerms !== true) return jsonError('Debes aceptar los términos y el aviso de privacidad')
   if (!(await verifyTurnstile(body?.captcha, req, 'register'))) return jsonError(TURNSTILE_ERROR, 403)
+  // Cuentas nuevas: pocas por conexión y un tope general por hora y por día
+  // (frena que alguien llene la base de cuentas o se acabe los correos del
+  // día; cada cuenta manda un correo de confirmación). Subirlo si la tienda crece.
+  const ip = clientIp(req)
+  if (!(await limitShared([
+    { key: `register:ip:${ip}`, max: 3, windowMs: HOUR },
+    { key: `register:ipday:${ip}`, max: 6, windowMs: DAY },
+    { key: 'register:all', max: 20, windowMs: HOUR },
+    { key: 'register:allday', max: 60, windowMs: DAY },
+  ]))) return tooMany('Demasiados registros desde esta conexión. Intenta más tarde.', 60 * 60)
 
   const supabase = await getAuthClient()
   const { data, error } = await supabase.auth.signUp({

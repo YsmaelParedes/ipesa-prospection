@@ -17,7 +17,7 @@ function detectImage(bytes: Uint8Array): { mime: string; ext: string } | null {
 
 // POST /api/store/logo (multipart: file) — administrador
 export async function POST(req: NextRequest) {
-  const ctx = await requireStore({ admin: true })
+  const ctx = await requireStore({ admin: true, write: true })
   if (ctx instanceof Response) return ctx
 
   const form = await req.formData().catch(() => null)
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/store/logo — quitar el logo de la tienda (vuelve el logo del producto)
 export async function DELETE() {
-  const ctx = await requireStore({ admin: true })
+  const ctx = await requireStore({ admin: true, write: true })
   if (ctx instanceof Response) return ctx
 
   const db = getServerSupabase()

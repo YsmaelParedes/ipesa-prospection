@@ -1,61 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { readJson } from '@/lib/validation'
+import { clientIp, DAY, hashKey, limitShared, MIN, tooMany } from '@/lib/rateLimit'
 import { TURNSTILE_ERROR, verifyTurnstile } from '@/lib/turnstile'
 
 /**
- * In-memory sliding-window rate limiter for the login endpoint.
- * Limits: 10 attempts per IP per 15-minute window.
- * NOTE: This resets on cold starts (serverless). For production at scale,
- * replace with a Redis-backed solution (e.g. Upstash Rate Limit).
- * ⚠️ REVISAR: consider Upstash @upstash/ratelimit for persistent rate limiting.
+ * Límites (compartidos entre servidores, ver lib/rateLimit.ts):
+ *  · por conexión: 10 intentos en 15 min y 60 al día
+ *  · por cuenta: 8 intentos en 15 min, venga de donde venga (frena a quien
+ *    prueba contraseñas de una cuenta desde muchas conexiones)
  */
-const loginAttempts = new Map<string, { count: number; windowStart: number }>()
-const RATE_LIMIT_MAX     = 10
-const RATE_LIMIT_WINDOW  = 15 * 60 * 1000 // 15 minutes in ms
-
-function checkRateLimit(ip: string): boolean {
-  const now    = Date.now()
-  const record = loginAttempts.get(ip)
-
-  if (!record || now - record.windowStart > RATE_LIMIT_WINDOW) {
-    loginAttempts.set(ip, { count: 1, windowStart: now })
-    return true // allowed
-  }
-
-  if (record.count >= RATE_LIMIT_MAX) {
-    return false // blocked
-  }
-
-  record.count++
-  return true // allowed
-}
-
-// Periodically clean up expired entries to prevent memory growth
-function cleanupRateLimitMap() {
-  const now = Date.now()
-  for (const [key, value] of loginAttempts.entries()) {
-    if (now - value.windowStart > RATE_LIMIT_WINDOW) {
-      loginAttempts.delete(key)
-    }
-  }
-}
-
 export async function POST(req: NextRequest) {
-  // Clean up stale entries on each request
-  cleanupRateLimitMap()
-
-  // Extract client IP — Vercel sets x-forwarded-for
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-           ?? req.headers.get('x-real-ip')
-           ?? 'unknown'
-
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json(
-      { error: 'Demasiados intentos. Por favor espera 15 minutos.' },
-      { status: 429 }
-    )
-  }
+  const ip = clientIp(req)
+  const tooManyLogins = () => tooMany('Demasiados intentos. Por favor espera 15 minutos.', 15 * 60)
+  if (!(await limitShared([
+    { key: `login:ip:${ip}`, max: 10, windowMs: 15 * MIN },
+    { key: `login:ipday:${ip}`, max: 60, windowMs: DAY },
+  ]))) return tooManyLogins()
 
   const body = await readJson(req)
   if (!body) return NextResponse.json({ error: 'Cuerpo de solicitud inválido' }, { status: 400 })
@@ -74,6 +35,7 @@ export async function POST(req: NextRequest) {
   if (typeof password !== 'string' || password.length > 128) {
     return NextResponse.json({ error: 'Contraseña inválida' }, { status: 400 })
   }
+  if (!(await limitShared([{ key: `login:acct:${hashKey(email)}`, max: 8, windowMs: 15 * MIN }]))) return tooManyLogins()
 
   // Las cookies de sesión se juntan aquí y se ponen en la respuesta final
   const sessionCookies: { name: string; value: string; options: Parameters<NextResponse['cookies']['set']>[2] }[] = []

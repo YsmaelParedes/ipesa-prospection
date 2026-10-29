@@ -45,6 +45,10 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // Remove the X-Powered-By: Next.js header to reduce fingerprinting surface
   poweredByHeader: false,
+
+  // La app no usa next/image: se apaga el optimizador de imágenes (/_next/image),
+  // que no hace falta y es una superficie de ataque (avisos de seguridad de Next.js 16.0–16.4.0)
+  images: { unoptimized: true },
   allowedDevOrigins: ['169.254.50.114'],
 
   // Librerías solo de servidor — no intentar incluirlas en el bundle del cliente

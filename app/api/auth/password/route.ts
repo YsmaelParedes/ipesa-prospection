@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { getAuthClient, getServerSupabase, getSessionUser, unauthorizedResponse } from '@/lib/supabase-server'
 import { passwordProblem } from '@/lib/invitations'
 import { clearPasswordReset, hasPasswordReset } from '@/lib/passwordReset'
-import { rateLimit } from '@/lib/rateLimit'
+import { limitShared, MIN, tooMany } from '@/lib/rateLimit'
 import { jsonError, readJson } from '@/lib/validation'
 import { reportError } from '@/lib/errorReport'
 
@@ -26,8 +26,8 @@ async function currentPasswordIsValid(email: string, password: string): Promise<
 export async function POST(req: NextRequest) {
   const user = await getSessionUser()
   if (!user?.email) return unauthorizedResponse()
-  if (!rateLimit(`password:${user.id}`, 6, 15 * 60 * 1000)) {
-    return jsonError('Demasiados intentos. Espera unos minutos.', 429)
+  if (!(await limitShared([{ key: `password:user:${user.id}`, max: 6, windowMs: 15 * MIN }]))) {
+    return tooMany('Demasiados intentos. Espera unos minutos.', 15 * 60)
   }
 
   const body = await readJson(req)

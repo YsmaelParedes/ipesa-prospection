@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getMemberships, requireUser } from '@/lib/supabase-server'
 import { STORE_PROFILE_SCHEMA, createStore, publicStore, setActiveStoreCookie } from '@/lib/storeServer'
-import { clientIp, rateLimit } from '@/lib/rateLimit'
+import { clientIp, DAY, HOUR, limitShared, tooMany } from '@/lib/rateLimit'
 import { jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 
 /**
@@ -13,9 +13,10 @@ import { jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 export async function POST(req: NextRequest) {
   const user = await requireUser()
   if (user instanceof Response) return user
-  if (!rateLimit(`stores:${clientIp(req)}`, 5, 60 * 60 * 1000)) {
-    return jsonError('Demasiadas altas desde esta conexión. Intenta más tarde.', 429)
-  }
+  if (!(await limitShared([
+    { key: `stores:ip:${clientIp(req)}`, max: 5, windowMs: HOUR },
+    { key: `stores:user:${user.id}`, max: 5, windowMs: DAY },
+  ]))) return tooMany('Demasiadas altas desde esta conexión. Intenta más tarde.', 60 * 60)
 
   const body = await readJson(req)
   if (!body) return jsonError('Cuerpo de solicitud inválido')

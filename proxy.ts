@@ -19,12 +19,22 @@ const PUBLIC_PREFIXES = ['/invitacion/', '/auth/', '/inicio/']  // /inicio/*: p�
 // Con sesión no tiene sentido verlas: se manda al panel
 const GUEST_ONLY      = ['/login', '/registro', '/recuperar']
 
-// ── Rate limit en memoria para /api/* ────────────────────────────────────────
-// 120 peticiones por IP por minuto. Se reinicia en cada arranque en frío
-// (para algo persistente usar @upstash/ratelimit).
+// ── Límite de peticiones en memoria para /api/* ─────────────────────────────
+// Por instancia (Vercel reutiliza instancias, así que frena ráfagas). Lo
+// sensible (iniciar sesión, cuentas, correos) además tiene límites
+// compartidos en la base: ver lib/rateLimit.ts.
+//  · Con sesión: 240 por minuto por sesión. Un equipo en el mismo wifi
+//    comparte la IP, así que no se le limita por IP sino por persona.
+//  · Por IP: 600 por minuto en total (tope aunque se inventen cookies).
+//  · Sin sesión: 60 por minuto por IP.
+//  · Acceso (/api/auth, invitaciones, errores del navegador): 20 por minuto por IP.
 const apiRateLimit = new Map<string, { count: number; windowStart: number }>()
-const API_RATE_LIMIT_MAX    = 120
 const API_RATE_LIMIT_WINDOW = 60 * 1000
+const LIMIT_SESSION = 240
+const LIMIT_IP      = 600
+const LIMIT_GUEST   = 60
+const LIMIT_ACCESS  = 20
+const ACCESS_PATHS  = ['/api/auth/', '/api/invitations/', '/api/client-errors']
 
 // Webhooks/cron: los manda Meta o Vercel (pocas IPs, ráfagas legítimas) y
 // se autentican por firma/secreto, así que no pasan por el límite por IP.
@@ -46,19 +56,27 @@ function isCrossSiteWrite(request: NextRequest): boolean {
   return !hosts.some(h => h?.split(',')[0].trim() === originHost)
 }
 
-function checkApiRateLimit(ip: string): boolean {
+function checkApiRateLimit(key: string, max: number): boolean {
   const now = Date.now()
   if (apiRateLimit.size > 5000) {
-    for (const [key, value] of apiRateLimit) if (now - value.windowStart > API_RATE_LIMIT_WINDOW) apiRateLimit.delete(key)
+    for (const [k, value] of apiRateLimit) if (now - value.windowStart > API_RATE_LIMIT_WINDOW) apiRateLimit.delete(k)
+    // Ataque desde muchísimas direcciones: no dejar crecer la memoria sin límite
+    if (apiRateLimit.size > 20_000) apiRateLimit.clear()
   }
-  const record = apiRateLimit.get(ip)
+  const record = apiRateLimit.get(key)
   if (!record || now - record.windowStart > API_RATE_LIMIT_WINDOW) {
-    apiRateLimit.set(ip, { count: 1, windowStart: now })
+    apiRateLimit.set(key, { count: 1, windowStart: now })
     return true
   }
-  if (record.count >= API_RATE_LIMIT_MAX) return false
+  if (record.count >= max) return false
   record.count++
   return true
+}
+
+/** Huella de la cookie de sesión (sin validarla: solo para contar por persona). */
+function sessionKey(request: NextRequest): string | null {
+  const c = request.cookies.getAll().find(x => x.name.startsWith('sb-') && x.name.includes('auth-token'))
+  return c?.value ? c.value.slice(-48) : null
 }
 
 export async function proxy(request: NextRequest) {
@@ -73,7 +91,11 @@ export async function proxy(request: NextRequest) {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
              ?? request.headers.get('x-real-ip')
              ?? 'unknown'
-    if (!checkApiRateLimit(ip)) {
+    const session = sessionKey(request)
+    const allowed = ACCESS_PATHS.some(p => pathname.startsWith(p))
+      ? checkApiRateLimit(`access:${ip}`, LIMIT_ACCESS)
+      : checkApiRateLimit(`ip:${ip}`, session ? LIMIT_IP : LIMIT_GUEST) && (!session || checkApiRateLimit(`s:${session}`, LIMIT_SESSION))
+    if (!allowed) {
       return NextResponse.json(
         { error: 'Demasiadas peticiones. Intenta de nuevo en un momento.' },
         { status: 429, headers: { 'Retry-After': '60' } },

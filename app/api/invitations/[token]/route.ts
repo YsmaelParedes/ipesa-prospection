@@ -6,6 +6,7 @@ import { setActiveStoreCookie, storeLogoUrl } from '@/lib/storeServer'
 import { findInvitationByToken, invitationStatus, maskEmail, passwordProblem, siteOrigin } from '@/lib/invitations'
 import { PLANS } from '@/lib/stores'
 import { jsonError, readJson, rpcUserError, serverError } from '@/lib/validation'
+import { clientIp, HOUR, limitShared, tooMany } from '@/lib/rateLimit'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -70,6 +71,10 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       const { data: existingId } = await db.rpc('auth_user_id_by_email', { p_email: inv.email })
       if (existingId) {
         return NextResponse.json({ error: 'Ya tienes una cuenta: inicia sesión para aceptar.', code: 'LOGIN_REQUIRED' }, { status: 409 })
+      }
+      // Crear la cuenta manda un correo de confirmación: pocas por conexión
+      if (!(await limitShared([{ key: `invite-signup:ip:${clientIp(req)}`, max: 10, windowMs: HOUR }]))) {
+        return tooMany('Demasiados intentos desde esta conexión. Intenta más tarde.', 60 * 60)
       }
       const name = typeof body.name === 'string' ? body.name.trim() : ''
       if (name.length < 2 || name.length > 60) return jsonError('Escribe tu nombre')
