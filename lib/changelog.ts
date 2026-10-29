@@ -38,9 +38,10 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '4.9.1',
     date: '29 de octubre, 2026',
-    title: 'Cerrar seguimiento',
+    title: 'Cerrar seguimiento y programar desde el Sistema Comercial',
     items: [
       'En la ficha de un cliente ya puedes cerrar su seguimiento pendiente cuando ya no hace falta darle más vueltas. Deja de salir en Hoy y en la Agenda, y vuelve al flujo en cuanto registres una actividad nueva.',
+      'En Contactos, «Dar seguimiento» te lleva al Sistema Comercial para registrar la actividad y programar el siguiente paso en un solo lugar. Los recordatorios que ya tenías con ese contacto se siguen viendo ahí.',
     ],
   },
   {

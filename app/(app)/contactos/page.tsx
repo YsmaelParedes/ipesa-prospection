@@ -51,7 +51,6 @@ const CAMPO_LABELS: Record<string, string> = {
   name: 'Nombre', phone: 'Teléfono', email: 'Correo', company: 'Empresa',
   address: 'Dirección', postal_code: 'C.P.', segment: 'Segmento', acquisition_channel: 'Canal',
 }
-const firstName = (name: string) => (name || '').trim().split(/\s+/)[0] || name
 
 /** Contactos por página y lo más que se vuelve a pedir de una vez al refrescar. */
 const PAGE = 50
@@ -545,10 +544,6 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
     if (r.ok) notifyDataChanged('reminder')
   }
 
-  const scheduleFollowUp = () => openQuickCreate({
-    kind: 'reminder',
-    defaults: { lead_id: null, lead_name: c.name, type: 'call', nota: `Llamar a ${firstName(c.name)}` },
-  })
   const now = new Date()
 
   return (
@@ -637,7 +632,7 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
               <div className="detail-section">
                 <div className="detail-section-head">
                   <h4>Sistema comercial</h4>
-                  <Link href={`/comercial?id=${c.id}`} className="link-btn">Abrir →</Link>
+                  <Link href={`/comercial?id=${c.id}`} className="link-btn">{readonly ? 'Abrir →' : 'Dar seguimiento →'}</Link>
                 </div>
                 <div className="kv-grid">
                   <div className="kv"><div className="k">Estado</div><div className="v"><StatusChip value={c.commercial_status || 'nuevo'} /></div></div>
@@ -646,24 +641,23 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
                 </div>
               </div>
 
-              <div className="detail-section">
-                <div className="detail-section-head">
-                  <h4>Seguimientos pendientes</h4>
-                  {!readonly && <button className="link-btn" onClick={scheduleFollowUp}><Ico.plus /> Programar</button>}
-                </div>
-                {reminders.length === 0 ? (
-                  <div className="empty-state small" style={{ textAlign: 'left', padding: '4px 0' }}>Nada programado con este cliente.</div>
-                ) : reminders.map(r => (
-                  <div key={r.id} className={`rem-row ${isOverdue(r.fecha_recordatorio, now) ? 'overdue' : ''}`}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="rem-row-when">{fmtDue(r.fecha_recordatorio, now)}</div>
-                      <div className="rem-row-text">{reminderTitle(r)}</div>
-                      {r.mine === false && <div className="rem-row-owner">De {r.owner_name}</div>}
-                    </div>
-                    {!readonly && r.mine !== false && <button className="notif-done" onClick={() => completeReminder(r.id)}>✓ Listo</button>}
+              {reminders.length > 0 && (
+                <div className="detail-section">
+                  <div className="detail-section-head">
+                    <h4>Recordatorios</h4>
                   </div>
-                ))}
-              </div>
+                  {reminders.map(r => (
+                    <div key={r.id} className={`rem-row ${isOverdue(r.fecha_recordatorio, now) ? 'overdue' : ''}`}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="rem-row-when">{fmtDue(r.fecha_recordatorio, now)}</div>
+                        <div className="rem-row-text">{reminderTitle(r)}</div>
+                        {r.mine === false && <div className="rem-row-owner">De {r.owner_name}</div>}
+                      </div>
+                      {!readonly && r.mine !== false && <button className="notif-done" onClick={() => completeReminder(r.id)}>✓ Listo</button>}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {waModule && phone.length === 10 && <ContactWhatsApp contact={c} readonly={readonly} onUpdated={onUpdated} />}
 
