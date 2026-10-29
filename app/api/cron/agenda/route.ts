@@ -26,6 +26,9 @@ export async function GET(req: NextRequest) {
   try {
     const result = await sendMorningAgenda()
     console.log('[cron/agenda]', JSON.stringify(result))
+    if (result.stalled) {
+      reportError({ source: 'cron', context: 'cron/reminders', error: new Error(`${result.stalled} recordatorio(s) de las últimas 24 h no se avisaron a su hora: revisa el Worker de Cloudflare (workers/avisos)`) })
+    }
     return NextResponse.json(result)
   } catch (error: any) {
     console.error('[cron/agenda]', error?.message ?? error)

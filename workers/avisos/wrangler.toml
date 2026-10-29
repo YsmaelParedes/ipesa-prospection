@@ -1,0 +1,14 @@
+# Reloj de los avisos a la hora (ver worker.js). Desplegado en la cuenta de
+# Cloudflare de matices.app. La llave se guarda como secreto:
+#   npx wrangler secret put CRON_KEY
+# y su SHA-256 en public.cron_keys de Supabase.
+name = "matices-avisos"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = false
+
+[vars]
+TARGET_URL = "https://www.matices.app/api/cron/reminders"
+
+[triggers]
+crons = ["* * * * *"]

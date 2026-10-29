@@ -33,7 +33,7 @@ ficha de la tienda (`PATCH /api/platform/stores/[id]` con `{ whatsapp }`).
 | Datos y Auth | Supabase (Postgres + Auth + Storage) |
 | Mensajería | WhatsApp Cloud API de Meta (Graph API, sin intermediarios) |
 | Notificaciones | Web Push (VAPID) + service worker propio (`public/sw.js`) |
-| Hosting | Vercel (crons diarios: resumen de la agenda y limpieza de tiendas) |
+| Hosting | Vercel (crons diarios: resumen de la agenda y limpieza de tiendas) + Worker de Cloudflare (reloj de los avisos a la hora, `workers/avisos`) |
 
 > Next.js 16 cambia varias convenciones respecto a versiones anteriores (por ejemplo,
 > `middleware.ts` ahora es `proxy.ts`). Antes de tocar código revisa la guía incluida en
@@ -211,16 +211,23 @@ la pantalla de inicio (iOS 16.4+).
 
 | Aviso | Quién lo dispara |
 |---|---|
-| Resumen de la agenda a las 8:00 | Cron diario de Vercel → `/api/cron/agenda` (con `CRON_SECRET`) |
-| Mensaje nuevo de WhatsApp | El webhook, al guardar el mensaje |
+| A la hora de cada recordatorio (solo a quien lo creó) | Worker de Cloudflare `matices-avisos` (`workers/avisos`), cada minuto → `/api/cron/reminders` con su llave (en la base solo su SHA-256, tabla `cron_keys`) |
+| Resumen de la agenda a las 8:00 (cada quien lo suyo) | Cron diario de Vercel → `/api/cron/agenda` (con `CRON_SECRET`) |
+| Mensaje nuevo de WhatsApp (todo el equipo de la tienda) | El webhook, al guardar el mensaje |
 
 Las suscripciones son por dominio: **si cambia el dominio de la app**, cada persona debe
 volver a activar los avisos en el dominio nuevo. Las suscripciones del dominio anterior siguen
 llegando mientras ese dominio responda.
 
-Los avisos a la hora de cada recordatorio (pg_cron cada minuto) se quitaron el 22 de octubre
-de 2026 porque agotaban el presupuesto de Disk IO de Supabase; volverán con un plan mayor.
-Ver `supabase/migrations/20261022230000_drop_reminder_push_on_time.sql`.
+Los avisos personales (recordatorios y resumen) van solo a los dispositivos de su dueño y
+mientras siga activo en la tienda; los de WhatsApp, a todos los del equipo que los tengan
+encendidos en ese dispositivo.
+
+El reloj de los avisos a la hora vive fuera de Supabase a propósito: con pg_cron cada minuto
+(octubre de 2026) se agotaba el Disk IO del plan. Cada vuelta del Worker es una lectura sobre
+`reminders_pending_push_idx`; solo se escribe cuando un recordatorio llega a su hora. **Si cambia
+el dominio de la app**, actualiza `TARGET_URL` del Worker. Si el reloj se detiene, el resumen de
+las 8:00 lo detecta (recordatorios del día anterior sin avisar) y manda un aviso de error.
 
 ## Base de datos
 

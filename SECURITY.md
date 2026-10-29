@@ -64,7 +64,9 @@ Cloud API y Web Push, y el aislamiento entre tiendas.
   errores internos se registran en el servidor y al cliente le llega un mensaje genérico.
 - **Webhooks y cron autenticados**: firma HMAC-SHA256 de Meta (`X-Hub-Signature-256`) y
   `CRON_SECRET`, ambos comparados en tiempo constante. El cron falla cerrado si no hay
-  secreto.
+  secreto. El reloj de los avisos a la hora (Worker de Cloudflare) usa una llave aleatoria
+  de 256 bits; la base guarda solo su SHA-256 (`cron_keys`, solo `service_role`), así que
+  la llave no se copia a Vercel ni a la base.
 - **Cabeceras** definidas en un solo lugar (`next.config.ts`): CSP estricta (sin
   `unsafe-eval` en producción, `object-src 'none'`, `frame-ancestors 'none'`), HSTS con
   preload, COOP, `nosniff`, `X-Frame-Options: DENY`, Permissions-Policy restrictiva y sin

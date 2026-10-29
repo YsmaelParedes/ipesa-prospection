@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.10.0',
+    date: '29 de octubre, 2026',
+    title: 'Avisos a la hora de cada recordatorio',
+    items: [
+      'Vuelven los avisos a la hora: cada recordatorio de tu Agenda te llega al celular o a la computadora justo a su hora, aunque la app esté cerrada.',
+      'Cada quien recibe solo sus propios recordatorios y su resumen de la mañana, en los dispositivos donde activó los avisos.',
+      { text: 'Los mensajes de WhatsApp siguen avisando a todo el equipo de la tienda; cada quien puede apagarlos en Configuración › Mi cuenta.', module: 'whatsapp' },
+    ],
+  },
+  {
     version: '4.9.1',
     date: '29 de octubre, 2026',
     title: 'Cerrar seguimiento y programar desde el Sistema Comercial',

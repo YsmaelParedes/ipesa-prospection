@@ -44,6 +44,16 @@ export async function POST(req: NextRequest) {
     if (prev) row.notify_whatsapp = prev.notify_whatsapp
   }
 
+  // La app lo re-guarda cada vez que abre: si ya está igual, no se escribe nada.
+  if (!oldEndpoint) {
+    const { data: same } = await supabase.from('push_subscriptions').select('user_id, p256dh, auth, notify_whatsapp')
+      .eq('endpoint', body.endpoint).maybeSingle()
+    if (same && same.user_id === user.id && same.p256dh === keys.p256dh && same.auth === keys.auth
+      && (row.notify_whatsapp === undefined || row.notify_whatsapp === same.notify_whatsapp)) {
+      return NextResponse.json({ ok: true })
+    }
+  }
+
   const { error } = await supabase.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' })
   if (error) return serverError('POST /api/push/subscribe', error, 'Error al registrar suscripción')
   if (oldEndpoint) await supabase.from('push_subscriptions').delete().eq('endpoint', oldEndpoint).eq('user_id', user.id)

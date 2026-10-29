@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   }
 
   // push_sent: si la hora ya pasó al capturarlo, no hay nada que avisar (quien
-  // lo guarda ya lo tiene a la vista). Hoy solo lo usa el resumen de la mañana.
+  // lo guarda ya lo tiene a la vista). Lo usan el aviso a la hora y el resumen de la mañana.
   const pushSent = naiveIso(parsed.data.fecha_recordatorio) <= zonedIso(new Date(), ctx.store.timezone)
 
   const { data, error } = await getServerSupabase()
