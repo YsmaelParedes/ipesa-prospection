@@ -144,9 +144,11 @@ export function reminderPayload(r: Row, lateMs = 0): PushPayload {
   const action = actionFor(r)
   const nota = r.nota?.trim() || ''
   const late = lateMs >= 15 * 60_000  // salió con retraso: que se vea la hora original
-  const when = `${late ? 'Era para' : 'Para'} las ${hhmm(r.reminder_date)}`
+  const time = hhmm(r.reminder_date)
+  const at = `${/^1:/.test(time) ? 'la' : 'las'} ${time}`  // "de la 1:30", "de las 2:30"
+  const when = late ? `Pendiente desde ${at}` : `Recordatorio de ${at}`
   // La nota va en el título si no hay cliente; si lo hay, en el cuerpo
-  const body = action && nota ? (late ? `${nota} · ${when}` : nota) : when
+  const body = action && nota ? (late ? `${nota} · ${when.toLowerCase()}` : nota) : when
   return {
     title: clip(action ? `${remTypeInfo(r.type).emoji} ${action}` : `⏰ ${nota || 'Recordatorio'}`, 70),
     body:  clip(body, 180),

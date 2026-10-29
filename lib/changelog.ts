@@ -36,6 +36,14 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.10.1',
+    date: '29 de octubre, 2026',
+    title: 'Avisos más claros',
+    items: [
+      'El aviso de un recordatorio dice «Recordatorio de las 14:44», y si llega tarde, «Pendiente desde las 14:44».',
+    ],
+  },
+  {
     version: '4.10.0',
     date: '29 de octubre, 2026',
     title: 'Avisos a la hora de cada recordatorio',

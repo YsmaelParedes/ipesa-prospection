@@ -43,13 +43,15 @@ test('aviso a la hora: con cliente, la acción va en el título y la nota en el 
 test('aviso a la hora: sin cliente, la nota es el título', () => {
   const p = reminderPayload(rem({ nota: 'Pedir pintura al proveedor', type: 'task' }))
   assert.equal(p.title, '⏰ Pedir pintura al proveedor')
-  assert.equal(p.body, 'Para las 10:30')
+  assert.equal(p.body, 'Recordatorio de las 10:30')
 })
 
 test('aviso a la hora: con retraso se ve la hora original', () => {
   const p = reminderPayload(rem({ lead_name: 'Ana', nota: 'Visita' }), 20 * 60_000)
-  assert.equal(p.body, 'Visita · Era para las 10:30')
-  assert.equal(reminderPayload(rem({ reminder_date: '2026-10-29T09:05:00' }), 30 * 60_000).body, 'Era para las 9:05')
+  assert.equal(p.body, 'Visita · pendiente desde las 10:30')
+  assert.equal(reminderPayload(rem({ reminder_date: '2026-10-29T09:05:00' }), 30 * 60_000).body, 'Pendiente desde las 9:05')
+  assert.equal(reminderPayload(rem({ reminder_date: '2026-10-29T13:15:00' })).body, 'Recordatorio de las 13:15')
+  assert.equal(reminderPayload(rem({ reminder_date: '2026-10-29T01:15:00' })).body, 'Recordatorio de la 1:15')
 })
 
 test('solo cuentan los que ya llegaron a su hora, en la hora local de su tienda', () => {
