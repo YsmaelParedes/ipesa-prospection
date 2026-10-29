@@ -18,9 +18,7 @@ import { Select, toOptions } from '@/components/Select'
 import { phoneDigits } from '@/components/ContactFormModal'
 import { useSession } from '@/lib/profile'
 import { useCatalogs } from '@/lib/catalogs'
-import { reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
-import { fmtDue, isOverdue } from '@/lib/datetime'
 import { normText } from '@/lib/searchIndex'
 import { PHONE_FILTERS, PHONE_FILTER_LABELS, phoneKind, type PhoneFilter } from '@/lib/lineType'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
@@ -476,7 +474,6 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
   onUpdated: (c: any) => void; onDeleted: (id: string) => void
 }) {
   const { segments, canales, zones } = useCatalogs()
-  const [reminders, setReminders] = useState<Reminder[]>([])
   const [editing, setEditing]     = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
   const [saving, setSaving]       = useState(false)
@@ -495,18 +492,6 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
   }, [onClose])
-
-  // Recordatorios pendientes que llevan el nombre de este cliente
-  const loadFollowUp = useCallback(async () => {
-    const own = await apiFetch('/api/data/reminders').then(res => res.json()).catch(() => ({ reminders: [] }))
-    const name = normText(c.name)
-    setReminders((own.reminders || [])
-      .filter((x: Reminder) => !x.completado && normText(x.lead_name) === name)
-      .sort((a: Reminder, b: Reminder) => a.fecha_recordatorio.localeCompare(b.fecha_recordatorio)))
-  }, [c.name])
-
-  useQueryEffect(() => { loadFollowUp() }, [loadFollowUp])
-  useDataChanged(['reminder'], loadFollowUp)
 
   const upd = (k: keyof typeof editForm, v: string) => setEditForm(f => ({ ...f, [k]: v }))
   const phoneErr = editForm.phone.length > 0 && editForm.phone.length < 10
@@ -539,12 +524,6 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
     else setDeleting(false)
   }
 
-  const completeReminder = async (id: string) => {
-    const r = await apiFetch(`/api/data/reminders/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ completado: true }) })
-    if (r.ok) notifyDataChanged('reminder')
-  }
-
-  const now = new Date()
 
   return (
     <>
@@ -640,24 +619,6 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
                   {c.last_note && <div className="kv" style={{ gridColumn: '1 / -1' }}><div className="k">Última nota</div><div className="v" style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{c.last_note}</div></div>}
                 </div>
               </div>
-
-              {reminders.length > 0 && (
-                <div className="detail-section">
-                  <div className="detail-section-head">
-                    <h4>Recordatorios</h4>
-                  </div>
-                  {reminders.map(r => (
-                    <div key={r.id} className={`rem-row ${isOverdue(r.fecha_recordatorio, now) ? 'overdue' : ''}`}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="rem-row-when">{fmtDue(r.fecha_recordatorio, now)}</div>
-                        <div className="rem-row-text">{reminderTitle(r)}</div>
-                        {r.mine === false && <div className="rem-row-owner">De {r.owner_name}</div>}
-                      </div>
-                      {!readonly && r.mine !== false && <button className="notif-done" onClick={() => completeReminder(r.id)}>✓ Listo</button>}
-                    </div>
-                  ))}
-                </div>
-              )}
 
               {waModule && phone.length === 10 && <ContactWhatsApp contact={c} readonly={readonly} onUpdated={onUpdated} />}
 
