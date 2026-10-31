@@ -4,7 +4,6 @@ import { sendWhatsAppMedia, uploadWhatsAppMedia } from '@/lib/whatsapp'
 import { WHATSAPP_NOT_CONNECTED, getStoreWhatsAppCreds } from '@/lib/storeWhatsApp'
 import { contactForPhone } from '@/lib/whatsappInbox'
 import { normalizePhone, toWhatsAppNumber } from '@/lib/phone'
-import { isWindowOpen } from '@/lib/whatsappSafety'
 import {
   MAX_CAPTION, MAX_SEND_BYTES, SEND_LABELS, SEND_TYPES, cleanFilename, contentMatches, fmtSize, sendMimeOf,
 } from '@/lib/whatsappFiles'
@@ -51,14 +50,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const kind = SEND_TYPES[mime]
   const filename = cleanFilename(file.name)
 
-  // Ventana de 24 h: se revisa antes de subir nada a Meta
   const supabase = getServerSupabase()
-  const { data: lastInbound } = await supabase.from('whatsapp_messages').select('created_at')
-    .eq('store_id', ctx.storeId).eq('phone', phone).eq('direction', 'inbound')
-    .order('created_at', { ascending: false }).limit(1).maybeSingle()
-  if (!isWindowOpen(lastInbound?.created_at)) {
-    return jsonError('Pasaron más de 24 h desde el último mensaje del cliente: solo se puede enviar una plantilla aprobada.', 409)
-  }
 
   const creds = await getStoreWhatsAppCreds(ctx.storeId)
   if (!creds) return jsonError(WHATSAPP_NOT_CONNECTED, 409)
