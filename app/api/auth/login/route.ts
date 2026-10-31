@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { SESSION_COOKIE_OPTIONS } from '@/lib/sessionCookie'
 import { readJson } from '@/lib/validation'
 import { clientIp, DAY, hashKey, limitShared, MIN, tooMany } from '@/lib/rateLimit'
 import { TURNSTILE_ERROR, verifyTurnstile } from '@/lib/turnstile'
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll: () => req.cookies.getAll(),
         setAll: (list) => { sessionCookies.push(...list) },

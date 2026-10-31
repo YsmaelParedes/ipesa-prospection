@@ -443,7 +443,7 @@ function TeamStep({ store, canInviteAdmins, invites, locked, onInvite, onBack, o
     setTimeout(() => setCopied(c => (c === inv.id ? '' : c)), 2000)
   }
   const waLink = (inv: Invite) => `https://wa.me/?text=${encodeURIComponent(
-    `Hola, te invito a unirte al equipo de ${store.name} en ${APP_NAME}. Crea tu acceso aquí: ${inv.link}`,
+    `Hola, te invito a unirte al equipo de ${store.name} en ${APP_NAME}. Entra o crea tu cuenta con el correo al que te invité y acepta aquí: ${inv.link}`,
   )}`
 
   return (

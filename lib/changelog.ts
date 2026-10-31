@@ -36,6 +36,23 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.11.0',
+    date: '30 de octubre, 2026',
+    title: 'Unirse a un equipo con tu propia cuenta',
+    items: [
+      'Para aceptar una invitación ahora entras con tu cuenta. Si aún no tienes una, créala en Registro con el correo al que te invitaron y después abre el enlace de la invitación.',
+    ],
+  },
+  {
+    version: '4.10.2',
+    date: '29 de octubre, 2026',
+    title: 'Texto libre sin límite en la bandeja',
+    module: 'whatsapp',
+    items: [
+      'Ya puedes escribir texto libre y enviar archivos en cualquier conversación de la bandeja, sin esperar a que el cliente te escriba primero.',
+    ],
+  },
+  {
     version: '4.10.1',
     date: '29 de octubre, 2026',
     title: 'Avisos más claros',

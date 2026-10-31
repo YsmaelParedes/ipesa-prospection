@@ -103,7 +103,7 @@ export function TeamTab({ store }: { store: ClientStore }) {
     if (newLink && await copyText(newLink.link)) showToast('Enlace copiado')
   }
   const waShare = (link: string) => `https://wa.me/?text=${encodeURIComponent(
-    `Hola, te invito a unirte al equipo de ${store.name} en ${APP_NAME}. Crea tu acceso aquí: ${link}`,
+    `Hola, te invito a unirte al equipo de ${store.name} en ${APP_NAME}. Entra o crea tu cuenta con el correo al que te invité y acepta aquí: ${link}`,
   )}`
 
   const pending = invites.filter(i => i.status === 'valid' || i.status === 'expired')
@@ -213,7 +213,7 @@ export function TeamTab({ store }: { store: ClientStore }) {
       </Panel>
 
       {pending.length > 0 && (
-        <Panel icon={Ico.mail} tone="tAmber" title="Invitaciones pendientes" subtitle="Aún no crean su acceso. Puedes generar un enlace nuevo o cancelarlas.">
+        <Panel icon={Ico.mail} tone="tAmber" title="Invitaciones pendientes" subtitle="Aún no las aceptan. Puedes generar un enlace nuevo o cancelarlas.">
           <div className={s.members}>
             {pending.map(inv => {
               const tone = avatarTone(inv.email)

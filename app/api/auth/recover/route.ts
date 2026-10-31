@@ -12,12 +12,17 @@ export async function POST(req: NextRequest) {
   const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
   if (!EMAIL_RE.test(email) || email.length > 254) return jsonError('Escribe un correo válido')
   const ip = clientIp(req)
+  const tooManyLinks = () => tooMany('Ya enviamos varios enlaces. Revisa tu correo o intenta en una hora.', 60 * 60)
   if (!(await limitShared([
     { key: `recover:ip:${ip}`, max: 5, windowMs: HOUR },
     { key: `recover:ipday:${ip}`, max: 15, windowMs: DAY },
-    { key: `recover:acct:${hashKey(email)}`, max: 3, windowMs: HOUR },
-  ]))) return tooMany('Ya enviamos varios enlaces. Revisa tu correo o intenta en una hora.', 60 * 60)
+  ]))) return tooManyLinks()
   if (!(await verifyTurnstile(body?.captcha, req, 'recover'))) return jsonError(TURNSTILE_ERROR, 403)
+  // El cupo por cuenta se cuenta después del captcha: si no, cualquiera podría
+  // gastarlo con el correo de otra persona y dejarla sin poder recuperar su acceso
+  if (!(await limitShared([
+    { key: `recover:acct:${hashKey(email)}`, max: 3, windowMs: HOUR },
+  ]))) return tooManyLinks()
 
   const supabase = await getAuthClient()
   const { error } = await supabase.auth.resetPasswordForEmail(email, {

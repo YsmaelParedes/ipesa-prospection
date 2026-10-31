@@ -81,3 +81,22 @@ test('the database limit error becomes a clear message', () => {
   assert.equal(remainingSlots(50, 60), 0)
   assert.equal(remainingSlots(null, 999), null)
 })
+
+test('avisos push: en Litro solo el administrador principal; con plan de equipo, todos', () => {
+  const { audienceUsers, mainAdminOf } = require('../lib/stores.ts')
+  const members = [
+    { user_id: 'a-old', role: 'admin' },
+    { user_id: 'creator', role: 'admin' },
+    { user_id: 'seller', role: 'employee' },
+  ]
+  const litro = { plan: 'litro', paid_until: null, created_by: 'creator' }
+  assert.deepEqual(audienceUsers(litro, members, NOW), ['creator'])
+  // Si quien abrió la tienda ya no es administrador activo, el más antiguo
+  assert.deepEqual(audienceUsers({ ...litro, created_by: 'gone' }, members, NOW), ['a-old'])
+  assert.deepEqual(audienceUsers(litro, [{ user_id: 'seller', role: 'employee' }], NOW), [])
+  assert.deepEqual(audienceUsers({ plan: 'galon', paid_until: null, created_by: 'creator' }, members, NOW), ['a-old', 'creator', 'seller'])
+  // Cortesía vencida cuenta como Litro: el equipo deja de recibir avisos
+  const expired = { plan: 'cubeta', paid_until: new Date(NOW - 10 * DAY).toISOString(), created_by: 'creator' }
+  assert.deepEqual(audienceUsers(expired, members, NOW), ['creator'])
+  assert.equal(mainAdminOf(null, []), null)
+})

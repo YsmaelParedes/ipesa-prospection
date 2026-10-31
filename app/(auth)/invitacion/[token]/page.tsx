@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { AuthAlert, AuthField, AuthHeader, AuthIcon, PasswordField, SubmitButton } from '@/components/AuthUI'
+import { AuthAlert, AuthHeader, AuthIcon, SubmitButton } from '@/components/AuthUI'
 import { ROLE_LABELS } from '@/lib/stores'
 import { forgetPendingInvite, rememberPendingInvite } from '@/lib/pendingInvite'
 import { signOut } from '@/lib/signOut'
@@ -12,7 +12,6 @@ type Info = {
   role: 'admin' | 'employee'
   email: string
   status: 'valid' | 'expired' | 'used' | 'revoked'
-  accountExists: boolean
   signedInAs: { email: string; matches: boolean } | null
 }
 
@@ -26,11 +25,8 @@ export default function InvitationPage({ params }: { params: Promise<{ token: st
   const { token } = use(params)
   const [info, setInfo]         = useState<Info | null>(null)
   const [loadError, setLoadErr] = useState('')
-  const [name, setName]         = useState('')
-  const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
-  const [confirmSent, setConfirmSent] = useState(false)
 
   useEffect(() => {
     fetch(`/api/invitations/${encodeURIComponent(token)}`)
@@ -48,18 +44,9 @@ export default function InvitationPage({ params }: { params: Promise<{ token: st
     setError('')
     setLoading(true)
     try {
-      const res = await fetch(`/api/invitations/${encodeURIComponent(token)}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(info?.signedInAs ? {} : { name, password }),
-      })
+      const res = await fetch(`/api/invitations/${encodeURIComponent(token)}`, { method: 'POST' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setError(data.error || 'No se pudo aceptar la invitación.'); return }
-      if (data.needsConfirmation) {
-        // Si confirma en este mismo dispositivo, /bienvenida lo regresa aquí
-        rememberPendingInvite(token)
-        setConfirmSent(true)
-        return
-      }
       forgetPendingInvite()
       window.location.href = '/'
     } catch {
@@ -79,21 +66,6 @@ export default function InvitationPage({ params }: { params: Promise<{ token: st
     )
   }
   if (!info) return <div className="auth-loading"><span className="auth-spinner dark" /></div>
-
-  if (confirmSent) {
-    return (
-      <div className="auth-done">
-        <div className="auth-done-icon"><AuthIcon.inbox /></div>
-        <h1 className="auth-title">Confirma tu correo</h1>
-        <p className="auth-sub">
-          Te enviamos un enlace a <strong>{info.email}</strong>. Ábrelo para activar tu cuenta y entrar a <strong>{info.store.name}</strong>.
-        </p>
-        <AuthAlert kind="info">
-          Si lo abres en otro dispositivo, después vuelve a abrir el enlace de tu invitación. ¿No te llegó? Revisa spam o promociones.
-        </AuthAlert>
-      </div>
-    )
-  }
 
   const roleLabel = ROLE_LABELS[info.role].toLowerCase()
   const head = (
@@ -142,29 +114,19 @@ export default function InvitationPage({ params }: { params: Promise<{ token: st
     )
   }
 
-  if (info.accountExists) {
-    return (
-      <>
-        <AuthHeader title="Únete al equipo" />
-        {head}
-        <AuthAlert kind="info">Ya tienes una cuenta con <strong>{info.email}</strong>. Inicia sesión para aceptar.</AuthAlert>
-        <Link href={`/login?next=${encodeURIComponent(`/invitacion/${token}`)}`} className="auth-submit as-link">Iniciar sesión y aceptar</Link>
-      </>
-    )
-  }
-
+  // Sin sesión: la invitación no crea cuentas. Entra con la cuenta de ese
+  // correo o créala en Registro; al confirmar el correo en este dispositivo,
+  // /bienvenida lo regresa aquí para aceptar.
   return (
     <>
-      <AuthHeader title="Únete al equipo" subtitle={<>Crea tu acceso con el correo <strong>{info.email}</strong>.</>} />
+      <AuthHeader title="Únete al equipo" subtitle={<>La invitación es para <strong>{info.email}</strong>. Entra con esa cuenta para aceptarla.</>} />
       {head}
-      {error && <AuthAlert>{error}</AuthAlert>}
-      <form onSubmit={accept} className="auth-form">
-        <AuthField label="Tu nombre" icon={AuthIcon.user} value={name} onChange={e => setName(e.target.value)}
-          autoComplete="name" autoFocus required maxLength={60} placeholder="Nombre y apellido" />
-        <PasswordField label="Crea tu contraseña" value={password} onChange={setPassword} showStrength autoComplete="new-password" />
-        <SubmitButton loading={loading}>Unirme a la tienda</SubmitButton>
-      </form>
-      <p className="auth-fine">Al unirte aceptas los <Link href="/terminos" className="auth-link">términos</Link> y el <Link href="/privacidad" className="auth-link">aviso de privacidad</Link>.</p>
+      <Link href={`/login?next=${encodeURIComponent(`/invitacion/${token}`)}`} className="auth-submit as-link">Iniciar sesión y aceptar</Link>
+      <p className="auth-alt">
+        ¿Aún no tienes cuenta?{' '}
+        <Link href="/registro" className="auth-link strong" onClick={() => rememberPendingInvite(token)}>Crea tu cuenta con ese correo</Link>
+        {' '}y después vuelve a abrir este enlace.
+      </p>
     </>
   )
 }

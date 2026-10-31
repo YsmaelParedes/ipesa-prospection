@@ -4,7 +4,8 @@
  * entradas del webhook (la URL original y la URL propia de cada tienda).
  */
 import { timingSafeEqual } from 'node:crypto'
-import { getServerSupabase } from './supabase-server'
+import { getServerSupabase, storeAudience } from './supabase-server'
+import { effectiveModules } from './stores'
 import { friendlyWhatsAppError } from './whatsapp'
 import { fmtPhone, normalizePhone, phoneVariants } from './phone'
 import { isOptOutMessage } from './whatsappSafety'
@@ -267,9 +268,11 @@ async function saveAgentEchoes(supabase: Supabase, storeId: string, echoes: any[
 export async function notifyStoreTeam(storeId: string, items: InboundNotification[]) {
   if (!items.length || !configureWebPush()) return
   const supabase = getServerSupabase()
-  const { data: members } = await supabase.from('store_members').select('user_id')
-    .eq('store_id', storeId).eq('status', 'active')
-  const userIds = (members ?? []).map(m => m.user_id)
+  // Solo quien puede abrir la bandeja: con WhatsApp vigente en el plan y, en
+  // Litro, solo el administrador principal
+  const audience = (await storeAudience([storeId])).get(storeId)
+  if (!audience || !effectiveModules(audience.store).whatsapp) return
+  const userIds = [...audience.users]
   if (!userIds.length) return
   const { data: subs } = await supabase
     .from('push_subscriptions')

@@ -82,7 +82,7 @@ export default function RegisterPage() {
         <SubmitButton loading={loading} disabled={!!TURNSTILE_SITE_KEY && !captcha}>{TURNSTILE_SITE_KEY && !captcha ? 'Verificando…' : 'Crear cuenta gratis'}</SubmitButton>
       </form>
       <p className="auth-alt">¿Ya tienes cuenta? <Link href="/login" className="auth-link strong">Inicia sesión</Link></p>
-      <p className="auth-fine">¿Te invitaron a una tienda? Abre el enlace de tu invitación: ahí creas tu contraseña.</p>
+      <p className="auth-fine">¿Te invitaron a una tienda? Regístrate con el correo al que te invitaron y después abre el enlace de tu invitación para unirte.</p>
     </>
   )
 }

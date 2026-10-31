@@ -79,11 +79,11 @@ export async function GET(req: NextRequest) {
       })
 
     const segmentOf = new Map(segments.map(s => [s.id, s.segment || 'Sin segmento']))
-    const bySegment = new Map<string, Row[]>()
+    const bySegment = new Map<string, number>()
     for (const r of rows) {
       if (r.kind === 'nota') continue
       const s = segmentOf.get(r.contact_id) ?? 'Sin segmento'
-      bySegment.set(s, [...(bySegment.get(s) ?? []), r])
+      bySegment.set(s, (bySegment.get(s) ?? 0) + 1)
     }
     const month = countActivities(rows)
 
@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
       people,
       totals: { prospects: prospects.count ?? 0, clients: clients.count ?? 0, quoted: month.quoted, sold: month.sold },
       dayByResult: byResult(day),
-      monthBySegment: Array.from(bySegment, ([segment, list]) => ({ segment, count: list.length }))
+      monthBySegment: Array.from(bySegment, ([segment, count]) => ({ segment, count }))
         .sort((a, b) => b.count - a.count),
     })
   } catch (error) {

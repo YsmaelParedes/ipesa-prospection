@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { ACTIVE_STORE_COOKIE } from '@/lib/supabase-server'
+import { SESSION_COOKIE_OPTIONS } from '@/lib/sessionCookie'
 
 export async function POST(req: NextRequest) {
   const res = NextResponse.json({ ok: true })
@@ -9,6 +10,7 @@ export async function POST(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: SESSION_COOKIE_OPTIONS,
       cookies: {
         getAll: () => req.cookies.getAll(),
         setAll: (list) => list.forEach(({ name, value, options }) => res.cookies.set(name, value, options)),

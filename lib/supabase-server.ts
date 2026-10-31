@@ -2,8 +2,9 @@ import { databaseFetch, measure } from './serverTiming'
 import { createServerClient } from '@supabase/ssr'
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { SESSION_COOKIE_OPTIONS } from './sessionCookie'
 import {
-  effectiveModules, effectivePlan, isStoreAdminRole, normalizeModules, storeAccess,
+  audienceUsers, effectiveModules, effectivePlan, isStoreAdminRole, mainAdminOf, normalizeModules, storeAccess,
   type PlanId, type StoreAccess, type StoreModule, type StoreModules, type StoreRole, type StoreStatus,
 } from './stores'
 
@@ -30,6 +31,7 @@ export function getServerSupabase(): SupabaseClient {
 export async function getAuthClient() {
   const cookieStore = await cookies()
   return createServerClient(SUPABASE_URL, SUPABASE_ANON, {
+    cookieOptions: SESSION_COOKIE_OPTIONS,
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll: (list) => {
@@ -127,9 +129,33 @@ export async function getMainAdmin(storeId: string): Promise<string | null> {
     db.from('store_members').select('user_id').eq('store_id', storeId).eq('role', 'admin').eq('status', 'active')
       .order('created_at', { ascending: true }).order('user_id', { ascending: true }),
   ])
-  const ids = (admins.data ?? []).map(a => a.user_id as string)
-  const creator = store.data?.created_by as string | null | undefined
-  return creator && ids.includes(creator) ? creator : (ids[0] ?? null)
+  return mainAdminOf(store.data?.created_by as string | null | undefined, (admins.data ?? []).map(a => a.user_id as string))
+}
+
+export type StoreAudience = { store: { plan: string; paid_until: string | null; modules: unknown; status: string; timezone: string | null }; users: Set<string> }
+
+/**
+ * Quién puede recibir avisos con datos de cada tienda (push de WhatsApp,
+ * recordatorios, agenda): sus miembros activos y, en el plan Litro, solo el
+ * administrador principal, igual que requireStore. Los demás quedan en espera
+ * y no deben ver datos de la tienda por ningún canal.
+ */
+export async function storeAudience(storeIds: string[]): Promise<Map<string, StoreAudience>> {
+  const out = new Map<string, StoreAudience>()
+  if (!storeIds.length) return out
+  const db = getServerSupabase()
+  const [stores, members] = await Promise.all([
+    db.from('stores').select('id, plan, paid_until, modules, status, timezone, created_by').in('id', storeIds),
+    db.from('store_members').select('store_id, user_id, role').in('store_id', storeIds).eq('status', 'active')
+      .order('created_at', { ascending: true }).order('user_id', { ascending: true }),
+  ])
+  const error = stores.error ?? members.error
+  if (error) throw error
+  for (const s of stores.data ?? []) {
+    const rows = (members.data ?? []).filter(m => m.store_id === s.id)
+    out.set(s.id, { store: s, users: new Set(audienceUsers(s, rows)) })
+  }
+  return out
 }
 
 /** Tienda activa: la de la cookie si el usuario pertenece a ella; si no, la más antigua. */

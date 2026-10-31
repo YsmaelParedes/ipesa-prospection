@@ -98,6 +98,29 @@ export function effectivePlan(s: PlanFields, now = Date.now()): PlanId {
 }
 
 /**
+ * Administrador principal: quien abrió la tienda si sigue como administrador
+ * activo; si no, el más antiguo (adminIds ya ordenados por antigüedad).
+ */
+export function mainAdminOf(creator: string | null | undefined, adminIds: string[]): string | null {
+  return creator && adminIds.includes(creator) ? creator : (adminIds[0] ?? null)
+}
+
+/**
+ * Quién de los miembros activos (ordenados por antigüedad) puede ver datos de
+ * la tienda fuera de la app (avisos push): todos, salvo en Litro, donde solo
+ * entra el administrador principal.
+ */
+export function audienceUsers(
+  store: PlanFields & { created_by?: string | null },
+  activeMembers: { user_id: string; role: string }[],
+  now = Date.now(),
+): string[] {
+  if (effectivePlan(store, now) !== 'litro') return activeMembers.map(m => m.user_id)
+  const main = mainAdminOf(store.created_by, activeMembers.filter(m => m.role === 'admin').map(m => m.user_id))
+  return main ? [main] : []
+}
+
+/**
  * Módulos que la tienda puede usar: WhatsApp si su plan lo incluye y el asesor
  * lo encendió; Campañas solo encima de WhatsApp; Fórmulas tal como estén en la base.
  */

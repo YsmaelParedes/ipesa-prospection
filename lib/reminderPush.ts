@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from 'node:crypto'
 import type { NextRequest } from 'next/server'
-import { getServerSupabase } from './supabase-server'
+import { getServerSupabase, storeAudience } from './supabase-server'
 import { sendPushToSubscriptions, type PushPayload, type PushSub } from './push'
 import { remTypeInfo } from './crm'
 import { DEFAULT_TZ, naiveIso, zonedIso } from './datetime'
@@ -77,23 +77,22 @@ async function loadAudience(rows: { store_id: string; user_id: string }[], now: 
   const storeIds = uniq(rows.map(r => r.store_id))
   const userIds  = uniq(rows.map(r => r.user_id))
   const supabase = getServerSupabase()
-  const [stores, members, subs] = await Promise.all([
-    supabase.from('stores').select('id, status, timezone').in('id', storeIds),
-    supabase.from('store_members').select('store_id, user_id').in('store_id', storeIds).in('user_id', userIds).eq('status', 'active'),
+  const [audience, subs] = await Promise.all([
+    storeAudience(storeIds),
     supabase.from('push_subscriptions').select('user_id, endpoint, p256dh, auth').in('user_id', userIds),
   ])
-  const error = stores.error ?? members.error ?? subs.error
-  if (error) throw error
+  if (subs.error) throw subs.error
 
   const zone = new Map<string, string>()
-  const live = new Set<string>()
-  for (const s of stores.data ?? []) {
-    zone.set(s.id, s.timezone || DEFAULT_TZ)
-    if (s.status === 'trial' || s.status === 'active') live.add(s.id)
-  }
   // El aviso lleva nombres y notas de clientes de la tienda: solo para quien
-  // sigue en su equipo y mientras la tienda esté vigente.
-  const allowed = new Set((members.data ?? []).filter(m => live.has(m.store_id)).map(m => `${m.store_id}:${m.user_id}`))
+  // sigue en su equipo (en Litro, solo el administrador principal) y mientras
+  // la tienda esté vigente.
+  const allowed = new Set<string>()
+  for (const [storeId, { store, users }] of audience) {
+    zone.set(storeId, store.timezone || DEFAULT_TZ)
+    if (store.status !== 'trial' && store.status !== 'active') continue
+    for (const uid of users) allowed.add(`${storeId}:${uid}`)
+  }
 
   const devices = new Map<string, PushSub[]>()
   for (const { user_id, ...sub } of subs.data ?? []) devices.set(user_id, [...(devices.get(user_id) ?? []), sub])
