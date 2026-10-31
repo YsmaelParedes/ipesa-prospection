@@ -26,7 +26,11 @@ export function PlanIcon({ plan, className }: { plan: PlanId; className?: string
   const inset = bucket ? 4 : 0
   const labelTop = top + 9
   const labelBottom = bottom - 7
-  const edge = { stroke: '#46515B', strokeWidth: 1, strokeLinejoin: 'round' as const }
+  // La marca ocupa x 4–58 / y 10–55 de su lienzo de 64: se escala con aire arriba y abajo y se centra en la etiqueta.
+  const markScale = Math.min(22, (labelBottom - labelTop - 4) / 45 * 64) / 64
+  const markX = 32 - 31 * markScale
+  const markY = (labelTop + labelBottom) / 2 + 1.8 - 32.5 * markScale
+  const edge ={ stroke: '#46515B', strokeWidth: 1, strokeLinejoin: 'round' as const }
 
   return (
     <svg viewBox="0 0 64 64" className={className} aria-hidden="true" focusable="false" fill="none">
@@ -68,7 +72,7 @@ export function PlanIcon({ plan, className }: { plan: PlanId; className?: string
 
       {/* La silueta original de la marca se imprime en blanco sobre la etiqueta. */}
       <path d={`M${left + 2} ${labelBottom - 2}L${right - 2} ${labelTop + 2}L${right - 2.6} ${labelTop + 6}L${left + inset + 1} ${labelBottom + .5}Z`} fill={paint.light} opacity=".45" />
-      <g transform={`translate(${small ? 23 : 21} ${labelTop + (small ? 1 : 2)}) scale(${small ? 18 / 64 : 22 / 64})`}>
+      <g transform={`translate(${markX} ${markY}) scale(${markScale})`}>
         <rect width="64" height="64" fill="#FFF" mask={`url(#${brand})`} />
       </g>
       <path d={`M${left + 4} ${top + 6}L${left + inset + 3} ${bottom - 5}`} stroke="#FFF" strokeWidth="1.5" opacity=".55" strokeLinecap="round" />

@@ -36,6 +36,14 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '4.11.1',
+    date: '31 de octubre, 2026',
+    title: 'Ajustes en los planes',
+    items: [
+      'En Configuración › Plan, la franja de colores del plan activo ya sigue el borde redondeado de la tarjeta y el logo de cada envase queda centrado en su etiqueta.',
+    ],
+  },
+  {
     version: '4.11.0',
     date: '30 de octubre, 2026',
     title: 'Unirse a un equipo con tu propia cuenta',
