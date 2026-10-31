@@ -32,7 +32,7 @@ html,body{margin:0;width:960px;height:640px;overflow:hidden;background:#fff;font
 .winTop{display:flex;align-items:center;gap:7px;padding:11px 14px;border-bottom:1px solid var(--line);font-size:12px;font-weight:700;color:var(--muted)}
 .winTop i{width:9px;height:9px;border-radius:50%;background:var(--paper-2)}
 .logo{display:inline-flex;align-items:center;gap:8px;font-family:var(--display);font-weight:800;color:var(--ink)}
-.mark{width:20px;height:20px;border-radius:6px;overflow:hidden;display:flex;flex-direction:column}.mark b{flex:1}
+.mark{width:24px;height:24px;flex-shrink:0}
 .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;flex-shrink:0}
 .tag{font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap}
 .track{height:10px;border-radius:999px;background:var(--paper-2);overflow:hidden}
@@ -107,12 +107,17 @@ html,body{margin:0;width:960px;height:640px;overflow:hidden;background:#fff;font
 .end{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#fff;opacity:0;transition:opacity .6s}
 .end.on{opacity:1}
 .end .big{display:flex;align-items:center;gap:14px;font-family:var(--display);font-weight:800;font-size:56px;letter-spacing:-1.5px}
-.end .big .mark{width:52px;height:52px;border-radius:14px}
+.end .big .mark{width:64px;height:64px}
 .end p{margin:0;font-family:var(--display);font-size:28px;font-weight:700}
 .end .cta{margin-top:6px;padding:13px 24px;border-radius:12px;background:var(--brand);color:#fff;font-weight:800;font-size:17px;box-shadow:0 12px 26px -12px rgba(229,10,38,.9)}
 </style>
 </head>
 <body>
+  <!-- La marca de Matices, la misma de public/brand-mark.svg -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="brandMark" viewBox="0 0 64 64">
+    <rect x="6" y="10" width="40" height="12" rx="6" fill="#E2E415"/><rect x="14" y="21" width="44" height="12" rx="6" fill="#00BBD9"/>
+    <rect x="4" y="32" width="46" height="12" rx="6" fill="#E51585"/><rect x="16" y="43" width="42" height="12" rx="6" fill="#FD0B2B"/>
+  </symbol></svg>
 <div class="stage">
   <div class="bar"></div>
 
@@ -122,7 +127,7 @@ html,body{margin:0;width:960px;height:640px;overflow:hidden;background:#fff;font
     <div class="phone rise d1"><div class="screen">
       <div class="clock"><b>8:00</b><span>martes 27 de octubre</span></div>
       <div class="notif" id="notif">
-        <div class="h"><span class="mark"><b style="background:#E2E415"></b><b style="background:#00BBD9"></b><b style="background:#E51585"></b><b style="background:#E50A26"></b></span>MATICES · ahora</div>
+        <div class="h"><svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#brandMark"/></svg>MATICES · ahora</div>
         <strong>📋 Hoy tienes 6 pendientes</strong>
         <p>9:00 Llamar a Ferretería Arce<br>11:30 Cotizar a Hotel Sol<br>y 4 más · 1 vencido</p>
       </div>
@@ -133,7 +138,7 @@ html,body{margin:0;width:960px;height:640px;overflow:hidden;background:#fff;font
   <section class="scene" id="s2">
     <div class="cap rise">Abres y <span class="spec">ya sabes qué sigue</span><div class="sub">Tu meta del día y cómo va tu tienda, en una sola pantalla.</div></div>
     <div class="win rise d1">
-      <div class="winTop"><i></i><i></i><i></i><span class="logo" style="margin-left:8px"><span class="mark"><b style="background:#E2E415"></b><b style="background:#00BBD9"></b><b style="background:#E51585"></b><b style="background:#E50A26"></b></span>Matices</span></div>
+      <div class="winTop"><i></i><i></i><i></i><span class="logo" style="margin-left:8px"><svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#brandMark"/></svg>Matices</span></div>
       <div class="dash">
         <div class="hello"><div><small>Buenos días</small><strong>Valeria</strong></div><span class="tag" style="background:var(--warning-soft);color:var(--warning)">6 para hoy</span></div>
         <div class="ringWrap">
@@ -186,7 +191,7 @@ html,body{margin:0;width:960px;height:640px;overflow:hidden;background:#fff;font
   </section>
 
   <div class="end" id="end">
-    <div class="big"><span class="mark"><b style="background:#E2E415"></b><b style="background:#00BBD9"></b><b style="background:#E51585"></b><b style="background:#E50A26"></b></span>Matices</div>
+    <div class="big"><svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><use href="#brandMark"/></svg>Matices</div>
     <p>El CRM para tiendas de pintura</p>
     <span class="cta">Empieza gratis</span>
   </div>
