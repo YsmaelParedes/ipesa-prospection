@@ -14,7 +14,7 @@
  * tiendas que no lo tienen.
  *
  * Versionado semántico MAYOR.MENOR.CORRECCIÓN:
- *  · MAYOR: un cambio grande en cómo se usa la app (p. ej. 2.0.0, multi-tienda).
+ *  · MAYOR: un cambio grande en cómo se usa la app Seguimos en la 1: la 2.0.0 será el próximo cambio grande.
  *  · MENOR: funciones nuevas o cambios visibles.
  *  · CORRECCIÓN: arreglos y ajustes pequeños.
  * Mantener package.json con el mismo número.
@@ -36,7 +36,7 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: '4.11.1',
+    version: '1.32.1',
     date: '31 de octubre, 2026',
     title: 'Ajustes en los planes',
     items: [
@@ -44,7 +44,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.11.0',
+    version: '1.32.0',
     date: '30 de octubre, 2026',
     title: 'Unirse a un equipo con tu propia cuenta',
     items: [
@@ -52,7 +52,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.10.2',
+    version: '1.31.2',
     date: '29 de octubre, 2026',
     title: 'Texto libre sin límite en la bandeja',
     module: 'whatsapp',
@@ -61,7 +61,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.10.1',
+    version: '1.31.1',
     date: '29 de octubre, 2026',
     title: 'Avisos más claros',
     items: [
@@ -69,7 +69,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.10.0',
+    version: '1.31.0',
     date: '29 de octubre, 2026',
     title: 'Avisos a la hora de cada recordatorio',
     items: [
@@ -79,7 +79,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.9.1',
+    version: '1.30.1',
     date: '29 de octubre, 2026',
     title: 'Cerrar seguimiento y programar desde el Sistema Comercial',
     items: [
@@ -88,7 +88,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.9.0',
+    version: '1.30.0',
     date: '27 de octubre, 2026',
     title: 'Sistema Comercial y Agenda conectados',
     items: [
@@ -98,7 +98,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.8.0',
+    version: '1.29.0',
     date: '27 de octubre, 2026',
     title: 'Sistema Comercial más fácil',
     items: [
@@ -112,7 +112,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.7.3',
+    version: '1.28.3',
     date: '27 de octubre, 2026',
     title: 'Planes',
     items: [
@@ -120,7 +120,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.7.2',
+    version: '1.28.2',
     date: '24 de octubre, 2026',
     title: 'Sistema Comercial',
     items: [
@@ -129,7 +129,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.7.1',
+    version: '1.28.1',
     date: '24 de octubre, 2026',
     title: 'Ajustes y correcciones',
     items: [
@@ -142,7 +142,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.7.0',
+    version: '1.28.0',
     date: '24 de octubre, 2026',
     title: 'Agente de IA: lo que sabe y sus reglas',
     module: 'whatsapp',
@@ -154,7 +154,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.6.0',
+    version: '1.27.0',
     date: '24 de octubre, 2026',
     title: 'Contactos más rápido y guías de inicio',
     items: [
@@ -167,7 +167,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.5.0',
+    version: '1.26.0',
     date: '23 de octubre, 2026',
     title: 'Sistema comercial nuevo',
     items: [
@@ -182,7 +182,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.4.0',
+    version: '1.25.0',
     date: '22 de octubre, 2026',
     title: 'Cambio en los avisos de la Agenda',
     items: [
@@ -191,7 +191,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.3.0',
+    version: '1.24.0',
     date: '22 de octubre, 2026',
     title: 'Configura tu agente de IA',
     module: 'whatsapp',
@@ -203,7 +203,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.2.0',
+    version: '1.23.0',
     date: '22 de octubre, 2026',
     title: 'Trabaja junto con el agente de IA',
     module: 'whatsapp',
@@ -213,7 +213,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.1.0',
+    version: '1.22.0',
     date: '22 de octubre, 2026',
     title: 'El agente de IA en la bandeja',
     module: 'whatsapp',
@@ -223,14 +223,14 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.0.2',
+    version: '1.21.2',
     date: '22 de octubre, 2026',
     title: 'WhatsApp se desplaza de nuevo',
     module: 'whatsapp',
     items: ['Ya puedes bajar en la lista de conversaciones, el chat, la ficha del contacto y los resultados de WhatsApp.'],
   },
   {
-    version: '4.0.1',
+    version: '1.21.1',
     date: '21 de octubre, 2026',
     title: 'Tiendas gratis sin uso',
     items: [
@@ -238,7 +238,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '4.0.0',
+    version: '1.21.0',
     date: '20 de octubre, 2026',
     title: 'Sistema comercial (reemplaza a Leads)',
     items: [
@@ -253,7 +253,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '3.2.1',
+    version: '1.20.1',
     date: '20 de octubre, 2026',
     title: 'Planes más fáciles de distinguir',
     items: [
@@ -261,7 +261,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '3.2.0',
+    version: '1.20.0',
     date: '20 de octubre, 2026',
     title: 'Botón de Ayuda',
     items: [
@@ -269,7 +269,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '3.1.2',
+    version: '1.19.2',
     date: '20 de octubre, 2026',
     title: 'Correos de contacto',
     items: [
@@ -277,7 +277,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '3.0.0',
+    version: '1.18.0',
     date: '18 de octubre, 2026',
     title: 'Planes Litro, Galón y Cubeta',
     items: [
@@ -289,7 +289,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.13.0',
+    version: '1.17.0',
     date: '17 de octubre, 2026',
     title: 'Nuevo sitio de Matices',
     items: [
@@ -297,7 +297,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.12.0',
+    version: '1.16.0',
     date: '17 de octubre, 2026',
     title: 'Exportar e importar, solo para el dueño',
     items: [
@@ -305,7 +305,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.11.0',
+    version: '1.15.0',
     date: '17 de octubre, 2026',
     title: 'Listas y casillas con el diseño de Matices',
     items: [
@@ -315,7 +315,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.10.0',
+    version: '1.14.0',
     date: '16 de octubre, 2026',
     title: 'Pantalla clara cuando algo falla',
     items: [
@@ -323,7 +323,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.9.0',
+    version: '1.13.0',
     date: '16 de octubre, 2026',
     title: 'Nuevo nombre y logo: Matices',
     items: [
@@ -333,7 +333,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.8.0',
+    version: '1.12.0',
     date: '16 de octubre, 2026',
     title: 'WhatsApp para tu tienda',
     items: [
@@ -343,7 +343,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.7.1',
+    version: '1.11.1',
     date: '16 de octubre, 2026',
     title: 'Avisos de Meta más claros',
     module: 'whatsapp',
@@ -352,7 +352,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.7.0',
+    version: '1.11.0',
     date: '16 de octubre, 2026',
     title: 'Campañas de WhatsApp con las reglas oficiales de Meta',
     module: 'campaigns',
@@ -366,7 +366,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.6.1',
+    version: '1.10.1',
     date: '15 de octubre, 2026',
     title: 'Ajustes en celular',
     items: [
@@ -377,7 +377,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.6.0',
+    version: '1.10.0',
     date: '15 de octubre, 2026',
     title: 'Envía archivos por WhatsApp',
     module: 'whatsapp',
@@ -388,16 +388,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.5.1',
+    version: '1.9.1',
     date: '15 de octubre, 2026',
     title: 'Novedades a tu ritmo',
     items: [
       'Las novedades ya no se abren solas al entrar: las consultas cuando quieras con el botón de la versión, abajo en el menú.',
-      'La app ahora usa números de versión (por ejemplo 2.5.1) en lugar de fechas.',
+      'La app ahora usa números de versión (por ejemplo 1.9.1) en lugar de fechas.',
     ],
   },
   {
-    version: '2.5.0',
+    version: '1.9.0',
     date: '15 de octubre, 2026',
     title: 'Descarga tu información y Configuración más simple',
     items: [
@@ -407,7 +407,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.4.0',
+    version: '1.8.0',
     date: '9 de octubre, 2026',
     title: 'Teléfonos mejor cuidados',
     items: [
@@ -421,7 +421,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.3.0',
+    version: '1.7.0',
     date: '6 de octubre, 2026',
     title: 'Fórmulas de Vintek',
     module: 'formulas',
@@ -431,7 +431,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.2.0',
+    version: '1.6.0',
     date: '2 de octubre, 2026',
     title: 'Avisos a tiempo',
     items: [
@@ -443,7 +443,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.1.0',
+    version: '1.5.0',
     date: '2 de octubre, 2026',
     title: 'Todo más ordenado y a la mano',
     items: [
@@ -457,7 +457,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: '2.0.0',
+    version: '1.4.0',
     date: '2 de octubre, 2026',
     title: 'Nueva imagen y tu tienda en la nube',
     items: [

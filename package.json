@@ -1,6 +1,6 @@
 {
   "name": "crm-pinturas",
-  "version": "4.11.1",
+  "version": "1.32.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
