@@ -47,7 +47,8 @@ export const absoluteUrl = (path: string) => `${SITE_URL}${path === '/' ? '' : p
  */
 export const OG_SIZE = { width: 1200, height: 630 }
 /** Imagen para compartir el enlace (app/og/route.tsx), con la misma ficha en todas las páginas. */
-const OG_IMAGE = { url: '/og', ...OG_SIZE, alt: `${APP_NAME} · ${APP_TAGLINE}` }
+// ?v=: WhatsApp y las redes guardan la imagen; subir el número al cambiarla
+const OG_IMAGE = { url: '/og?v=2', ...OG_SIZE, alt: `${APP_NAME} · ${APP_TAGLINE}` }
 
 export function pageMeta({ title, description, path }: { title: string; description: string; path: string }): Metadata {
   return {
