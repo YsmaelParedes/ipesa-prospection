@@ -4,7 +4,7 @@ import { useQueryEffect } from '@/lib/useCachedQuery'
 
 
 import { useCallback, useState } from 'react'
-import { Ico, Note, Panel, Spinner, api, send, useToast } from './ui'
+import { Card, Ico, Note, Spinner, api, cx, send, useToast } from './ui'
 import s from './configuracion.module.css'
 
 type ConfigItem = { id: string; type: string; label: string; created_at: string }
@@ -25,29 +25,43 @@ function chipColor(label: string) {
   return CHIP_PALETTES[Math.abs(h) % CHIP_PALETTES.length]
 }
 
-function CatalogPanel({ type, title, singular, subtitle, icon, tone, canEdit }: {
-  type: 'segment' | 'canal' | 'zone'; title: string; singular: string; subtitle: string
-  icon: typeof Ico.tag; tone?: 'tCyan' | 'tMagenta'; canEdit: boolean
-}) {
-  const [toast, showToast] = useToast()
-  const [items, setItems]       = useState<ConfigItem[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [label, setLabel]       = useState('')
-  const [error, setError]       = useState('')
-  const [saving, setSaving]     = useState(false)
-  const [confirmDel, setConfirmDel] = useState<string | null>(null)
+type CatalogType = 'segment' | 'canal' | 'zone'
+const CATALOGS: { type: CatalogType; title: string; singular: string; subtitle: string }[] = [
+  { type: 'segment', title: 'Segmentos', singular: 'segmento', subtitle: 'Tipos de cliente para tus contactos.' },
+  { type: 'canal',   title: 'Canales',   singular: 'canal',    subtitle: 'Cómo te conoció el cliente.' },
+  { type: 'zone',    title: 'Zonas',     singular: 'zona',     subtitle: 'Áreas de la ciudad para filtrar el sistema comercial.' },
+]
 
+/** Las tres listas se cargan juntas para mostrar cuántas opciones tiene cada pestaña. */
+function useCatalogs() {
+  const [lists, setLists] = useState<Record<CatalogType, ConfigItem[]> | null>(null)
+  const [error, setError] = useState('')
   const load = useCallback(async () => {
     try {
-      const d = await api<{ items: ConfigItem[] }>(`/api/data/config?type=${type}`)
-      setItems(d.items ?? [])
+      const all = await Promise.all(CATALOGS.map(c => api<{ items: ConfigItem[] }>(`/api/data/config?type=${c.type}`)))
+      setLists({ segment: all[0].items ?? [], canal: all[1].items ?? [], zone: all[2].items ?? [] })
+      setError('')
     } catch (err) {
       setError((err as Error).message)
-    } finally {
-      setLoading(false)
     }
-  }, [type])
+  }, [])
   useQueryEffect(() => { load() }, [load])
+  return { lists, error, load }
+}
+
+export function CatalogsTab({ canEdit }: { canEdit: boolean }) {
+  const [toast, showToast] = useToast()
+  const { lists, error: loadError, load } = useCatalogs()
+  const [active, setActive]   = useState<CatalogType>('segment')
+  const [label, setLabel]     = useState('')
+  const [error, setError]     = useState('')
+  const [saving, setSaving]   = useState(false)
+  const [confirmDel, setConfirmDel] = useState<string | null>(null)
+
+  const cat = CATALOGS.find(c => c.type === active)!
+  const items = lists?.[active] ?? []
+
+  const pick = (type: CatalogType) => { setActive(type); setLabel(''); setError(''); setConfirmDel(null) }
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,7 +71,7 @@ function CatalogPanel({ type, title, singular, subtitle, icon, tone, canEdit }: 
     setSaving(true)
     setError('')
     try {
-      await api('/api/data/config', send('POST', { type, label: trimmed }))
+      await api('/api/data/config', send('POST', { type: active, label: trimmed }))
       setLabel('')
       showToast(`"${trimmed}" agregado`)
       await load()
@@ -80,61 +94,69 @@ function CatalogPanel({ type, title, singular, subtitle, icon, tone, canEdit }: 
     await load()
   }
 
-  return (
-    <Panel icon={icon} tone={tone} title={title} subtitle={subtitle} actions={<span className={s.count}>{items.length}</span>}>
-      {loading ? <Spinner /> : (
-        <div className={s.list}>
-          {items.length === 0 && <div className={s.empty}>Aún no hay {title.toLowerCase()}.</div>}
-          {items.map(item => {
-            const { bg, color } = chipColor(item.label)
-            return (
-              <div key={item.id} className={s.item}>
-                <span className="chip" style={{ background: bg, color, fontSize: 12.5 }}><span className="chip-dot" style={{ background: color }} />{item.label}</span>
-                {canEdit && (
-                  <span className={s.itemActions}>
-                    {confirmDel === item.id ? (
-                      <>
-                        <span className={s.confirm}>¿Eliminar?</span>
-                        <button className={`${s.mini} ${s.miniDanger}`} onClick={() => remove(item)}>Sí</button>
-                        <button className={`${s.mini} ${s.miniGhost}`} onClick={() => setConfirmDel(null)}>No</button>
-                      </>
-                    ) : (
-                      <button className="icon-btn icon-btn-delete" onClick={() => setConfirmDel(item.id)} title="Eliminar" aria-label={`Eliminar ${item.label}`}><Ico.trash /></button>
-                    )}
-                  </span>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-      {canEdit && (
-        <form className={s.addRow} onSubmit={add}>
-          <input className={s.input} value={label} onChange={e => { setLabel(e.target.value); setError('') }} maxLength={100}
-            placeholder={`Nuevo ${singular}…`} aria-label={`Nuevo ${singular}`} />
-          <button type="submit" className="btn btn-primary" disabled={!label.trim() || saving} style={{ flexShrink: 0 }}>
-            <Ico.plus style={{ width: 14, height: 14 }} />{saving ? 'Guardando…' : 'Agregar'}
-          </button>
-        </form>
-      )}
-      {error && <div className={s.error}>{error}</div>}
-      {toast}
-    </Panel>
-  )
-}
+  if (loadError) return <Note kind="danger">{loadError}</Note>
 
-export function CatalogsTab({ canEdit }: { canEdit: boolean }) {
   return (
     <>
       {!canEdit && <Note>Solo un administrador puede cambiar estas opciones, porque afectan a todo el equipo.</Note>}
-      <div className={s.grid3}>
-        <CatalogPanel type="segment" title="Segmentos" singular="segmento" icon={Ico.tag} canEdit={canEdit}
-          subtitle="Tipos de cliente para tus contactos." />
-        <CatalogPanel type="canal" title="Canales" singular="canal" icon={Ico.channel} tone="tCyan" canEdit={canEdit}
-          subtitle="Cómo te conoció el cliente." />
-        <CatalogPanel type="zone" title="Zonas" singular="zona" icon={Ico.pin} tone="tMagenta" canEdit={canEdit}
-          subtitle="Áreas de la ciudad para filtrar el sistema comercial." />
-      </div>
+      <Card>
+        <div className={s.catTabs} role="tablist" aria-label="Catálogos">
+          {CATALOGS.map(c => (
+            <button key={c.type} type="button" role="tab" aria-selected={active === c.type}
+              className={cx(s.catTab, active === c.type && s.catTabOn)} onClick={() => pick(c.type)}>
+              {c.title}<span className={s.catCount}>{lists ? lists[c.type].length : '…'}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className={s.cardBody} role="tabpanel" aria-label={cat.title}>
+          <p className={s.catHint}>{cat.subtitle}</p>
+
+          {canEdit && (
+            <form className={s.catAdd} onSubmit={add}>
+              <input className={s.input} value={label} onChange={e => { setLabel(e.target.value); setError('') }} maxLength={100}
+                placeholder={`Nuevo ${cat.singular}…`} aria-label={`Nuevo ${cat.singular}`} />
+              <button type="submit" className="btn btn-primary" disabled={!label.trim() || saving}>
+                <Ico.plus style={{ width: 14, height: 14 }} />{saving ? 'Guardando…' : 'Agregar'}
+              </button>
+            </form>
+          )}
+          {error && <div className={s.error}>{error}</div>}
+
+          {!lists ? <Spinner /> : items.length === 0 ? (
+            <div className={s.empty}>Aún no hay {cat.title.toLowerCase()}.</div>
+          ) : (
+            <ul className={s.chips}>
+              {items.map(item => {
+                const { bg, color } = chipColor(item.label)
+                const asking = confirmDel === item.id
+                return (
+                  <li key={item.id} className={cx(s.catChip, asking && s.catChipAsk)} style={asking ? undefined : { background: bg, color }}>
+                    {asking ? (
+                      <>
+                        <span>¿Eliminar «{item.label}»?</span>
+                        <button type="button" className={cx(s.mini, s.miniDanger)} onClick={() => remove(item)}>Sí</button>
+                        <button type="button" className={cx(s.mini, s.miniGhost)} onClick={() => setConfirmDel(null)}>No</button>
+                      </>
+                    ) : (
+                      <>
+                        <span className={s.catDot} style={{ background: color }} />
+                        <span>{item.label}</span>
+                        {canEdit && (
+                          <button type="button" className={s.catX} onClick={() => setConfirmDel(item.id)} aria-label={`Eliminar ${item.label}`} title="Eliminar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      </Card>
+      {toast}
     </>
   )
 }

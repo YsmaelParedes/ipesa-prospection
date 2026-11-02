@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.35.0',
+    date: '1 de noviembre, 2026',
+    title: 'Configuración más ordenada',
+    items: [
+      'Configuración se reorganizó en dos grupos: arriba lo tuyo (Perfil, Avisos y Seguridad) y abajo lo de la tienda (General, Equipo, Catálogos, WhatsApp y Plan y pagos). Cada sección explica para qué sirve.',
+      'Los avisos tienen su propia sección; el botón para activarlos te lleva directo ahí.',
+      'Arriba del menú se ve el nombre completo de tu tienda. Si solo tienes una, ya no parece un botón; el selector aparece cuando perteneces a varias.',
+    ],
+  },
+  {
     version: '1.34.0',
     date: '1 de noviembre, 2026',
     title: 'Agenda más clara',

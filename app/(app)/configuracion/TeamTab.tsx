@@ -9,7 +9,7 @@ import { APP_NAME } from '@/lib/brand'
 import type { ClientStore } from '@/lib/profile'
 import { ROLE_LABELS, type StoreRole } from '@/lib/stores'
 import { Select } from '@/components/Select'
-import { Ico, Note, Panel, Spinner, WhatsAppGlyph, api, avatarTone, copyText, cx, fmtDate, initialsOf, send, useToast } from './ui'
+import { Card, Ico, Note, Spinner, WhatsAppGlyph, api, avatarTone, copyText, cx, fmtDate, initialsOf, send, useToast } from './ui'
 import s from './configuracion.module.css'
 
 type Member = {
@@ -42,6 +42,7 @@ export function TeamTab({ store }: { store: ClientStore }) {
   const [newLink, setNewLink]   = useState<NewLink | null>(null)
   const [busyId, setBusyId]     = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [inviteOpen, setInviteOpen] = useState(false)
   const linkRef = useRef<HTMLDivElement>(null)
 
   // Un enlace nuevo (también desde "Invitaciones pendientes") siempre queda a la vista
@@ -112,62 +113,80 @@ export function TeamTab({ store }: { store: ClientStore }) {
 
   if (loadError) return <Note kind="danger">{loadError}</Note>
 
+  const full = activeSeats >= store.maxUsers
+  const inviteForm = (
+    <div className={s.inviteBox} ref={linkRef}>
+      {newLink ? (
+        <div className={s.linkBox}>
+          <strong>Invitación lista para {newLink.email}</strong>
+          <div className={s.linkRow}>
+            <input className={cx(s.input, s.mono)} readOnly value={newLink.link} onFocus={e => e.currentTarget.select()} aria-label="Enlace de invitación" />
+            <button type="button" className="btn btn-dark" onClick={copy}><Ico.copy style={{ width: 14, height: 14 }} />Copiar</button>
+            <a className={cx('btn', s.wa)} href={waShare(newLink.link)} target="_blank" rel="noopener noreferrer"><WhatsAppGlyph style={{ width: 15, height: 15 }} />WhatsApp</a>
+          </div>
+          <p className={s.hint}>Por seguridad este enlace solo se muestra ahora. Si lo pierdes, genera uno nuevo.</p>
+          <div className={s.inviteBoxFoot}>
+            <button type="button" className="btn btn-ghost" onClick={() => { setNewLink(null); setInviteOpen(false) }}>Listo</button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={submit}>
+          <div className={s.inviteForm}>
+            <input className={s.input} type="email" required maxLength={254} value={email} onChange={e => { setEmail(e.target.value); setError('') }}
+              placeholder="correo@ejemplo.com" aria-label="Correo de la persona" autoComplete="off" autoFocus />
+            <div className={s.seg} role="radiogroup" aria-label="Rol">
+              <button type="button" role="radio" aria-checked={role === 'employee'} className={cx(role === 'employee' && s.segOn)} onClick={() => setRole('employee')}>Vendedor</button>
+              {store.allowAdmins && <button type="button" role="radio" aria-checked={role === 'admin'} className={cx(role === 'admin' && s.segOn)} onClick={() => setRole('admin')}>Administrador</button>}
+            </div>
+          </div>
+          <p className={s.hint}>
+            {role === 'employee'
+              ? <><strong>Vendedor:</strong> entra con su propio usuario y en el sistema comercial trabaja solo los contactos que le asignes; los contactos son de toda la tienda{store.modules.whatsapp ? ', y atiende WhatsApp' : ''}.</>
+              : <><strong>Administrador:</strong> además ve el trabajo de todo el equipo y configura la tienda.</>}
+            {' '}El enlace vence en 7 días y solo sirve para ese correo.
+          </p>
+          {error && <div className={s.error}>{error}</div>}
+          <div className={s.inviteBoxFoot}>
+            <button type="button" className="btn btn-ghost" onClick={() => { setInviteOpen(false); setError('') }}>Cancelar</button>
+            <button type="submit" className="btn btn-primary" disabled={inviting || !email.trim()}>
+              <Ico.link style={{ width: 14, height: 14 }} />{inviting ? 'Creando…' : 'Crear invitación'}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  )
+
   return (
     <>
-      {store.maxUsers <= 1 ? (
-      <Panel icon={Ico.userPlus} title="Invitar a alguien" subtitle={`El plan ${store.planLabel} incluye solo al administrador.`}>
+      {store.maxUsers <= 1 && (
         <Note kind="info">
-          Para sumar a tu equipo cambia a Galón (hasta 3 usuarios) o Cubeta (hasta 5, con administradores).{' '}
+          El plan {store.planLabel} incluye solo al administrador. Para sumar a tu equipo cambia a Galón (hasta 3 usuarios) o Cubeta (hasta 5, con administradores).{' '}
           <Link href="/configuracion?tab=plan" className="auth-link strong">Ver planes</Link>
         </Note>
-      </Panel>
-      ) : (
-      <Panel icon={Ico.userPlus} title="Invitar a alguien" subtitle="Genera un enlace personal y compártelo por WhatsApp o correo. Vence en 7 días y solo sirve para ese correo.">
-        <form className={s.inviteForm} onSubmit={submit}>
-          <input className={s.input} type="email" required maxLength={254} value={email} onChange={e => { setEmail(e.target.value); setError('') }}
-            placeholder="correo@ejemplo.com" aria-label="Correo de la persona" autoComplete="off" />
-          <div className={s.seg} role="radiogroup" aria-label="Rol">
-            <button type="button" role="radio" aria-checked={role === 'employee'} className={cx(role === 'employee' && s.segOn)} onClick={() => setRole('employee')}>Vendedor</button>
-            {store.allowAdmins && <button type="button" role="radio" aria-checked={role === 'admin'} className={cx(role === 'admin' && s.segOn)} onClick={() => setRole('admin')}>Administrador</button>}
-          </div>
-          <button type="submit" className="btn btn-primary" disabled={inviting || !email.trim()}>
-            <Ico.link style={{ width: 14, height: 14 }} />{inviting ? 'Creando…' : 'Crear invitación'}
-          </button>
-        </form>
-        <p className={s.hint}>
-          {role === 'employee'
-            ? <><strong>Vendedor:</strong> entra con su propio usuario y en el sistema comercial trabaja solo los contactos que le asignes; los contactos son de toda la tienda{store.modules.whatsapp ? ', y atiende WhatsApp' : ''}.</>
-            : <><strong>Administrador:</strong> además ve el trabajo de todo el equipo y configura la tienda.</>}
-        </p>
-        {error && <div className={s.error}>{error}</div>}
-        {newLink && (
-          <div className={s.linkBox} ref={linkRef}>
-            <strong>Invitación lista para {newLink.email}</strong>
-            <div className={s.linkRow}>
-              <input className={cx(s.input, s.mono)} readOnly value={newLink.link} onFocus={e => e.currentTarget.select()} aria-label="Enlace de invitación" />
-              <button type="button" className="btn btn-dark" onClick={copy}><Ico.copy style={{ width: 14, height: 14 }} />Copiar</button>
-              <a className={cx('btn', s.wa)} href={waShare(newLink.link)} target="_blank" rel="noopener noreferrer"><WhatsAppGlyph style={{ width: 15, height: 15 }} />WhatsApp</a>
-            </div>
-            <p className={s.hint}>Por seguridad este enlace solo se muestra ahora. Si lo pierdes, genera uno nuevo.</p>
-          </div>
-        )}
-      </Panel>
       )}
 
-      <Panel icon={Ico.users} tone="tCyan" title="Equipo" subtitle="Quién tiene acceso a esta tienda.">
-        <div className={s.seats}>
-          <span>Plan {store.planLabel}</span>
-          <div className={s.seatBar}><i style={{ width: `${seatPct}%` }} /></div>
-          <strong>{activeSeats} de {store.maxUsers} usuarios</strong>
-        </div>
+      <Card
+        title="Miembros"
+        description={`${activeSeats} de ${store.maxUsers} usuarios del plan ${store.planLabel}`}
+        actions={store.maxUsers > 1 && !inviteOpen && !newLink && (
+          <button type="button" className="btn btn-primary" onClick={() => setInviteOpen(true)} disabled={full} title={full ? 'Ya usas todos los lugares de tu plan' : undefined}>
+            <Ico.userPlus style={{ width: 15, height: 15 }} />Invitar
+          </button>
+        )}
+      >
+        <div className={s.seatBar} aria-hidden="true"><i style={{ width: `${seatPct}%` }} /></div>
+        {(inviteOpen || newLink) && inviteForm}
+        {!inviteOpen && !newLink && error && <div className={cx(s.error, s.padX)}>{error}</div>}
+
         {!members ? <Spinner /> : (
-          <div className={s.members}>
+          <ul className={s.members}>
             {members.map(m => {
               const name = m.display_name || m.email
               const tone = avatarTone(m.email)
               const off = m.status !== 'active'
               return (
-                <div key={m.user_id} className={cx(s.member, off && s.memberOff)}>
+                <li key={m.user_id} className={cx(s.member, off && s.memberOff)}>
                   <span className={s.avatar} style={{ background: tone.bg, color: tone.fg }}>{initialsOf(name)}</span>
                   <div className={s.memberMain}>
                     <strong><span>{name}</span>{m.isMe && <em className={s.you}>Tú</em>}</strong>
@@ -188,7 +207,6 @@ export function TeamTab({ store }: { store: ClientStore }) {
                     ) : (
                       <span className={cx(s.badge, ROLE_BADGE[m.role])}>{m.isMain ? 'Administrador principal' : ROLE_LABELS[m.role]}</span>
                     )}
-                    {off && <span className={cx(s.badge, s.bDanger, s.offBadge)}>Desactivado</span>}
                     {m.canManage && (confirmId === m.user_id ? (
                       <>
                         <button className={cx(s.mini, s.miniDanger)} disabled={busyId === m.user_id}
@@ -197,7 +215,7 @@ export function TeamTab({ store }: { store: ClientStore }) {
                       </>
                     ) : (
                       <>
-                        <button className="btn btn-ghost" style={{ padding: '6px 11px', fontSize: 12.5 }} disabled={busyId === m.user_id}
+                        <button className={cx('btn btn-ghost', s.btnSm)} disabled={busyId === m.user_id}
                           onClick={() => act(m.user_id, () => api('/api/store/members', send('PATCH', { userId: m.user_id, status: off ? 'active' : 'disabled' })), off ? 'Acceso reactivado' : 'Acceso desactivado')}>
                           {off ? 'Reactivar' : 'Desactivar'}
                         </button>
@@ -205,29 +223,23 @@ export function TeamTab({ store }: { store: ClientStore }) {
                       </>
                     ))}
                   </div>
-                </div>
+                </li>
               )
             })}
-          </div>
-        )}
-      </Panel>
 
-      {pending.length > 0 && (
-        <Panel icon={Ico.mail} tone="tAmber" title="Invitaciones pendientes" subtitle="Aún no las aceptan. Puedes generar un enlace nuevo o cancelarlas.">
-          <div className={s.members}>
+            {/* Las invitaciones van en la misma lista, debajo de quienes ya entraron */}
             {pending.map(inv => {
-              const tone = avatarTone(inv.email)
               const expired = inv.status === 'expired'
               return (
-                <div key={inv.id} className={s.member}>
-                  <span className={s.avatar} style={{ background: tone.bg, color: tone.fg }}>{initialsOf(inv.email)}</span>
+                <li key={inv.id} className={s.member}>
+                  <span className={cx(s.avatar, s.avatarPending)}><Ico.mail /></span>
                   <div className={s.memberMain}>
                     <strong><span>{inv.email}</span></strong>
-                    <small>{ROLE_LABELS[inv.role]} · {expired ? 'El enlace venció' : `Vence el ${fmtDate(inv.expiresAt, { day: 'numeric', month: 'long' })}`}</small>
+                    <small>{ROLE_LABELS[inv.role]} · {expired ? 'El enlace venció' : `Invitación pendiente, vence el ${fmtDate(inv.expiresAt, { day: 'numeric', month: 'long' })}`}</small>
                   </div>
                   <div className={s.memberActions}>
-                    {expired && <span className={cx(s.badge, s.bWarn)}>Vencida</span>}
-                    <button className="btn btn-ghost" style={{ padding: '6px 11px', fontSize: 12.5 }} disabled={busyId === inv.id}
+                    <span className={cx(s.badge, expired ? s.bWarn : s.bMuted)}>{expired ? 'Vencida' : 'Pendiente'}</span>
+                    <button className={cx('btn btn-ghost', s.btnSm)} disabled={busyId === inv.id}
                       onClick={() => act(inv.id, () => createInvite(inv.email, inv.role), 'Enlace nuevo generado')}>
                       Nuevo enlace
                     </button>
@@ -236,12 +248,12 @@ export function TeamTab({ store }: { store: ClientStore }) {
                       <Ico.trash />
                     </button>
                   </div>
-                </div>
+                </li>
               )
             })}
-          </div>
-        </Panel>
-      )}
+          </ul>
+        )}
+      </Card>
       {toast}
     </>
   )

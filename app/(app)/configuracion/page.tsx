@@ -2,29 +2,40 @@
 
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { BRAND_MARK } from '@/lib/brand'
 import { useSession } from '@/lib/profile'
-import { ROLE_LABELS, STATUS_LABELS, WHATSAPP_OFFERED, type StoreModule } from '@/lib/stores'
-import { Ico, Spinner, WhatsAppGlyph, cx } from './ui'
+import { WHATSAPP_OFFERED, type StoreModule } from '@/lib/stores'
+import { Ico, SectionHead, Spinner, WhatsAppGlyph, cx } from './ui'
 import { StoreTab } from './StoreTab'
 import { CatalogsTab } from './CatalogsTab'
 import { TeamTab } from './TeamTab'
 import { WhatsAppTab } from './WhatsAppTab'
 import { WhatsAppOffer } from '@/components/WhatsAppOffer'
-import { PlanTab, STATUS_BADGE } from './PlanTab'
-import { AccountTab } from './AccountTab'
+import { PlanTab } from './PlanTab'
+import { ProfileTab, SecurityTab } from './AccountTab'
+import { NotificationsPanel } from './NotificationsPanel'
 import s from './configuracion.module.css'
 
-type TabId = 'tienda' | 'catalogos' | 'equipo' | 'whatsapp' | 'plan' | 'cuenta'
-const TABS: { id: TabId; label: string; hint: string; icon: (p: React.SVGProps<SVGSVGElement>) => React.ReactElement; admin?: boolean; module?: StoreModule }[] = [
-  { id: 'tienda',       label: 'Tienda',       hint: 'Datos y logo',            icon: Ico.store, admin: true },
-  { id: 'catalogos',    label: 'Catálogos',    hint: 'Segmentos y canales',     icon: Ico.tag },
-  { id: 'equipo',       label: 'Equipo',       hint: 'Usuarios e invitaciones', icon: Ico.users, admin: true },
-  // Sin WhatsApp activo se muestra igual (a los administradores) como "Por activar", para ofrecerlo
-  { id: 'whatsapp',     label: 'WhatsApp',     hint: 'Tu número y respuestas',   icon: WhatsAppGlyph, admin: true },
-  { id: 'plan',         label: 'Plan',         hint: 'Suscripción y pagos',     icon: Ico.card, admin: true },
-  { id: 'cuenta',       label: 'Mi cuenta',    hint: 'Perfil, avisos y contraseña', icon: Ico.user },
+type TabId = 'perfil' | 'avisos' | 'seguridad' | 'tienda' | 'equipo' | 'catalogos' | 'whatsapp' | 'plan'
+type Tab = {
+  id: TabId; label: string; description: string; group: 'cuenta' | 'tienda'
+  icon: (p: React.SVGProps<SVGSVGElement>) => React.ReactElement; admin?: boolean; module?: StoreModule
+}
+
+/* Arriba lo de cada persona; abajo lo que toca a toda la tienda */
+const TABS: Tab[] = [
+  { id: 'perfil',    group: 'cuenta', label: 'Perfil',       icon: Ico.user,  description: 'Cómo te ve tu equipo y a qué tiendas tienes acceso.' },
+  { id: 'avisos',    group: 'cuenta', label: 'Avisos',       icon: Ico.bell,  description: 'Recordatorios a su hora, tu agenda a las 8:00 y mensajes de clientes, aunque la app esté cerrada.' },
+  { id: 'seguridad', group: 'cuenta', label: 'Seguridad',    icon: Ico.lock,  description: 'Tu contraseña y tu sesión en este dispositivo.' },
+  { id: 'tienda',    group: 'tienda', label: 'General',      icon: Ico.store, admin: true, description: 'Los datos de tu tienda. Tu equipo ve el nombre y el logo en el menú.' },
+  { id: 'equipo',    group: 'tienda', label: 'Equipo',       icon: Ico.users, admin: true, description: 'Quién tiene acceso a esta tienda y con qué rol.' },
+  { id: 'catalogos', group: 'tienda', label: 'Catálogos',    icon: Ico.tag,   description: 'Las opciones con las que tu equipo clasifica a sus contactos.' },
+  // Sin WhatsApp activo se muestra igual (a los administradores), para ofrecerlo
+  { id: 'whatsapp',  group: 'tienda', label: 'WhatsApp',     icon: WhatsAppGlyph, admin: true, description: 'El número de tu tienda y las respuestas rápidas del equipo.' },
+  { id: 'plan',      group: 'tienda', label: 'Plan y pagos', icon: Ico.card,  admin: true, description: 'Tu plan, lo que usas de él y tu suscripción.' },
 ]
+const GROUPS = [{ id: 'cuenta', label: 'Tu cuenta' }, { id: 'tienda', label: 'Tienda' }] as const
+/** Direcciones de antes que siguen llegando desde avisos y correos. */
+const ALIASES: Record<string, TabId> = { cuenta: 'perfil' }
 
 export default function ConfiguracionPage() {
   return <Suspense fallback={<Spinner />}><Settings /></Suspense>
@@ -44,8 +55,10 @@ function Settings() {
     [isAdmin, store],
   )
 
-  const wanted = params.get('tab')
-  const tab = tabs.find(t => t.id === wanted)?.id ?? (isAdmin ? 'tienda' : 'catalogos')
+  const raw = params.get('tab') ?? ''
+  const wanted = ALIASES[raw] ?? raw
+  const current = tabs.find(t => t.id === wanted) ?? tabs.find(t => t.id === (isAdmin ? 'tienda' : 'perfil')) ?? tabs[0]
+  const tab = current.id
 
   // En celular las secciones se desplazan en horizontal: centrar la activa
   useEffect(() => {
@@ -58,43 +71,45 @@ function Settings() {
 
   if (!session || !store) return <Spinner />
   const go = (id: TabId) => router.replace(`${pathname}?tab=${id}`, { scroll: false })
-  const location = [store.city, store.state].filter(Boolean).join(', ')
+  const waHint = (t: Tab) => t.id === 'whatsapp' && !store.modules.whatsapp
+    ? (!WHATSAPP_OFFERED ? 'Pronto' : store.planIncludesWhatsApp ? 'Por activar' : null)
+    : null
 
   return (
-    <>
-      <header className={s.storeHead}>
-        <div className={s.storeLogo}><img src={store.logoUrl || BRAND_MARK} alt="" /></div>
-        <div className={s.storeInfo}>
-          <h2>{store.name}</h2>
-          <p>{location || 'Agrega la ciudad y el estado de tu tienda'}</p>
-        </div>
-        <div className={s.storeChips}>
-          {store.access === 'readonly'
-            ? <span className={cx(s.badge, STATUS_BADGE[store.status])}><i />{STATUS_LABELS[store.status]}</span>
-            : <span className={cx(s.badge, store.plan === 'litro' ? s.bMuted : s.bActive)}><i />Plan {store.planLabel}</span>}
-          {session.role && <span className={cx(s.badge, s.bMuted)}>{ROLE_LABELS[session.role]}</span>}
-        </div>
-      </header>
+    <div className={s.layout}>
+      <nav className={s.nav} ref={navRef} aria-label="Secciones de configuración">
+        {GROUPS.map(g => {
+          const items = tabs.filter(t => t.group === g.id)
+          if (!items.length) return null
+          return (
+            <div key={g.id} className={s.navGroup}>
+              <div className={s.navLabel}>{g.label}</div>
+              {items.map(t => {
+                const hint = waHint(t)
+                return (
+                  <button key={t.id} className={cx(s.navItem, tab === t.id && s.navActive)} onClick={() => go(t.id)} aria-current={tab === t.id ? 'page' : undefined}>
+                    <t.icon className={s.navIcon} />
+                    <span className={s.navText}>{t.label}</span>
+                    {hint && <span className={s.navTag}>{hint}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          )
+        })}
+      </nav>
 
-      <div className={s.layout}>
-        <nav className={s.nav} ref={navRef} aria-label="Secciones de configuración">
-          {tabs.map(t => (
-            <button key={t.id} className={cx(s.navItem, tab === t.id && s.navActive)} onClick={() => go(t.id)} aria-current={tab === t.id ? 'page' : undefined}>
-              <span className={s.navIcon}><t.icon /></span>
-              <span className={s.navText}><strong>{t.label}</strong><small>{t.id === 'whatsapp' && !store.modules.whatsapp ? (!WHATSAPP_OFFERED ? 'Próximamente' : store.planIncludesWhatsApp ? 'Por activar' : 'En el plan Cubeta') : t.hint}</small></span>
-            </button>
-          ))}
-        </nav>
-
-        <div className={s.content} key={tab}>
-          {tab === 'tienda'       && <StoreTab store={store} />}
-          {tab === 'catalogos'    && <CatalogsTab canEdit={isAdmin} />}
-          {tab === 'equipo'       && <TeamTab store={store} />}
-          {tab === 'whatsapp'     && (store.modules.whatsapp ? <WhatsAppTab /> : <WhatsAppOffer />)}
-          {tab === 'plan'         && <PlanTab store={store} />}
-          {tab === 'cuenta'       && <AccountTab session={session} />}
-        </div>
+      <div className={s.content} key={tab}>
+        <SectionHead title={current.label} description={current.description} />
+        {tab === 'perfil'    && <ProfileTab session={session} />}
+        {tab === 'avisos'    && <NotificationsPanel />}
+        {tab === 'seguridad' && <SecurityTab />}
+        {tab === 'tienda'    && <StoreTab store={store} />}
+        {tab === 'catalogos' && <CatalogsTab canEdit={isAdmin} />}
+        {tab === 'equipo'    && <TeamTab store={store} />}
+        {tab === 'whatsapp'  && (store.modules.whatsapp ? <WhatsAppTab /> : <WhatsAppOffer />)}
+        {tab === 'plan'      && <PlanTab store={store} />}
       </div>
-    </>
+    </div>
   )
 }

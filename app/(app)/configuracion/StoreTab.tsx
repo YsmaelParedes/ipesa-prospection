@@ -7,7 +7,7 @@ import { downloadStoreWorkbook } from '@/lib/exportData'
 import { invalidateSession, type ClientStore } from '@/lib/profile'
 import { MX_STATES } from '@/lib/mexico'
 import { Select, toOptions } from '@/components/Select'
-import { Ico, Note, Panel, api, cx, send, useToast } from './ui'
+import { Card, CardFoot, Ico, Note, Row, api, send, useToast } from './ui'
 import s from './configuracion.module.css'
 
 const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp']
@@ -95,25 +95,53 @@ export function StoreTab({ store }: { store: ClientStore }) {
 
   return (
     <>
-      <Panel icon={Ico.store} title="Datos de la tienda" subtitle="Tu equipo ve el nombre en el menú; los datos de contacto se usan en tus mensajes y reportes.">
-        <form onSubmit={save}>
-          <div className={s.formGrid}>
-            <div className={cx('field', s.span2)}>
-              <label htmlFor="st-name">Nombre de la sucursal</label>
-              <input id="st-name" value={form.name} onChange={set('name')} maxLength={80} required placeholder="Pinturas La Paleta" />
+      {store.access === 'readonly' && (
+        <Note kind="warn">Tu tienda está en modo de solo consulta. Puedes ajustar estos datos y descargar tu información, pero para registrar clientes y enviar mensajes necesitas activar tu plan.</Note>
+      )}
+
+      <Card as="form" onSubmit={save}>
+        <Row label="Logo" hint={`Sale en el menú de tu equipo y en las invitaciones. Horizontal, con fondo blanco o transparente. PNG, JPG o WebP de hasta 2 MB.`}>
+          <div className={s.logoLine}>
+            <div className={s.logoPreview}>
+              {logoUrl
+                ? <img src={logoUrl} alt={`Logo de ${store.name}`} />
+                : <BrandLogo className={s.logoPreviewBrand} />}
             </div>
+            <div className={s.row}>
+              <button type="button" className="btn btn-ghost" onClick={() => fileRef.current?.click()} disabled={logoBusy}>
+                <Ico.upload style={{ width: 15, height: 15 }} />{logoBusy ? 'Subiendo…' : logoUrl ? 'Cambiar' : 'Subir logo'}
+              </button>
+              {logoUrl && <button type="button" className="btn btn-ghost" onClick={removeLogo} disabled={logoBusy}>Quitar</button>}
+            </div>
+          </div>
+          {!logoUrl && <p className={s.controlHint}>Mientras no subas uno, se usa el de {APP_NAME}.</p>}
+          {logoError && <div className={s.error}>{logoError}</div>}
+          <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={e => upload(e.target.files?.[0])} />
+        </Row>
+
+        <Row label="Nombre" htmlFor="st-name" hint="Así aparece en el menú de tu equipo.">
+          <input id="st-name" className={s.input} value={form.name} onChange={set('name')} maxLength={80} required placeholder="Pinturas La Paleta" />
+        </Row>
+
+        <Row label="Contacto" hint="Se usan en tus mensajes y reportes.">
+          <div className={s.fields2}>
             <div className="field">
               <label htmlFor="st-phone">Teléfono</label>
               <input id="st-phone" type="tel" inputMode="tel" value={form.phone} onChange={set('phone')} maxLength={20} placeholder="222 123 4567" />
             </div>
             <div className="field">
-              <label htmlFor="st-email">Correo de la tienda</label>
+              <label htmlFor="st-email">Correo</label>
               <input id="st-email" type="email" value={form.email} onChange={set('email')} maxLength={254} placeholder="ventas@tutienda.com" />
             </div>
-            <div className={cx('field', s.span2)}>
-              <label htmlFor="st-address">Dirección</label>
-              <input id="st-address" value={form.address} onChange={set('address')} maxLength={300} placeholder="Calle, número y colonia" />
-            </div>
+          </div>
+        </Row>
+
+        <Row label="Ubicación">
+          <div className="field">
+            <label htmlFor="st-address">Dirección</label>
+            <input id="st-address" value={form.address} onChange={set('address')} maxLength={300} placeholder="Calle, número y colonia" />
+          </div>
+          <div className={s.fields2}>
             <div className="field">
               <label htmlFor="st-city">Ciudad o municipio</label>
               <input id="st-city" value={form.city} onChange={set('city')} maxLength={80} />
@@ -125,40 +153,15 @@ export function StoreTab({ store }: { store: ClientStore }) {
             </div>
           </div>
           {error && <div className={s.error}>{error}</div>}
-          <div className={s.formFoot}>
-            <small>{dirty ? 'Tienes cambios sin guardar' : 'Todo guardado'}</small>
-            {dirty && <button type="button" className="btn btn-ghost" onClick={() => { setForm(saved); setError('') }}>Descartar</button>}
-            <button type="submit" className="btn btn-primary" disabled={!dirty || busy}>{busy ? 'Guardando…' : 'Guardar cambios'}</button>
-          </div>
-        </form>
-      </Panel>
+        </Row>
 
-      <Panel icon={Ico.image} tone="tCyan" title="Logo de la sucursal" subtitle={`Reemplaza al logo de ${APP_NAME} en el menú de tu equipo y en las invitaciones.`}>
-        <div className={s.logoRow}>
-          <div className={s.logoPreview}>
-            {logoUrl
-              ? <img src={logoUrl} alt={`Logo de ${store.name}`} />
-              : <BrandLogo className={s.logoPreviewBrand} />}
-          </div>
-          <div className={s.logoSide}>
-            <p>{logoUrl ? 'Este es el logo que ve tu equipo.' : `Estás usando el logo de ${APP_NAME}.`} Funciona mejor horizontal, con fondo blanco o transparente. PNG, JPG o WebP de hasta 2 MB.</p>
-            <div className={s.row}>
-              <button type="button" className="btn btn-dark" onClick={() => fileRef.current?.click()} disabled={logoBusy}>
-                <Ico.upload style={{ width: 15, height: 15 }} />{logoBusy ? 'Subiendo…' : logoUrl ? 'Cambiar logo' : 'Subir logo'}
-              </button>
-              {logoUrl && <button type="button" className="btn btn-ghost" onClick={removeLogo} disabled={logoBusy}>Quitar logo</button>}
-            </div>
-            {logoError && <div className={s.error}>{logoError}</div>}
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={e => upload(e.target.files?.[0])} />
-          </div>
-        </div>
-      </Panel>
+        <CardFoot status={dirty ? 'Tienes cambios sin guardar' : 'Todo guardado'}>
+          {dirty && <button type="button" className="btn btn-ghost" onClick={() => { setForm(saved); setError('') }}>Descartar</button>}
+          <button type="submit" className="btn btn-primary" disabled={!dirty || busy}>{busy ? 'Guardando…' : 'Guardar cambios'}</button>
+        </CardFoot>
+      </Card>
 
       <ExportPanel store={store} onDone={showToast} />
-
-      {store.access === 'readonly' && (
-        <Note kind="warn">Tu tienda está en modo de solo consulta. Puedes ajustar estos datos y descargar tu información, pero para registrar clientes y enviar mensajes necesitas activar tu plan.</Note>
-      )}
       {toast}
     </>
   )
@@ -183,13 +186,16 @@ function ExportPanel({ store, onDone }: { store: ClientStore; onDone: (msg: stri
   }
 
   return (
-    <Panel icon={Ico.download} tone="tTeal" title="Descarga tu información"
-      subtitle="Un solo archivo de Excel con tus contactos, su historial comercial, agenda y catálogos. La información es de tu tienda: puedes llevártela cuando quieras.">
-      <button className="btn btn-ghost" onClick={run} disabled={!!step}>
-        <Ico.download style={{ width: 15, height: 15 }} />
-        {step ? `Preparando ${step.toLowerCase()}…` : 'Descargar mi información'}
-      </button>
-      {error && <div className={s.error}>{error}</div>}
-    </Panel>
+    <Card>
+      <Row label="Tu información" hint="Un Excel con tus contactos, su historial comercial, la agenda y los catálogos. Es de tu tienda: puedes llevártela cuando quieras." align="center">
+        <div>
+          <button className="btn btn-ghost" onClick={run} disabled={!!step}>
+            <Ico.download style={{ width: 15, height: 15 }} />
+            {step ? `Preparando ${step.toLowerCase()}…` : 'Descargar'}
+          </button>
+          {error && <div className={s.error}>{error}</div>}
+        </div>
+      </Row>
+    </Card>
   )
 }

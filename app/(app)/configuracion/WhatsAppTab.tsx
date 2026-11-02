@@ -4,7 +4,7 @@ import { useCachedQuery, useQueryEffect } from '@/lib/useCachedQuery'
 
 
 import { useCallback, useState } from 'react'
-import { Ico, Note, Panel, Spinner, WhatsAppGlyph, api, cx, fmtDate, send, useToast } from './ui'
+import { Card, Ico, Note, Spinner, WhatsAppGlyph, api, cx, fmtDate, send, useToast } from './ui'
 import s from './configuracion.module.css'
 import { tierLabel } from '@/lib/whatsappSafety'
 
@@ -42,11 +42,12 @@ function ConnectionPanel() {
   }, [])
 
   if (error) return <Note kind="danger">{error}</Note>
-  if (!conn) return <Panel icon={WhatsAppGlyph} tone="tWa" title="Tu número de WhatsApp"><Spinner /></Panel>
+  if (!conn) return <Card title="Tu número"><Spinner /></Card>
 
   const quality = QUALITY[health?.qualityRating ?? 'UNKNOWN'] ?? QUALITY.UNKNOWN
   return (
-    <Panel icon={WhatsAppGlyph} tone="tWa" title="Tu número de WhatsApp" subtitle="El número con el que tu tienda atiende a sus clientes desde el CRM.">
+    <Card title="Tu número" description="Con él tu tienda atiende a sus clientes desde el CRM.">
+      <div className={s.cardBody}>
       <div className={s.waHero}>
         <span className={cx(s.waBadge, !conn.connected && s.waBadgeOff)}><WhatsAppGlyph /></span>
         <div className={s.waMain}>
@@ -66,26 +67,27 @@ function ConnectionPanel() {
         </div>
       )}
       {conn.connected && health?.qualityRating && health.qualityRating !== 'GREEN' && health.qualityRating !== 'UNKNOWN' && (
-        <div style={{ marginTop: 14 }}>
+        <div className={s.noteGap}>
           <Note kind="warn">La calidad del número bajó (bloqueos, reportes o pocas lecturas). Si sigue así, Meta puede pausar tus plantillas o restringir el número: envía solo a quien aceptó recibir tus mensajes y revisa tus plantillas.</Note>
         </div>
       )}
       {conn.connected && health?.canSendMessage === 'BLOCKED' && (
-        <div style={{ marginTop: 14 }}>
+        <div className={s.noteGap}>
           <Note kind="danger">Meta tiene bloqueado el envío desde este número. {(health.healthNotes ?? []).join(' ')}</Note>
         </div>
       )}
       {conn.connected && health?.canSendMessage === 'LIMITED' && !!health.healthNotes?.length && (
-        <div style={{ marginTop: 14 }}>
+        <div className={s.noteGap}>
           <Note kind="warn">{health.healthNotes.join(' ')}</Note>
         </div>
       )}
       {conn.connected && !conn.receivesMessages && (
-        <div style={{ marginTop: 14 }}>
+        <div className={s.noteGap}>
           <Note kind="danger">Por ahora no llegan los mensajes que te escriben tus clientes. Avísale a tu asesor para que lo revise.</Note>
         </div>
       )}
-    </Panel>
+      </div>
+    </Card>
   )
 }
 
@@ -131,12 +133,13 @@ function QuickRepliesPanel({ showToast }: { showToast: (m: string) => void }) {
   }
 
   return (
-    <Panel icon={Ico.bolt} tone="tMagenta" title="Respuestas rápidas" subtitle={<>Mensajes frecuentes que el equipo inserta en el chat con un clic. Usa <code>{'{nombre}'}</code> para el nombre del cliente.</>}>
+    <Card title="Respuestas rápidas" description={<>Mensajes frecuentes que el equipo inserta en el chat con un clic. Usa <code>{'{nombre}'}</code> para el nombre del cliente.</>}
+      actions={items && <span className={s.count}>{items.length}</span>}>
       {!items ? <Spinner /> : (
-        <div className={s.list}>
-          {items.length === 0 && <div className={s.empty}>Aún no hay respuestas. Ideas: «Horario», «Ubicación», «Formas de pago».</div>}
+        <ul className={s.list}>
+          {items.length === 0 && <li className={s.empty}>Aún no hay respuestas. Ideas: «Horario», «Ubicación», «Formas de pago».</li>}
           {items.map(q => (
-            <div key={q.id} className={s.item} style={{ alignItems: 'flex-start', padding: '10px 10px 10px 14px' }}>
+            <li key={q.id} className={s.item} style={{ alignItems: 'flex-start' }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 800 }}>{q.title}</div>
                 <div style={{ fontSize: 12.5, color: 'var(--ink-3)', whiteSpace: 'pre-wrap', marginTop: 2 }}>{q.body}</div>
@@ -151,11 +154,11 @@ function QuickRepliesPanel({ showToast }: { showToast: (m: string) => void }) {
                   <button className="icon-btn icon-btn-delete" onClick={() => setConfirmDel(q.id)} title="Eliminar" aria-label={`Eliminar ${q.title}`}><Ico.trash /></button>
                 )}
               </span>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
-      <form onSubmit={add} style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8, padding: 12, borderRadius: 14, background: 'var(--paper)', border: '1px solid var(--line)' }}>
+      <form onSubmit={add} className={s.replyForm}>
         <input className={s.input} value={title} onChange={e => setTitle(e.target.value)} maxLength={60} placeholder="Título (ej. Horario)" aria-label="Título" />
         <textarea className={s.input} value={body} onChange={e => setBody(e.target.value)} maxLength={1000} rows={3} style={{ resize: 'vertical' }}
           placeholder="¡Hola {nombre}! Abrimos de lunes a sábado de 9:00 a 19:00 h." aria-label="Mensaje" />
@@ -164,7 +167,7 @@ function QuickRepliesPanel({ showToast }: { showToast: (m: string) => void }) {
           <Ico.plus style={{ width: 14, height: 14 }} />{saving ? 'Guardando…' : 'Agregar respuesta'}
         </button>
       </form>
-    </Panel>
+    </Card>
   )
 }
 

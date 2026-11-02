@@ -8,7 +8,7 @@ import { apiFetch } from '@/lib/apiClient'
 
 import { useState } from 'react'
 import { currentSubscription, disableDevicePush, enableDevicePush, pushSupport, testDevicePush } from '@/lib/pushClient'
-import { Ico, Note, Panel, cx } from './ui'
+import { Card, Note, Row, cx } from './ui'
 import s from './configuracion.module.css'
 
 type Status = 'loading' | 'ios-install' | 'unsupported' | 'blocked' | 'off' | 'on'
@@ -86,47 +86,46 @@ export function NotificationsPanel() {
 
   const on = status === 'on'
 
+  if (status === 'ios-install') return (
+    <Note kind="info">
+      En iPhone los avisos solo llegan con la app instalada: en Safari toca <strong>Compartir</strong> → <strong>Agregar a inicio</strong>,
+      abre la app desde ese ícono y actívalos aquí.
+    </Note>
+  )
+  if (status === 'unsupported') return (
+    <Note>Este navegador no permite avisos. Usa Chrome, Edge o Safari actualizados (en iPhone, iOS 16.4 o más reciente).</Note>
+  )
+
   return (
-    <Panel icon={Ico.bolt} tone="tAmber" title="Avisos en este dispositivo"
-      subtitle="A la hora de cada recordatorio, un resumen de tu agenda a las 8:00 y cuando te escribe un cliente, aunque la app esté cerrada.">
-      {status === 'ios-install' ? (
-        <Note kind="info">
-          En iPhone los avisos solo llegan con la app instalada: en Safari toca <strong>Compartir</strong> → <strong>Agregar a inicio</strong>,
-          abre la app desde ese ícono y actívalos aquí.
-        </Note>
-      ) : status === 'unsupported' ? (
-        <Note>Este navegador no permite avisos. Usa Chrome, Edge o Safari actualizados (en iPhone, iOS 16.4 o más reciente).</Note>
-      ) : (
-        <div className={s.formGrid}>
-          <div className={cx(s.span2)} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+    <>
+      <Card>
+        <Row label="En este dispositivo" hint="Cada celular o computadora se activa por separado." align="center">
+          <div className={s.controlLine}>
             <span className={cx(s.badge, on ? s.bActive : status === 'blocked' ? s.bWarn : s.bMuted)}><i />{STATUS_LABEL[status]}</span>
-            <span style={{ flex: 1 }} />
+            <span className={s.grow} />
             {on && <button className="btn btn-ghost" onClick={() => run(test)} disabled={busy}>Enviar prueba</button>}
             <button className={on ? 'btn btn-ghost' : 'btn btn-primary'} onClick={on ? disable : enable} disabled={busy || status === 'loading'}>
               {busy ? '…' : on ? 'Desactivar' : 'Activar avisos'}
             </button>
           </div>
-          {status === 'blocked' && (
-            <div className={s.span2}>
-              <Note kind="warn">
-                Este navegador tiene bloqueados los avisos de la app. Permítelos en el candado junto a la dirección
-                (en la app instalada: Ajustes del celular → Notificaciones) y vuelve a tocar «Activar avisos».
-              </Note>
-            </div>
-          )}
-          {on && (
-            <label className={s.span2} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, color: 'var(--ink-2)', cursor: 'pointer' }}>
-              <input type="checkbox" checked={whatsapp} onChange={toggleWhatsapp} style={{ '--check': '#25D366', width: 16, height: 16 } as React.CSSProperties} />
-              Avisarme también cuando llegue un mensaje de WhatsApp
+        </Row>
+        {on && (
+          <Row label="Mensajes de WhatsApp" hint="Además de tus recordatorios y el resumen de la mañana." align="center">
+            <label className={s.checkLine}>
+              <input type="checkbox" checked={whatsapp} onChange={toggleWhatsapp} style={{ '--check': '#25D366' } as React.CSSProperties} />
+              Avisarme cuando me escriba un cliente
             </label>
-          )}
-          {!on && status !== 'loading' && (
-            <p className={cx(s.hint, s.span2)}>Cada celular o computadora se activa por separado.</p>
-          )}
-          {error && <div className={cx(s.error, s.span2)}>{error}</div>}
-          {info && <div className={s.span2}><Note kind="ok">{info}</Note></div>}
-        </div>
+          </Row>
+        )}
+      </Card>
+      {status === 'blocked' && (
+        <Note kind="warn">
+          Este navegador tiene bloqueados los avisos de la app. Permítelos en el candado junto a la dirección
+          (en la app instalada: Ajustes del celular → Notificaciones) y vuelve a tocar «Activar avisos».
+        </Note>
       )}
-    </Panel>
+      {error && <Note kind="danger">{error}</Note>}
+      {info && <Note kind="ok">{info}</Note>}
+    </>
   )
 }

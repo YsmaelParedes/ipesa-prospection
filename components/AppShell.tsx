@@ -249,7 +249,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
       else snoozePushPrompt()
     } catch (err) {
       console.warn('[push]', err)
-      router.push('/configuracion?tab=cuenta')  // ahí se ve el detalle del problema
+      router.push('/configuracion?tab=avisos')  // ahí se ve el detalle del problema
     } finally {
       setPushBusy(false)
       checkPush()
@@ -374,17 +374,25 @@ Pantalla: ${pathname}`,
             : <BrandLogo />}
           {store && (
             <div className="store-switch" ref={storeMenuRef}>
-              <button
-                className="store-switch-btn"
-                onClick={() => hasStoreMenu && setStoreMenuOpen(o => !o)}
-                aria-expanded={hasStoreMenu ? storeMenuOpen : undefined}
-                aria-haspopup={hasStoreMenu ? 'menu' : undefined}
-                title={hasStoreMenu ? 'Cambiar de tienda' : store.name}
-              >
-                <Icon.store className="store-switch-icon" />
-                <span className="store-switch-name">{store.name}</span>
-                {hasStoreMenu && <Icon.chevrons className="store-switch-chev" />}
-              </button>
+              {/* Con una sola tienda es solo el nombre; el selector aparece cuando hay a cuál cambiarse */}
+              {hasStoreMenu ? (
+                <button
+                  className="store-switch-btn"
+                  onClick={() => setStoreMenuOpen(o => !o)}
+                  aria-expanded={storeMenuOpen}
+                  aria-haspopup="menu"
+                  title="Cambiar de tienda"
+                >
+                  <Icon.store className="store-switch-icon" />
+                  <span className="store-switch-name">{store.name}</span>
+                  <Icon.chevrons className="store-switch-chev" />
+                </button>
+              ) : (
+                <div className="store-current">
+                  <Icon.store className="store-switch-icon" />
+                  <span className="store-switch-name">{store.name}</span>
+                </div>
+              )}
               {storeMenuOpen && session && (
                 <div className="store-menu" role="menu">
                   {session.stores.map(s => (
@@ -506,7 +514,7 @@ Pantalla: ${pathname}`,
                     {reminders.length > 8 ? `Ver los ${reminders.length} en la Agenda →` : 'Abrir la Agenda →'}
                   </Link>
                   {(pushState === 'off' || pushState === 'blocked') && (
-                    <Link href="/configuracion?tab=cuenta" className="notif-push-hint">
+                    <Link href="/configuracion?tab=avisos" className="notif-push-hint">
                       <Icon.bellOff style={{ width: 14, height: 14, flexShrink: 0 }} />
                       {pushState === 'blocked'
                         ? 'Los avisos están bloqueados en este navegador. Ver cómo activarlos'

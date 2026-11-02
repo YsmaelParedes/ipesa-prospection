@@ -52,6 +52,7 @@ export const Ico = {
   send:     icon(<><path d="m22 2-7 20-4-9-9-4 20-7Z" /><path d="M22 2 11 13" /></>),
   logout:   icon(<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />),
   mail:     icon(<><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-10 6L2 7" /></>),
+  bell:     icon(<><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></>),
   shield:   icon(<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />),
 }
 export function WhatsAppGlyph(p: IconProps) {
@@ -62,26 +63,67 @@ export function WhatsAppGlyph(p: IconProps) {
   )
 }
 
-export function Panel({ icon: I, tone, title, subtitle, actions, children }: {
-  icon?: (p: IconProps) => React.ReactElement
-  tone?: 'tWa' | 'tCyan' | 'tMagenta' | 'tTeal' | 'tAmber' | 'tInk'
-  title: string
-  subtitle?: React.ReactNode
+/* Ajustes en filas: a la izquierda qué es, a la derecha el control. Todas las secciones usan estas piezas. */
+
+export function SectionHead({ title, description }: { title: string; description: string }) {
+  return (
+    <header className={s.sectionHead}>
+      <h2>{title}</h2>
+      <p>{description}</p>
+    </header>
+  )
+}
+
+/** Tarjeta de ajustes. Con título lleva su propio encabezado; sin título, solo agrupa filas. */
+export function Card({ title, description, actions, children, as: As = 'section', onSubmit }: {
+  title?: string
+  description?: React.ReactNode
   actions?: React.ReactNode
   children: React.ReactNode
+  as?: 'section' | 'form'
+  onSubmit?: (e: React.FormEvent) => void
 }) {
   return (
-    <section className={s.panel}>
-      <header className={s.panelHead}>
-        {I && <span className={cx(s.panelIcon, tone && s[tone])}><I /></span>}
-        <div className={s.panelTitle}>
-          <h3>{title}</h3>
-          {subtitle && <p>{subtitle}</p>}
-        </div>
-        {actions && <div className={s.panelActions}>{actions}</div>}
-      </header>
+    <As className={s.card} onSubmit={onSubmit}>
+      {title && (
+        <header className={s.cardHead}>
+          <div className={s.cardTitle}>
+            <h3>{title}</h3>
+            {description && <p>{description}</p>}
+          </div>
+          {actions && <div className={s.cardActions}>{actions}</div>}
+        </header>
+      )}
       {children}
-    </section>
+    </As>
+  )
+}
+
+export function Row({ label, hint, htmlFor, children, align }: {
+  label: string
+  hint?: React.ReactNode
+  htmlFor?: string
+  children: React.ReactNode
+  align?: 'center'
+}) {
+  return (
+    <div className={cx(s.setRow, align === 'center' && s.setRowCenter)}>
+      <div className={s.setLabel}>
+        {htmlFor ? <label htmlFor={htmlFor}>{label}</label> : <strong>{label}</strong>}
+        {hint && <p>{hint}</p>}
+      </div>
+      <div className={s.setControl}>{children}</div>
+    </div>
+  )
+}
+
+/** Pie de la tarjeta: estado a la izquierda y el botón principal siempre abajo a la derecha. */
+export function CardFoot({ status, children }: { status?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className={s.cardFoot}>
+      {status && <small>{status}</small>}
+      {children}
+    </div>
   )
 }
 
