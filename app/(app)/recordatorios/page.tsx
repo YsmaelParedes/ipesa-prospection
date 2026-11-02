@@ -1,19 +1,16 @@
 'use client'
 
 import { useDataReady, useQueryEffect } from '@/lib/useCachedQuery'
-
-
 import { cachedQueryData, apiFetch } from '@/lib/apiClient'
-
-
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useSession } from '@/lib/profile'
 import { REMINDER_TYPES, REMINDER_TYPE_INFO, remTypeInfo, reminderSubject, reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
-import { MESES, QUICK_WHEN, fmtDue, isSameDay, quickDate, toDbLocal, type QuickWhen } from '@/lib/datetime'
+import { MESES, QUICK_WHEN, isSameDay, pad, quickDate, toDbLocal, type QuickWhen } from '@/lib/datetime'
 import { addDays, type CommercialContact } from '@/lib/commercial'
-import { StatusChip, nextLabel } from '@/components/CommercialUI'
+import { StatusChip } from '@/components/CommercialUI'
+import s from './agenda.module.css'
 
 /** GET /api/data/commercial/agenda: seguimientos del sistema comercial con su fecha. */
 type CommercialData = { today: string; followUps: CommercialContact[] }
@@ -21,45 +18,50 @@ type CommercialData = { today: string; followUps: CommercialContact[] }
 type AgendaItem = { kind: 'rem'; r: Reminder; at: number } | { kind: 'com'; c: CommercialContact; at: number }
 const COMMERCIAL_FILTER = 'commercial'
 
-/* ══════════════════════════════════════════════════════════
-   ICONOS SVG
-══════════════════════════════════════════════════════════ */
 const Ico = {
-  plus:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M12 5v14M5 12h14"/></svg>,
-  check: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><path d="m5 13 4 4L19 7"/></svg>,
-  trash: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>,
-  edit:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-  clock: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
-  user:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 12, height: 12 }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-  snooze:() => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M5 3 2 6M22 6l-3-3"/></svg>,
+  plus:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}><path d="M12 5v14M5 12h14"/></svg>,
+  check: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="m5 13 4 4L19 7"/></svg>,
+  trash: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>,
+  edit:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+  snooze:() => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M5 3 2 6M22 6l-3-3"/></svg>,
+  chevron: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={s.chev}><path d="m9 6 6 6-6 6"/></svg>,
 }
 
-function fmtCompletado(iso: string | null) {
+/** El punto de color de cada tipo; el seguimiento comercial lleva el rojo de la marca. */
+const COMMERCIAL_DOT = 'var(--brand)'
+const typeDot = (type?: string | null) => remTypeInfo(type).color
+
+const fmtTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
+const fmtShort = (d: Date) => `${d.getDate()} ${MESES[d.getMonth()]}`
+const fmtDoneAt = (iso: string | null) => {
   if (!iso) return ''
   const d = new Date(iso)
   return `${d.getDate()} ${MESES[d.getMonth()]} ${d.getFullYear()}`
 }
+/** "domingo 1 de noviembre" para el encabezado del día. */
+const dayName = (d: Date) => new Intl.DateTimeFormat('es-MX', { weekday: 'long', day: 'numeric', month: 'long' }).format(d)
 
-/* ══════════════════════════════════════════════════════════
-   POSPONER
-══════════════════════════════════════════════════════════ */
+/* ── Posponer ── */
 function SnoozeMenu({ onPick }: { onPick: (when: QuickWhen) => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!open) return
-    const h = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
+    const click = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', click)
+    document.addEventListener('keydown', key)
+    return () => { document.removeEventListener('mousedown', click); document.removeEventListener('keydown', key) }
   }, [open])
   return (
-    <div className="snooze" ref={ref}>
-      <button onClick={() => setOpen(o => !o)} title="Posponer" aria-label="Posponer" aria-expanded={open} className="icon-btn icon-btn-edit"><Ico.snooze /></button>
+    <div className={s.snooze} ref={ref}>
+      <button onClick={() => setOpen(o => !o)} title="Posponer" aria-label="Posponer" aria-expanded={open}
+        className={`${s.icon} ${s.press} ${open ? '' : s.quiet}`}><Ico.snooze /></button>
       {open && (
-        <div className="snooze-menu" role="menu">
-          <div className="snooze-title">Posponer a…</div>
+        <div className={s.snoozeMenu} role="menu">
+          <div className={s.snoozeTitle}>Posponer a…</div>
           {QUICK_WHEN.map(w => (
-            <button key={w.key} role="menuitem" onClick={() => { setOpen(false); onPick(w.key) }}>{w.label}</button>
+            <button key={w.key} role="menuitem" className={s.press} onClick={() => { setOpen(false); onPick(w.key) }}>{w.label}</button>
           ))}
         </div>
       )}
@@ -67,58 +69,65 @@ function SnoozeMenu({ onPick }: { onPick: (when: QuickWhen) => void }) {
   )
 }
 
-/* ══════════════════════════════════════════════════════════
-   TARJETA DE RECORDATORIO
-══════════════════════════════════════════════════════════ */
-function RemCard({ r, accent, readonly, onComplete, onDelete, onSnooze }: {
-  r: Reminder; accent: string; readonly: boolean
+/** La hora del renglón. Con showDate (vencidos y más adelante) lleva también el día. */
+function When({ date, time, showDate }: { date: Date; time: string | null; showDate: boolean }) {
+  if (!showDate) return <div className={s.when}>{time ?? 'Sin hora'}</div>
+  return <div className={s.when}>{fmtShort(date)}<small>{time ?? 'Sin hora'}</small></div>
+}
+
+/* ── Recordatorio ── */
+function RemRow({ r, overdue, showDate, readonly, onComplete, onDelete, onSnooze }: {
+  r: Reminder; overdue: boolean; showDate: boolean; readonly: boolean
   onComplete?: () => void
-  onDelete:    () => void
-  onSnooze?:   (when: QuickWhen) => void
+  onDelete: () => void
+  onSnooze?: (when: QuickWhen) => void
 }) {
   const [confirmDel, setConfirmDel] = useState(false)
-  const typeInfo = remTypeInfo(r.type)
-  const isHigh   = r.priority === 'high'
-  const subject  = reminderSubject(r)
+  const info = remTypeInfo(r.type)
+  const subject = reminderSubject(r)
+  const date = new Date(r.fecha_recordatorio)
+  const title = reminderTitle(r)
+  const canEdit = !readonly && !r.completado
+
+  const meta = (
+    <div className={s.meta}>
+      <span className={s.kind}><i style={{ background: typeDot(r.type) }} />{info.label}</span>
+      {subject && <><span className={s.sep} /><span>{subject}</span></>}
+      {r.completado && <><span className={s.sep} /><span>Completado {fmtDoneAt(r.completado_at)}</span></>}
+      {r.priority === 'high' && !r.completado && <span className={s.flag}>Alta</span>}
+    </div>
+  )
 
   return (
-    <div className={`rem-card ${isHigh ? 'high' : ''} ${r.completado ? 'done' : ''}`}>
-      <div className="rem-card-bar" style={{ background: accent }} />
-
-      <div className="rem-card-body">
-        <div className="rem-card-tags">
-          <span className="rem-type" style={{ color: typeInfo.color, background: typeInfo.bg }}>{typeInfo.emoji} {typeInfo.label}</span>
-          {isHigh && <span className="rem-type" style={{ color: 'var(--danger)', background: 'var(--danger-soft)' }}>Alta</span>}
-        </div>
-
-        <div className="rem-card-title">{reminderTitle(r)}</div>
-
-        {subject && <span className="rem-subject"><Ico.user /> {subject}</span>}
-
-        {!r.completado ? (
-          <div className="rem-card-when" style={{ color: accent }}><Ico.clock /> {fmtDue(r.fecha_recordatorio)}</div>
-        ) : (
-          <div className="rem-card-when muted">Completado {fmtCompletado(r.completado_at)}</div>
-        )}
-      </div>
-
-      <div className="rem-card-actions">
+    <div className={`${s.row} ${overdue ? s.overdue : ''} ${r.completado ? s.doneRow : ''}`}>
+      <When date={date} time={fmtTime(date)} showDate={showDate} />
+      {canEdit ? (
+        <button className={`${s.main} ${s.press}`} onClick={() => openQuickCreate({ kind: 'reminder', reminder: r })}>
+          <span className={s.title}>{title}</span>
+          {meta}
+        </button>
+      ) : (
+        <div className={s.main}><span className={s.title}>{title}</span>{meta}</div>
+      )}
+      <div className={s.actions}>
         {confirmDel ? (
-          <div className="rem-card-confirm">
+          <div className={s.confirm}>
             <button onClick={() => { onDelete(); setConfirmDel(false) }} className="btn btn-danger">Sí, borrar</button>
             <button onClick={() => setConfirmDel(false)} className="btn btn-ghost">Cancelar</button>
           </div>
         ) : (
           <>
-            <div className="rem-card-icons">
-              {!readonly && !r.completado && onSnooze && <SnoozeMenu onPick={onSnooze} />}
-              {!readonly && !r.completado && (
-                <button onClick={() => openQuickCreate({ kind: 'reminder', reminder: r })} title="Editar" className="icon-btn icon-btn-edit"><Ico.edit /></button>
-              )}
-              {!readonly && <button onClick={() => setConfirmDel(true)} title="Eliminar" className="icon-btn icon-btn-delete"><Ico.trash /></button>}
-            </div>
+            {canEdit && onSnooze && <SnoozeMenu onPick={onSnooze} />}
+            {canEdit && (
+              <button onClick={() => openQuickCreate({ kind: 'reminder', reminder: r })} title="Editar" aria-label="Editar"
+                className={`${s.icon} ${s.quiet} ${s.press}`}><Ico.edit /></button>
+            )}
+            {!readonly && (
+              <button onClick={() => setConfirmDel(true)} title="Eliminar" aria-label="Eliminar"
+                className={`${s.icon} ${s.danger} ${s.quiet} ${s.press}`}><Ico.trash /></button>
+            )}
             {!readonly && onComplete && (
-              <button onClick={onComplete} className="rem-done-btn"><Ico.check /> Listo</button>
+              <button onClick={onComplete} className={`${s.doneBtn} ${s.press}`}><Ico.check /> Listo</button>
             )}
           </>
         )}
@@ -128,45 +137,42 @@ function RemCard({ r, accent, readonly, onComplete, onDelete, onSnooze }: {
 }
 
 /* ── Seguimiento del sistema comercial: se registra ahí; aquí se ve en su día ── */
-function FollowCard({ c, accent, today }: { c: CommercialContact; accent: string; today: string }) {
-  const next = nextLabel(c.next_action_at, today)
+function FollowRow({ c, overdue, showDate }: { c: CommercialContact; overdue: boolean; showDate: boolean }) {
+  const date = new Date(`${c.next_action_at}T12:00`)
   return (
-    <Link href={`/comercial?id=${c.id}`} className="rem-card" style={{ textDecoration: 'none', color: 'inherit' }}>
-      <div className="rem-card-bar" style={{ background: accent }} />
-      <div className="rem-card-body">
-        <div className="rem-card-tags">
-          <span className="rem-type" style={{ color: 'var(--brand-strong)', background: 'var(--brand-soft)' }}>🎯 Sistema comercial</span>
+    <div className={`${s.row} ${overdue ? s.overdue : ''}`}>
+      <When date={date} time={null} showDate={showDate} />
+      <Link href={`/comercial?id=${c.id}`} className={`${s.main} ${s.press}`}>
+        <span className={s.title}>{c.next_action || 'Dar seguimiento'}</span>
+        <span className={s.meta}>
+          <span className={s.kind}><i style={{ background: COMMERCIAL_DOT }} />Sistema comercial</span>
+          <span className={s.sep} /><span>{c.company?.trim() || c.name}</span>
           <StatusChip value={c.commercial_status} />
-        </div>
-        <div className="rem-card-title">{c.next_action || 'Dar seguimiento'}</div>
-        <span className="rem-subject"><Ico.user /> {c.company?.trim() || c.name}{c.last_note ? ` · «${c.last_note}»` : ''}</span>
-        <div className="rem-card-when" style={{ color: accent }}><Ico.clock /> {next.label}</div>
-      </div>
-      <div className="rem-card-actions">
-        <span className="rem-done-btn">Abrir →</span>
-      </div>
-    </Link>
+        </span>
+      </Link>
+      <div className={s.actions}><Ico.chevron /></div>
+    </div>
   )
 }
 
-/* ── Grupo con encabezado ── */
-function RemGroup({ label, color, items, today, readonly, onComplete, onDelete, onSnooze }: {
-  label: string; color: string; items: AgendaItem[]; today: string; readonly: boolean
+/* ── Grupo de un día ── */
+function AgendaGroup({ label, overdue, showDate, items, readonly, onComplete, onDelete, onSnooze }: {
+  label: string; overdue?: boolean; showDate?: boolean; items: AgendaItem[]; readonly: boolean
   onComplete: (id: string) => void; onDelete: (id: string) => void; onSnooze: (r: Reminder, when: QuickWhen) => void
 }) {
   if (items.length === 0) return null
   return (
-    <section className="rem-group">
-      <div className="rem-group-head">
-        <span className="rem-group-dot" style={{ background: color }} />
-        <span className="rem-group-label" style={{ color }}>{label}</span>
-        <span className="rem-group-count">{items.length}</span>
+    <section className={s.group}>
+      <div className={s.groupHead}>
+        <span className={`${s.groupLabel} ${overdue ? s.overdueLabel : ''}`}>{label}</span>
+        <span className={s.groupCount}>{items.length}</span>
+        <span className={s.groupRule} />
       </div>
-      <div className="rem-group-list">
+      <div className={s.list}>
         {items.map(it => it.kind === 'com' ? (
-          <FollowCard key={`c-${it.c.id}`} c={it.c} accent={color} today={today} />
+          <FollowRow key={`c-${it.c.id}`} c={it.c} overdue={!!overdue} showDate={!!showDate} />
         ) : (
-          <RemCard key={it.r.id} r={it.r} accent={color} readonly={readonly}
+          <RemRow key={it.r.id} r={it.r} overdue={!!overdue} showDate={!!showDate} readonly={readonly}
             onComplete={() => onComplete(it.r.id)} onDelete={() => onDelete(it.r.id)} onSnooze={when => onSnooze(it.r, when)} />
         ))}
       </div>
@@ -174,19 +180,17 @@ function RemGroup({ label, color, items, today, readonly, onComplete, onDelete, 
   )
 }
 
-/* ══════════════════════════════════════════════════════════
-   AGENDA
-══════════════════════════════════════════════════════════ */
+/* ══════════════ AGENDA ══════════════ */
 export default function AgendaPage() {
   const session  = useSession()
   const readonly = session?.store?.access === 'readonly'
   const [reminders, setReminders] = useState<Reminder[]>(() => cachedQueryData('/api/data/reminders')?.reminders ?? [])
   const [commercial, setCommercial] = useState<CommercialData | null>(() => cachedQueryData('/api/data/commercial/agenda') ?? null)
-  const [loading,   setLoading]   = useState(() => !cachedQueryData('/api/data/reminders'))
+  const [loading, setLoading] = useState(() => !cachedQueryData('/api/data/reminders'))
   useDataReady(loading, 'recordatorios')
-  const [tab,       setTab]       = useState<'pending' | 'done'>('pending')
-  const [typeFilter,setTypeFilter]= useState<string>('all')
-  const [toast,     setToast]     = useState('')
+  const [tab, setTab] = useState<'pending' | 'done'>('pending')
+  const [typeFilter, setTypeFilter] = useState<string>('all')
+  const [toast, setToast] = useState('')
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2400) }
 
@@ -254,17 +258,20 @@ export default function AgendaPage() {
     return m
   }, [tab, pending, done])
 
-  const groupProps = { readonly, today: comToday, onComplete: handleComplete, onDelete: handleDelete, onSnooze: handleSnooze }
+  const groupProps = { readonly, onComplete: handleComplete, onDelete: handleDelete, onSnooze: handleSnooze }
 
   return (
     <>
-      <div className="section-head">
+      <div className={s.head}>
         <h2>Agenda</h2>
         {pendingCount > 0 && (
-          <span className="count">{overdue.length ? `${overdue.length} vencido${overdue.length !== 1 ? 's' : ''} · ` : ''}{pendingCount} pendiente{pendingCount !== 1 ? 's' : ''}</span>
+          <span className={s.sum}>
+            {overdue.length > 0 && <b>{overdue.length} vencido{overdue.length !== 1 ? 's' : ''}</b>}
+            {overdue.length > 0 ? ' · ' : ''}{pendingCount} pendiente{pendingCount !== 1 ? 's' : ''}
+          </span>
         )}
         {!readonly && (
-          <div className="section-actions">
+          <div className={s.headActions}>
             <button className="btn btn-primary page-primary" onClick={() => openQuickCreate({ kind: 'reminder' })}>
               <Ico.plus /> Nuevo recordatorio
             </button>
@@ -272,27 +279,27 @@ export default function AgendaPage() {
         )}
       </div>
 
-      <div className="status-tabs" role="tablist" aria-label="Recordatorios">
-        {([{ key: 'pending', label: 'Pendientes', count: pendingCount }, { key: 'done', label: 'Completados', count: done.length }] as const).map(t => (
-          <button key={t.key} role="tab" aria-selected={tab === t.key} className={`status-tab ${tab === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)}>
-            {t.label}{!loading && <span className="status-tab-count">{t.count}</span>}
-          </button>
-        ))}
-      </div>
-
-      <div className="filter-bar">
-        <button className={`filter-pill ${typeFilter === 'all' ? 'active' : ''}`} onClick={() => setTypeFilter('all')}>Todos</button>
-        {tab === 'pending' && followUps.length > 0 && (
-          <button className={`filter-pill ${typeFilter === COMMERCIAL_FILTER ? 'active' : ''}`} onClick={() => setTypeFilter(COMMERCIAL_FILTER)}>
-            🎯 Sistema comercial<span className="count">{followUps.length}</span>
-          </button>
-        )}
-        {REMINDER_TYPES.filter(t => typeCounts.has(t) || typeFilter === t).map(t => (
-          <button key={t} className={`filter-pill ${typeFilter === t ? 'active' : ''}`} onClick={() => setTypeFilter(t)}>
-            {REMINDER_TYPE_INFO[t].emoji} {REMINDER_TYPE_INFO[t].label}
-            <span className="count">{typeCounts.get(t) ?? 0}</span>
-          </button>
-        ))}
+      <div className={s.controls}>
+        <div className={s.seg} role="tablist" aria-label="Recordatorios">
+          {([{ key: 'pending', label: 'Pendientes', count: pendingCount }, { key: 'done', label: 'Completados', count: done.length }] as const).map(t => (
+            <button key={t.key} role="tab" aria-selected={tab === t.key} className={s.press} onClick={() => setTab(t.key)}>
+              {t.label}{!loading && <span className={s.segN}>{t.count}</span>}
+            </button>
+          ))}
+        </div>
+        <div className={s.chips}>
+          <button className={`${s.chip} ${s.press}`} aria-pressed={typeFilter === 'all'} onClick={() => setTypeFilter('all')}>Todos</button>
+          {tab === 'pending' && followUps.length > 0 && (
+            <button className={`${s.chip} ${s.press}`} aria-pressed={typeFilter === COMMERCIAL_FILTER} onClick={() => setTypeFilter(COMMERCIAL_FILTER)}>
+              Sistema comercial<span className={s.chipN}>{followUps.length}</span>
+            </button>
+          )}
+          {REMINDER_TYPES.filter(t => typeCounts.has(t) || typeFilter === t).map(t => (
+            <button key={t} className={`${s.chip} ${s.press}`} aria-pressed={typeFilter === t} onClick={() => setTypeFilter(t)}>
+              {REMINDER_TYPE_INFO[t].label}<span className={s.chipN}>{typeCounts.get(t) ?? 0}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
@@ -301,28 +308,26 @@ export default function AgendaPage() {
         </div>
       ) : tab === 'pending' ? (
         remsF.length === 0 && followF.length === 0 ? (
-          <div className="empty-state">
-            <div style={{ fontSize: 34, marginBottom: 10, opacity: 0.5 }}>✅</div>
-            <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, color: 'var(--ink)' }}>
-              {typeFilter === 'all' ? 'Todo al día' : typeFilter === COMMERCIAL_FILTER ? 'Sin seguimientos del sistema comercial' : `Sin pendientes de tipo "${remTypeInfo(typeFilter).label}"`}
-            </div>
-            {!readonly && <div>Programa llamadas, visitas o tareas con <button className="link-btn" onClick={() => openQuickCreate({ kind: 'reminder' })}>Nuevo recordatorio</button>.</div>}
+          <div className={s.empty} style={{ marginTop: 26 }}>
+            <div className={s.mark}><Ico.check /></div>
+            <h3>{typeFilter === 'all' ? 'Todo al día' : typeFilter === COMMERCIAL_FILTER ? 'Sin seguimientos del sistema comercial' : `Sin pendientes de ${remTypeInfo(typeFilter).label.toLowerCase()}`}</h3>
+            {!readonly && <p>Programa llamadas, visitas o tareas con <button className="link-btn" onClick={() => openQuickCreate({ kind: 'reminder' })}>Nuevo recordatorio</button>.</p>}
           </div>
         ) : (
           <>
-            <RemGroup label="Vencidos" color="var(--danger)" items={overdue} {...groupProps} />
-            <RemGroup label="Hoy" color="var(--brand)" items={todayRem} {...groupProps} />
-            <RemGroup label="Mañana" color="var(--warning)" items={tomorrowRem} {...groupProps} />
-            <RemGroup label="Más adelante" color="var(--c-cyan-ink)" items={later} {...groupProps} />
+            <AgendaGroup label="Vencidos" overdue showDate items={overdue} {...groupProps} />
+            <AgendaGroup label={`Hoy · ${dayName(now)}`} items={todayRem} {...groupProps} />
+            <AgendaGroup label={`Mañana · ${dayName(tomorrow)}`} items={tomorrowRem} {...groupProps} />
+            <AgendaGroup label="Más adelante" showDate items={later} {...groupProps} />
           </>
         )
       ) : (
         doneF.length === 0 ? (
-          <div className="empty-state">Sin recordatorios completados aún.</div>
+          <div className={s.empty} style={{ marginTop: 26 }}><p>Sin recordatorios completados aún.</p></div>
         ) : (
-          <div className="rem-group-list">
+          <div className={s.list} style={{ marginTop: 26 }}>
             {doneF.map(r => (
-              <RemCard key={r.id} r={r} accent="var(--muted-2)" readonly={readonly} onDelete={() => handleDelete(r.id)} />
+              <RemRow key={r.id} r={r} overdue={false} showDate readonly={readonly} onDelete={() => handleDelete(r.id)} />
             ))}
           </div>
         )

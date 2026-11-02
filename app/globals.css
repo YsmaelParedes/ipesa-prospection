@@ -2353,13 +2353,6 @@ a.activity-row:hover .activity-text strong { text-decoration: underline; }
 .timeline-del { margin-left: auto; font-size: 11px; color: var(--muted); }
 .timeline-del:hover { color: var(--danger); }
 
-.rem-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; margin-bottom: 6px; background: var(--card); border: 1px solid var(--line); }
-.rem-row.overdue { background: var(--brand-softer); border-color: #F5C8CF; }
-.rem-row.done { background: transparent; border: none; padding: 6px 4px; margin: 0; font-size: 12px; color: var(--muted); text-decoration: line-through; }
-.rem-row-when { font-size: 12px; font-weight: 700; color: var(--ink-2); }
-.rem-row.overdue .rem-row-when { color: var(--brand-strong); }
-.rem-row-text { font-size: 12.5px; color: var(--ink-3); margin-top: 1px; }
-.rem-row-owner { font-size: 11px; color: var(--muted); margin-top: 2px; }
 .details-summary { font-size: 12px; color: var(--muted); cursor: pointer; font-weight: 600; }
 
 .mini-cards { display: flex; flex-direction: column; gap: 8px; }
@@ -2368,47 +2361,6 @@ a.activity-row:hover .activity-text strong { text-decoration: underline; }
 .mini-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .mini-card-top strong { font-size: 13px; }
 .mini-card-sub { font-size: 11.5px; color: var(--muted); }
-
-/* ============================================================
-   AGENDA
-   ============================================================ */
-.rem-group { margin-bottom: 26px; }
-.rem-group-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.rem-group-dot { width: 9px; height: 9px; border-radius: 50%; }
-.rem-group-label { font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.rem-group-count { font-size: 11px; font-weight: 700; color: var(--muted); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
-.rem-group-list { display: flex; flex-direction: column; gap: 8px; }
-.rem-card { display: flex; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-sm); }
-.rem-card.high { border-color: #F7C1C9; }
-.rem-card.done { opacity: .85; }
-.rem-card-bar { width: 4px; flex-shrink: 0; border-radius: 12px 0 0 12px; }
-.rem-card-body { flex: 1; min-width: 0; padding: 11px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
-.rem-card-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-.rem-type { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
-.rem-card-title { font-size: 13.5px; font-weight: 700; color: var(--ink); line-height: 1.35; overflow-wrap: anywhere; }
-.rem-subject { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; color: var(--ink-3); background: var(--paper-2); border-radius: 999px; padding: 2px 9px; }
-.rem-subject.lead { color: var(--c-cyan-ink); background: var(--c-cyan-soft); }
-a.rem-subject:hover { text-decoration: underline; }
-.rem-card-when { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; }
-.rem-card-when.muted { color: var(--muted); font-weight: 500; }
-.rem-card-actions { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 8px; padding: 10px 12px; border-left: 1px solid var(--line); flex-shrink: 0; }
-.rem-card-icons { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.rem-card-confirm { display: flex; flex-direction: column; gap: 6px; }
-.rem-card-confirm .btn { padding: 6px 10px; font-size: 12px; }
-.rem-done-btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 12px; border-radius: 8px; background: var(--success); color: #fff; font-size: 12px; font-weight: 700; }
-.rem-done-btn:hover { background: #17602F; }
-.snooze { position: relative; }
-.snooze-menu {
-  position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; width: 180px; padding: 6px;
-  background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); animation: pop .14s ease;
-}
-.snooze-title { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 6px 8px 4px; }
-.snooze-menu button { width: 100%; text-align: left; padding: 8px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
-.snooze-menu button:hover { background: var(--paper); }
-@media (max-width: 640px) {
-  .rem-card { flex-wrap: wrap; }
-  .rem-card-actions { flex-direction: row; flex-wrap: wrap; width: 100%; border-left: none; border-top: 1px solid var(--line); justify-content: space-between; align-items: center; padding: 8px 12px 8px 16px; }
-}
 
 /* ============================================================
    DESPLEGABLE PROPIO (components/Select.tsx)

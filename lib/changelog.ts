@@ -36,6 +36,17 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.34.0',
+    date: '1 de noviembre, 2026',
+    title: 'Agenda más clara',
+    items: [
+      'La Agenda se rediseñó: ahora es una lista limpia, agrupada por día, con la hora alineada a la izquierda para que se lea de un vistazo.',
+      'Lo vencido se distingue con una franja roja y la fecha en rojo.',
+      'Posponer, editar y eliminar aparecen al pasar el cursor sobre el pendiente; en el celular siempre están a la vista. «Listo» sigue siempre visible.',
+      'Pestañas y filtros quedaron en una sola fila, y puedes tocar cualquier parte del renglón para abrirlo.',
+    ],
+  },
+  {
     version: '1.33.0',
     date: '1 de noviembre, 2026',
     title: 'Acumulado de la semana y del mes',
