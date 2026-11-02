@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.33.0',
+    date: '1 de noviembre, 2026',
+    title: 'Acumulado de la semana y del mes',
+    items: [
+      'Nueva pestaña Acumulado en el Sistema Comercial: los totales de la semana o del mes, con flechas para ver cualquier semana o mes anterior.',
+      'Cada cifra se compara con el periodo anterior. Si el periodo va a la mitad, la comparación toma los mismos días, para que sea pareja.',
+      'El avance contra la meta se calcula por días hábiles (de lunes a sábado), y una tabla muestra cómo va cada vendedor.',
+    ],
+  },
+  {
     version: '1.32.1',
     date: '31 de octubre, 2026',
     title: 'Ajustes en los planes',

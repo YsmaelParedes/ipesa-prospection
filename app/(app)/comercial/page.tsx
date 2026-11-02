@@ -11,6 +11,7 @@ import { HoyView, type Opened, type Sub } from './HoyView'
 import { CarteraView } from './CarteraView'
 import { OportunidadesView } from './OportunidadesView'
 import { EquipoView } from './EquipoView'
+import { AcumuladoView } from './AcumuladoView'
 import { ContactPanel } from './ContactPanel'
 import { GuideButton, GuideModal, useGuide } from '@/components/GuideModal'
 import { commercialGuide } from '@/components/Guides'
@@ -21,8 +22,8 @@ const PATH = '/api/data/commercial'
 /** Prospectos nuevos por página y lo más que se pide de una vez (igual que el servidor). */
 const FRESH_PAGE = 30
 const MAX_FRESH = 300
-type Tab = 'hoy' | 'cartera' | 'oportunidades' | 'equipo'
-const TAB_KEYS: Tab[] = ['hoy', 'cartera', 'oportunidades', 'equipo']
+type Tab = 'hoy' | 'cartera' | 'oportunidades' | 'equipo' | 'acumulado'
+const TAB_KEYS: Tab[] = ['hoy', 'cartera', 'oportunidades', 'equipo', 'acumulado']
 
 export default function ComercialPage() {
   // ?id= abre un contacto (desde el buscador, Inicio, Contactos o WhatsApp); ?tab= abre una pestaña
@@ -140,7 +141,7 @@ function ComercialContent() {
     { key: 'hoy', label: 'Hoy', count: data?.due.length },
     { key: 'cartera', label: 'Cartera' },
     ...(salesTeam ? [{ key: 'oportunidades' as Tab, label: 'Oportunidades' }] : []),
-    ...(salesTeam && isAdmin ? [{ key: 'equipo' as Tab, label: 'Equipo' }] : []),
+    ...(salesTeam && isAdmin ? [{ key: 'equipo' as Tab, label: 'Equipo' }, { key: 'acumulado' as Tab, label: 'Acumulado' }] : []),
   ]
   const current: Tab = TABS.some(t => t.key === tab) ? tab : 'hoy'
   // Guía de inicio: sola la primera vez (no si se llegó directo a una ficha)
@@ -175,6 +176,8 @@ function ComercialContent() {
           zone={zone} segment={segment} onZone={setZone} onSegment={setSegment} onOpen={setOverlay} />
       ) : current === 'oportunidades' ? (
         <OportunidadesView isAdmin={isAdmin} segments={data.segments ?? []} onOpen={setOverlay} />
+      ) : current === 'acumulado' ? (
+        <AcumuladoView />
       ) : (
         <EquipoView today={data.today} />
       )}

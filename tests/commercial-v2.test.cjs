@@ -65,3 +65,25 @@ test('Hoy: vencidos, de hoy y prospectos nuevos sin importar la dirección', () 
   assert.equal(c.bucketOf({ ...base, next_action_at: '2026-10-23' }, '2026-10-23'), 'hoy')
   assert.equal(c.bucketOf({ ...base, commercial_status: 'depurar', next_action_at: null }, '2026-10-23'), 'depurar')
 })
+
+test('acumulado: la semana va de lunes a domingo y el mes es natural', () => {
+  // 1 de noviembre de 2026 es domingo: su semana empieza el lunes 26 de octubre
+  assert.equal(c.startOfWeek('2026-11-01'), '2026-10-26')
+  assert.equal(c.startOfWeek('2026-10-26'), '2026-10-26')
+  assert.deepEqual(c.periodRange('week', '2026-11-01'), { from: '2026-10-26', to: '2026-11-01' })
+  assert.deepEqual(c.periodRange('week', '2026-11-01', 1), { from: '2026-10-19', to: '2026-10-25' })
+  assert.deepEqual(c.periodRange('month', '2026-11-01'), { from: '2026-11-01', to: '2026-11-30' })
+  assert.deepEqual(c.periodRange('month', '2026-11-04', 1), { from: '2026-10-01', to: '2026-10-31' })
+  // Enero hacia atrás cambia de año; febrero de 2026 tiene 28 días
+  assert.deepEqual(c.periodRange('month', '2026-01-15', 1), { from: '2025-12-01', to: '2025-12-31' })
+  assert.deepEqual(c.periodRange('month', '2026-02-10'), { from: '2026-02-01', to: '2026-02-28' })
+})
+
+test('acumulado: los días hábiles son de lunes a sábado', () => {
+  // Del lunes 26 de octubre al domingo 1 de noviembre: 6 hábiles
+  assert.equal(c.workDaysBetween('2026-10-26', '2026-11-01'), 6)
+  assert.equal(c.workDaysBetween('2026-11-01', '2026-11-01'), 0)
+  assert.equal(c.workDaysBetween('2026-10-26', '2026-10-26'), 1)
+  // addMonths topa el día al último del mes destino
+  assert.equal(c.addMonths('2026-03-31', -1), '2026-02-28')
+})

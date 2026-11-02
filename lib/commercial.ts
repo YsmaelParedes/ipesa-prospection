@@ -203,13 +203,46 @@ export function compliance(counts: Goals, goals: Goals, days = 1): number {
   return keys.reduce((sum, k) => sum + Math.min(1, counts[k] / (goals[k] * Math.max(1, days))), 0) / keys.length
 }
 
-/** Días hábiles (lunes a sábado) del 1 del mes hasta la fecha, inclusive. */
-export function workDaysUntil(isoDate: string): number {
+/** Días hábiles (lunes a sábado) entre dos fechas, ambas incluidas. */
+export function workDaysBetween(from: string, to: string): number {
   let n = 0
-  for (let d = `${isoDate.slice(0, 7)}-01`; d <= isoDate; d = addDays(d, 1)) {
+  for (let d = from; d <= to; d = addDays(d, 1)) {
     if (new Date(`${d}T12:00:00Z`).getUTCDay() !== 0) n++
   }
   return n
+}
+
+/** Días hábiles (lunes a sábado) del 1 del mes hasta la fecha, inclusive. */
+export const workDaysUntil = (isoDate: string) => workDaysBetween(`${isoDate.slice(0, 7)}-01`, isoDate)
+
+// ── Periodos del acumulado (semana de lunes a domingo, o mes natural) ────────
+export type Period = 'week' | 'month'
+
+/** Lunes de la semana de esa fecha. */
+export function startOfWeek(isoDate: string): string {
+  const day = new Date(`${isoDate}T12:00:00Z`).getUTCDay()
+  return addDays(isoDate, -((day + 6) % 7))
+}
+
+export const startOfMonth = (isoDate: string) => `${isoDate.slice(0, 7)}-01`
+
+/** Mueve una fecha n meses (n negativo va hacia atrás); el día se topa al último del mes. */
+export function addMonths(isoDate: string, n: number): string {
+  const [y, m, d] = isoDate.split('-').map(Number)
+  const date = new Date(Date.UTC(y, m - 1 + n, 1, 12))
+  const last = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 12)).getUTCDate()
+  date.setUTCDate(Math.min(d, last))
+  return date.toISOString().slice(0, 10)
+}
+
+/** Inicio y fin del periodo: offset 0 es el actual, 1 el anterior, y así. */
+export function periodRange(period: Period, today: string, offset = 0): { from: string; to: string } {
+  if (period === 'week') {
+    const from = addDays(startOfWeek(today), -7 * offset)
+    return { from, to: addDays(from, 6) }
+  }
+  const from = startOfMonth(addMonths(startOfMonth(today), -offset))
+  return { from, to: addDays(addMonths(from, 1), -1) }
 }
 
 export type ActivityForCount = { kind: string; result: string | null; is_followup: boolean; quote_amount: number | string | null; sale_amount: number | string | null }
