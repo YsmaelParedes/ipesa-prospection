@@ -5,7 +5,8 @@ catálogo JSON listo para /formulas, con la muestra de color de cada fila.
 
 A diferencia de parse-formula-catalog.mjs (que parte de un .md convertido),
 este script lee el PDF directamente, así que no hay corrupción de decimales
-por conversión. Pensado para PDFs con este formato de fila:
+por conversión. Pensado para PDFs con este formato de fila (la línea de producto puede venir
+partida en dos renglones, como "Vinipesa" / "Matte"):
 
   Vintek 001-5 Enchantress Eve 5 INFINITE 1000 KX 34.75 2Y 43 13Y 36.25
                                                B  3.5   14   1Y 18.5
@@ -61,21 +62,28 @@ def to_hex(color):
 def parse_values(rest):
     """'24.25 2Y 0.75 9Y 27.25' -> [24.25, 96.75, 459.25] (en shots)."""
     found = list(VALUE_RE.finditer(rest))
-    # Todo el texto debe quedar explicado por exactamente 3 valores.
+    # Todo el texto debe quedar explicado por 3 valores. Algunos PDFs traen la
+    # celda de 19 L vacía en unas pocas filas: con solo 2 valores se devuelve
+    # [1 L, 4 L, None] y la cantidad se calcula con esas dos columnas.
     rebuilt = " ".join(m.group(0) for m in found)
-    if len(found) != 3 or re.sub(r"\s+", " ", rest.strip()) != rebuilt:
+    if len(found) not in (2, 3) or re.sub(r"\s+", " ", rest.strip()) != rebuilt:
         return None
     out = []
     for m in found:
         oz = float(m.group(1)) if m.group(1) else 0.0
         out.append(oz * SHOTS_PER_OZ + float(m.group(2)))
+    if len(out) == 2:
+        out.append(None)
     return out
 
 
 def best_shots_per_liter(s1, s4, s19):
     """Punto medio del rango que cuadra con las tres columnas. None si no cuadra."""
-    lo = max(s1 - HALF, (s4 - HALF) / 4, (s19 - HALF) / 19)
-    hi = min(s1 + HALF, (s4 + HALF) / 4, (s19 + HALF) / 19)
+    lo = max(s1 - HALF, (s4 - HALF) / 4)
+    hi = min(s1 + HALF, (s4 + HALF) / 4)
+    if s19 is not None:
+        lo = max(lo, (s19 - HALF) / 19)
+        hi = min(hi, (s19 + HALF) / 19)
     if lo > hi + EPS:
         return None
     return (lo + hi) / 2
@@ -87,20 +95,29 @@ def main():
         sys.exit(1)
     pdf_path, catalog_id, product_line, fandeck, out_path = sys.argv[1:6]
     fandeck_re = re.escape(fandeck)
+    # Una línea de producto de varias palabras ("Vinipesa Matte") viene partida
+    # en dos renglones en el PDF: la primera palabra antes de la fila de datos y
+    # el resto después. La fila de datos ya no lleva el nombre de la línea.
+    words = product_line.split()
+    first_word = words[0]
+    split_lines = len(words) > 1
+    skip_lines = {first_word, " ".join(words[1:])} if split_lines else set()
+    prefix = "" if split_lines else rf"{re.escape(product_line)} "
     color_re = re.compile(
-        rf"^{re.escape(product_line)} (?P<code>\S+) (?P<name>.+?) (?P<base>\d+) {fandeck_re} (?P<rest>.+)$"
+        rf"^{prefix}(?P<code>\S+) (?P<name>.+?) (?P<base>\d+) {fandeck_re} (?P<rest>.+)$"
     )
 
     colors = []
     problems = []
     needs_review = []
+    no_19l = []
     no_swatch = []
 
     with pdfplumber.open(pdf_path) as pdf:
         for pno, page in enumerate(pdf.pages):
             text = page.extract_text() or ""
             lines = text.split("\n")
-            if not any(l.startswith(product_line + " ") for l in lines):
+            if not any(l.startswith(first_word) for l in lines):
                 continue  # portada u hoja sin datos
 
             # Recuadros de muestra: columna izquierda, ~34 pt de ancho y >40 de alto.
@@ -113,7 +130,7 @@ def main():
             # Posición vertical de cada fila de color (la palabra inicial de la línea).
             starts = sorted(
                 (w for w in page.extract_words()
-                 if w["text"] == product_line and w["x0"] < 150 and w["top"] > 70),
+                 if w["text"] == first_word and w["x0"] < 150 and w["top"] > 70),
                 key=lambda w: w["top"],
             )
 
@@ -121,7 +138,7 @@ def main():
             page_colors = []
             for line in lines:
                 line = line.strip()
-                if not line or line.startswith("Product Line") or re.match(r"^\d+ shots", line, re.I):
+                if not line or line in skip_lines or line.startswith("Product Line") or re.match(r"^\d+ shots", line, re.I):
                     continue
                 m = color_re.match(line)
                 if m:
@@ -157,6 +174,8 @@ def main():
                     "raw": {"1L": s1, "4L": s4, "19L": s19},
                 }
                 current["colourants"].append(cn)
+                if s19 is None:
+                    no_19l.append((current["code"], code, s1, s4, pno))
                 if review:
                     needs_review.append((current["code"], current["name"], code, s1, s4, s19, pno))
 
@@ -201,6 +220,9 @@ def main():
     print(f"Muestras: {len(colors) - len(set(no_swatch))} de {len(colors)} colores.")
     print(f"Líneas needsReview (no cuadran entre 1/4/19 L): {len(needs_review)}")
     for r in needs_review[:40]:
+        print("  ", r)
+    print(f"Líneas sin valor de 19 L en el PDF (cantidad calculada con 1 y 4 L): {len(no_19l)}")
+    for r in no_19l:
         print("  ", r)
     print(f"Problemas de lectura: {len(problems)}")
     for p in problems[:40]:

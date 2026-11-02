@@ -36,6 +36,15 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.36.0',
+    date: '1 de noviembre, 2026',
+    title: 'Fórmulas de Vinipesa Matte con el abanico INFINITE 1000',
+    module: 'formulas',
+    items: [
+      'En Fórmulas hay un catálogo nuevo: Vinipesa Matte con los 1,232 colores del abanico INFINITE 1000, cada uno con su muestra de color. Cámbiate de catálogo con las pestañas de arriba.',
+    ],
+  },
+  {
     version: '1.35.0',
     date: '1 de noviembre, 2026',
     title: 'Configuración más ordenada',
