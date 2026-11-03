@@ -13,6 +13,7 @@ import { Suspense, useEffect, useState, useCallback, useMemo, useRef } from 'rea
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Avatar, TipoChip, CanalChip, FilterDropdown, fmtDateLong, fmtPhone, normalizePhone, segmentColor } from '@/components/CrmUI'
+import { waMeLink } from '@/lib/phone'
 import { StatusChip, fmtDay } from '@/components/CommercialUI'
 import { Select, toOptions } from '@/components/Select'
 import { phoneDigits } from '@/components/ContactFormModal'
@@ -661,7 +662,7 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
           <div className="detail-foot">
             {phone && <a href={`tel:${phone}`} className="btn btn-ghost btn-ghost-call"><Ico.phone /> Llamar</a>}
             {waModule && phone.length === 10 && (
-              <Link href={`/whatsapp?phone=${phone}`} className="btn btn-ghost btn-ghost-whatsapp"><Ico.whatsapp /> WhatsApp</Link>
+              <a href={waMeLink(phone)} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-ghost-whatsapp"><Ico.whatsapp /> WhatsApp</a>
             )}
             {c.email && <a href={`mailto:${c.email}`} className="btn btn-ghost btn-ghost-mail"><Ico.mail /> Correo</a>}
           </div>
