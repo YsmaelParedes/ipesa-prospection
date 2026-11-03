@@ -108,12 +108,15 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
   const { quota, refetch: refetchQuota } = useWhatsAppCampaignQuota()
   const { phase, total, done, sent, failed, skipped, outcomes, stopReason, askConfirm, backToForm, run, cancel, reset } = useCampaignSend()
 
+  // Efectos separados: refrescar estadísticas o catálogos no vuelve a descargar toda la base
   useQueryEffect(() => {
     apiFetch('/api/data/contacts?fields=lite&all=1&line=con_telefono')
       .then(r => r.json())
       .then(d => setContacts((d.contacts || []).filter((c: Contact) => normalizePhone(c.phone).length === 10)))
       .catch(() => {})
       .finally(() => setLoading(false))
+  }, [])
+  useQueryEffect(() => {
     loadCatalogs()
       .then(d => setSegmentos(d.segments))
       .catch(() => {})

@@ -24,7 +24,7 @@ async function currentPasswordIsValid(email: string, password: string): Promise<
  *  · Desde la app (Mi cuenta): hay que escribir la actual.
  */
 export async function POST(req: NextRequest) {
-  const user = await getSessionUser()
+  const user = await getSessionUser({ fresh: true })
   if (!user?.email) return unauthorizedResponse()
   if (!(await limitShared([{ key: `password:user:${user.id}`, max: 6, windowMs: 15 * MIN }]))) {
     return tooMany('Demasiados intentos. Espera unos minutos.', 15 * 60)

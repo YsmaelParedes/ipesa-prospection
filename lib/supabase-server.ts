@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { databaseFetch, measure } from './serverTiming'
 import { createServerClient } from '@supabase/ssr'
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
@@ -47,16 +48,66 @@ export function displayNameOf(user: Pick<User, 'user_metadata' | 'email'>): stri
   return (user.user_metadata?.display_name as string | undefined)?.trim() || user.email?.split('@')[0] || 'Usuario'
 }
 
+// ─── Caché corta por instancia ───────────────────────────────────────────────
+// Cada petición a la API validaba la sesión contra Supabase Auth y volvía a
+// leer membresías y tienda: 2 consultas extra por petición, y una pantalla
+// pide varias a la vez. Se guarda la promesa (las peticiones simultáneas
+// comparten una sola consulta) por unos segundos. Un fallo no se guarda.
+type CacheEntry<T> = { until: number; value: Promise<T> }
+const CACHE_MAX = 5000
+
+function remember<T>(map: Map<string, CacheEntry<T>>, key: string, ttl: number, load: () => Promise<T>): Promise<T> {
+  const now = Date.now()
+  const hit = map.get(key)
+  if (hit && hit.until > now) return hit.value
+  if (map.size >= CACHE_MAX) {
+    for (const [k, e] of map) if (e.until <= now) map.delete(k)
+    if (map.size >= CACHE_MAX) map.clear()
+  }
+  const value = load()
+  const entry = { until: now + ttl, value }
+  map.set(key, entry)
+  const forget = () => { if (map.get(key) === entry) map.delete(key) }
+  value.then(v => { if (v === null) forget() }, forget)
+  return value
+}
+
+/** Sesión validada: 30 s por token (nunca más allá de su vencimiento). */
+const SESSION_USER_TTL = 30_000
+const userCache = new Map<string, CacheEntry<User | null>>()
+const tokenKey = (token: string) => createHash('sha256').update(token).digest('base64url')
+
 // getUser() valida el JWT contra Supabase Auth (a diferencia de getSession(),
-// que solo lee la cookie) — es lo correcto para autorizar.
-export async function getSessionUser(): Promise<User | null> {
+// que solo lee la cookie) — es lo correcto para autorizar. getSession() solo se
+// usa para obtener el token (y renovarlo si venció), nunca para confiar en él.
+// Con { fresh: true } se valida otra vez aunque haya una validación reciente
+// (cambiar contraseña o nombre).
+export async function getSessionUser(opts: { fresh?: boolean } = {}): Promise<User | null> {
   try {
     const client = await getAuthClient()
-    const { data: { user }, error } = await measure('auth', () => client.auth.getUser())
-    return error || !user ? null : user
+    const { data: { session } } = await client.auth.getSession()
+    const token = session?.access_token
+    if (!token) return null
+    const key = tokenKey(token)
+    if (opts.fresh) userCache.delete(key)
+    const expiresIn = session.expires_at ? session.expires_at * 1000 - Date.now() : SESSION_USER_TTL
+    const load = async () => {
+      const { data: { user }, error } = await measure('auth', () => client.auth.getUser(token))
+      return error || !user ? null : user
+    }
+    if (expiresIn <= 0) return await load()
+    return await remember(userCache, key, Math.min(SESSION_USER_TTL, expiresIn), load)
   } catch {
     return null
   }
+}
+
+/** Olvida la validación de la sesión de esta petición (al cambiar datos del usuario). */
+export async function forgetSessionUser() {
+  try {
+    const { data: { session } } = await (await getAuthClient()).auth.getSession()
+    if (session?.access_token) userCache.delete(tokenKey(session.access_token))
+  } catch {}
 }
 
 // ─── Tiendas ─────────────────────────────────────────────────────────────────
@@ -158,15 +209,31 @@ export async function storeAudience(storeIds: string[]): Promise<Map<string, Sto
   return out
 }
 
+/**
+ * Membresías y administrador principal: 10 s por instancia. Cambiar permisos,
+ * plan o datos de la tienda desde la app borra la caché al momento
+ * (invalidateStoreContextCache); otros cambios (otra instancia, la base)
+ * tardan como mucho 10 s en verse.
+ */
+const STORE_CONTEXT_TTL = 10_000
+const membershipCache = new Map<string, CacheEntry<Membership[]>>()
+const mainAdminCache = new Map<string, CacheEntry<string | null>>()
+
+export function invalidateStoreContextCache() {
+  membershipCache.clear()
+  mainAdminCache.clear()
+}
+
 /** Tienda activa: la de la cookie si el usuario pertenece a ella; si no, la más antigua. */
 export async function resolveStoreContext(user: User): Promise<StoreContext | null> {
-  const memberships = await getMemberships(user.id)
+  const memberships = await remember(membershipCache, user.id, STORE_CONTEXT_TTL, () => getMemberships(user.id))
   if (!memberships.length) return null
   const wanted = (await cookies()).get(ACTIVE_STORE_COOKIE)?.value
   const m = memberships.find(x => x.storeId === wanted) ?? memberships[0]
   const plan = effectivePlan(m.store)
   // Litro incluye 1 usuario: solo el administrador principal (si hay más administradores, quedan en espera)
-  const litroBlocked = plan === 'litro' && (m.role !== 'admin' || (await getMainAdmin(m.storeId)) !== user.id)
+  const litroBlocked = plan === 'litro' && (m.role !== 'admin' ||
+    (await remember(mainAdminCache, m.storeId, STORE_CONTEXT_TTL, () => getMainAdmin(m.storeId))) !== user.id)
   return {
     uid: user.id,
     user,
@@ -263,9 +330,11 @@ export async function getUserNameMap(storeId: string): Promise<Map<string, strin
   return new Map((await getStoreMembers(storeId)).map(m => [m.user_id, m.display_name]))
 }
 
+/** Cambió el equipo de una tienda (roles, altas, bajas, nombres): también los permisos en caché. */
 export function invalidateStoreMembers(storeId?: string) {
   if (storeId) { directoryCache.delete(storeId); testCache.delete(storeId) }
   else { directoryCache.clear(); testCache.clear() }
+  invalidateStoreContextCache()
 }
 
 const testCache = new Map<string, { at: number; ids: Set<string> }>()

@@ -1,6 +1,6 @@
 import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, requireStore } from '@/lib/supabase-server'
+import { getServerSupabase, invalidateStoreContextCache, requireStore } from '@/lib/supabase-server'
 import { STORE_PROFILE_SCHEMA, publicStore } from '@/lib/storeServer'
 import { jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 
@@ -38,6 +38,7 @@ export async function PATCH(req: NextRequest) {
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', ctx.storeId)
   if (error) return serverError('PATCH /api/store', error, 'No se pudo guardar la tienda')
+  invalidateStoreContextCache()
 
   return NextResponse.json({ ok: true })
 }

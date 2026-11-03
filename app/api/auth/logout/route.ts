@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { ACTIVE_STORE_COOKIE } from '@/lib/supabase-server'
+import { ACTIVE_STORE_COOKIE, forgetSessionUser } from '@/lib/supabase-server'
 import { SESSION_COOKIE_OPTIONS } from '@/lib/sessionCookie'
 
 export async function POST(req: NextRequest) {
@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
     }
   )
 
+  await forgetSessionUser()
   await supabase.auth.signOut()
   // La tienda activa es una preferencia del navegador: se olvida al salir
   res.cookies.delete(ACTIVE_STORE_COOKIE)

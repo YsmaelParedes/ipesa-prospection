@@ -13,11 +13,25 @@ export function queryPolicy(path: string): QueryPolicy | null {
   if (p === '/api/whatsapp/conversations') return { ...normal, staleTime: 15_000, poll: 15_000 }
   // Threads can mark messages read. Only explicit preview requests may use the cache.
   if (p.startsWith('/api/whatsapp/conversations/')) return new URL(path, 'https://local').searchParams.get('preview') === '1' ? { ...normal, staleTime: 6_000 } : null
+  // Todos los contactos con teléfono (Campañas): miles de filas. No se vuelven a
+  // pedir solo por regresar a la pestaña; sí cuando cambian (invalidación).
+  if (p === '/api/data/contacts') {
+    const sp = new URL(path, 'https://local').searchParams
+    if (sp.get('all') === '1' && sp.get('fields') === 'lite') return { staleTime: 600_000, maxAge: 1_800_000 }
+  }
   if (p.startsWith('/api/data/') || p === '/api/store' || p.startsWith('/api/store/') || p === '/api/stores') return normal
   return null
 }
 
+/**
+ * Al terminar una campaña: lo que puede haber cambiado (bajas de marketing,
+ * conversaciones nuevas). Cada lote solo refresca lo de WhatsApp; si cada lote
+ * invalidara los contactos, Campañas volvería a descargar toda la base por lote.
+ */
+export const CAMPAIGN_SENT_RESOURCES = ['/api/data/dashboard', '/api/data/contacts', '/api/data/commercial']
+
 export function mutationResources(path: string): string[] {
+  if (path.startsWith('/api/whatsapp/campaigns/send')) return ['/api/whatsapp/']
   if (path.startsWith('/api/data/contacts')) return ['/api/data/contacts', '/api/data/commercial', '/api/data/dashboard', '/api/whatsapp/']
   if (path.startsWith('/api/data/commercial')) return ['/api/data/commercial', '/api/data/contacts', '/api/data/dashboard']
   if (path.startsWith('/api/data/reminders')) return ['/api/data/reminders', '/api/data/dashboard']
