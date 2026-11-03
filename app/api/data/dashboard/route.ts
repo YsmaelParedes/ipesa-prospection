@@ -62,7 +62,7 @@ async function GETImpl(req: NextRequest) {
       { count: totalContacts },
       { count: contactsThisMonth },
       { count: contactsLastMonth },
-      { data: segmentsData },
+      segmentsData,
       mine,
       activities,
       { count: waUnread },
@@ -73,7 +73,9 @@ async function GETImpl(req: NextRequest) {
       contactsCount(),
       contactsCount().gte('created_at', startOfMonth),
       contactsCount().gte('created_at', startOfLastMonth).lt('created_at', startOfMonth),
-      supabase.from('contacts').select('segment').eq('store_id', storeId),
+      // Todas las páginas: PostgREST corta en 1,000 filas y la dona contaba solo esas
+      fetchPaged<{ segment: string | null }>((from, to) => supabase.from('contacts').select('segment')
+        .eq('store_id', storeId).order('id', { ascending: true }).range(from, to), 200000),
       // Mi cola: los míos (y, sin reparto, los que no tienen responsable)
       fetchPaged<QueueRow>((from, to) => {
         const q = supabase.from('contacts')
@@ -127,7 +129,7 @@ async function GETImpl(req: NextRequest) {
 
     // ── Segmento (contactos de la tienda) ───────────────────────────────────
     const segmentCounts: Record<string, number> = {}
-    for (const c of segmentsData ?? []) {
+    for (const c of segmentsData) {
       if (c.segment) segmentCounts[c.segment] = (segmentCounts[c.segment] || 0) + 1
     }
     const bySegment = Object.entries(segmentCounts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)

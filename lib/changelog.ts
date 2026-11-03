@@ -36,6 +36,14 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.36.1',
+    date: '2 de noviembre, 2026',
+    title: 'Clientes por segmento, completo',
+    items: [
+      'La gráfica de Clientes por segmento en Inicio ahora cuenta todos tus contactos. En bases de más de 1,000 contactos solo tomaba en cuenta los primeros 1,000.',
+    ],
+  },
+  {
     version: '1.36.0',
     date: '1 de noviembre, 2026',
     title: 'Fórmulas de Vinipesa Matte con el abanico INFINITE 1000',
