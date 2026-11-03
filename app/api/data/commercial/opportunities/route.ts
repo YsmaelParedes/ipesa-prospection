@@ -33,11 +33,12 @@ export async function GET(req: NextRequest) {
     const quotes = new Map<string, { amount: number; at: string }>()
     const ids = rows.map(r => r.id)
     for (let i = 0; i < ids.length; i += 200) {
-      const { data, error } = await supabase.from('commercial_activities').select('contact_id, quote_amount, created_at')
-        .eq('store_id', ctx.storeId).in('contact_id', ids.slice(i, i + 200)).not('quote_amount', 'is', null)
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      for (const a of data ?? []) if (!quotes.has(a.contact_id)) quotes.set(a.contact_id, { amount: Number(a.quote_amount), at: a.created_at })
+      // Todas las páginas: un bloque puede juntar más de 1,000 cotizaciones
+      const data = await fetchPaged<{ contact_id: string; quote_amount: number | string; created_at: string }>((from, to) =>
+        supabase.from('commercial_activities').select('contact_id, quote_amount, created_at')
+          .eq('store_id', ctx.storeId).in('contact_id', ids.slice(i, i + 200)).not('quote_amount', 'is', null)
+          .order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to), 200000)
+      for (const a of data) if (!quotes.has(a.contact_id)) quotes.set(a.contact_id, { amount: Number(a.quote_amount), at: a.created_at })
     }
 
     const probability = STAGE_PROBABILITY.cotizacion

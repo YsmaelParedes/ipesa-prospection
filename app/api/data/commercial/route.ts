@@ -4,6 +4,7 @@ import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { jsonError, serverError } from '@/lib/validation'
 import { COMMERCIAL_COLUMNS, hasSalesTeam, withOwnerNames, zonedDayStart } from '@/lib/commercialServer'
 import { withContactSearch } from '@/lib/contactSearch'
+import { fetchPaged } from '@/lib/paged'
 import { addDays, countActivities, goalsFor, parseGoalsConfig, todayISO, type ActivityForCount } from '@/lib/commercial'
 
 const FRESH_PAGE = 30
@@ -42,7 +43,7 @@ async function GETImpl(req: NextRequest) {
   const supabase = getServerSupabase()
 
   try {
-    let due = supabase.from('contacts').select(COMMERCIAL_COLUMNS).eq('store_id', ctx.storeId)
+    let due = supabase.from('contacts').select(COMMERCIAL_COLUMNS, { count: 'exact' }).eq('store_id', ctx.storeId)
       .or(`owner_id.eq.${ctx.uid},owner_id.is.null`)
       .not('next_action_at', 'is', null).lte('next_action_at', today).neq('commercial_status', 'depurar')
     if (zone) due = due.eq('zone', zone)
@@ -89,10 +90,11 @@ async function GETImpl(req: NextRequest) {
     const quoting = [...dueRows, ...foundRows].filter(c => c.commercial_status === 'cotizacion').map(c => c.id as string)
     const quotes = new Map<string, number>()
     if (quoting.length) {
-      const { data } = await supabase.from('commercial_activities').select('contact_id, quote_amount')
-        .eq('store_id', ctx.storeId).in('contact_id', quoting).not('quote_amount', 'is', null)
-        .order('created_at', { ascending: false })
-      for (const a of data ?? []) if (!quotes.has(a.contact_id)) quotes.set(a.contact_id, Number(a.quote_amount))
+      const data = await fetchPaged<{ contact_id: string; quote_amount: number | string }>((from, to) =>
+        supabase.from('commercial_activities').select('contact_id, quote_amount')
+          .eq('store_id', ctx.storeId).in('contact_id', quoting).not('quote_amount', 'is', null)
+          .order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to), 200000)
+      for (const a of data) if (!quotes.has(a.contact_id)) quotes.set(a.contact_id, Number(a.quote_amount))
     }
 
     return NextResponse.json({
@@ -105,6 +107,8 @@ async function GETImpl(req: NextRequest) {
       goals: goalsFor(parseGoalsConfig(store.data?.commercial_goals), ctx.uid),
       counts: countActivities((activities.data ?? []) as ActivityForCount[]),
       due: dueRows.map(c => ({ ...c, quote_amount: quotes.get(c.id as string) ?? null })),
+      // La lista llega hasta MAX_DUE; el contador es el total real
+      dueTotal: dueRes.count ?? dueRows.length,
       fresh: freshRows,
       freshTotal: freshRes.count ?? freshRows.length,
       visit: visitRes.data ?? [],

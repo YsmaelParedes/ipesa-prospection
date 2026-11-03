@@ -38,9 +38,12 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '1.36.1',
     date: '2 de noviembre, 2026',
-    title: 'Clientes por segmento, completo',
+    title: 'Números completos',
     items: [
       'La gráfica de Clientes por segmento en Inicio ahora cuenta todos tus contactos. En bases de más de 1,000 contactos solo tomaba en cuenta los primeros 1,000.',
+      'Los contadores de pendientes en Hoy y en la Agenda muestran el total real, aunque tengas cientos de seguimientos. Si la lista es muy larga, te decimos cuántos faltan por ver.',
+      'En Oportunidades, el monto de cada cotización y el total ya no se quedan cortos cuando hay muchas cotizaciones.',
+      'El resumen de las 8:00 cuenta todos tus pendientes y vencidos.',
     ],
   },
   {

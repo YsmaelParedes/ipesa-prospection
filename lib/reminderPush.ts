@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto'
 import type { NextRequest } from 'next/server'
 import { getServerSupabase, storeAudience } from './supabase-server'
+import { fetchPaged } from './paged'
 import { sendPushToSubscriptions, type PushPayload, type PushSub } from './push'
 import { remTypeInfo } from './crm'
 import { DEFAULT_TZ, naiveIso, zonedIso } from './datetime'
@@ -271,28 +272,25 @@ export async function sendMorningAgenda(now = new Date()) {
   const supabase = getServerSupabase()
   // Hasta el fin del día en la zona más adelantada (UTC+14 → 38 h desde ahora)
   const bound = new Date(now.getTime() + 38 * 3600_000).toISOString().slice(0, 19)
-  const [reminders, followups] = await Promise.all([
-    supabase.from('reminders')
+  // Todas las páginas: PostgREST corta en 1,000 filas, y el resumen cuenta pendientes y vencidos
+  const [rows, due] = await Promise.all([
+    fetchPaged<Row>((from, to) => supabase.from('reminders')
       .select('id, store_id, user_id, lead_name, nota, reminder_date, type, push_sent')
       .eq('completado', false)
       .not('user_id', 'is', null)
       .lte('reminder_date', bound)
-      .order('reminder_date', { ascending: true })
-      .limit(5000),
+      .order('reminder_date', { ascending: true }).order('id', { ascending: true })
+      .range(from, to), 50000),
     // Seguimientos comerciales con fecha de hoy o vencida, de quien tiene al cliente
-    supabase.from('contacts')
+    fetchPaged<FollowUp>((from, to) => supabase.from('contacts')
       .select('id, store_id, owner_id, name, company, next_action, next_action_at')
       .not('owner_id', 'is', null)
       .not('next_action_at', 'is', null)
       .lte('next_action_at', bound.slice(0, 10))
       .neq('commercial_status', 'depurar')
-      .order('next_action_at', { ascending: true })
-      .limit(5000),
+      .order('next_action_at', { ascending: true }).order('id', { ascending: true })
+      .range(from, to), 50000),
   ])
-  const error = reminders.error ?? followups.error
-  if (error) throw error
-  const rows = (reminders.data ?? []) as Row[]
-  const due = (followups.data ?? []) as FollowUp[]
   if (!rows.length && !due.length) return { users: 0, sent: 0, missed: 0, stalled: 0, followups: 0 }
 
   const aud = await loadAudience([...rows, ...due.map(c => ({ store_id: c.store_id, user_id: c.owner_id }))], now)

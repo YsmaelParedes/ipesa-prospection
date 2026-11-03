@@ -46,7 +46,7 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
   const { today, goals, counts } = data
   const [done, setDone] = useState<Metric | null>(null)
   const searching = data.found !== null && query.trim() !== ''
-  const pending = data.due.length
+  const pending = data.dueTotal
 
   const groups: Group[] = searching
     ? [{ key: 'found', title: 'Resultados en toda la base', color: 'var(--ink-3)', items: data.found ?? [] }]
@@ -122,7 +122,13 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
   const moreButton = searching ? null
     : sub === 'nuevos' ? more('fresh', data.fresh.length, data.freshTotal)
     : sub === 'visita' ? more('visit', data.visit.length, data.visitTotal)
-    : <Link href="/recordatorios" className={`${s.loadMore} ${s.press}`} style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>Ver los próximos días en la Agenda →</Link>
+    : <>
+        {/* La lista trae los 500 más urgentes; el aviso dice cuántos hay en total */}
+        {data.due.length < data.dueTotal && (
+          <p className={s.loadMore}>Se muestran los {data.due.length.toLocaleString('es-MX')} más urgentes de {data.dueTotal.toLocaleString('es-MX')}. Al resolverlos aparecen los demás.</p>
+        )}
+        <Link href="/recordatorios" className={`${s.loadMore} ${s.press}`} style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>Ver los próximos días en la Agenda →</Link>
+      </>
 
   const filtered = !!(zone || segment)
   const empty = !all.length && (

@@ -118,6 +118,7 @@ function ComercialContent() {
       return {
         ...d,
         due: stays(c) ? d.due.map(x => x.id === c.id ? { ...x, ...c } : x) : d.due.filter(x => x.id !== c.id),
+        dueTotal: !stays(c) && d.due.some(x => x.id === c.id) ? Math.max(0, d.dueTotal - 1) : d.dueTotal,
         fresh: d.fresh.filter(x => x.id !== c.id || (!c.last_activity_at && !c.owner_id)),
         visit: d.visit.filter(x => x.id !== c.id || (!c.last_activity_at && !c.owner_id)),
         found: d.found && d.found.map(x => x.id === c.id ? { ...x, ...c } : x),
@@ -138,7 +139,7 @@ function ComercialContent() {
   const salesTeam = !!data?.salesTeam
   const isAdmin = !!data?.isAdmin
   const TABS: { key: Tab; label: string; count?: number }[] = [
-    { key: 'hoy', label: 'Hoy', count: data?.due.length },
+    { key: 'hoy', label: 'Hoy', count: data?.dueTotal },
     { key: 'cartera', label: 'Cartera' },
     ...(salesTeam ? [{ key: 'oportunidades' as Tab, label: 'Oportunidades' }] : []),
     ...(salesTeam && isAdmin ? [{ key: 'equipo' as Tab, label: 'Equipo' }, { key: 'acumulado' as Tab, label: 'Acumulado' }] : []),

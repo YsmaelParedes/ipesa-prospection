@@ -17,6 +17,8 @@ export type TodayData = {
   today: string; uid: string; isAdmin: boolean; salesTeam: boolean
   zones: string[]; segments: string[]; goals: Goals; counts: DayCounts
   due: ListContact[]; fresh: ListContact[]; freshTotal: number; offset: number
+  /** Cuántos pendientes hay en total (la lista trae hasta 500). */
+  dueTotal: number
   /** Sin teléfono ("Para visita"): los primeros y cuántos hay. */
   visit: ListContact[]; visitTotal: number
   /** Con búsqueda: coincidencias en toda la base. */

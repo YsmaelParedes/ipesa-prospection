@@ -13,7 +13,7 @@ import { StatusChip } from '@/components/CommercialUI'
 import s from './agenda.module.css'
 
 /** GET /api/data/commercial/agenda: seguimientos del sistema comercial con su fecha. */
-type CommercialData = { today: string; followUps: CommercialContact[] }
+type CommercialData = { today: string; followUps: CommercialContact[]; total?: number }
 /** Un renglón de la Agenda: recordatorio o seguimiento comercial, ordenados juntos por fecha. */
 type AgendaItem = { kind: 'rem'; r: Reminder; at: number } | { kind: 'com'; c: CommercialContact; at: number }
 const COMMERCIAL_FILTER = 'commercial'
@@ -251,7 +251,9 @@ export default function AgendaPage() {
   const tomorrowRem = merge(remsF.filter(r => isSameDay(new Date(r.fecha_recordatorio), tomorrow)), comOn(d => d === comTomorrow))
   const later    = merge(remsF.filter(r => { const d = new Date(r.fecha_recordatorio); return d >= now && !isSameDay(d, now) && !isSameDay(d, tomorrow) }), comOn(d => d > comTomorrow))
   const doneF    = applyTypeFilter(done)
-  const pendingCount = pending.length + followUps.length
+  // La lista de seguimientos llega recortada a los más próximos; el contador usa el total real
+  const followTotal = Math.max(commercial?.total ?? 0, followUps.length)
+  const pendingCount = pending.length + followTotal
   const typeCounts = useMemo(() => {
     const m = new Map<string, number>()
     for (const r of (tab === 'pending' ? pending : done)) m.set(r.type || 'task', (m.get(r.type || 'task') ?? 0) + 1)
@@ -291,7 +293,7 @@ export default function AgendaPage() {
           <button className={`${s.chip} ${s.press}`} aria-pressed={typeFilter === 'all'} onClick={() => setTypeFilter('all')}>Todos</button>
           {tab === 'pending' && followUps.length > 0 && (
             <button className={`${s.chip} ${s.press}`} aria-pressed={typeFilter === COMMERCIAL_FILTER} onClick={() => setTypeFilter(COMMERCIAL_FILTER)}>
-              Sistema comercial<span className={s.chipN}>{followUps.length}</span>
+              Sistema comercial<span className={s.chipN}>{followTotal}</span>
             </button>
           )}
           {REMINDER_TYPES.filter(t => typeCounts.has(t) || typeFilter === t).map(t => (
@@ -319,6 +321,9 @@ export default function AgendaPage() {
             <AgendaGroup label={`Hoy · ${dayName(now)}`} items={todayRem} {...groupProps} />
             <AgendaGroup label={`Mañana · ${dayName(tomorrow)}`} items={tomorrowRem} {...groupProps} />
             <AgendaGroup label="Más adelante" showDate items={later} {...groupProps} />
+            {followF.length > 0 && followUps.length < followTotal && (
+              <p className={s.capNote}>Se muestran los {followUps.length.toLocaleString('es-MX')} seguimientos más próximos de {followTotal.toLocaleString('es-MX')}. Los demás aparecen conforme se acerque su fecha.</p>
+            )}
           </>
         )
       ) : (
