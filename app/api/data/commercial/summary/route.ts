@@ -10,14 +10,14 @@ import {
 
 type Row = ActivityForCount & { user_id: string | null; created_at: string }
 
-const MAX_OFFSET = 60
+const MAX_OFFSET = 400
 
 /** Meta del periodo: la meta diaria por los días hábiles transcurridos. */
 const scale = (goals: Goals, days: number): Goals =>
   Object.fromEntries(GOAL_KEYS.map(k => [k, goals[k] * days])) as Goals
 
 /**
- * GET /api/data/commercial/summary?period=week|month&offset=0 — pestaña
+ * GET /api/data/commercial/summary?period=day|week|month&offset=0 — pestaña
  * "Acumulado" (solo administradores): totales del periodo, los mismos días del
  * periodo anterior para comparar, avance contra la meta y el desglose por
  * vendedor.
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   const sp = req.nextUrl.searchParams
   const period = (sp.get('period') || 'week') as Period
-  if (period !== 'week' && period !== 'month') return jsonError('Periodo inválido')
+  if (period !== 'day' && period !== 'week' && period !== 'month') return jsonError('Periodo inválido')
   const offset = Number(sp.get('offset') ?? 0)
   if (!Number.isInteger(offset) || offset < 0 || offset > MAX_OFFSET) return jsonError('Periodo fuera de rango')
 
@@ -43,8 +43,9 @@ export async function GET(req: NextRequest) {
   const end = to > today ? today : to
   const days = workDaysBetween(from, end)
   const fullDays = workDaysBetween(from, to)
-  // Un mes que empieza en domingo aún no tiene días hábiles: se mide contra el periodo completo
-  const goalDays = days || fullDays
+  // Un día se mide contra la meta diaria (aunque sea domingo). Un mes que empieza
+  // en domingo aún no tiene días hábiles: se mide contra el periodo completo
+  const goalDays = period === 'day' ? 1 : days || fullDays
 
   const prev = periodRange(period, from, 1)
   // Los mismos días naturales del periodo anterior, para que la comparación sea justa
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest) {
   const sameDay = addDays(prev.from, elapsed)
   // Un mes anterior más corto (febrero) no puede pasarse de su último día
   const prevEnd = sameDay > prev.to ? prev.to : sameDay
-  const prevGoalDays = workDaysBetween(prev.from, prevEnd) || workDaysBetween(prev.from, prev.to)
+  const prevGoalDays = period === 'day' ? 1 : workDaysBetween(prev.from, prevEnd) || workDaysBetween(prev.from, prev.to)
 
   try {
     const supabase = getServerSupabase()

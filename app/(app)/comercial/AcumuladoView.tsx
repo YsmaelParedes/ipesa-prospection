@@ -23,8 +23,17 @@ type Data = {
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 const tone = (ratio: number) => ratio >= 0.8 ? s.ok : ratio >= 0.4 ? s.mid : s.low
 const cap = (t: string) => t[0].toUpperCase() + t.slice(1)
+const PREV_LABEL: Record<Period, string> = { day: 'Día anterior', week: 'Semana anterior', month: 'Mes anterior' }
+const NEXT_LABEL: Record<Period, string> = { day: 'Día siguiente', week: 'Semana siguiente', month: 'Mes siguiente' }
+
+/** "lunes" */
+const weekday = (iso: string) => new Intl.DateTimeFormat('es-MX', { weekday: 'long', timeZone: 'UTC' }).format(new Date(`${iso}T12:00:00Z`))
 
 function periodLabel(d: Data): string {
+  if (d.period === 'day') {
+    const day = `${weekday(d.from)} ${fmtDay(d.from)}`
+    return d.offset === 0 ? `Hoy · ${day}` : d.offset === 1 ? `Ayer · ${day}` : cap(day)
+  }
   if (d.period === 'week') {
     const range = `${fmtDay(d.from)} – ${fmtDay(d.to)}`
     return d.offset === 0 ? `Esta semana · ${range}` : d.offset === 1 ? `Semana pasada · ${range}` : range
@@ -48,7 +57,7 @@ function Delta({ now, before, isMoney }: { now: number; before: number; isMoney?
   )
 }
 
-/** "Acumulado" (administrador): totales de la semana o del mes, comparados con el periodo anterior. */
+/** "Acumulado" (administrador): totales de un día, la semana o el mes, comparados con el periodo anterior. */
 export function AcumuladoView() {
   const [period, setPeriod] = useState<Period>('week')
   const [offset, setOffset] = useState(0)
@@ -73,15 +82,16 @@ export function AcumuladoView() {
   const picker = (
     <div className={s.teamTop}>
       <div className={s.filters} style={{ margin: 0 }}>
+        <button className={`${s.pill} ${s.press}`} aria-pressed={period === 'day'} onClick={() => choose('day')}>Día</button>
         <button className={`${s.pill} ${s.press}`} aria-pressed={period === 'week'} onClick={() => choose('week')}>Semana</button>
         <button className={`${s.pill} ${s.press}`} aria-pressed={period === 'month'} onClick={() => choose('month')}>Mes</button>
       </div>
       <div className={s.periodNav}>
         <button className={`${s.navBtn} ${s.press}`} onClick={() => setOffset(o => o + 1)}
-          aria-label={period === 'week' ? 'Semana anterior' : 'Mes anterior'}>‹</button>
+          aria-label={PREV_LABEL[period]}>‹</button>
         <span className={s.periodLabel}>{data ? periodLabel(data) : '…'}</span>
         <button className={`${s.navBtn} ${s.press}`} disabled={offset === 0} onClick={() => setOffset(o => Math.max(0, o - 1))}
-          aria-label={period === 'week' ? 'Semana siguiente' : 'Mes siguiente'}>›</button>
+          aria-label={NEXT_LABEL[period]}>›</button>
       </div>
       {offset > 0 && <button className={`${s.ghostBtn} ${s.press}`} onClick={() => setOffset(0)}>Volver a hoy</button>}
     </div>
@@ -91,10 +101,14 @@ export function AcumuladoView() {
   if (!data) return <>{picker}<div className={`${s.elev} ${s.emptyList}`}>Cargando…</div></>
 
   const week = data.period === 'week'
-  const compare = data.partial
-    ? `Comparado con ${data.elapsedDays === 1 ? 'el primer día' : `los primeros ${data.elapsedDays} días`} ${week ? 'de la semana anterior' : 'del mes anterior'}, para que sea parejo.`
-    : `Comparado con ${week ? 'la semana anterior completa' : 'el mes anterior completo'}.`
-  const goalNote = data.startedDays === 0
+  const compare = data.period === 'day'
+    ? 'Comparado con el día anterior.'
+    : data.partial
+      ? `Comparado con ${data.elapsedDays === 1 ? 'el primer día' : `los primeros ${data.elapsedDays} días`} ${week ? 'de la semana anterior' : 'del mes anterior'}, para que sea parejo.`
+      : `Comparado con ${week ? 'la semana anterior completa' : 'el mes anterior completo'}.`
+  const goalNote = data.period === 'day'
+    ? 'Meta de un día'
+    : data.startedDays === 0
     ? `${week ? 'Meta de la semana completa' : 'Meta del mes completo'}: ${data.fullDays} días hábiles`
     : `Meta de ${data.goalDays === 1 ? '1 día hábil' : `${data.goalDays} días hábiles`}`
   const kpis: { label: string; value: string; now: number; before: number; isMoney?: boolean }[] = [
@@ -179,7 +193,7 @@ export function AcumuladoView() {
       <div className={`${s.elev} ${s.zonesNote}`} style={{ marginTop: 12 }}>
         <Ico.calendar />
         <span style={{ flex: 1, minWidth: 220 }}>
-          Las metas se cuentan por días hábiles (de lunes a sábado). Cámbialas en <b>Equipo → Editar metas</b>.
+          Las metas se cuentan por días hábiles (de lunes a sábado). Cámbialas en <b>Actividad diaria → Editar metas</b>.
         </span>
       </div>
     </>

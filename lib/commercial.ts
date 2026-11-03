@@ -215,8 +215,8 @@ export function workDaysBetween(from: string, to: string): number {
 /** Días hábiles (lunes a sábado) del 1 del mes hasta la fecha, inclusive. */
 export const workDaysUntil = (isoDate: string) => workDaysBetween(`${isoDate.slice(0, 7)}-01`, isoDate)
 
-// ── Periodos del acumulado (semana de lunes a domingo, o mes natural) ────────
-export type Period = 'week' | 'month'
+// ── Periodos del acumulado (un día, semana de lunes a domingo, o mes natural) ─
+export type Period = 'day' | 'week' | 'month'
 
 /** Lunes de la semana de esa fecha. */
 export function startOfWeek(isoDate: string): string {
@@ -237,6 +237,10 @@ export function addMonths(isoDate: string, n: number): string {
 
 /** Inicio y fin del periodo: offset 0 es el actual, 1 el anterior, y así. */
 export function periodRange(period: Period, today: string, offset = 0): { from: string; to: string } {
+  if (period === 'day') {
+    const day = addDays(today, -offset)
+    return { from: day, to: day }
+  }
   if (period === 'week') {
     const from = addDays(startOfWeek(today), -7 * offset)
     return { from, to: addDays(from, 6) }

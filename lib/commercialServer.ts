@@ -13,7 +13,7 @@ export const hasSalesTeam = (ctx: StoreContext) => planOf(ctx.plan).salesTeam
 
 export function salesTeamRequired(): Response {
   return Response.json(
-    { error: 'Oportunidades, metas por vendedor y la pantalla Equipo vienen en los planes Galón y Cubeta.', code: 'PLAN_FEATURE' },
+    { error: 'Oportunidades, metas por vendedor, Actividad diaria y Acumulado vienen en los planes Galón y Cubeta.', code: 'PLAN_FEATURE' },
     { status: 403 },
   )
 }

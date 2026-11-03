@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.37.0',
+    date: '2 de noviembre, 2026',
+    title: 'Actividad diaria y Acumulado por día',
+    items: [
+      'La pestaña Equipo del Sistema Comercial ahora se llama Actividad diaria y muestra solo lo de hoy: cada vendedor contra su meta del día, lo cotizado y lo vendido hoy.',
+      'Acumulado suma la vista Día: con las flechas ves cualquier día anterior, comparado con el día de antes. Semana y Mes siguen igual.',
+      { text: 'En el Sistema Comercial, el botón de WhatsApp abre la app de WhatsApp de tu celular con el chat del cliente. En la lista de Hoy, además, se abre su ficha para que registres cómo te fue.', module: 'whatsapp' },
+    ],
+  },
+  {
     version: '1.36.1',
     date: '2 de noviembre, 2026',
     title: 'Números completos',

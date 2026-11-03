@@ -5,7 +5,7 @@ import { fetchPaged } from '@/lib/paged'
 import { hasSalesTeam, salesTeamRequired, zonedDayStart } from '@/lib/commercialServer'
 import {
   GOAL_KEYS, RESULT_CHOICES, RESULT_RULES, addDays, compliance, countActivities, goalsFor, parseGoals,
-  parseGoalsConfig, todayISO, workDaysUntil, type ActivityForCount,
+  parseGoalsConfig, todayISO, type ActivityForCount,
 } from '@/lib/commercial'
 
 type Row = ActivityForCount & { user_id: string | null; contact_id: string; created_at: string }
@@ -15,29 +15,25 @@ const byResult = (rows: Row[]) => RESULT_CHOICES
   .filter(x => x.count > 0)
 
 /**
- * GET /api/data/commercial/control?date=AAAA-MM-DD — pantalla "Equipo":
- * cada persona contra su meta del día y su cumplimiento del mes, totales de
- * la tienda y desglose por resultado y por segmento. Vendedor: solo lo suyo.
+ * GET /api/data/commercial/control — pantalla "Actividad diaria": solo lo de
+ * hoy. Cada persona contra su meta del día, lo cotizado y vendido hoy, y el
+ * desglose por resultado y por segmento. Semanas y meses están en Acumulado
+ * (/summary). Vendedor: solo lo suyo. Las cuentas de prueba no cuentan.
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
   if (!hasSalesTeam(ctx)) return salesTeamRequired()
 
   const tz = ctx.store.timezone || 'America/Mexico_City'
   const today = todayISO(tz)
-  const date = req.nextUrl.searchParams.get('date') || today
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date)) || date > today) return jsonError('Fecha inválida')
-
-  const monthStart = `${date.slice(0, 7)}-01`
-  const range = { from: zonedDayStart(monthStart, tz).toISOString(), to: zonedDayStart(addDays(date, 1), tz).toISOString() }
-  const dayFrom = Date.parse(zonedDayStart(date, tz).toISOString())
+  const range = { from: zonedDayStart(today, tz).toISOString(), to: zonedDayStart(addDays(today, 1), tz).toISOString() }
 
   try {
     const supabase = getServerSupabase()
     const count = (status: string) => supabase.from('contacts').select('id', { count: 'exact', head: true })
       .eq('store_id', ctx.storeId).eq('commercial_status', status)
-    const [allRows, segments, members, store, prospects, clients, owned, tests] = await Promise.all([
+    const [allRows, members, store, prospects, clients, owned, tests] = await Promise.all([
       fetchPaged<Row>((from, to) => {
         let q = supabase.from('commercial_activities')
           .select('user_id, contact_id, kind, result, is_followup, quote_amount, sale_amount, created_at')
@@ -45,8 +41,6 @@ export async function GET(req: NextRequest) {
         if (!ctx.isAdmin) q = q.eq('user_id', ctx.uid)
         return q.order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, to)
       }, 200000),
-      fetchPaged<{ id: string; segment: string | null }>((from, to) => supabase.from('contacts').select('id, segment')
-        .eq('store_id', ctx.storeId).order('id', { ascending: true }).range(from, to), 200000),
       getStoreMembers(ctx.storeId).catch(() => []),
       supabase.from('stores').select('commercial_goals').eq('id', ctx.storeId).maybeSingle(),
       count('nuevo'),
@@ -60,47 +54,50 @@ export async function GET(req: NextRequest) {
     const rows = allRows.filter(r => !r.user_id || !tests.has(r.user_id))
 
     const cfg = parseGoalsConfig(store.data?.commercial_goals)
-    const workDays = workDaysUntil(date)
     const ownedBy = new Map<string, number>()
     for (const o of owned) if (o.owner_id) ownedBy.set(o.owner_id, (ownedBy.get(o.owner_id) ?? 0) + 1)
-    const day = rows.filter(r => Date.parse(r.created_at) >= dayFrom)
 
-    // Vendedores: los empleados y quien tenga actividad este mes
+    // Vendedores: los empleados y quien tenga actividad hoy
     const people = members
       .filter(m => m.status === 'active' && !tests.has(m.user_id) && (ctx.isAdmin || m.user_id === ctx.uid))
       .filter(m => m.role === 'employee' || rows.some(r => r.user_id === m.user_id))
       .map(m => {
         const goals = goalsFor(cfg, m.user_id)
-        const dayCounts = countActivities(day.filter(r => r.user_id === m.user_id))
-        const monthCounts = countActivities(rows.filter(r => r.user_id === m.user_id))
+        const day = countActivities(rows.filter(r => r.user_id === m.user_id))
         return {
           user_id: m.user_id, name: m.display_name, role: m.role, goals, custom: !!cfg.byUser[m.user_id],
           owned: ownedBy.get(m.user_id) ?? 0,
-          day: dayCounts, dayCompliance: compliance(dayCounts, goals),
-          month: monthCounts, monthCompliance: compliance(monthCounts, goals, workDays),
+          day, dayCompliance: compliance(day, goals),
         }
       })
 
-    const segmentOf = new Map(segments.map(s => [s.id, s.segment || 'Sin segmento']))
+    // Segmento solo de los contactos con actividad hoy (no hace falta leer toda la base)
+    const ids = Array.from(new Set(rows.filter(r => r.kind !== 'nota').map(r => r.contact_id)))
+    const segmentOf = new Map<string, string>()
+    for (let i = 0; i < ids.length; i += 150) {
+      const { data, error } = await supabase.from('contacts').select('id, segment')
+        .eq('store_id', ctx.storeId).in('id', ids.slice(i, i + 150))
+      if (error) throw error
+      for (const c of data ?? []) segmentOf.set(c.id, c.segment || 'Sin segmento')
+    }
     const bySegment = new Map<string, number>()
     for (const r of rows) {
       if (r.kind === 'nota') continue
       const s = segmentOf.get(r.contact_id) ?? 'Sin segmento'
       bySegment.set(s, (bySegment.get(s) ?? 0) + 1)
     }
-    const month = countActivities(rows)
+    const day = countActivities(rows)
 
     return NextResponse.json({
-      date, today,
+      today,
       teamGoals: cfg.team,
       people,
-      totals: { prospects: prospects.count ?? 0, clients: clients.count ?? 0, quoted: month.quoted, sold: month.sold },
-      dayByResult: byResult(day),
-      monthBySegment: Array.from(bySegment, ([segment, count]) => ({ segment, count }))
-        .sort((a, b) => b.count - a.count),
+      totals: { prospects: prospects.count ?? 0, clients: clients.count ?? 0, quoted: day.quoted, sold: day.sold },
+      byResult: byResult(rows),
+      bySegment: Array.from(bySegment, ([segment, count]) => ({ segment, count })).sort((a, b) => b.count - a.count),
     })
   } catch (error) {
-    return serverError('GET /api/data/commercial/control', error, 'Error al obtener el equipo')
+    return serverError('GET /api/data/commercial/control', error, 'Error al obtener la actividad del día')
   }
 }
 

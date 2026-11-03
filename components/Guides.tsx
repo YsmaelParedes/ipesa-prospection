@@ -18,8 +18,8 @@ export function commercialGuide({ isAdmin, salesTeam }: { isAdmin: boolean; sale
       }
     : isAdmin
       ? {
-          title: 'Oportunidades y Equipo',
-          text: 'En Oportunidades ves las cotizaciones abiertas y las marcas como Ganada, Perdida o Seguimiento. En Equipo ves cómo va cada vendedor contra su meta y cambias las metas.',
+          title: 'Oportunidades, Actividad diaria y Acumulado',
+          text: 'En Oportunidades ves las cotizaciones abiertas y las marcas como Ganada, Perdida o Seguimiento. En Actividad diaria ves cómo va hoy cada vendedor contra su meta y cambias las metas; en Acumulado, cualquier día, semana o mes.',
           art: (
             <div className="g-bars">
               <div>Vendedor 1<i><b style={{ width: '80%' }} /></i><span>80 %</span></div>

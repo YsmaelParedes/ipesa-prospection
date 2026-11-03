@@ -10,13 +10,13 @@ import s from './comercial.module.css'
 
 type Person = {
   user_id: string; name: string; role: string; goals: Goals; custom: boolean; owned: number
-  day: DayCounts; dayCompliance: number; month: DayCounts; monthCompliance: number
+  day: DayCounts; dayCompliance: number
 }
 type Data = {
-  date: string; today: string; teamGoals: Goals; people: Person[]
+  today: string; teamGoals: Goals; people: Person[]
   totals: { prospects: number; clients: number; quoted: number; sold: number }
-  dayByResult: { result: string; label: string; count: number }[]
-  monthBySegment: { segment: string; count: number }[]
+  byResult: { result: string; label: string; count: number }[]
+  bySegment: { segment: string; count: number }[]
 }
 
 const RESULT_COLOR: Record<string, string> = {
@@ -24,48 +24,46 @@ const RESULT_COLOR: Record<string, string> = {
   venta: 'var(--success-fill)', no_interesado: 'var(--ink-3)', numero_equivocado: 'var(--brand)',
 }
 const tone = (ratio: number) => ratio >= 0.8 ? s.ok : ratio >= 0.4 ? s.mid : s.low
+/** "lunes, 2 de noviembre" */
+const dayName = (iso: string) => new Intl.DateTimeFormat('es-MX', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
+  .format(new Date(`${iso}T12:00:00Z`))
 
-/** "Equipo" (administrador): cada vendedor contra su meta del día y del mes, y los totales de la tienda. */
-export function EquipoView({ today }: { today: string }) {
-  const [date, setDate] = useState(today)
+/**
+ * "Actividad diaria" (administrador): solo lo de hoy, cada vendedor contra su
+ * meta del día. Semanas y meses, con su comparación, están en Acumulado.
+ */
+export function ActividadView() {
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
 
   const load = useCallback(async () => {
     try {
-      const r = await apiFetch(`/api/data/commercial/control?date=${date}`)
+      const r = await apiFetch('/api/data/commercial/control')
       const d = await r.json()
       if (!r.ok) throw new Error(d.error)
       setData(d); setError('')
     } catch (e) {
-      setError(e instanceof Error && e.message ? e.message : 'No se pudo cargar el equipo')
+      setError(e instanceof Error && e.message ? e.message : 'No se pudo cargar la actividad del día')
     }
-  }, [date])
+  }, [])
   useQueryEffect(() => { load() }, [load])
   useDataChanged(['commercial'], load)
 
   if (error) return <div className={`${s.elev} ${s.emptyList}`} role="alert">{error}</div>
   if (!data) return <div className={`${s.elev} ${s.emptyList}`}>Cargando…</div>
-  const maxResult = Math.max(1, ...data.dayByResult.map(r => r.count))
-  const maxSegment = Math.max(1, ...data.monthBySegment.map(r => r.count))
-  const isToday = date === data.today
+  const maxResult = Math.max(1, ...data.byResult.map(r => r.count))
+  const maxSegment = Math.max(1, ...data.bySegment.map(r => r.count))
 
   return (
     <>
-      <div className={s.teamTop}>
-        <label className={s.dateInput}>
-          <Ico.calendar />
-          <input type="date" value={date} max={data.today} onChange={e => e.target.value && setDate(e.target.value)} aria-label="Día" />
-        </label>
-        {!isToday && <button className={`${s.ghostBtn} ${s.press}`} onClick={() => setDate(data.today)}>Volver a hoy</button>}
-      </div>
+      <p className={s.dayLabel}>Hoy · {dayName(data.today)}</p>
 
       <div className={s.kpis}>
         <div className={`${s.elev} ${s.kpi}`}><small>Prospectos</small><b className={s.num}>{data.totals.prospects.toLocaleString('es-MX')}</b></div>
         <div className={`${s.elev} ${s.kpi}`}><small>Clientes</small><b className={s.num}>{data.totals.clients.toLocaleString('es-MX')}</b></div>
-        <div className={`${s.elev} ${s.kpi}`}><small>Cotizado este mes</small><b className={s.num}>{money(data.totals.quoted)}</b></div>
-        <div className={`${s.elev} ${s.kpi}`}><small>Vendido este mes</small><b className={s.num}>{money(data.totals.sold)}</b></div>
+        <div className={`${s.elev} ${s.kpi}`}><small>Cotizado hoy</small><b className={s.num}>{money(data.totals.quoted)}</b></div>
+        <div className={`${s.elev} ${s.kpi}`}><small>Vendido hoy</small><b className={s.num}>{money(data.totals.sold)}</b></div>
       </div>
 
       {data.people.length === 0 ? (
@@ -77,7 +75,7 @@ export function EquipoView({ today }: { today: string }) {
               <div className={s.personHead}>
                 <div className={s.avatar} style={{ background: 'var(--brand-soft)', color: 'var(--brand-strong)' }} aria-hidden="true">{initials(p.name)}</div>
                 <div><b>{p.name}</b><small>{p.owned.toLocaleString('es-MX')} clientes suyos{p.custom ? ' · metas propias' : ''}</small></div>
-                <span className={`${s.bigPct} ${s.num}`} title={isToday ? 'Cumplimiento de hoy' : 'Cumplimiento del día'}>{pct(p.dayCompliance)}</span>
+                <span className={`${s.bigPct} ${s.num}`} title="Cumplimiento de hoy">{pct(p.dayCompliance)}</span>
               </div>
               {GOAL_KEYS.map(k => {
                 const ratio = p.goals[k] ? p.day[k] / p.goals[k] : 0
@@ -89,7 +87,6 @@ export function EquipoView({ today }: { today: string }) {
                   </div>
                 )
               })}
-              <div className={s.month}><span>Cumplimiento del mes</span><b className={s.num}>{pct(p.monthCompliance)}</b></div>
             </article>
           ))}
         </div>
@@ -97,8 +94,8 @@ export function EquipoView({ today }: { today: string }) {
 
       <div className={s.split}>
         <div className={`${s.elev} ${s.splitCard}`}>
-          <h3>Resultados {isToday ? 'de hoy' : 'del día'}</h3>
-          {data.dayByResult.length === 0 ? <div className={s.hMuted}>Sin actividades este día.</div> : data.dayByResult.map(r => (
+          <h3>Resultados de hoy</h3>
+          {data.byResult.length === 0 ? <div className={s.hMuted}>Sin actividades hoy.</div> : data.byResult.map(r => (
             <div key={r.result} className={s.brow}>
               <span>{r.label}</span>
               <div className={s.bar}><span style={{ width: `${Math.round(r.count / maxResult * 100)}%`, background: RESULT_COLOR[r.result] }} /></div>
@@ -107,8 +104,8 @@ export function EquipoView({ today }: { today: string }) {
           ))}
         </div>
         <div className={`${s.elev} ${s.splitCard}`}>
-          <h3>Actividad por segmento (este mes)</h3>
-          {data.monthBySegment.length === 0 ? <div className={s.hMuted}>Sin actividades este mes.</div> : data.monthBySegment.slice(0, 8).map(r => (
+          <h3>Actividad por segmento (hoy)</h3>
+          {data.bySegment.length === 0 ? <div className={s.hMuted}>Sin actividades hoy.</div> : data.bySegment.slice(0, 8).map(r => (
             <div key={r.segment} className={s.brow}>
               <span>{r.segment}</span>
               <div className={s.bar}><span style={{ width: `${Math.round(r.count / maxSegment * 100)}%`, background: 'var(--c-cyan-ink)' }} /></div>
@@ -120,7 +117,7 @@ export function EquipoView({ today }: { today: string }) {
 
       <div className={`${s.elev} ${s.zonesNote}`}>
         <Ico.pin size={18} />
-        <span style={{ flex: 1, minWidth: 220 }}><b>Zonas sin repartir.</b> Todos ven la base completa; el primero que trabaja un prospecto se queda con él. Puedes reasignar a alguien desde su ficha.</span>
+        <span style={{ flex: 1, minWidth: 220 }}><b>Para ver otros días, semanas o meses</b>, usa la pestaña Acumulado. Todos ven la base completa; el primero que trabaja un prospecto se queda con él.</span>
         <button className={`${s.ghostBtn} ${s.press}`} onClick={() => setEditing(true)}>Editar metas</button>
       </div>
 

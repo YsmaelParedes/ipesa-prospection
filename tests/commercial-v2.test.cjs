@@ -77,6 +77,9 @@ test('acumulado: la semana va de lunes a domingo y el mes es natural', () => {
   // Enero hacia atrás cambia de año; febrero de 2026 tiene 28 días
   assert.deepEqual(c.periodRange('month', '2026-01-15', 1), { from: '2025-12-01', to: '2025-12-31' })
   assert.deepEqual(c.periodRange('month', '2026-02-10'), { from: '2026-02-01', to: '2026-02-28' })
+  // Un día: hoy, ayer, y hacia atrás cruzando de mes
+  assert.deepEqual(c.periodRange('day', '2026-11-02'), { from: '2026-11-02', to: '2026-11-02' })
+  assert.deepEqual(c.periodRange('day', '2026-11-02', 2), { from: '2026-10-31', to: '2026-10-31' })
 })
 
 test('acumulado: los días hábiles son de lunes a sábado', () => {

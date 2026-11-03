@@ -10,7 +10,7 @@ import type { CommercialContact } from '@/lib/commercial'
 import { HoyView, type Opened, type Sub } from './HoyView'
 import { CarteraView } from './CarteraView'
 import { OportunidadesView } from './OportunidadesView'
-import { EquipoView } from './EquipoView'
+import { ActividadView } from './ActividadView'
 import { AcumuladoView } from './AcumuladoView'
 import { ContactPanel } from './ContactPanel'
 import { GuideButton, GuideModal, useGuide } from '@/components/GuideModal'
@@ -22,8 +22,8 @@ const PATH = '/api/data/commercial'
 /** Prospectos nuevos por página y lo más que se pide de una vez (igual que el servidor). */
 const FRESH_PAGE = 30
 const MAX_FRESH = 300
-type Tab = 'hoy' | 'cartera' | 'oportunidades' | 'equipo' | 'acumulado'
-const TAB_KEYS: Tab[] = ['hoy', 'cartera', 'oportunidades', 'equipo', 'acumulado']
+type Tab = 'hoy' | 'cartera' | 'oportunidades' | 'actividad' | 'acumulado'
+const TAB_KEYS: Tab[] = ['hoy', 'cartera', 'oportunidades', 'actividad', 'acumulado']
 
 export default function ComercialPage() {
   // ?id= abre un contacto (desde el buscador, Inicio, Contactos o WhatsApp); ?tab= abre una pestaña
@@ -42,7 +42,8 @@ function ComercialContent() {
   const [data, setData] = useState<TodayData | null>(() => cachedQueryData<TodayData>(PATH) ?? null)
   const [loading, setLoading] = useState(() => !cachedQueryData(PATH))
   useDataReady(loading, 'comercial')
-  const wanted = params.get('tab') as Tab | null
+  // ?tab=equipo es el nombre anterior de Actividad diaria (enlaces viejos)
+  const wanted = (params.get('tab') === 'equipo' ? 'actividad' : params.get('tab')) as Tab | null
   const [tab, setTab] = useState<Tab>(wanted && TAB_KEYS.includes(wanted) ? wanted : 'hoy')
   const [sub, setSub] = useState<Sub>('pend')
   const [zone, setZone] = useState('')
@@ -142,7 +143,7 @@ function ComercialContent() {
     { key: 'hoy', label: 'Hoy', count: data?.dueTotal },
     { key: 'cartera', label: 'Cartera' },
     ...(salesTeam ? [{ key: 'oportunidades' as Tab, label: 'Oportunidades' }] : []),
-    ...(salesTeam && isAdmin ? [{ key: 'equipo' as Tab, label: 'Equipo' }, { key: 'acumulado' as Tab, label: 'Acumulado' }] : []),
+    ...(salesTeam && isAdmin ? [{ key: 'actividad' as Tab, label: 'Actividad diaria' }, { key: 'acumulado' as Tab, label: 'Acumulado' }] : []),
   ]
   const current: Tab = TABS.some(t => t.key === tab) ? tab : 'hoy'
   // Guía de inicio: sola la primera vez (no si se llegó directo a una ficha)
@@ -180,7 +181,7 @@ function ComercialContent() {
       ) : current === 'acumulado' ? (
         <AcumuladoView />
       ) : (
-        <EquipoView today={data.today} />
+        <ActividadView />
       )}
 
       {overlay && data && (
