@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getStoreMembers, requireStore } from '@/lib/supabase-server'
+import { getServerSupabase, getStoreMembers, getTestUserIds, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
 import { hasSalesTeam, salesTeamRequired, zonedDayStart } from '@/lib/commercialServer'
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     const supabase = getServerSupabase()
     const count = (status: string) => supabase.from('contacts').select('id', { count: 'exact', head: true })
       .eq('store_id', ctx.storeId).eq('commercial_status', status)
-    const [rows, segments, members, store, prospects, clients, owned] = await Promise.all([
+    const [allRows, segments, members, store, prospects, clients, owned, tests] = await Promise.all([
       fetchPaged<Row>((from, to) => {
         let q = supabase.from('commercial_activities')
           .select('user_id, contact_id, kind, result, is_followup, quote_amount, sale_amount, created_at')
@@ -53,8 +53,11 @@ export async function GET(req: NextRequest) {
       count('cliente'),
       fetchPaged<{ owner_id: string | null }>((from, to) => supabase.from('contacts').select('owner_id')
         .eq('store_id', ctx.storeId).not('owner_id', 'is', null).order('id', { ascending: true }).range(from, to), 200000),
+      getTestUserIds(ctx.storeId),
     ])
     if (store.error) throw store.error
+    // Las cuentas de prueba no cuentan en los números del equipo
+    const rows = allRows.filter(r => !r.user_id || !tests.has(r.user_id))
 
     const cfg = parseGoalsConfig(store.data?.commercial_goals)
     const workDays = workDaysUntil(date)
@@ -64,7 +67,7 @@ export async function GET(req: NextRequest) {
 
     // Vendedores: los empleados y quien tenga actividad este mes
     const people = members
-      .filter(m => m.status === 'active' && (ctx.isAdmin || m.user_id === ctx.uid))
+      .filter(m => m.status === 'active' && !tests.has(m.user_id) && (ctx.isAdmin || m.user_id === ctx.uid))
       .filter(m => m.role === 'employee' || rows.some(r => r.user_id === m.user_id))
       .map(m => {
         const goals = goalsFor(cfg, m.user_id)

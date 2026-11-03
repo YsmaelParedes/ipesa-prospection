@@ -1,7 +1,7 @@
 import { getDashboardWhatsAppUsage } from '@/lib/dashboardWhatsApp'
 import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
+import { getServerSupabase, getTestUserIds, getUserNameMap, requireStore } from '@/lib/supabase-server'
 import { serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
 import { hasSalesTeam } from '@/lib/commercialServer'
@@ -64,11 +64,12 @@ async function GETImpl(req: NextRequest) {
       { count: contactsLastMonth },
       segmentsData,
       mine,
-      activities,
+      allActivities,
       { count: waUnread },
       { count: waInboundToday },
       waUsage,
       names,
+      tests,
     ] = await Promise.all([
       contactsCount(),
       contactsCount().gte('created_at', startOfMonth),
@@ -96,7 +97,10 @@ async function GETImpl(req: NextRequest) {
       supabase.from('whatsapp_messages').select('id', { count: 'exact', head: true }).eq('store_id', storeId).eq('direction', 'inbound').gte('created_at', startOfToday),
       req.nextUrl.searchParams.get('includeWhatsApp') !== '0' && isAdmin && ctx.modules.whatsapp ? getDashboardWhatsAppUsage(storeId) : Promise.resolve(null),
       isAdmin ? getUserNameMap(storeId).catch(() => new Map<string, string>()) : Promise.resolve(null),
+      isAdmin ? getTestUserIds(storeId) : Promise.resolve(new Set<string>()),
     ])
+    // Las cuentas de prueba no cuentan en los números de toda la tienda (la vista propia no se filtra)
+    const activities = allActivities.filter(a => !a.user_id || !tests.has(a.user_id))
 
     // ── Cola de hoy y próximos seguimientos ────────────────────────────────
     const queue = mine.filter(c => inQueue(bucketOf(c, today))).sort(queueCompare(today))

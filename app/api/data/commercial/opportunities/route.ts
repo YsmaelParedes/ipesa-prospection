@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
+import { getServerSupabase, getTestUserIds, getUserNameMap, requireStore } from '@/lib/supabase-server'
 import { serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
 import { COMMERCIAL_COLUMNS } from '@/lib/commercialServer'
@@ -21,14 +21,17 @@ export async function GET(req: NextRequest) {
   const supabase = getServerSupabase()
 
   try {
-    const [rows, names] = await Promise.all([
+    const [allRows, names, tests] = await Promise.all([
       fetchPaged<Row>((from, to) => {
         let q = supabase.from('contacts').select(COMMERCIAL_COLUMNS).eq('store_id', ctx.storeId).eq('commercial_status', 'cotizacion')
         if (!team) q = q.eq('owner_id', ctx.uid)
         return q.order('last_activity_at', { ascending: true, nullsFirst: true }).order('id', { ascending: true }).range(from, to)
       }, 5000),
       getUserNameMap(ctx.storeId).catch(() => new Map<string, string>()),
+      team ? getTestUserIds(ctx.storeId) : Promise.resolve(new Set<string>()),
     ])
+    // Vista del equipo: sin las oportunidades de las cuentas de prueba
+    const rows = allRows.filter(r => !r.owner_id || !tests.has(r.owner_id as string))
 
     const quotes = new Map<string, { amount: number; at: string }>()
     const ids = rows.map(r => r.id)

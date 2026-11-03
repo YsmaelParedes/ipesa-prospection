@@ -264,6 +264,26 @@ export async function getUserNameMap(storeId: string): Promise<Map<string, strin
 }
 
 export function invalidateStoreMembers(storeId?: string) {
-  if (storeId) directoryCache.delete(storeId)
-  else directoryCache.clear()
+  if (storeId) { directoryCache.delete(storeId); testCache.delete(storeId) }
+  else { directoryCache.clear(); testCache.clear() }
+}
+
+const testCache = new Map<string, { at: number; ids: Set<string> }>()
+
+/**
+ * Cuentas de prueba de la tienda (store_members.is_test): lo que hacen no
+ * cuenta en los números del equipo (Equipo, Acumulado, Inicio, Oportunidades)
+ * ni aparecen en las tablas de vendedores. Si la consulta falla, no excluye a
+ * nadie: mejor un número con pruebas que una pantalla rota.
+ */
+export async function getTestUserIds(storeId: string): Promise<Set<string>> {
+  const hit = testCache.get(storeId)
+  if (hit && Date.now() - hit.at < 60_000) return hit.ids
+  const { data, error } = await getServerSupabase().from('store_members').select('user_id')
+    .eq('store_id', storeId).eq('is_test', true)
+  if (error) { console.error('[getTestUserIds]', error.message); return new Set() }
+  const ids = new Set((data ?? []).map(r => r.user_id as string))
+  if (testCache.size > 1000) testCache.clear()
+  testCache.set(storeId, { at: Date.now(), ids })
+  return ids
 }

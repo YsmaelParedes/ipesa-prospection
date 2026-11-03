@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getStoreMembers, requireStore } from '@/lib/supabase-server'
+import { getServerSupabase, getStoreMembers, getTestUserIds, requireStore } from '@/lib/supabase-server'
 import { jsonError, serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
 import { hasSalesTeam, salesTeamRequired, zonedDayStart } from '@/lib/commercialServer'
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const supabase = getServerSupabase()
-    const [rows, members, store] = await Promise.all([
+    const [allRows, members, store, tests] = await Promise.all([
       fetchPaged<Row>((f, t) => supabase.from('commercial_activities')
         .select('user_id, kind, result, is_followup, quote_amount, sale_amount, created_at')
         .eq('store_id', ctx.storeId)
@@ -65,8 +65,11 @@ export async function GET(req: NextRequest) {
         .order('created_at', { ascending: true }).order('id', { ascending: true }).range(f, t), 200000),
       getStoreMembers(ctx.storeId).catch(() => []),
       supabase.from('stores').select('commercial_goals').eq('id', ctx.storeId).maybeSingle(),
+      getTestUserIds(ctx.storeId),
     ])
     if (store.error) throw store.error
+    // Las cuentas de prueba no cuentan en los números del equipo
+    const rows = allRows.filter(r => !r.user_id || !tests.has(r.user_id))
 
     const startsAt = Date.parse(zonedDayStart(from, tz).toISOString())
     const prevEndsAt = Date.parse(zonedDayStart(addDays(prevEnd, 1), tz).toISOString())
@@ -75,7 +78,7 @@ export async function GET(req: NextRequest) {
 
     const cfg = parseGoalsConfig(store.data?.commercial_goals)
     const people = members
-      .filter(m => m.status === 'active')
+      .filter(m => m.status === 'active' && !tests.has(m.user_id))
       .filter(m => m.role === 'employee' || current.some(r => r.user_id === m.user_id))
       .map(m => {
         const goals = goalsFor(cfg, m.user_id)
