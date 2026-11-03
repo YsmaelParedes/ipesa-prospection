@@ -104,7 +104,7 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
 
   const content = (
     <>
-      <div className={s.paneHead}>
+      <div className={s.paneHead} data-tour="ficha-head">
         <div className={s.avatar} style={{ background: bg, color: fg }} aria-hidden="true">{initials(bizName(contact))}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h2 className={s.paneTitle}>{bizName(contact)}</h2>

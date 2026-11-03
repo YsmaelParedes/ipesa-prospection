@@ -67,7 +67,7 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
 
   // Cada medida se puede tocar para ver con quién fue
   const strip = (
-    <div className={`${s.elev} ${s.strip}`}>
+    <div className={`${s.elev} ${s.strip}`} data-tour="strip">
       <button type="button" className={`${s.bigbar} ${s.stripBtn}`} onClick={() => setDone('calls')} aria-label={`Ver las ${counts.calls} llamadas de hoy`}>
         <span className={s.progressRow}>
           <span>Llamadas de hoy</span>
@@ -95,7 +95,7 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
     ['visita', 'Para visita', 'var(--ink-3)', data.visitTotal],
   ]
   const subTabs = (
-    <div className={s.subTabs} role="group" aria-label="Qué ver">
+    <div className={s.subTabs} role="group" aria-label="Qué ver" data-tour="subs">
       {SUBS.map(([key, label, color, n]) => (
         <button key={key} type="button" className={`${s.subTab} ${s.press}`} aria-pressed={!searching && sub === key}
           onClick={() => { onSub(key); onOpen(null); if (searching) onQuery('') }}>
@@ -106,9 +106,9 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
   )
 
   const filters = (
-    <Filters zones={data.zones} segments={data.segments ?? []} zone={zone} segment={segment} onZone={onZone} onSegment={onSegment}
+    <div data-tour="filters"><Filters zones={data.zones} segments={data.segments ?? []} zone={zone} segment={segment} onZone={onZone} onSegment={onSegment}
       query={query} onQuery={onQuery} placeholder="Buscar en toda la base: negocio o teléfono"
-      active={!!(zone || segment || query)} onClear={onClear} />
+      active={!!(zone || segment || query)} onClear={onClear} /></div>
   )
 
   // De a 30; con más de 300, se acota con la zona, el segmento o la búsqueda
@@ -173,7 +173,7 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
                   const [bg, fg] = avatarColors(c.commercial_status)
                   const phone = normalizePhone(c.phone)
                   return (
-                    <div key={c.id} role="button" tabIndex={0} className={s.row} aria-current={selected?.id === c.id}
+                    <div key={c.id} role="button" tabIndex={0} className={s.row} aria-current={selected?.id === c.id} data-tour-row={c.id}
                       onClick={() => onOpen({ id: c.id })} onKeyDown={e => { if (e.key === 'Enter') onOpen({ id: c.id }) }}>
                       <span className={s.avatar} style={{ background: bg, color: fg }} aria-hidden="true">{initials(bizName(c))}</span>
                       <span style={{ minWidth: 0 }}>
@@ -232,7 +232,7 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
                 const [bg, fg] = avatarColors(c.commercial_status)
                 const phone = normalizePhone(c.phone)
                 return (
-                  <article key={c.id} className={`${s.elev} ${s.card} ${g.key === 'late' ? s.cardDue : ''}`}>
+                  <article key={c.id} className={`${s.elev} ${s.card} ${g.key === 'late' ? s.cardDue : ''}`} data-tour-row={c.id}>
                     <button className={s.cardTop} onClick={() => onOpen({ id: c.id })}>
                       <span className={s.avatar} style={{ background: bg, color: fg }} aria-hidden="true">{initials(bizName(c))}</span>
                       <span style={{ flex: 1, minWidth: 0 }}>

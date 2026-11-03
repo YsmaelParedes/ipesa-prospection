@@ -352,7 +352,7 @@ Pantalla: ${pathname}`,
     const Ic = it.icon
     const badge = badgeFor(it.id)
     return (
-      <Link key={it.id} href={it.href} className={`nav-item ${isActive(it.href) ? 'active' : ''}`} aria-current={isActive(it.href) ? 'page' : undefined}>
+      <Link key={it.id} href={it.href} data-tour={`nav-${it.id}`} className={`nav-item ${isActive(it.href) ? 'active' : ''}`} aria-current={isActive(it.href) ? 'page' : undefined}>
         <Ic className="nav-icon" />
         <span>{it.label}</span>
         {badge && <span className={`nav-count ${badge.cls}`}>{badge.n > 99 ? '99+' : badge.n}</span>}
@@ -589,7 +589,7 @@ Pantalla: ${pathname}`,
           const Ic = it.icon
           const badge = badgeFor(it.id)
           return (
-            <Link key={it.id} href={it.href} className={isActive(it.href) ? 'active' : ''} aria-current={isActive(it.href) ? 'page' : undefined}>
+            <Link key={it.id} href={it.href} data-tour={`nav-${it.id}`} className={isActive(it.href) ? 'active' : ''} aria-current={isActive(it.href) ? 'page' : undefined}>
               <Ic />
               <span>{it.short ?? it.label}</span>
               {badge && <span className={`bn-badge ${badge.cls}`}>{badge.n > 99 ? '99+' : badge.n}</span>}

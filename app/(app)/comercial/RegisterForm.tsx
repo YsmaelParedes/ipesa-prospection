@@ -105,7 +105,7 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
   }
 
   return (
-    <div>
+    <div data-tour="form">
       <div className={s.step}>
         <div className={s.stepHead}><span className={s.stepN}>1</span>Tipo</div>
         <div className={s.typeSeg} role="group" aria-label="Tipo de actividad">
@@ -117,7 +117,7 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
 
       <div className={s.step}>
         <div className={s.stepHead}><span className={s.stepN}>2</span>Resultado</div>
-        <div className={`${s.results} ${wide ? s.wideResults : ''}`} role="group" aria-label="Resultado">
+        <div className={`${s.results} ${wide ? s.wideResults : ''}`} role="group" aria-label="Resultado" data-tour="results">
           {RESULT_CHOICES.map(r => (
             <button key={r} type="button" className={`${s.chipPick} ${s.press}`} aria-pressed={result === r} onClick={() => pick(r)}>
               <span className={s.chipIco} style={{ background: RESULT_LOOK[r].bg }} aria-hidden="true">{RESULT_LOOK[r].icon}</span>

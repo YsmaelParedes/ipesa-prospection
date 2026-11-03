@@ -13,8 +13,9 @@ import { OportunidadesView } from './OportunidadesView'
 import { ActividadView } from './ActividadView'
 import { AcumuladoView } from './AcumuladoView'
 import { ContactPanel } from './ContactPanel'
-import { GuideButton, GuideModal, useGuide } from '@/components/GuideModal'
-import { commercialGuide } from '@/components/Guides'
+import { GuideButton, useGuide } from '@/components/GuideModal'
+import { CommercialTour } from './CommercialTour'
+import { commercialTour, type CommercialStep } from './tourSteps'
 import { Ico, bizName, useWide, whenPhrase, type TodayData } from './ui'
 import s from './comercial.module.css'
 
@@ -146,24 +147,63 @@ function ComercialContent() {
     ...(salesTeam && isAdmin ? [{ key: 'actividad' as Tab, label: 'Actividad diaria' }, { key: 'acumulado' as Tab, label: 'Acumulado' }] : []),
   ]
   const current: Tab = TABS.some(t => t.key === tab) ? tab : 'hoy'
-  // Guía de inicio: sola la primera vez (no si se llegó directo a una ficha)
-  const guide = useGuide('comercial', !loading && !!data && !deepId)
+  // Recorrido: solo la primera vez (no si se llegó directo a una ficha). Clave
+  // nueva para que también lo vea una vez quien ya vio la guía anterior.
+  const guide = useGuide('comercial-recorrido', !loading && !!data && !deepId)
+
+  // Cliente de ejemplo: el primero de Pendientes, si no de Nuevos, si no de Para visita
+  const tourClient: { id: string; sub: Sub } | null = !data ? null
+    : data.due[0] ? { id: data.due[0].id, sub: 'pend' }
+    : data.fresh[0] ? { id: data.fresh[0].id, sub: 'nuevos' }
+    : data.visit[0] ? { id: data.visit[0].id, sub: 'visita' }
+    : null
+  // Al terminar se deja la pantalla como estaba
+  const beforeTour = useRef<{ tab: Tab; sub: Sub; opened: Opened | null } | null>(null)
+  const startTour = useCallback(() => {
+    beforeTour.current = { tab, sub, opened }
+    guide.show()
+  }, [tab, sub, opened, guide])
+  const endTour = useCallback(() => {
+    const b = beforeTour.current
+    if (b) { setTab(b.tab); setSub(b.sub); setOpened(b.opened) }
+    beforeTour.current = null
+    guide.close()
+  }, [guide])
+  // Cada paso deja lista la pantalla: en Hoy y, si toca, con el cliente de ejemplo visible o abierto
+  const prepareStep = useCallback((step: CommercialStep) => {
+    setTab('hoy')
+    if (step.prepare && tourClient) {
+      setSub(tourClient.sub)
+      setOpened(step.prepare === 'ficha' || wide ? { id: tourClient.id } : null)
+    } else if (!wide) {
+      setOpened(null)
+    }
+  }, [tourClient, wide])
+  // La primera vez sale sola: también hay que recordar cómo estaba la pantalla
+  useEffect(() => {
+    if (guide.open && !beforeTour.current) beforeTour.current = { tab, sub, opened }
+  }, [guide.open, tab, sub, opened])
 
   return (
     <>
       <div className={s.tabsRow}>
         {TABS.length > 1 && (
-          <div className={s.tabs} role="tablist" aria-label="Sistema Comercial">
+          <div className={s.tabs} role="tablist" aria-label="Sistema Comercial" data-tour="tabs">
             {TABS.map(t => (
-              <button key={t.key} role="tab" aria-selected={current === t.key} className={`${s.tab} ${s.press}`} onClick={() => setTab(t.key)}>
+              <button key={t.key} role="tab" aria-selected={current === t.key} className={`${s.tab} ${s.press}`} onClick={() => setTab(t.key)} data-tour={`tab-${t.key}`}>
                 {t.label}{t.count ? <span className={`${s.tabCount} ${s.num}`}>{t.count}</span> : null}
               </button>
             ))}
           </div>
         )}
-        <GuideButton onClick={guide.show} />
+        <GuideButton onClick={startTour} />
       </div>
-      {guide.open && <GuideModal title="Cómo usar el Sistema Comercial" steps={commercialGuide({ isAdmin, salesTeam })} onClose={guide.close} />}
+      {guide.open && data && (
+        <CommercialTour
+          steps={commercialTour({ isAdmin, salesTeam, readonly, waModule, clientId: tourClient?.id })}
+          onStep={step => prepareStep(step as CommercialStep)}
+          onClose={endTour} />
+      )}
 
       {loading || !data ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>

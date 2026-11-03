@@ -36,6 +36,14 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.38.0',
+    date: '2 de noviembre, 2026',
+    title: 'Recorrido del Sistema Comercial',
+    items: [
+      'El Sistema Comercial tiene un recorrido nuevo: va señalando cada parte de la pantalla y explica qué hacer, desde tu lista de Hoy hasta qué pasa con cada resultado. Sale una vez y lo repites cuando quieras con «¿Cómo funciona?».',
+    ],
+  },
+  {
     version: '1.37.0',
     date: '2 de noviembre, 2026',
     title: 'Actividad diaria y Acumulado por día',
