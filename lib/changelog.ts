@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.36.1',
+    date: '3 de noviembre, 2026',
+    title: 'Inicio y Campañas más rápidos',
+    items: [
+      'Inicio carga más rápido, sobre todo en tiendas con muchos contactos.',
+      { text: 'Campañas ya no vuelve a cargar todos tus contactos cada vez que regresas a la pestaña ni mientras se envía una campaña: la lista se actualiza una vez, al terminar.', module: 'campaigns' },
+      'La app responde más rápido al moverte entre pantallas.',
+    ],
+  },
+  {
     version: '1.36.0',
     date: '1 de noviembre, 2026',
     title: 'Fórmulas de Vinipesa Matte con el abanico INFINITE 1000',

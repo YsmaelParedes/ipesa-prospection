@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getServerSupabase, requireStore } from '@/lib/supabase-server'
+import { getServerSupabase, invalidateStoreContextCache, requireStore } from '@/lib/supabase-server'
 import { emailConfigured, escapeHtml, sendEmail } from '@/lib/email'
 import { EMAILS } from '@/lib/legal'
 import { jsonError, serverError } from '@/lib/validation'
@@ -29,6 +29,7 @@ export async function POST() {
       .eq('id', ctx.storeId).is('whatsapp_requested_at', null)
       .select('whatsapp_requested_at')
     if (error) throw error
+    invalidateStoreContextCache()
     if (data?.length && emailConfigured()) {
       const who = ctx.user.email ?? ctx.uid
       await sendEmail({

@@ -2,7 +2,7 @@ require('./register-typescript.cjs')
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
 const { QueryCache, QueryError } = require('../lib/queryCache.ts')
-const { queryPolicy, normalizedPath, mutationResources } = require('../lib/queryPolicy.ts')
+const { queryPolicy, normalizedPath, mutationResources, CAMPAIGN_SENT_RESOURCES } = require('../lib/queryPolicy.ts')
 const policy = { staleTime: 30_000, maxAge: 600_000 }
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r }); return { promise, resolve } }
 
@@ -135,5 +135,12 @@ test('normalization, side-effect exclusions and mutation dependencies', () => {
   assert.equal(queryPolicy('/api/whatsapp/media/123'), null)
   assert.ok(mutationResources('/api/data/reminders/123').includes('/api/data/dashboard'))
   assert.ok(mutationResources('/api/data/contacts/123').includes('/api/data/commercial'))
-  assert.ok(mutationResources('/api/whatsapp/campaigns/send').includes('/api/data/dashboard'))
+  // Un lote de campaña no vuelve a descargar los contactos; se refrescan al terminar
+  assert.deepEqual(mutationResources('/api/whatsapp/campaigns/send'), ['/api/whatsapp/'])
+  assert.ok(CAMPAIGN_SENT_RESOURCES.includes('/api/data/contacts') && CAMPAIGN_SENT_RESOURCES.includes('/api/data/dashboard'))
+  assert.ok(mutationResources('/api/whatsapp/send').includes('/api/data/dashboard'))
+  // La base completa (Campañas) no se vuelve a pedir al regresar a la pestaña; la lista paginada sí
+  assert.ok(queryPolicy('/api/data/contacts?all=1&fields=lite&line=con_telefono').staleTime >= 600_000)
+  assert.equal(queryPolicy('/api/data/contacts?all=1').staleTime, 30_000)
+  assert.equal(queryPolicy('/api/data/contacts?limit=50').staleTime, 30_000)
 })

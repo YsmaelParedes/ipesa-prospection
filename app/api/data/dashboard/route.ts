@@ -6,7 +6,7 @@ import { serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
 import { hasSalesTeam } from '@/lib/commercialServer'
 import {
-  KIND_LABELS, RESULT_RULES, bucketOf, countActivities, inQueue, isCallResult, queueCompare, resultLabel, todayISO,
+  KIND_LABELS, NO_ANSWER_LIMIT, RESULT_RULES, countActivities, isCallResult, resultLabel, todayISO,
   type ActivityKind, type CommercialStatus,
 } from '@/lib/commercial'
 
@@ -32,10 +32,13 @@ function mexicoBoundaries() {
 }
 
 type QueueRow = {
-  id: string; name: string; company: string | null; address: string | null; owner_id: string | null
+  id: string; name: string; company: string | null
   commercial_status: CommercialStatus; next_action: string | null; next_action_at: string | null
-  last_activity_at: string | null; no_answer_streak: number; created_at: string
+  last_activity_at?: string | null
 }
+/** Cola y próximos calculados en la base (función dashboard_queue). */
+type QueueSummary = { count: number; overdue: number; top: QueueRow[]; upcoming: QueueRow[] }
+type Facets = { total: number; segment: Record<string, number> }
 type ActivityRow = {
   id: string; contact_id: string; user_id: string | null; kind: ActivityKind; result: string | null; note: string | null
   quote_amount: number | null; sale_amount: number | null; is_followup: boolean; created_at: string
@@ -59,29 +62,24 @@ async function GETImpl(req: NextRequest) {
     const contactsCount = () => supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('store_id', storeId)
 
     const [
-      { count: totalContacts },
+      facetsRes,
       { count: contactsThisMonth },
       { count: contactsLastMonth },
-      { data: segmentsData },
-      mine,
+      queueRes,
       activities,
       { count: waUnread },
       { count: waInboundToday },
       waUsage,
       names,
     ] = await Promise.all([
-      contactsCount(),
+      // Total y conteo por segmento de toda la base, en una pasada dentro de la base
+      supabase.rpc('contact_facets', { p_store: storeId }),
       contactsCount().gte('created_at', startOfMonth),
       contactsCount().gte('created_at', startOfLastMonth).lt('created_at', startOfMonth),
-      supabase.from('contacts').select('segment').eq('store_id', storeId),
-      // Mi cola: los míos (y, sin reparto, los que no tienen responsable)
-      fetchPaged<QueueRow>((from, to) => {
-        const q = supabase.from('contacts')
-          .select('id, name, company, address, owner_id, commercial_status, next_action, next_action_at, last_activity_at, no_answer_streak, created_at')
-          .eq('store_id', storeId)
-        return (isAdmin && !salesTeam ? q.or(`owner_id.eq.${ctx.uid},owner_id.is.null`) : q.eq('owner_id', ctx.uid))
-          .order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, to)
-      }, 100000),
+      // Mi cola: los míos (y, sin reparto, los que no tienen responsable); la base cuenta y elige las filas
+      supabase.rpc('dashboard_queue', {
+        p_store: storeId, p_uid: ctx.uid, p_unowned: isAdmin && !salesTeam, p_today: today, p_no_answer_limit: NO_ANSWER_LIMIT,
+      }),
       // Actividad comercial desde el mes pasado: toda la tienda (administrador) o la propia (vendedor)
       fetchPaged<ActivityRow>((from, to) => {
         let q = supabase.from('commercial_activities')
@@ -96,11 +94,15 @@ async function GETImpl(req: NextRequest) {
       isAdmin ? getUserNameMap(storeId).catch(() => new Map<string, string>()) : Promise.resolve(null),
     ])
 
+    if (facetsRes.error) throw facetsRes.error
+    if (queueRes.error) throw queueRes.error
+    const facets = facetsRes.data as Facets
+    const totalContacts = facets?.total ?? 0
+
     // ── Cola de hoy y próximos seguimientos ────────────────────────────────
-    const queue = mine.filter(c => inQueue(bucketOf(c, today))).sort(queueCompare(today))
-    const overdue = queue.filter(c => c.next_action_at && c.next_action_at < today).length
-    const upcoming = mine.filter(c => bucketOf(c, today) === 'programado')
-      .sort((a, b) => String(a.next_action_at).localeCompare(String(b.next_action_at))).slice(0, 6)
+    const queue = (queueRes.data ?? { count: 0, overdue: 0, top: [], upcoming: [] }) as QueueSummary
+    const overdue = queue.overdue
+    const upcoming = queue.upcoming
 
     // ── Mes actual contra el anterior ───────────────────────────────────────
     const at = (a: ActivityRow) => Date.parse(a.created_at)
@@ -126,11 +128,8 @@ async function GETImpl(req: NextRequest) {
     }
 
     // ── Segmento (contactos de la tienda) ───────────────────────────────────
-    const segmentCounts: Record<string, number> = {}
-    for (const c of segmentsData ?? []) {
-      if (c.segment) segmentCounts[c.segment] = (segmentCounts[c.segment] || 0) + 1
-    }
-    const bySegment = Object.entries(segmentCounts).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
+    const bySegment = Object.entries(facets?.segment ?? {}).map(([name, count]) => ({ name, count: Number(count) }))
+      .sort((a, b) => b.count - a.count)
 
     // ── Actividad reciente (14 días) ────────────────────────────────────────
     const recent = activities.filter(a => at(a) >= since14d).slice(0, 8)
@@ -153,7 +152,7 @@ async function GETImpl(req: NextRequest) {
       metrics: {
         totalContacts:    totalContacts || 0,
         newContactsMonth: contactsThisMonth || 0,
-        queueToday:       queue.length,
+        queueToday:       queue.count,
         overdue,
         quotesMonth:      thisMonth.quotes,
         quotedMonth:      thisMonth.quoted,
@@ -167,8 +166,8 @@ async function GETImpl(req: NextRequest) {
         sold:     { current: thisMonth.sold,         previous: lastMonth.sold },
       },
       queue: {
-        count: queue.length,
-        contacts: queue.slice(0, 5).map(c => ({
+        count: queue.count,
+        contacts: queue.top.map(c => ({
           id: c.id, name: bizName(c), status: c.commercial_status, next_action: c.next_action, next_action_at: c.next_action_at,
           overdue: !!c.next_action_at && c.next_action_at < today, fresh: !c.last_activity_at,
         })),

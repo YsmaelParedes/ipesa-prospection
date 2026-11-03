@@ -42,8 +42,9 @@ test('sync re-reads Stripe after acquiring the store lock and uses historical pr
   const steps = []; let reads = 0; let applied
   const db = { from: () => query({ data: { id: STORE, stripe_customer_id: 'cus_dummy' }, error: null }),
     rpc: async (_, args) => { steps.push('apply'); applied = args; return { data: { plan: 'litro', prev_plan: 'galon' }, error: null } } }
+  let invalidated = 0
   const { syncSubscription } = load('lib/stripeSync.ts', {
-    './supabase-server': { getServerSupabase: () => db },
+    './supabase-server': { getServerSupabase: () => db, invalidateStoreContextCache: () => { invalidated++ } },
     './stripe': { getStripe: () => ({ subscriptions: { retrieve: async () => { steps.push('read'); return fakeSub(++reads === 1 ? 'active' : 'canceled') } } }), planForPrice: async () => 'galon' },
     './stripeBillingState': { withStripeStoreLock: async (_, work) => { steps.push('lock'); return work('token') } },
     './billing': billing, './stores': stores, './brand': { APP_NAME: 'Test' },
@@ -53,6 +54,7 @@ test('sync re-reads Stripe after acquiring the store lock and uses historical pr
   assert.equal(applied.p_status, 'canceled')
   assert.equal(applied.p_plan, 'galon')
   assert.equal(applied.p_lock, 'token')
+  assert.equal(invalidated, 1, 'el plan nuevo se ve al momento en esta instancia')
 })
 
 test('store lookup errors throw (retry); subscriptions of no store are skipped without locking', async () => {

@@ -1,7 +1,7 @@
 import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse, after } from 'next/server'
 import {
-  displayNameOf, getServerSupabase, getSessionUser, invalidateStoreMembers,
+  displayNameOf, forgetSessionUser, getServerSupabase, getSessionUser, invalidateStoreMembers,
   resolveStoreContext, unauthorizedResponse,
 } from '@/lib/supabase-server'
 import { sessionPayload } from '@/lib/storeServer'
@@ -32,7 +32,7 @@ async function GETImpl() {
 
 // PATCH /api/me — cambiar mi nombre visible
 export async function PATCH(req: NextRequest) {
-  const user = await getSessionUser()
+  const user = await getSessionUser({ fresh: true })
   if (!user) return unauthorizedResponse()
   const body = await readJson(req)
   const name = typeof body?.name === 'string' ? body.name.trim() : ''
@@ -43,6 +43,7 @@ export async function PATCH(req: NextRequest) {
   })
   if (error) return serverError('PATCH /api/me', error, 'No se pudo actualizar tu nombre')
   invalidateStoreMembers()
+  await forgetSessionUser()  // el nombre vive en la sesión validada en caché
   return NextResponse.json({ ok: true, name })
 }
 

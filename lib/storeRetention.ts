@@ -13,7 +13,7 @@
 import { APP_NAME } from './brand'
 import { emailConfigured, escapeHtml, sendEmail } from './email'
 import { RETENTION_IDLE_DAYS, RETENTION_IDLE_MONTHS, RETENTION_LAST_NOTICE_DAYS, RETENTION_NOTICE_DAYS } from './retention'
-import { getServerSupabase } from './supabase-server'
+import { getServerSupabase, invalidateStoreContextCache } from './supabase-server'
 
 const DAY = 86_400_000
 const BUCKETS = ['store-assets', 'whatsapp-media']
@@ -132,6 +132,7 @@ async function deleteStore(storeId: string) {
   const { data, error } = await db.rpc('delete_inactive_store', { p_store: storeId, p_idle_days: RETENTION_IDLE_DAYS })
   if (error) throw error
   if (!data?.deleted) throw new Error(`La base no la eliminó (${data?.reason ?? 'sin motivo'})`)
+  invalidateStoreContextCache()
 
   const problems: string[] = []
   for (const bucket of BUCKETS) {

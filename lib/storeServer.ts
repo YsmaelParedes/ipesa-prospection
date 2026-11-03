@@ -3,7 +3,7 @@
  */
 import { cookies } from 'next/headers'
 import type { User } from '@supabase/supabase-js'
-import { ACTIVE_STORE_COOKIE, STORE_COLUMNS, getServerSupabase, type StoreContext, type StoreRow } from './supabase-server'
+import { ACTIVE_STORE_COOKIE, STORE_COLUMNS, getServerSupabase, invalidateStoreContextCache, type StoreContext, type StoreRow } from './supabase-server'
 import { randomToken } from './crypto'
 import {
   DEFAULT_CANALES, DEFAULT_MODULES, DEFAULT_PLAN, DEFAULT_SEGMENTS,
@@ -116,6 +116,7 @@ export async function createStore(createdBy: string, profile: Record<string, unk
     await db.from('stores').delete().eq('id', store.id)
     throw memberError
   }
+  invalidateStoreContextCache()
 
   const catalogs = [
     ...DEFAULT_SEGMENTS.map(label => ({ store_id: store!.id, type: 'segment', label })),

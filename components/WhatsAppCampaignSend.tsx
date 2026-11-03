@@ -1,6 +1,7 @@
 'use client'
 
-import { apiFetch } from '@/lib/apiClient'
+import { apiFetch, invalidateQueries } from '@/lib/apiClient'
+import { CAMPAIGN_SENT_RESOURCES } from '@/lib/queryPolicy'
 
 
 import { useRef, useState } from 'react'
@@ -74,6 +75,8 @@ export function useCampaignSend() {
       if (stop) { setStopReason(stop); break }
     }
 
+    // Una sola actualización de contactos e Inicio al terminar (no una por lote)
+    if (out.some(o => !o.skipped)) invalidateQueries(CAMPAIGN_SENT_RESOURCES)
     setPhase('results')
     return out
   }

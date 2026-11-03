@@ -4,7 +4,7 @@
  * confiar en el evento, para que el orden en que lleguen los avisos no
  * importe; la escritura la hace la función atómica apply_stripe_subscription.
  */
-import { getServerSupabase } from './supabase-server'
+import { getServerSupabase, invalidateStoreContextCache } from './supabase-server'
 import { getStripe, planForPrice } from './stripe'
 import { subscriptionSnapshot, type SubscriptionLike } from './billing'
 import { PLANS } from './stores'
@@ -65,6 +65,7 @@ export async function syncSubscription(subscriptionId: string): Promise<SyncResu
       p_lock: token,
     })
     if (error) throw error
+    invalidateStoreContextCache()
     if (data?.ignored) return { ok: false, reason: 'Suscripción anterior ignorada' }
     if (!data?.plan || !data?.prev_plan) throw new Error('Stripe no devolvió el resultado de sincronización')
     return { ok: true, storeId, plan: data.plan, prevPlan: data.prev_plan }
