@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { DoneToday, type Metric } from './DoneToday'
 import { NO_ANSWER_LIMIT, type CommercialContact, type ResultChoice } from '@/lib/commercial'
-import { fmtPhone, normalizePhone } from '@/lib/phone'
+import { fmtPhone, normalizePhone, waMeLink } from '@/lib/phone'
 import { ContactPanel, avatarColors } from './ContactPanel'
 import type { Kind } from './RegisterForm'
 import { Filters, Ico, StatusChip, bizName, fmtDay, initials, money, whenOf, type ListContact, type TodayData } from './ui'
@@ -186,8 +186,8 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
                         {phone && <a href={`tel:${phone}`} className={`${s.qbtn} ${s.qCall} ${s.press}`} aria-label={`Llamar a ${bizName(c)}`}
                           onClick={e => { e.stopPropagation(); onOpen({ id: c.id, kind: 'llamada' }) }}><Ico.phone /></a>}
                         {waModule && phone.length === 10 && c.line_type !== 'fijo' && (
-                          <button className={`${s.qbtn} ${s.qWa} ${s.press}`} aria-label={`WhatsApp a ${bizName(c)}`}
-                            onClick={e => { e.stopPropagation(); onOpen({ id: c.id, kind: 'whatsapp' }) }}><Ico.chat /></button>
+                          <a href={waMeLink(phone)} target="_blank" rel="noopener noreferrer" className={`${s.qbtn} ${s.qWa} ${s.press}`} aria-label={`WhatsApp a ${bizName(c)}`}
+                            onClick={e => { e.stopPropagation(); onOpen({ id: c.id, kind: 'whatsapp' }) }}><Ico.chat /></a>
                         )}
                         {!phone && (
                           <button className={`${s.qbtn} ${s.actMore} ${s.press}`} aria-label={`Registrar visita a ${bizName(c)}`}
@@ -249,7 +249,7 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
                       <div className={s.actions}>
                         {phone && <a href={`tel:${phone}`} className={`${s.act} ${s.actCall} ${s.press}`} onClick={() => onOpen({ id: c.id, kind: 'llamada' })}><Ico.phone /> Llamar</a>}
                         {waModule && phone.length === 10 && c.line_type !== 'fijo' && (
-                          <button className={`${s.act} ${s.actWa} ${s.press}`} onClick={() => onOpen({ id: c.id, kind: 'whatsapp' })}><Ico.chat /> WhatsApp</button>
+                          <a href={waMeLink(phone)} target="_blank" rel="noopener noreferrer" className={`${s.act} ${s.actWa} ${s.press}`} onClick={() => onOpen({ id: c.id, kind: 'whatsapp' })}><Ico.chat /> WhatsApp</a>
                         )}
                         <button className={`${s.act} ${s.actMore} ${s.press}`} aria-label={`Registrar visita a ${bizName(c)}`} onClick={() => onOpen({ id: c.id, kind: 'visita' })}><Ico.pin /></button>
                       </div>

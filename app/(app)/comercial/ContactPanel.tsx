@@ -8,7 +8,7 @@ import {
   KIND_LABELS, NO_ANSWER_LIMIT, STAGE_PROBABILITY, resultLabel,
   type ActivityKind, type CommercialContact, type ResultChoice,
 } from '@/lib/commercial'
-import { fmtPhone, normalizePhone } from '@/lib/phone'
+import { fmtPhone, normalizePhone, waMeLink } from '@/lib/phone'
 import { RegisterForm, type Kind } from './RegisterForm'
 import { Ico, StatusChip, addressOf, bizName, fmtDay, initials, localDay, money, personName, whenPhrase, type ListContact } from './ui'
 import s from './comercial.module.css'
@@ -29,7 +29,7 @@ export const avatarColors = (status: string) => AVATAR[status] ?? ['var(--paper-
 
 /**
  * Ficha comercial de un contacto. En computadora va a la derecha de la lista
- * ("pane"); en celular, o desde Oportunidades y Equipo, se abre encima ("overlay").
+ * ("pane"); en celular, o desde Cartera y Oportunidades, se abre encima ("overlay").
  * Cualquiera del equipo registra; quien registra se queda con el contacto.
  */
 export function ContactPanel({ contactId, initial, today, variant, readonly, waModule, uid, kind, result, onSaved, onClose }: {
@@ -140,7 +140,7 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
       <div className={s.actions}>
         {phone && <a href={`tel:${phone}`} className={`${s.act} ${s.actCall} ${s.press}`}><Ico.phone /> Llamar</a>}
         {waModule && phone.length === 10 && contact.line_type !== 'fijo' && (
-          <Link href={`/whatsapp?phone=${phone}`} className={`${s.act} ${s.actWa} ${s.press}`}><Ico.chat /> WhatsApp</Link>
+          <a href={waMeLink(phone)} target="_blank" rel="noopener noreferrer" className={`${s.act} ${s.actWa} ${s.press}`}><Ico.chat /> WhatsApp</a>
         )}
         <Link href={`/contactos?id=${contact.id}`} className={`${s.act} ${s.actMore} ${s.press}`} aria-label="Ver en Contactos" title="Ver en Contactos"><Ico.user /></Link>
       </div>
