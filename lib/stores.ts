@@ -58,6 +58,7 @@ export const ROLE_LABELS: Record<StoreRole, string> = {
  *    plan_quota() de la base, que lo hace cumplir: cambia los dos.
  *  · whatsapp: incluye la bandeja de WhatsApp (las campañas son un extra aparte).
  *  · paid: se cobra con Stripe.
+ *  · reports: Acumulado y reportes en Excel por vendedor.
  * Interno = la tienda propia (IPESA): cortesía con todo, se asigna a mano en la base.
  */
 export type PlanId = 'litro' | 'galon' | 'cubeta' | 'interno'
@@ -65,14 +66,15 @@ export type PlanDef = {
   label: string; maxUsers: number; allowAdmins: boolean
   maxContacts: number | null
   whatsapp: boolean; paid: boolean
-  /** Sistema comercial en equipo: Oportunidades, metas por vendedor y pantalla Equipo. */
+  /** Sistema comercial en equipo: Oportunidades, metas por vendedor y Actividad diaria. */
   salesTeam: boolean
+  reports: boolean
 }
 export const PLANS: Record<PlanId, PlanDef> = {
-  litro:   { label: 'Litro',   maxUsers: 1,  allowAdmins: false, maxContacts: 50,   whatsapp: false, paid: false, salesTeam: false },
-  galon:   { label: 'Galón',   maxUsers: 3,  allowAdmins: false, maxContacts: null, whatsapp: false, paid: true,  salesTeam: true },
-  cubeta:  { label: 'Cubeta',  maxUsers: 5,  allowAdmins: true,  maxContacts: null, whatsapp: true,  paid: true,  salesTeam: true },
-  interno: { label: 'Interno', maxUsers: 50, allowAdmins: true,  maxContacts: null, whatsapp: true,  paid: false, salesTeam: true },
+  litro:   { label: 'Litro',   maxUsers: 1,  allowAdmins: false, maxContacts: 50,   whatsapp: false, paid: false, salesTeam: false, reports: false },
+  galon:   { label: 'Galón',   maxUsers: 3,  allowAdmins: false, maxContacts: null, whatsapp: false, paid: true,  salesTeam: true,  reports: false },
+  cubeta:  { label: 'Cubeta',  maxUsers: 10, allowAdmins: true,  maxContacts: null, whatsapp: true,  paid: true,  salesTeam: true,  reports: true },
+  interno: { label: 'Interno', maxUsers: 50, allowAdmins: true,  maxContacts: null, whatsapp: true,  paid: false, salesTeam: true,  reports: true },
 }
 /** Planes que se venden (en orden), sin la cortesía interna. */
 export const PUBLIC_PLANS = ['litro', 'galon', 'cubeta'] as const satisfies readonly PlanId[]

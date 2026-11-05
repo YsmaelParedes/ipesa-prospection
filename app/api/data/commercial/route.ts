@@ -2,7 +2,7 @@ import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { jsonError, serverError } from '@/lib/validation'
-import { COMMERCIAL_COLUMNS, hasSalesTeam, withOwnerNames, zonedDayStart } from '@/lib/commercialServer'
+import { COMMERCIAL_COLUMNS, hasReports, hasSalesTeam, withOwnerNames, zonedDayStart } from '@/lib/commercialServer'
 import { withContactSearch } from '@/lib/contactSearch'
 import { fetchPaged } from '@/lib/paged'
 import { addDays, countActivities, goalsFor, parseGoalsConfig, todayISO, type ActivityForCount } from '@/lib/commercial'
@@ -102,6 +102,7 @@ async function GETImpl(req: NextRequest) {
       uid: ctx.uid,
       isAdmin: ctx.isAdmin,
       salesTeam: hasSalesTeam(ctx),
+      reports: hasReports(ctx),
       zones: (catalogs.data ?? []).filter(c => c.type === 'zone').map(c => c.label as string),
       segments: (catalogs.data ?? []).filter(c => c.type === 'segment').map(c => c.label as string),
       goals: goalsFor(parseGoalsConfig(store.data?.commercial_goals), ctx.uid),

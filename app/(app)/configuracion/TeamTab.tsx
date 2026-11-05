@@ -7,7 +7,7 @@ import { useQueryEffect } from '@/lib/useCachedQuery'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { APP_NAME } from '@/lib/brand'
 import type { ClientStore } from '@/lib/profile'
-import { ROLE_LABELS, type StoreRole } from '@/lib/stores'
+import { PLANS, ROLE_LABELS, type StoreRole } from '@/lib/stores'
 import { Select } from '@/components/Select'
 import { Card, Ico, Note, Spinner, WhatsAppGlyph, api, avatarTone, copyText, cx, fmtDate, initialsOf, send, useToast } from './ui'
 import s from './configuracion.module.css'
@@ -161,7 +161,7 @@ export function TeamTab({ store }: { store: ClientStore }) {
     <>
       {store.maxUsers <= 1 && (
         <Note kind="info">
-          El plan {store.planLabel} incluye solo al administrador. Para sumar a tu equipo cambia a Galón (hasta 3 usuarios) o Cubeta (hasta 5, con administradores).{' '}
+          El plan {store.planLabel} incluye solo al administrador. Para sumar a tu equipo cambia a Galón (hasta {PLANS.galon.maxUsers} usuarios) o Cubeta (hasta {PLANS.cubeta.maxUsers}, con administradores).{' '}
           <Link href="/configuracion?tab=plan" className="auth-link strong">Ver planes</Link>
         </Note>
       )}

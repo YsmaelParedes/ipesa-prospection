@@ -14,7 +14,7 @@ export type ListContact = CommercialContact & { quote_amount?: number | null }
 
 /** GET /api/data/commercial — la lista de "Hoy". */
 export type TodayData = {
-  today: string; uid: string; isAdmin: boolean; salesTeam: boolean
+  today: string; uid: string; isAdmin: boolean; salesTeam: boolean; reports: boolean
   zones: string[]; segments: string[]; goals: Goals; counts: DayCounts
   due: ListContact[]; fresh: ListContact[]; freshTotal: number; offset: number
   /** Cuántos pendientes hay en total (la lista trae hasta 500). */

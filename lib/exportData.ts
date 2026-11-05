@@ -3,9 +3,10 @@
  *  · contactRows: renglones de contactos con su estado comercial.
  *  · downloadStoreWorkbook: un solo archivo con Contactos, Historial comercial,
  *    Agenda y Catálogos, pedido por partes a /api/data/export.
+ *  · downloadSummaryWorkbook: el periodo que se ve en Acumulado, por vendedor.
  */
 import { normalizePhone } from './phone'
-import { KIND_LABELS, resultLabel, statusInfo, type ActivityKind } from './commercial'
+import { GOAL_KEYS, GOAL_LABELS, KIND_LABELS, resultLabel, statusInfo, type ActivityKind, type DayCounts, type Goals } from './commercial'
 
 type Row = Record<string, any>
 type Sheet = { name: string; rows: Row[] }
@@ -42,6 +43,43 @@ export const contactRows = (list: Row[]) => list.map(c => ({
   'Última nota':      c.last_note || '',
   'Fecha registro':   day(c.created_at),
 }))
+
+export type SummaryData = {
+  period: string; from: string; end: string
+  totals: DayCounts; prev: DayCounts; goals: Goals; compliance: number; prevCompliance: number
+  people: { name: string; counts: DayCounts; goals: Goals; compliance: number }[]
+}
+
+const percent = (ratio: number) => Math.round(ratio * 100)
+const countsRow = (name: string, c: DayCounts, ratio: number) => ({
+  'Vendedor': name,
+  ...Object.fromEntries(GOAL_KEYS.map(k => [GOAL_LABELS[k], c[k]])),
+  'Monto cotizado': c.quoted,
+  'Monto vendido': c.sold,
+  'Cumplimiento %': percent(ratio),
+})
+
+/** Un renglón por vendedor y el total de la tienda (incluye a quien ya no está en el equipo). */
+export const summaryPeopleRows = (d: SummaryData) => [
+  ...d.people.map(p => countsRow(p.name, p.counts, p.compliance)),
+  countsRow('Total de la tienda', d.totals, d.compliance),
+]
+
+/** Los indicadores de la tienda contra el periodo anterior y la meta. */
+export const summaryTotalsRows = (d: SummaryData) => [
+  ...GOAL_KEYS.map(k => ({ 'Indicador': GOAL_LABELS[k], 'Este periodo': d.totals[k], 'Periodo anterior': d.prev[k], 'Meta': d.goals[k] as number | string })),
+  { 'Indicador': 'Monto cotizado', 'Este periodo': d.totals.quoted, 'Periodo anterior': d.prev.quoted, 'Meta': '' },
+  { 'Indicador': 'Monto vendido', 'Este periodo': d.totals.sold, 'Periodo anterior': d.prev.sold, 'Meta': '' },
+  { 'Indicador': 'Cumplimiento %', 'Este periodo': percent(d.compliance), 'Periodo anterior': percent(d.prevCompliance), 'Meta': 100 },
+]
+
+export async function downloadSummaryWorkbook(d: SummaryData) {
+  const label = d.from === d.end ? d.from : `${d.from}-a-${d.end}`
+  await writeWorkbook(`acumulado-${label}.xlsx`, [
+    { name: 'Por vendedor', rows: summaryPeopleRows(d) },
+    { name: 'Resumen', rows: summaryTotalsRows(d) },
+  ])
+}
 
 async function writeWorkbook(filename: string, sheets: Sheet[]) {
   const XLSX = await import('xlsx')

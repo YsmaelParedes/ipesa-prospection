@@ -10,7 +10,7 @@ import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
   title: `Precios del CRM para tiendas de pintura · ${APP_NAME}`,
-  description: 'Plan Litro gratis para empezar, Galón para tu equipo sin límites y Cubeta para equipos grandes. Pago mensual con tarjeta; cambia o cancela cuando quieras.',
+  description: 'Plan Litro gratis para empezar, Galón para vender en equipo y Cubeta para medir y dirigir a un equipo más grande. Pago mensual con tarjeta; cambia o cancela cuando quieras.',
   path: '/inicio/precios',
 })
 

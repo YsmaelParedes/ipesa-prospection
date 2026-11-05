@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getStoreMembers, getTestUserIds, requireStore } from '@/lib/supabase-server'
 import { jsonError, serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
-import { hasSalesTeam, salesTeamRequired, zonedDayStart } from '@/lib/commercialServer'
+import { hasReports, reportsRequired, zonedDayStart } from '@/lib/commercialServer'
 import {
   GOAL_KEYS, addDays, compliance, countActivities, goalsFor, parseGoalsConfig, periodRange,
   todayISO, workDaysBetween, type ActivityForCount, type Goals, type Period,
@@ -28,7 +28,7 @@ const scale = (goals: Goals, days: number): Goals =>
 export async function GET(req: NextRequest) {
   const ctx = await requireStore({ admin: true })
   if (ctx instanceof Response) return ctx
-  if (!hasSalesTeam(ctx)) return salesTeamRequired()
+  if (!hasReports(ctx)) return reportsRequired()
 
   const sp = req.nextUrl.searchParams
   const period = (sp.get('period') || 'week') as Period

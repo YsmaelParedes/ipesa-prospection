@@ -31,6 +31,7 @@ const GROUPS: { id: string; title: string; items: { q: string; a: string }[] }[]
       { q: '¿Cómo se paga?', a: 'Con tarjeta de crédito o débito, cada mes, a través de Stripe. Nosotros nunca vemos los datos de tu tarjeta. Si un cobro no pasa, Stripe lo reintenta; si al final no se cobra, tu tienda vuelve al plan Litro sin borrar nada.' },
       { q: '¿Puedo cancelar?', a: 'Cuando quieras, desde Configuración → Plan. Conservas tu plan hasta el final del mes pagado y después pasas a Litro.' },
       { q: '¿Cuántas personas pueden usarlo?', a: `Litro es para una sola persona, el administrador. Galón incluye hasta ${PLANS.galon.maxUsers} usuarios y Cubeta hasta ${PLANS.cubeta.maxUsers}, con administradores. Cada quien con su propio acceso.` },
+      { q: '¿Qué tiene Cubeta que no tenga Galón?', a: `Hasta ${PLANS.cubeta.maxUsers} usuarios y varios administradores; Acumulado, para ver el día, la semana y el mes de cada vendedor contra el periodo anterior; reportes en Excel, y te ayudamos a importar tu base y a capacitar a tu equipo.` },
       { q: 'Tengo varias sucursales, ¿cómo funciona?', a: 'Cada cuenta es una sucursal, con su propio plan, equipo y datos. Si tienes otra, escríbenos y la damos de alta aparte.' },
     ],
   },

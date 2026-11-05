@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import Link from '@/components/CachedLink'
 import { apiFetch } from '@/lib/apiClient'
 import { useQueryEffect } from '@/lib/useCachedQuery'
 import { useDataChanged } from '@/lib/crmEvents'
@@ -30,9 +31,9 @@ const dayName = (iso: string) => new Intl.DateTimeFormat('es-MX', { weekday: 'lo
 
 /**
  * "Actividad diaria" (administrador): solo lo de hoy, cada vendedor contra su
- * meta del día. Semanas y meses, con su comparación, están en Acumulado.
+ * meta del día. Semanas y meses, con su comparación, están en Acumulado (plan Cubeta).
  */
-export function ActividadView() {
+export function ActividadView({ reports }: { reports: boolean }) {
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
@@ -117,7 +118,7 @@ export function ActividadView() {
 
       <div className={`${s.elev} ${s.zonesNote}`}>
         <Ico.pin size={18} />
-        <span style={{ flex: 1, minWidth: 220 }}><b>Para ver otros días, semanas o meses</b>, usa la pestaña Acumulado. Todos ven la base completa; el primero que trabaja un prospecto se queda con él.</span>
+        <span style={{ flex: 1, minWidth: 220 }}><b>Para ver otros días, semanas o meses</b>, {reports ? 'usa la pestaña Acumulado' : <>el plan Cubeta incluye Acumulado y reportes en Excel (<Link href="/configuracion?tab=plan" className="auth-link strong">ver planes</Link>)</>}. Todos ven la base completa; el primero que trabaja un prospecto se queda con él.</span>
         <button className={`${s.ghostBtn} ${s.press}`} onClick={() => setEditing(true)}>Editar metas</button>
       </div>
 

@@ -135,6 +135,13 @@ export function PlanTab({ store }: { store: ClientStore }) {
         )}
       </Card>
 
+      {store.plan === 'cubeta' && !readonly && (
+        <Note kind="info">
+          Tu plan incluye ayuda para importar tu base y capacitar a tu equipo. Escríbenos a{' '}
+          <a href={`mailto:${EMAILS.soporte}`} className="auth-link strong">{EMAILS.soporte}</a> y lo agendamos.
+        </Note>
+      )}
+
       {store.plan === 'interno' ? (
         <Card title="Plan de cortesía" description="Tu tienda tiene todas las funciones sin cobro. Si necesitas cambiar algo, escríbenos.">
           <div className={s.cardBody}>

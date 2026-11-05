@@ -9,10 +9,11 @@ const DAY = 86_400_000
 const NOW = Date.parse('2026-10-18T12:00:00Z')
 
 test('the plans match what was agreed', () => {
-  assert.deepEqual([PLANS.litro.maxUsers, PLANS.galon.maxUsers, PLANS.cubeta.maxUsers], [1, 3, 5])
+  assert.deepEqual([PLANS.litro.maxUsers, PLANS.galon.maxUsers, PLANS.cubeta.maxUsers], [1, 3, 10])
   assert.equal(PLANS.litro.maxContacts, 50)
   assert.equal(PLANS.galon.whatsapp, false)
   assert.equal(PLANS.cubeta.whatsapp, true)
+  assert.deepEqual([PLANS.litro.reports, PLANS.galon.reports, PLANS.cubeta.reports, PLANS.interno.reports], [false, false, true, true])
   assert.equal(planOf('profesional').label, 'Litro', 'unknown plans fall back to Litro')
 })
 
@@ -99,4 +100,26 @@ test('avisos push: en Litro solo el administrador principal; con plan de equipo,
   const expired = { plan: 'cubeta', paid_until: new Date(NOW - 10 * DAY).toISOString(), created_by: 'creator' }
   assert.deepEqual(audienceUsers(expired, members, NOW), ['creator'])
   assert.equal(mainAdminOf(null, []), null)
+})
+
+test('the Acumulado report has one row per seller, the store total and the comparison', () => {
+  const { summaryPeopleRows, summaryTotalsRows } = require('../lib/exportData.ts')
+  const counts = (calls, sold) => ({ calls, effective: 1, quotes: 2, followups: 3, sales: 4, quoted: 100, sold })
+  const goals = { calls: 30, effective: 15, quotes: 6, followups: 10, sales: 2 }
+  const data = {
+    period: 'week', from: '2026-11-02', end: '2026-11-04',
+    totals: counts(12, 500), prev: counts(8, 200), goals, compliance: 0.5, prevCompliance: 0.256,
+    people: [{ name: 'Ana', counts: counts(10, 300), goals, compliance: 0.64 }],
+  }
+  const rows = summaryPeopleRows(data)
+  assert.equal(rows.length, 2)
+  assert.equal(rows[0]['Vendedor'], 'Ana')
+  assert.equal(rows[0]['Llamadas'], 10)
+  assert.equal(rows[0]['Monto vendido'], 300)
+  assert.equal(rows[0]['Cumplimiento %'], 64)
+  assert.equal(rows[1]['Vendedor'], 'Total de la tienda')
+  assert.equal(rows[1]['Monto vendido'], 500)
+  const totals = summaryTotalsRows(data)
+  assert.deepEqual(totals[0], { 'Indicador': 'Llamadas', 'Este periodo': 12, 'Periodo anterior': 8, 'Meta': 30 })
+  assert.deepEqual(totals.at(-1), { 'Indicador': 'Cumplimiento %', 'Este periodo': 50, 'Periodo anterior': 26, 'Meta': 100 })
 })

@@ -10,12 +10,18 @@ export const ACTIVITY_COLUMNS =
 
 /** Reparto, metas y control diario: Galón, Cubeta e Interno (Litro solo tiene la cola). */
 export const hasSalesTeam = (ctx: StoreContext) => planOf(ctx.plan).salesTeam
+/** Acumulado y reportes en Excel: Cubeta e Interno. */
+export const hasReports = (ctx: StoreContext) => planOf(ctx.plan).reports
 
 export function salesTeamRequired(): Response {
   return Response.json(
-    { error: 'Oportunidades, metas por vendedor, Actividad diaria y Acumulado vienen en los planes Galón y Cubeta.', code: 'PLAN_FEATURE' },
+    { error: 'Oportunidades, metas por vendedor y Actividad diaria vienen en los planes Galón y Cubeta.', code: 'PLAN_FEATURE' },
     { status: 403 },
   )
+}
+
+export function reportsRequired(): Response {
+  return Response.json({ error: 'Acumulado y los reportes en Excel vienen en el plan Cubeta.', code: 'PLAN_FEATURE' }, { status: 403 })
 }
 
 /**

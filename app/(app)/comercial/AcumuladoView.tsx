@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/apiClient'
 import { useQueryEffect } from '@/lib/useCachedQuery'
 import { useDataChanged } from '@/lib/crmEvents'
 import { GOAL_KEYS, GOAL_LABELS, type DayCounts, type Goals, type Period } from '@/lib/commercial'
+import { downloadSummaryWorkbook } from '@/lib/exportData'
 import { Ico, fmtDay, initials, money, pct } from './ui'
 import s from './comercial.module.css'
 
@@ -63,6 +64,8 @@ export function AcumuladoView() {
   const [offset, setOffset] = useState(0)
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState('')
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -78,6 +81,18 @@ export function AcumuladoView() {
   useDataChanged(['commercial'], load)
 
   const choose = (p: Period) => { setPeriod(p); setOffset(0); setData(null) }
+
+  const download = async () => {
+    if (!data) return
+    setExporting(true); setExportError('')
+    try {
+      await downloadSummaryWorkbook(data)
+    } catch {
+      setExportError('No se pudo descargar el reporte. Inténtalo de nuevo.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const picker = (
     <div className={s.teamTop}>
@@ -154,7 +169,13 @@ export function AcumuladoView() {
       </div>
 
       <div className={`${s.elev} ${s.splitCard}`}>
-        <h3>Por vendedor</h3>
+        <div className={s.cardHead} style={{ alignItems: 'center', marginBottom: 8 }}>
+          <h3>Por vendedor</h3>
+          <button className={`${s.ghostBtn} ${s.press}`} disabled={exporting} onClick={download}>
+            {exporting ? 'Preparando…' : 'Descargar Excel'}
+          </button>
+        </div>
+        {exportError && <p className={s.hMuted} role="alert" style={{ fontSize: 12, margin: '0 0 8px' }}>{exportError}</p>}
         {data.people.length === 0 ? (
           <div className={s.hMuted}>Aún no hay vendedores. Invítalos desde Configuración → Equipo.</div>
         ) : (

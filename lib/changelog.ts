@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.39.0',
+    date: '4 de noviembre, 2026',
+    title: 'Plan Cubeta con más para tu equipo',
+    items: [
+      'El plan Cubeta ahora incluye hasta 10 usuarios.',
+      'En Acumulado puedes descargar un reporte en Excel del periodo que estás viendo, con la actividad y las ventas de cada vendedor.',
+      'Acumulado y los reportes en Excel son parte del plan Cubeta, igual que la ayuda para importar tu base y capacitar a tu equipo.',
+    ],
+  },
+  {
     version: '1.38.1',
     date: '3 de noviembre, 2026',
     title: 'Inicio y Campañas más rápidos',

@@ -12,12 +12,13 @@ const at = (id: string) => `[data-tour="${id}"]`
  * lo que ve cada quien: Oportunidades solo con equipo de ventas, Actividad
  * diaria y Acumulado solo administradores, registrar solo si puede escribir.
  */
-export function commercialTour({ isAdmin, salesTeam, readonly, waModule, clientId }: {
-  isAdmin: boolean; salesTeam: boolean; readonly: boolean; waModule: boolean
+export function commercialTour({ isAdmin, salesTeam, reports, readonly, waModule, clientId }: {
+  isAdmin: boolean; salesTeam: boolean; reports: boolean; readonly: boolean; waModule: boolean
   /** Cliente que se usa de ejemplo (el primero de la lista); sin él, esos pasos salen al centro. */
   clientId?: string
 }): CommercialStep[] {
   const team = salesTeam && isAdmin
+  const summary = reports && isAdmin
   const steps: (CommercialStep | false)[] = [
     {
       id: 'welcome', title: 'Así funciona el Sistema Comercial',
@@ -39,7 +40,7 @@ export function commercialTour({ isAdmin, salesTeam, readonly, waModule, clientI
           <li><b>Hoy:</b> tu lista de trabajo del día.</li>
           <li><b>Cartera:</b> toda tu base, por etapa.</li>
           {salesTeam && <li><b>Oportunidades:</b> las cotizaciones abiertas.</li>}
-          {team && <li><b>Actividad diaria y Acumulado:</b> cómo va el equipo (solo administradores).</li>}
+          {team && <li><b>{summary ? 'Actividad diaria y Acumulado' : 'Actividad diaria'}:</b> cómo va el equipo (solo administradores).</li>}
         </ul>
       ),
     },
@@ -151,7 +152,7 @@ export function commercialTour({ isAdmin, salesTeam, readonly, waModule, clientI
         </>
       ),
     },
-    team && {
+    summary && {
       id: 'summary', target: at('tab-acumulado'), title: 'Acumulado',
       body: <p>Los totales de un <b>día, semana o mes</b>, comparados con el periodo anterior, con el avance contra la meta y una tabla por vendedor. Usa las flechas para ver periodos pasados.</p>,
     },

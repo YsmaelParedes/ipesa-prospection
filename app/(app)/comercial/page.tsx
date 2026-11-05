@@ -139,12 +139,14 @@ function ComercialContent() {
   }
 
   const salesTeam = !!data?.salesTeam
+  const reports = !!data?.reports
   const isAdmin = !!data?.isAdmin
   const TABS: { key: Tab; label: string; count?: number }[] = [
     { key: 'hoy', label: 'Hoy', count: data?.dueTotal },
     { key: 'cartera', label: 'Cartera' },
     ...(salesTeam ? [{ key: 'oportunidades' as Tab, label: 'Oportunidades' }] : []),
-    ...(salesTeam && isAdmin ? [{ key: 'actividad' as Tab, label: 'Actividad diaria' }, { key: 'acumulado' as Tab, label: 'Acumulado' }] : []),
+    ...(salesTeam && isAdmin ? [{ key: 'actividad' as Tab, label: 'Actividad diaria' }] : []),
+    ...(reports && isAdmin ? [{ key: 'acumulado' as Tab, label: 'Acumulado' }] : []),
   ]
   const current: Tab = TABS.some(t => t.key === tab) ? tab : 'hoy'
   // Recorrido: solo la primera vez (no si se llegó directo a una ficha). Clave
@@ -200,7 +202,7 @@ function ComercialContent() {
       </div>
       {guide.open && data && (
         <CommercialTour
-          steps={commercialTour({ isAdmin, salesTeam, readonly, waModule, clientId: tourClient?.id })}
+          steps={commercialTour({ isAdmin, salesTeam, reports, readonly, waModule, clientId: tourClient?.id })}
           onStep={step => prepareStep(step as CommercialStep)}
           onClose={endTour} />
       )}
@@ -221,7 +223,7 @@ function ComercialContent() {
       ) : current === 'acumulado' ? (
         <AcumuladoView />
       ) : (
-        <ActividadView />
+        <ActividadView reports={reports} />
       )}
 
       {overlay && data && (
