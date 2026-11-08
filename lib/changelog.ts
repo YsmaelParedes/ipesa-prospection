@@ -36,6 +36,15 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.43.0',
+    date: '7 de noviembre, 2026',
+    title: 'Planes más claros',
+    items: [
+      'Las metas propias para cada vendedor son parte del plan Cubeta. En Galón, todo el equipo usa la meta de la tienda.',
+      'La tabla de planes muestra mejor qué incluye cada uno.',
+    ],
+  },
+  {
     version: '1.42.0',
     date: '7 de noviembre, 2026',
     title: 'Plan Cubeta con más para tu equipo',

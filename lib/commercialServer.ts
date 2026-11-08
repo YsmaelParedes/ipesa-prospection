@@ -1,5 +1,6 @@
 import { getServerSupabase, getUserNameMap, type StoreContext } from './supabase-server'
 import { planOf } from './stores'
+import { parseGoalsConfig, type GoalsConfig } from './commercial'
 
 export const COMMERCIAL_COLUMNS =
   'id, name, phone, email, company, address, postal_code, colonia, zone, segment, acquisition_channel, line_type, owner_id, commercial_status, ' +
@@ -12,12 +13,28 @@ export const ACTIVITY_COLUMNS =
 export const hasSalesTeam = (ctx: StoreContext) => planOf(ctx.plan).salesTeam
 /** Acumulado y reportes en Excel: Cubeta e Interno. */
 export const hasReports = (ctx: StoreContext) => planOf(ctx.plan).reports
+/** Metas propias por vendedor: Cubeta e Interno. */
+export const hasSellerGoals = (ctx: StoreContext) => planOf(ctx.plan).sellerGoals
+
+/**
+ * Las metas que aplican hoy en la tienda. Sin metas por vendedor en su plan,
+ * todos usan la de la tienda; las propias se conservan guardadas por si
+ * vuelve a Cubeta.
+ */
+export function storeGoals(ctx: StoreContext, raw: unknown): GoalsConfig {
+  const cfg = parseGoalsConfig(raw)
+  return hasSellerGoals(ctx) ? cfg : { ...cfg, byUser: {} }
+}
 
 export function salesTeamRequired(): Response {
   return Response.json(
-    { error: 'Oportunidades, metas por vendedor y Actividad diaria vienen en los planes Galón y Cubeta.', code: 'PLAN_FEATURE' },
+    { error: 'Oportunidades, Actividad diaria y las metas del equipo vienen en los planes Galón y Cubeta.', code: 'PLAN_FEATURE' },
     { status: 403 },
   )
+}
+
+export function sellerGoalsRequired(): Response {
+  return Response.json({ error: 'Las metas propias para cada vendedor vienen en el plan Cubeta.', code: 'PLAN_FEATURE' }, { status: 403 })
 }
 
 export function reportsRequired(): Response {

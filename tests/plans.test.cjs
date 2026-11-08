@@ -14,6 +14,8 @@ test('the plans match what was agreed', () => {
   assert.equal(PLANS.galon.whatsapp, false)
   assert.equal(PLANS.cubeta.whatsapp, true)
   assert.deepEqual([PLANS.litro.reports, PLANS.galon.reports, PLANS.cubeta.reports, PLANS.interno.reports], [false, false, true, true])
+  // Metas propias por vendedor: solo Cubeta e Interno; en Galón todo el equipo usa la de la tienda
+  assert.deepEqual([PLANS.litro.sellerGoals, PLANS.galon.sellerGoals, PLANS.cubeta.sellerGoals, PLANS.interno.sellerGoals], [false, false, true, true])
   assert.equal(planOf('profesional').label, 'Litro', 'unknown plans fall back to Litro')
 })
 

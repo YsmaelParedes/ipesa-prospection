@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getStoreMembers, getTestUserIds, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
-import { hasSalesTeam, salesTeamRequired, zonedDayStart } from '@/lib/commercialServer'
+import { hasSalesTeam, hasSellerGoals, salesTeamRequired, sellerGoalsRequired, storeGoals, zonedDayStart } from '@/lib/commercialServer'
 import {
   EMAIL_RESULT_CHOICES, GOAL_KEYS, RESULT_CHOICES, RESULT_RULES, addDays, compliance, countActivities, goalsFor, parseGoals,
   parseGoalsConfig, todayISO, type ActivityForCount,
@@ -53,7 +53,7 @@ export async function GET() {
     // Las cuentas de prueba no cuentan en los números del equipo
     const rows = allRows.filter(r => !r.user_id || !tests.has(r.user_id))
 
-    const cfg = parseGoalsConfig(store.data?.commercial_goals)
+    const cfg = storeGoals(ctx, store.data?.commercial_goals)
     const ownedBy = new Map<string, number>()
     for (const o of owned) if (o.owner_id) ownedBy.set(o.owner_id, (ownedBy.get(o.owner_id) ?? 0) + 1)
 
@@ -91,6 +91,7 @@ export async function GET() {
     return NextResponse.json({
       today,
       teamGoals: cfg.team,
+      sellerGoals: hasSellerGoals(ctx),
       people,
       totals: { prospects: prospects.count ?? 0, clients: clients.count ?? 0, quoted: day.quoted, sold: day.sold },
       byResult: byResult(rows),
@@ -116,6 +117,7 @@ export async function PATCH(req: NextRequest) {
   if (!body) return jsonError('Cuerpo de solicitud inválido')
   const userId = body.user_id ?? null
   if (userId !== null && !isUUID(userId)) return jsonError('Persona inválida')
+  if (userId !== null && !hasSellerGoals(ctx)) return sellerGoalsRequired()
   const reset = body.reset === true
   if (!reset) {
     for (const k of GOAL_KEYS) {
@@ -127,6 +129,7 @@ export async function PATCH(req: NextRequest) {
   const supabase = getServerSupabase()
   const { data: store, error: readError } = await supabase.from('stores').select('commercial_goals').eq('id', ctx.storeId).maybeSingle()
   if (readError) return serverError('PATCH /api/data/commercial/control', readError, 'No se pudieron guardar las metas')
+  // Se lee completo: las metas propias guardadas se conservan aunque el plan no las use
   const cfg = parseGoalsConfig(store?.commercial_goals)
   if (userId) {
     if (reset) delete cfg.byUser[userId as string]

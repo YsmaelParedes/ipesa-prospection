@@ -2,10 +2,10 @@ import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { jsonError, serverError } from '@/lib/validation'
-import { COMMERCIAL_COLUMNS, hasReports, hasSalesTeam, withOwnerNames, zonedDayStart } from '@/lib/commercialServer'
+import { COMMERCIAL_COLUMNS, hasReports, hasSalesTeam, storeGoals, withOwnerNames, zonedDayStart } from '@/lib/commercialServer'
 import { withContactSearch } from '@/lib/contactSearch'
 import { fetchPaged } from '@/lib/paged'
-import { addDays, countActivities, goalsFor, parseGoalsConfig, todayISO, type ActivityForCount } from '@/lib/commercial'
+import { addDays, countActivities, goalsFor, todayISO, type ActivityForCount } from '@/lib/commercial'
 
 const FRESH_PAGE = 30
 /** Al refrescar se pide de una vez lo que ya se veía (hasta este tope). */
@@ -105,7 +105,7 @@ async function GETImpl(req: NextRequest) {
       reports: hasReports(ctx),
       zones: (catalogs.data ?? []).filter(c => c.type === 'zone').map(c => c.label as string),
       segments: (catalogs.data ?? []).filter(c => c.type === 'segment').map(c => c.label as string),
-      goals: goalsFor(parseGoalsConfig(store.data?.commercial_goals), ctx.uid),
+      goals: goalsFor(storeGoals(ctx, store.data?.commercial_goals), ctx.uid),
       counts: countActivities((activities.data ?? []) as ActivityForCount[]),
       due: dueRows.map(c => ({ ...c, quote_amount: quotes.get(c.id as string) ?? null })),
       // La lista llega hasta MAX_DUE; el contador es el total real

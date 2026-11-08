@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getStoreMembers, getTestUserIds, requireStore } from '@/lib/supabase-server'
 import { jsonError, serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
-import { hasReports, reportsRequired, zonedDayStart } from '@/lib/commercialServer'
+import { hasReports, reportsRequired, storeGoals, zonedDayStart } from '@/lib/commercialServer'
 import {
-  GOAL_KEYS, addDays, compliance, countActivities, goalsFor, parseGoalsConfig, periodRange,
+  GOAL_KEYS, addDays, compliance, countActivities, goalsFor, periodRange,
   todayISO, workDaysBetween, type ActivityForCount, type Goals, type Period,
 } from '@/lib/commercial'
 
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
     const current = rows.filter(r => Date.parse(r.created_at) >= startsAt)
     const previous = rows.filter(r => Date.parse(r.created_at) < prevEndsAt)
 
-    const cfg = parseGoalsConfig(store.data?.commercial_goals)
+    const cfg = storeGoals(ctx, store.data?.commercial_goals)
     const people = members
       .filter(m => m.status === 'active' && !tests.has(m.user_id))
       .filter(m => m.role === 'employee' || current.some(r => r.user_id === m.user_id))

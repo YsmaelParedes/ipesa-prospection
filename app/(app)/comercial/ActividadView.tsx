@@ -15,6 +15,8 @@ type Person = {
 }
 type Data = {
   today: string; teamGoals: Goals; people: Person[]
+  /** Metas propias por vendedor (plan Cubeta). */
+  sellerGoals?: boolean
   totals: { prospects: number; clients: number; quoted: number; sold: number }
   byResult: { result: string; label: string; count: number }[]
   bySegment: { segment: string; count: number }[]
@@ -23,6 +25,7 @@ type Data = {
 const RESULT_COLOR: Record<string, string> = {
   no_contesta: 'var(--muted-2)', contactado: 'var(--c-teal-ink)', cotizacion: 'var(--warning-fill)',
   venta: 'var(--success-fill)', no_interesado: 'var(--ink-3)', numero_equivocado: 'var(--brand)',
+  enviado: '#00708A', respondio: 'var(--c-teal-ink)', correo_incorrecto: 'var(--brand)',
 }
 const tone = (ratio: number) => ratio >= 0.8 ? s.ok : ratio >= 0.4 ? s.mid : s.low
 /** "lunes, 2 de noviembre" */
@@ -166,15 +169,24 @@ function GoalsModal({ data, onClose, onSaved }: { data: Data; onClose: () => voi
           <button className="modal-close btn-icon" onClick={onClose} aria-label="Cerrar"><Ico.close /></button>
         </div>
         <div className="modal-body">
-          <div className={s.filters}>
-            <button className={`${s.pill} ${s.press}`} aria-pressed={who === ''} onClick={() => choose('')}>Toda la tienda</button>
-            {data.people.map(p => (
-              <button key={p.user_id} className={`${s.pill} ${s.press}`} aria-pressed={who === p.user_id} onClick={() => choose(p.user_id)}>{p.name}</button>
-            ))}
-          </div>
-          <p className={s.hMuted} style={{ fontSize: 12.5, margin: '0 0 12px' }}>
-            {who ? (person?.custom ? `${person.name} tiene metas propias.` : `${person?.name} usa las metas de la tienda; al guardar tendrá las suyas.`) : 'Las usan los vendedores que no tienen metas propias.'}
-          </p>
+          {data.sellerGoals ? (
+            <>
+              <div className={s.filters}>
+                <button className={`${s.pill} ${s.press}`} aria-pressed={who === ''} onClick={() => choose('')}>Toda la tienda</button>
+                {data.people.map(p => (
+                  <button key={p.user_id} className={`${s.pill} ${s.press}`} aria-pressed={who === p.user_id} onClick={() => choose(p.user_id)}>{p.name}</button>
+                ))}
+              </div>
+              <p className={s.hMuted} style={{ fontSize: 12.5, margin: '0 0 12px' }}>
+                {who ? (person?.custom ? `${person.name} tiene metas propias.` : `${person?.name} usa las metas de la tienda; al guardar tendrá las suyas.`) : 'Las usan los vendedores que no tienen metas propias.'}
+              </p>
+            </>
+          ) : (
+            <p className={s.hMuted} style={{ fontSize: 12.5, margin: '0 0 12px' }}>
+              Todo el equipo usa estas metas. Para darle a cada vendedor las suyas, el plan Cubeta incluye metas propias por vendedor
+              (<Link href="/configuracion?tab=plan" className="auth-link strong">ver planes</Link>).
+            </p>
+          )}
           <div className={s.goalGrid}>
             {GOAL_KEYS.map(k => (
               <label key={k} style={{ display: 'contents' }}>

@@ -66,15 +66,17 @@ export type PlanDef = {
   label: string; maxUsers: number; allowAdmins: boolean
   maxContacts: number | null
   whatsapp: boolean; paid: boolean
-  /** Sistema comercial en equipo: Oportunidades, metas por vendedor y Actividad diaria. */
+  /** Sistema comercial en equipo: Oportunidades, reparto, Actividad diaria y una meta para todo el equipo. */
   salesTeam: boolean
+  /** Metas propias para cada vendedor (si no, todos usan la meta de la tienda). */
+  sellerGoals: boolean
   reports: boolean
 }
 export const PLANS: Record<PlanId, PlanDef> = {
-  litro:   { label: 'Litro',   maxUsers: 1,  allowAdmins: false, maxContacts: 50,   whatsapp: false, paid: false, salesTeam: false, reports: false },
-  galon:   { label: 'Galón',   maxUsers: 3,  allowAdmins: false, maxContacts: null, whatsapp: false, paid: true,  salesTeam: true,  reports: false },
-  cubeta:  { label: 'Cubeta',  maxUsers: 10, allowAdmins: true,  maxContacts: null, whatsapp: true,  paid: true,  salesTeam: true,  reports: true },
-  interno: { label: 'Interno', maxUsers: 50, allowAdmins: true,  maxContacts: null, whatsapp: true,  paid: false, salesTeam: true,  reports: true },
+  litro:   { label: 'Litro',   maxUsers: 1,  allowAdmins: false, maxContacts: 50,   whatsapp: false, paid: false, salesTeam: false, sellerGoals: false, reports: false },
+  galon:   { label: 'Galón',   maxUsers: 3,  allowAdmins: false, maxContacts: null, whatsapp: false, paid: true,  salesTeam: true,  sellerGoals: false, reports: false },
+  cubeta:  { label: 'Cubeta',  maxUsers: 10, allowAdmins: true,  maxContacts: null, whatsapp: true,  paid: true,  salesTeam: true,  sellerGoals: true,  reports: true },
+  interno: { label: 'Interno', maxUsers: 50, allowAdmins: true,  maxContacts: null, whatsapp: true,  paid: false, salesTeam: true,  sellerGoals: true,  reports: true },
 }
 /** Planes que se venden (en orden), sin la cortesía interna. */
 export const PUBLIC_PLANS = ['litro', 'galon', 'cubeta'] as const satisfies readonly PlanId[]
