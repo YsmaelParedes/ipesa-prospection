@@ -98,9 +98,12 @@ export function SiteNav() {
           ))}
         </nav>
         <div className={s.navCta}>
-          <Link href="/login" className={`${s.btn} ${s.btnGhost} ${s.hideSm}`}>Iniciar sesión</Link>
+          {/* En celular también: quien ya tiene cuenta no debe buscarla dentro del menú */}
+          <Link href="/login" className={`${s.btn} ${s.btnGhost}`}>
+            <span className={s.navFull}>Iniciar sesión</span><span className={s.navShort}>Entrar</span>
+          </Link>
           <Link href="/registro" className={`${s.btn} ${s.btnPrimary}`}>
-            <span className={s.hideXs}>Crear cuenta gratis</span><span className={s.showXs}>Crear cuenta</span>
+            <span className={s.navFull}>Crear cuenta gratis</span><span className={s.navShort}>Crear cuenta</span>
           </Link>
           <button
             ref={btnRef}
@@ -117,6 +120,7 @@ export function SiteNav() {
       </div>
       <nav id="site-menu" className={s.mobileMenu} aria-label="Secciones del sitio" hidden={!open}>
         <div className={s.wrap}>
+          <Link href="/login" className={s.mobileLogin}>Iniciar sesión</Link>
           <Link href="/inicio" className={isActive('/inicio') ? s.navActive : undefined}>Inicio</Link>
           {NAV.map(e => 'href' in e ? (
             <Link key={e.label} href={e.href} className={isActive(e.href) ? s.navActive : undefined} aria-current={isActive(e.href) ? 'page' : undefined}>{e.label}</Link>
@@ -130,7 +134,6 @@ export function SiteNav() {
               ))}
             </div>
           ))}
-          <Link href="/login" className={s.mobileLogin}>Iniciar sesión</Link>
         </div>
       </nav>
     </header>

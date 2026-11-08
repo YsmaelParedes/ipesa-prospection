@@ -25,6 +25,16 @@
 .btnArrow { width: 18px; height: 18px; transition: transform .16s; }
 .btn:hover .btnArrow { transform: translateX(3px); }
 .showXs { display: none; }
+/* Botones del encabezado: textos cortos en celular para que quepan Entrar, Crear cuenta y el menú */
+.navShort { display: none; }
+@media (max-width: 480px) {
+  .navFull { display: none; }
+  .navShort { display: inline; }
+}
+@media (max-width: 380px) {
+  /* Solo el símbolo de la marca; el enlace conserva su nombre accesible */
+  .navBrand :global(.brand-wordmark) > span { display: none; }
+}
 
 /* ── Navegación ── */
 .nav {
@@ -307,6 +317,7 @@
   .hideXs { display: none; }
   .showXs { display: inline; }
   .navCta .btnGhost { padding: 9px 8px; }
+  .navCta { gap: 4px; }
   .stat { padding: 22px 14px; }
   .stat strong { font-size: 22px; }
 }
@@ -331,7 +342,8 @@
 .mobileMenu a { padding: 13px 4px; border-bottom: 1px solid var(--line); font-size: 16px; font-weight: 700; color: var(--ink-2); }
 .mobileMenu a.navActive { color: var(--brand-strong); }
 .mobileMenu a.navActive::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 10px; border-radius: 50%; background: var(--brand); vertical-align: 2px; }
-.mobileMenu a.mobileLogin { border-bottom: 0; color: var(--muted); }
+/* Primero en el menú, con aspecto de botón */
+.mobileMenu a.mobileLogin { margin: 4px 0 8px; padding: 12px 16px; border: 1px solid var(--line-strong); border-radius: 12px; text-align: center; color: var(--ink); }
 
 /* Encabezado de páginas interiores */
 .pageHero { position: relative; overflow: hidden; padding: 72px 0 64px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, #FFFFFF 0%, var(--bg) 100%); }

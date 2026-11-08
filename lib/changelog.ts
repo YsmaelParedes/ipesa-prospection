@@ -42,6 +42,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     items: [
       'Las metas propias para cada vendedor son parte del plan Cubeta. En Galón, todo el equipo usa la meta de la tienda.',
       'La tabla de planes muestra mejor qué incluye cada uno.',
+      'En el celular, el sitio ya muestra el botón Entrar arriba, junto a Crear cuenta, y en el menú Iniciar sesión aparece primero.',
     ],
   },
   {
