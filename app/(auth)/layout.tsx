@@ -6,33 +6,38 @@ import { BrandLogo } from '@/components/Brand'
 // Solo /registro sale en Google (su layout lo vuelve a abrir); el resto es de cada persona
 export const metadata: Metadata = NO_INDEX
 
+/** Las muestras del abanico: color, nombre y clave como en una carta de colores. */
+const SWATCHES = [
+  { color: '#E2E415', name: 'Amarillo Mostrador', code: 'MT-104', angle: -52 },
+  { color: '#4EC39C', name: 'Verde Fachada', code: 'MT-221', angle: -30 },
+  { color: '#00BBD9', name: 'Turquesa Alberca', code: 'MT-318', angle: -9 },
+  { color: '#E51585', name: 'Magenta Taller', code: 'MT-407', angle: 12 },
+  { color: '#FD0B2B', name: 'Rojo Matices', code: 'MT-001', angle: 33 },
+]
+
 /**
- * Pantallas de acceso: panel de marca (escritorio) + formulario.
- * Un remolino de manchas de pintura con la paleta de la app es el arte del panel.
+ * Pantallas de acceso: el arte es una carta de colores abierta en abanico
+ * (en celular, una franja arriba) y el formulario va en una tarjeta.
  */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="auth-shell">
       <div className="brand-line" aria-hidden="true" />
-      <aside className="auth-art" aria-hidden="true">
-        <div className="auth-swirl">
-          <span className="blob b1" /><span className="blob b2" /><span className="blob b3" />
-          <span className="blob b4" /><span className="blob b5" />
-        </div>
-        <div className="auth-art-inner">
-          <Link href="/inicio" className="auth-art-logo" tabIndex={-1}>
-            <BrandLogo />
-          </Link>
-          <div className="auth-art-copy">
-            <h2>El CRM hecho para tiendas <span className="spectrum-text">de pintura</span></h2>
-            <p>Contactos, cotizaciones, agenda y avisos en un solo lugar. La información de cada tienda, separada y protegida.</p>
-            <ul className="auth-art-list">
-              <li><span className="dot d1" />Lo que toca hoy: seguimientos y recordatorios</li>
-              <li><span className="dot d2" />Sistema comercial: llamadas, seguimientos y metas del día</li>
-              <li><span className="dot d3" />Tu equipo con permisos que cuidan tu base</li>
-            </ul>
-          </div>
-          <div className="auth-art-foot">Empieza gratis · Cambia de plan cuando quieras</div>
+      <aside className="auth-art">
+        <Link href="/inicio" className="auth-art-logo" aria-label="Matices, ir al sitio">
+          <BrandLogo />
+        </Link>
+        <p className="auth-art-title">
+          Cada cliente, en su lugar. <span>Como tu carta de colores.</span>
+        </p>
+        <div className="auth-fan" aria-hidden="true">
+          {SWATCHES.map(s => (
+            <div key={s.code} className="auth-chip" style={{ '--r': `${s.angle}deg` } as React.CSSProperties}>
+              <div className="auth-chip-color" style={{ background: s.color }} />
+              <div className="auth-chip-label"><b>{s.name}</b><span>{s.code}</span></div>
+            </div>
+          ))}
+          <div className="auth-fan-pin" />
         </div>
       </aside>
       <main className="auth-main">

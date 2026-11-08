@@ -50,7 +50,7 @@ function LoginForm() {
 
   return (
     <>
-      <AuthHeader title="Bienvenido de vuelta" subtitle="Entra a la cuenta de tu tienda." />
+      <AuthHeader title="Hola de nuevo" subtitle="Entra para ver lo que toca hoy en tu tienda." />
       {linkError && <AuthAlert kind="info">El enlace no es válido o ya venció. Inicia sesión o solicita uno nuevo.</AuthAlert>}
       {error && <AuthAlert>{error}</AuthAlert>}
       {unconfirmed && (
@@ -65,12 +65,12 @@ function LoginForm() {
           onChange={e => setEmail(e.target.value)} autoComplete="email" autoFocus required maxLength={254}
           placeholder="tu@correo.com"
         />
-        <PasswordField label="Contraseña" value={password} onChange={setPassword} />
-        <div className="auth-row-end">
-          <Link href="/recuperar" className="auth-link">¿Olvidaste tu contraseña?</Link>
-        </div>
+        <PasswordField label="Contraseña" value={password} onChange={setPassword}
+          labelAside={<Link href="/recuperar" className="auth-link">¿La olvidaste?</Link>} />
         <Turnstile ref={turnstile} action="login" onToken={setCaptcha} />
-        <SubmitButton loading={loading} disabled={!!TURNSTILE_SITE_KEY && !captcha}>{TURNSTILE_SITE_KEY && !captcha ? 'Verificando…' : 'Entrar'}</SubmitButton>
+        <SubmitButton dark loading={loading} disabled={!!TURNSTILE_SITE_KEY && !captcha}>
+          {loading ? 'Entrando…' : TURNSTILE_SITE_KEY && !captcha ? 'Verificando…' : 'Entrar'}
+        </SubmitButton>
       </form>
       <p className="auth-alt">¿Tu tienda aún no usa {APP_NAME}? <Link href="/registro" className="auth-link strong">Crea tu cuenta gratis</Link></p>
     </>

@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { BrandLogo } from '@/components/Brand'
 
 /* Piezas compartidas de las pantallas de acceso (login, registro, recuperar…) */
 
@@ -21,7 +20,8 @@ export const AuthIcon = {
 export function AuthHeader({ title, subtitle }: { title: string; subtitle?: React.ReactNode }) {
   return (
     <div className="auth-head">
-      <BrandLogo className="auth-logo-mobile" />
+      {/* Las cuatro franjas del logo, como muestras de color */}
+      <div className="auth-bars" aria-hidden="true"><span /><span /><span /><span /></div>
       <h1 className="auth-title">{title}</h1>
       {subtitle && <p className="auth-sub">{subtitle}</p>}
     </div>
@@ -71,14 +71,18 @@ export function passwordScore(pw: string): number {
 }
 const SCORE_LABELS = ['Muy débil', 'Débil', 'Aceptable', 'Buena', 'Excelente']
 
-export function PasswordField({ label, value, onChange, showStrength, autoComplete = 'current-password', id = 'f-password', autoFocus }: {
+export function PasswordField({ label, value, onChange, showStrength, autoComplete = 'current-password', id = 'f-password', autoFocus, labelAside }: {
   label: string; value: string; onChange: (v: string) => void; showStrength?: boolean; autoComplete?: string; id?: string; autoFocus?: boolean
+  /** Junto a la etiqueta, a la derecha (ej. «¿La olvidaste?»). */
+  labelAside?: React.ReactNode
 }) {
   const [visible, setVisible] = useState(false)
   const score = passwordScore(value)
   return (
     <div className="auth-field">
-      <label htmlFor={id}>{label}</label>
+      {labelAside
+        ? <div className="auth-label-row"><label htmlFor={id}>{label}</label>{labelAside}</div>
+        : <label htmlFor={id}>{label}</label>}
       <div className="auth-input">
         <AuthIcon.lock className="auth-input-icon" />
         <input
@@ -107,9 +111,9 @@ export function PasswordField({ label, value, onChange, showStrength, autoComple
   )
 }
 
-export function SubmitButton({ loading, children, disabled }: { loading: boolean; children: React.ReactNode; disabled?: boolean }) {
+export function SubmitButton({ loading, children, disabled, dark }: { loading: boolean; children: React.ReactNode; disabled?: boolean; dark?: boolean }) {
   return (
-    <button type="submit" className="auth-submit" disabled={loading || disabled}>
+    <button type="submit" className={dark ? 'auth-submit secondary' : 'auth-submit'} disabled={loading || disabled}>
       {loading ? <span className="auth-spinner" /> : null}
       <span>{children}</span>
       {!loading && <AuthIcon.arrow className="auth-submit-arrow" />}

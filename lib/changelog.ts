@@ -36,6 +36,15 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.44.0',
+    date: '7 de noviembre, 2026',
+    title: 'Nueva pantalla para entrar',
+    items: [
+      'Iniciar sesión, crear cuenta y recuperar tu contraseña tienen un diseño nuevo, con una carta de colores, también en el celular.',
+      'El enlace para recuperar tu contraseña está junto al campo de contraseña.',
+    ],
+  },
+  {
     version: '1.43.0',
     date: '7 de noviembre, 2026',
     title: 'Planes más claros',
