@@ -69,7 +69,7 @@
 @media (hover: hover) {
   .row:hover { background: var(--paper); }
   .row[aria-current='true']:hover { background: var(--brand-softer); }
-  .pill:hover, .ghostBtn:hover, .chipPick:hover { background: var(--paper); }
+  .pill:not([aria-pressed='true']):hover, .ghostBtn:hover, .chipPick:hover { background: var(--paper); }
 }
 .avatar { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; font-size: 12px; flex-shrink: 0; }
 .name { font-weight: 800; font-size: 13.5px; line-height: 1.25; overflow-wrap: anywhere; }
@@ -261,3 +261,53 @@
 .tbl tbody small { color: var(--muted); font-weight: 700; }
 .who { display: flex; align-items: center; gap: 8px; font-weight: 800; }
 @media (max-width: 760px) { .periodLabel { min-width: 0; flex: 1; } }
+
+/* ── Acumulado: tocar Cotizado o Vendido muestra a qué clientes ── */
+.kpiTap { display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.kpiTap[aria-expanded='true'] { box-shadow: 0 0 0 2px var(--brand); }
+@media (hover: hover) { .kpiTap:hover { background: var(--paper); } }
+.kpiMore { display: inline-flex; align-items: center; gap: 2px; margin-top: 8px; font-size: 11.5px; font-weight: 800; color: var(--brand-strong); }
+
+.detailPanel { padding: 14px 16px 6px; margin: -2px 0 14px; }
+.detailHead { display: flex; flex-direction: column; gap: 8px; }
+.detailTitle { display: flex; align-items: center; gap: 10px; }
+.detailTitle h3 { margin: 0; flex: 1; font-size: 15px; font-family: var(--font-display); font-weight: 700; }
+.detailClose { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--paper-2); color: var(--ink-2); flex-shrink: 0; }
+.detailSum { margin: 0; font-size: 12.5px; color: var(--muted); }
+.detailSum b { color: var(--ink); font-size: 15px; font-weight: 800; }
+.detailChips { display: flex; gap: 6px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding-bottom: 2px; }
+.detailChips .pill { flex-shrink: 0; white-space: nowrap; }
+.detailSort { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.detailList { list-style: none; margin: 8px 0 0; padding: 0; }
+.detailRow { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; text-align: left; padding: 10px 0; box-shadow: 0 -1px 0 var(--line); font: inherit; color: inherit; cursor: pointer; }
+.detailRow:disabled { cursor: default; }
+@media (hover: hover) { .detailRow:not(:disabled):hover { background: var(--paper); } }
+.detailWho { min-width: 0; display: flex; flex-direction: column; }
+.detailWho b { font-size: 13.5px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detailWho span { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detailAmt { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.detailAmt b { font-size: 14px; font-weight: 800; }
+.st { font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+.stOpen { background: var(--warning-soft); color: var(--warning); }
+.stWon { background: var(--success-soft); color: var(--success); }
+.stLost { background: var(--paper-2); color: var(--muted); }
+
+/* Celular: hoja que sube desde abajo, encima de la barra de navegación */
+.detailLayer { position: fixed; inset: 0; z-index: 1500; }
+.detailScrim { position: absolute; inset: 0; background: rgba(19, 19, 19, .38); opacity: 0; }
+.detailSheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 82dvh; display: flex; flex-direction: column; background: var(--card);
+  border-radius: 22px 22px 0 0; box-shadow: 0 -12px 40px -12px rgba(19, 19, 19, .28); padding: 0 16px env(safe-area-inset-bottom, 0px); translate: 0 100%; }
+.detailShown .detailScrim { opacity: 1; }
+.detailShown .detailSheet { translate: 0 0; }
+.detailGrab { width: 40px; height: 4px; border-radius: 4px; background: var(--line-strong); margin: 8px auto 6px; flex-shrink: 0; }
+.detailSheet .detailHead { padding-bottom: 10px; }
+.detailScroll { overflow-y: auto; overscroll-behavior: contain; margin: 0 -16px; padding: 0 16px 18px; }
+@media (prefers-reduced-motion: no-preference) {
+  .detailScrim { transition: opacity 200ms ease-out; }
+  .detailSheet { transition: translate 300ms cubic-bezier(0.2, 0, 0, 1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .detailSheet { translate: 0 0; opacity: 0; transition: opacity 200ms ease-out; }
+  .detailShown .detailSheet { opacity: 1; }
+  .detailScrim { transition: opacity 200ms ease-out; }
+}

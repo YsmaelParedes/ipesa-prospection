@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.40.0',
+    date: '7 de noviembre, 2026',
+    title: 'En Acumulado, ve a qué clientes cotizaste y vendiste',
+    items: [
+      'Toca Cotizado o Vendido en Acumulado para ver cada cotización o venta del periodo: el cliente, quién la registró, el día y el monto.',
+      'Filtra por vendedor y ordena por monto o por fecha. Cada cotización dice si sigue abierta, si ya se ganó o si se perdió.',
+      'Toca un cliente de la lista para abrir su ficha.',
+    ],
+  },
+  {
     version: '1.38.1',
     date: '3 de noviembre, 2026',
     title: 'Inicio y Campañas más rápidos',

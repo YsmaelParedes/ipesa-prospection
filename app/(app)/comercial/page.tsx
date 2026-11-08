@@ -219,7 +219,7 @@ function ComercialContent() {
       ) : current === 'oportunidades' ? (
         <OportunidadesView isAdmin={isAdmin} segments={data.segments ?? []} onOpen={setOverlay} />
       ) : current === 'acumulado' ? (
-        <AcumuladoView />
+        <AcumuladoView onOpen={id => setOverlay({ id })} />
       ) : (
         <ActividadView />
       )}
