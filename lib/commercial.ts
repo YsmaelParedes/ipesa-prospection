@@ -48,15 +48,22 @@ export function daysSince(iso: string | null | undefined, today: string): number
   return Number.isNaN(from) ? null : Math.max(0, Math.round((to - from) / 86_400_000))
 }
 
-export const ACTIVITY_KINDS = ['llamada', 'whatsapp', 'visita', 'nota'] as const
+export const ACTIVITY_KINDS = ['llamada', 'whatsapp', 'visita', 'correo', 'nota'] as const
 export type ActivityKind = typeof ACTIVITY_KINDS[number]
-export const KIND_LABELS: Record<ActivityKind, string> = { llamada: 'Llamada', whatsapp: 'WhatsApp', visita: 'Visita', nota: 'Nota' }
+export const KIND_LABELS: Record<ActivityKind, string> = { llamada: 'Llamada', whatsapp: 'WhatsApp', visita: 'Visita', correo: 'Correo', nota: 'Nota' }
 
-export const RESULTS = ['no_contesta', 'contactado', 'interes', 'cotizacion', 'venta', 'reprogramar', 'no_interesado', 'numero_equivocado'] as const
+export const RESULTS = [
+  'no_contesta', 'contactado', 'interes', 'cotizacion', 'venta', 'reprogramar', 'no_interesado', 'numero_equivocado',
+  'enviado', 'respondio', 'correo_incorrecto',
+] as const
 export type CallResult = typeof RESULTS[number]
 /** Los 6 resultados que se eligen al registrar ("interes" y "reprogramar" quedan solo en el historial). */
 export const RESULT_CHOICES = ['no_contesta', 'contactado', 'cotizacion', 'venta', 'no_interesado', 'numero_equivocado'] as const
-export type ResultChoice = typeof RESULT_CHOICES[number]
+/** Los de un correo: la app no sabe si se envió ni si contestaron, lo dice el vendedor. */
+export const EMAIL_RESULT_CHOICES = ['enviado', 'respondio', 'cotizacion', 'venta', 'no_interesado', 'correo_incorrecto'] as const
+export type ResultChoice = typeof RESULT_CHOICES[number] | typeof EMAIL_RESULT_CHOICES[number]
+/** Los resultados que se pueden elegir según el tipo de actividad. */
+export const resultChoicesFor = (kind: string): readonly ResultChoice[] => kind === 'correo' ? EMAIL_RESULT_CHOICES : RESULT_CHOICES
 
 type Rule = {
   label: string
@@ -78,6 +85,10 @@ export const RESULT_RULES: Record<CallResult, Rule> = {
   reprogramar:       { label: 'Reprogramar',        days: null, status: null,            action: 'Llamar', pickDate: true },
   no_interesado:     { label: 'No interesado',      days: 90,   status: 'no_interesado', action: 'Volver a ofrecer' },
   numero_equivocado: { label: 'Número incorrecto',  days: null, status: 'depurar',       action: null },
+  enviado:           { label: 'Enviado',            days: 3,    status: null,            action: 'Ver si respondió el correo' },
+  respondio:         { label: 'Respondió',          days: 3,    status: 'contactado',    action: 'Dar seguimiento' },
+  // El teléfono puede servir: no pasa a «Número incorrecto» y conserva su próxima acción
+  correo_incorrecto: { label: 'Correo incorrecto',  days: null, status: null,            action: null },
 }
 export const isCallResult = (v: unknown): v is CallResult => typeof v === 'string' && Object.hasOwn(RESULT_RULES, v)
 export const resultLabel = (r: string | null | undefined) => (r && isCallResult(r) ? RESULT_RULES[r].label : '')
@@ -85,8 +96,9 @@ export const resultLabel = (r: string | null | undefined) => (r && isCallResult(
 /** Llamadas seguidas sin respuesta a partir de las cuales el contacto baja al final de su grupo. */
 export const NO_ANSWER_LIMIT = 3
 
-/** Contacto efectivo: hubo conversación (no cuenta "Sin contacto" ni "Número incorrecto"). */
-export const isEffective = (r: string | null | undefined) => !!r && r !== 'no_contesta' && r !== 'numero_equivocado'
+/** Contacto efectivo: hubo conversación (no cuenta "Sin contacto", "Número incorrecto" ni un correo sin respuesta). */
+const NOT_EFFECTIVE = new Set(['no_contesta', 'numero_equivocado', 'enviado', 'correo_incorrecto'])
+export const isEffective = (r: string | null | undefined) => !!r && !NOT_EFFECTIVE.has(r)
 
 /** Fecha de hoy (AAAA-MM-DD) en la zona horaria de la tienda. */
 export function todayISO(timeZone = 'America/Mexico_City', now = new Date()): string {
@@ -120,6 +132,9 @@ export function outcomeText(result: CallResult): string {
     case 'reprogramar':       return 'Vuelve en la fecha que elijas'
     case 'no_interesado':     return 'Sale de tu lista y vuelve en 90 días'
     case 'numero_equivocado': return 'Sale de la lista para corregir el número'
+    case 'enviado':           return 'Vuelve a tu lista para ver si respondió'
+    case 'respondio':         return 'Pasa a Contactado · 50 %'
+    case 'correo_incorrecto': return 'Corrige el correo en Contactos. Su próxima acción no cambia'
   }
 }
 
@@ -250,16 +265,18 @@ export function periodRange(period: Period, today: string, offset = 0): { from: 
 }
 
 export type ActivityForCount = { kind: string; result: string | null; is_followup: boolean; quote_amount: number | string | null; sale_amount: number | string | null }
-export type DayCounts = Goals & { quoted: number; sold: number }
+/** emails: correos registrados (no tienen meta). */
+export type DayCounts = Goals & { quoted: number; sold: number; emails: number }
 
 /** Lo que cuenta para las metas. Las notas no cuentan como contacto. */
 export function countActivities(list: ActivityForCount[]): DayCounts {
-  const c: DayCounts = { calls: 0, effective: 0, quotes: 0, followups: 0, sales: 0, quoted: 0, sold: 0 }
+  const c: DayCounts = { calls: 0, effective: 0, quotes: 0, followups: 0, sales: 0, quoted: 0, sold: 0, emails: 0 }
   for (const a of list) {
     c.quoted += Number(a.quote_amount) || 0
     c.sold += Number(a.sale_amount) || 0
     if (a.kind === 'nota') continue
     if (a.kind === 'llamada') c.calls++
+    if (a.kind === 'correo') c.emails++
     if (isEffective(a.result)) c.effective++
     if (a.result === 'cotizacion') c.quotes++
     if (a.result === 'venta') c.sales++

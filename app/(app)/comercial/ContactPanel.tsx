@@ -10,6 +10,7 @@ import {
 } from '@/lib/commercial'
 import { fmtPhone, normalizePhone, waMeLink } from '@/lib/phone'
 import { RegisterForm, type Kind } from './RegisterForm'
+import { EmailButton, emailOf, mailSubject } from './EmailButton'
 import { Ico, StatusChip, addressOf, bizName, fmtDay, initials, localDay, money, personName, whenPhrase, type ListContact } from './ui'
 import s from './comercial.module.css'
 
@@ -32,13 +33,15 @@ export const avatarColors = (status: string) => AVATAR[status] ?? ['var(--paper-
  * ("pane"); en celular, o desde Cartera y Oportunidades, se abre encima ("overlay").
  * Cualquiera del equipo registra; quien registra se queda con el contacto.
  */
-export function ContactPanel({ contactId, initial, today, variant, readonly, waModule, uid, kind, result, onSaved, onClose }: {
+export function ContactPanel({ contactId, initial, today, variant, readonly, waModule, storeName, uid, kind, result, onSaved, onClose }: {
   contactId: string
   initial?: ListContact
   today: string
   variant: 'pane' | 'overlay'
   readonly: boolean
   waModule: boolean
+  /** Va en el asunto de los correos. */
+  storeName?: string
   /** Quien está usando la app (para "Tuyo"). */
   uid?: string
   kind?: Kind
@@ -51,6 +54,8 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
   const [history, setHistory] = useState<Activity[] | null>(null)
   const [error, setError] = useState('')
   const [closing, setClosing] = useState(false)
+  // «Correo» en la ficha deja el formulario listo para registrar el correo
+  const [formKind, setFormKind] = useState<Kind | undefined>(kind)
   const contact = detail?.contact ?? initial ?? null
 
   const load = useCallback(async () => {
@@ -142,6 +147,12 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
         {waModule && phone.length === 10 && contact.line_type !== 'fijo' && (
           <a href={waMeLink(phone)} target="_blank" rel="noopener noreferrer" className={`${s.act} ${s.actWa} ${s.press}`}><Ico.chat /> WhatsApp</a>
         )}
+        {emailOf(contact.email) && (
+          <EmailButton email={emailOf(contact.email)} subject={mailSubject(storeName, bizName(contact))}
+            className={`${s.act} ${s.actMail} ${s.press}`} onOpen={() => { if (!readonly) setFormKind('correo') }}>
+            <Ico.mail /> Correo
+          </EmailButton>
+        )}
         <Link href={`/contactos?id=${contact.id}`} className={`${s.act} ${s.actMore} ${s.press}`} aria-label="Ver en Contactos" title="Ver en Contactos"><Ico.user /></Link>
       </div>
 
@@ -152,7 +163,7 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
           {contact.owner_id && !mine && contact.owner_name && (
             <p className={s.notice}>Lo trabaja {contact.owner_name}. Si registras una actividad, pasa a ser tuyo.</p>
           )}
-          <RegisterForm key={contact.id} contact={contact} today={today} initialKind={kind} initialResult={result}
+          <RegisterForm key={`${contact.id}-${formKind ?? ''}`} contact={contact} today={today} initialKind={formKind} initialResult={result}
             wide={variant === 'pane'} onSaved={c => { onSaved(c); load() }} />
         </div>
       )}

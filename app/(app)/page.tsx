@@ -412,6 +412,7 @@ const ACTIVITY_TONE: Record<string, React.CSSProperties> = {
   llamada:  { background: 'var(--c-cyan-soft)',    color: 'var(--c-cyan-ink)' },
   whatsapp: { background: '#E3F7EA',               color: '#128C4A' },
   visita:   { background: 'var(--c-teal-soft)',    color: 'var(--c-teal-ink)' },
+  correo:   { background: '#E0F4F8',               color: '#00708A' },
   nota:     { background: 'var(--paper-2)',        color: 'var(--muted)' },
   close:    { background: 'var(--success-soft)',   color: 'var(--success)' },
   default:  { background: 'var(--brand-soft)',     color: 'var(--brand)' },
@@ -424,6 +425,7 @@ function ActivityIcon({ type }: { type?: string }) {
     case 'llamada':  return <svg {...p}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z" /></svg>
     case 'whatsapp': return <svg {...p}><path d="M21 11.5a8.38 8.38 0 0 1-9 8.4 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.2A8.38 8.38 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5Z" /></svg>
     case 'visita':   return <svg {...p}><path d="M3 9 4.5 4h15L21 9" /><path d="M3 9h18v1a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9Z" /><path d="M5 13v7h14v-7" /></svg>
+    case 'correo':   return <svg {...p}><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-10 6L2 7" /></svg>
     case 'close':    return <svg {...p} strokeWidth={2.4}><path d="m5 13 4 4L19 7" /></svg>
     default:         return <svg {...p}><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { Fragment, useCallback, useState } from 'react'
 import { apiFetch } from '@/lib/apiClient'
 import { useQueryEffect } from '@/lib/useCachedQuery'
 import { useDataChanged } from '@/lib/crmEvents'
@@ -179,7 +179,12 @@ export function AcumuladoView({ onOpen }: { onOpen: (contactId: string) => void 
               <thead>
                 <tr>
                   <th scope="col">Vendedor</th>
-                  {GOAL_KEYS.map(k => <th key={k} scope="col">{GOAL_LABELS[k]}</th>)}
+                  {GOAL_KEYS.map(k => (
+                    <Fragment key={k}>
+                      <th scope="col">{GOAL_LABELS[k]}</th>
+                      {k === 'calls' && <th scope="col">Correos</th>}
+                    </Fragment>
+                  ))}
                   <th scope="col">Vendido</th>
                   <th scope="col">Cumplimiento</th>
                 </tr>
@@ -194,7 +199,10 @@ export function AcumuladoView({ onOpen }: { onOpen: (contactId: string) => void 
                       </span>
                     </th>
                     {GOAL_KEYS.map(k => (
-                      <td key={k}>{p.counts[k]}<small> / {p.goals[k]}</small></td>
+                      <Fragment key={k}>
+                        <td>{p.counts[k]}<small> / {p.goals[k]}</small></td>
+                        {k === 'calls' && <td>{p.counts.emails ?? 0}</td>}
+                      </Fragment>
                     ))}
                     <td>{money(p.counts.sold)}</td>
                     <td><b>{pct(p.compliance)}</b></td>
