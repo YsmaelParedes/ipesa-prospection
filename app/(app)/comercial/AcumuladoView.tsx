@@ -1,12 +1,13 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { Fragment, useCallback, useState } from 'react'
 import { apiFetch } from '@/lib/apiClient'
 import { useQueryEffect } from '@/lib/useCachedQuery'
 import { useDataChanged } from '@/lib/crmEvents'
 import { GOAL_KEYS, GOAL_LABELS, type DayCounts, type Goals, type Period } from '@/lib/commercial'
 import { downloadSummaryWorkbook } from '@/lib/exportData'
 import { Ico, fmtDay, initials, money, pct } from './ui'
+import { AmountDetail, type AmountKind } from './AmountDetail'
 import s from './comercial.module.css'
 
 type Person = {
@@ -59,13 +60,15 @@ function Delta({ now, before, isMoney }: { now: number; before: number; isMoney?
 }
 
 /** "Acumulado" (administrador): totales de un día, la semana o el mes, comparados con el periodo anterior. */
-export function AcumuladoView() {
+export function AcumuladoView({ onOpen }: { onOpen: (contactId: string) => void }) {
   const [period, setPeriod] = useState<Period>('week')
   const [offset, setOffset] = useState(0)
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState('')
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState('')
+  // Tarjeta de monto abierta: a qué clientes se cotizó o vendió
+  const [detail, setDetail] = useState<AmountKind | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -80,7 +83,7 @@ export function AcumuladoView() {
   useQueryEffect(() => { load() }, [load])
   useDataChanged(['commercial'], load)
 
-  const choose = (p: Period) => { setPeriod(p); setOffset(0); setData(null) }
+  const choose = (p: Period) => { setPeriod(p); setOffset(0); setData(null); setDetail(null) }
 
   const download = async () => {
     if (!data) return
@@ -126,11 +129,11 @@ export function AcumuladoView() {
     : data.startedDays === 0
     ? `${week ? 'Meta de la semana completa' : 'Meta del mes completo'}: ${data.fullDays} días hábiles`
     : `Meta de ${data.goalDays === 1 ? '1 día hábil' : `${data.goalDays} días hábiles`}`
-  const kpis: { label: string; value: string; now: number; before: number; isMoney?: boolean }[] = [
+  const kpis: { label: string; value: string; now: number; before: number; isMoney?: boolean; detail?: AmountKind }[] = [
     { label: 'Llamadas', value: data.totals.calls.toLocaleString('es-MX'), now: data.totals.calls, before: data.prev.calls },
     { label: 'Contactos efectivos', value: data.totals.effective.toLocaleString('es-MX'), now: data.totals.effective, before: data.prev.effective },
-    { label: 'Cotizado', value: money(data.totals.quoted), now: data.totals.quoted, before: data.prev.quoted, isMoney: true },
-    { label: 'Vendido', value: money(data.totals.sold), now: data.totals.sold, before: data.prev.sold, isMoney: true },
+    { label: 'Cotizado', value: money(data.totals.quoted), now: data.totals.quoted, before: data.prev.quoted, isMoney: true, detail: 'quoted' },
+    { label: 'Vendido', value: money(data.totals.sold), now: data.totals.sold, before: data.prev.sold, isMoney: true, detail: 'sold' },
   ]
 
   return (
@@ -138,7 +141,15 @@ export function AcumuladoView() {
       {picker}
 
       <div className={s.kpis}>
-        {kpis.map(k => (
+        {kpis.map(k => k.detail ? (
+          <button key={k.label} className={`${s.elev} ${s.kpi} ${s.kpiTap} ${s.press}`} aria-expanded={detail === k.detail}
+            onClick={() => setDetail(d => d === k.detail ? null : k.detail!)}>
+            <small>{k.label}</small>
+            <b className={s.num}>{k.value}</b>
+            <Delta now={k.now} before={k.before} isMoney={k.isMoney} />
+            <span className={s.kpiMore}>{detail === k.detail ? 'Ocultar clientes' : 'Ver clientes'}<Ico.chevron /></span>
+          </button>
+        ) : (
           <div key={k.label} className={`${s.elev} ${s.kpi}`}>
             <small>{k.label}</small>
             <b className={s.num}>{k.value}</b>
@@ -146,6 +157,11 @@ export function AcumuladoView() {
           </div>
         ))}
       </div>
+      {detail && (
+        <AmountDetail kind={detail} period={data.period} offset={data.offset}
+          title={`${detail === 'quoted' ? 'Cotizado' : 'Vendido'} · ${periodLabel(data)}`}
+          onClose={() => setDetail(null)} onOpen={onOpen} />
+      )}
       <p className={s.compareNote}>{compare}</p>
 
       <div className={`${s.elev} ${s.splitCard}`} style={{ marginBottom: 12 }}>
@@ -184,7 +200,12 @@ export function AcumuladoView() {
               <thead>
                 <tr>
                   <th scope="col">Vendedor</th>
-                  {GOAL_KEYS.map(k => <th key={k} scope="col">{GOAL_LABELS[k]}</th>)}
+                  {GOAL_KEYS.map(k => (
+                    <Fragment key={k}>
+                      <th scope="col">{GOAL_LABELS[k]}</th>
+                      {k === 'calls' && <th scope="col">Correos</th>}
+                    </Fragment>
+                  ))}
                   <th scope="col">Vendido</th>
                   <th scope="col">Cumplimiento</th>
                 </tr>
@@ -199,7 +220,10 @@ export function AcumuladoView() {
                       </span>
                     </th>
                     {GOAL_KEYS.map(k => (
-                      <td key={k}>{p.counts[k]}<small> / {p.goals[k]}</small></td>
+                      <Fragment key={k}>
+                        <td>{p.counts[k]}<small> / {p.goals[k]}</small></td>
+                        {k === 'calls' && <td>{p.counts.emails ?? 0}</td>}
+                      </Fragment>
                     ))}
                     <td>{money(p.counts.sold)}</td>
                     <td><b>{pct(p.compliance)}</b></td>

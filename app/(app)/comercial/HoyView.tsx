@@ -6,6 +6,7 @@ import { DoneToday, type Metric } from './DoneToday'
 import { NO_ANSWER_LIMIT, type CommercialContact, type ResultChoice } from '@/lib/commercial'
 import { fmtPhone, normalizePhone, waMeLink } from '@/lib/phone'
 import { ContactPanel, avatarColors } from './ContactPanel'
+import { EmailButton, emailOf, mailSubject } from './EmailButton'
 import type { Kind } from './RegisterForm'
 import { Filters, Ico, StatusChip, bizName, fmtDay, initials, money, whenOf, type ListContact, type TodayData } from './ui'
 import s from './comercial.module.css'
@@ -23,7 +24,7 @@ const TONE = { late: s.late, soon: s.soon, fresh: s.fresh, later: s.later }
  * siempre visible; en celular se abre al picar Llamar o WhatsApp. Al guardar
  * se queda en el mismo cliente: el siguiente se elige a mano.
  */
-export function HoyView({ data, wide, sub, zone, segment, query, readonly, waModule, loadingMore, onSub, onZone, onSegment, onQuery, onClear, onMore, onSaved, opened, onOpen }: {
+export function HoyView({ data, wide, sub, zone, segment, query, readonly, waModule, storeName, loadingMore, onSub, onZone, onSegment, onQuery, onClear, onMore, onSaved, opened, onOpen }: {
   data: TodayData
   wide: boolean
   sub: Sub
@@ -32,6 +33,8 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
   query: string
   readonly: boolean
   waModule: boolean
+  /** Va en el asunto de los correos. */
+  storeName?: string
   loadingMore: boolean
   onSub: (s: Sub) => void
   onZone: (z: string) => void
@@ -189,6 +192,10 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
                           <a href={waMeLink(phone)} target="_blank" rel="noopener noreferrer" className={`${s.qbtn} ${s.qWa} ${s.press}`} aria-label={`WhatsApp a ${bizName(c)}`}
                             onClick={e => { e.stopPropagation(); onOpen({ id: c.id, kind: 'whatsapp' }) }}><Ico.chat /></a>
                         )}
+                        {emailOf(c.email) && (
+                          <EmailButton email={emailOf(c.email)} subject={mailSubject(storeName, bizName(c))} label={`Correo a ${bizName(c)}`}
+                            className={`${s.qbtn} ${s.qMail} ${s.press}`} onOpen={() => onOpen({ id: c.id, kind: 'correo' })}><Ico.mail /></EmailButton>
+                        )}
                         {!phone && (
                           <button className={`${s.qbtn} ${s.actMore} ${s.press}`} aria-label={`Registrar visita a ${bizName(c)}`}
                             onClick={e => { e.stopPropagation(); onOpen({ id: c.id, kind: 'visita' }) }}><Ico.pin /></button>
@@ -204,7 +211,7 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
           </div>
           {selected && (
             <ContactPanel key={`${selected.id}-${selected.kind ?? ''}`} contactId={selected.id} initial={selectedContact} today={today}
-              variant="pane" readonly={readonly} waModule={waModule} uid={data.uid}
+              variant="pane" readonly={readonly} waModule={waModule} storeName={storeName} uid={data.uid}
               kind={selected.kind} result={selected.result}
               onSaved={c => { onSaved(c); onOpen({ id: c.id }) }} />
           )}
@@ -251,6 +258,10 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
                         {waModule && phone.length === 10 && c.line_type !== 'fijo' && (
                           <a href={waMeLink(phone)} target="_blank" rel="noopener noreferrer" className={`${s.act} ${s.actWa} ${s.press}`} onClick={() => onOpen({ id: c.id, kind: 'whatsapp' })}><Ico.chat /> WhatsApp</a>
                         )}
+                        {emailOf(c.email) && (
+                          <EmailButton email={emailOf(c.email)} subject={mailSubject(storeName, bizName(c))}
+                            className={`${s.act} ${s.actMail} ${s.press}`} onOpen={() => onOpen({ id: c.id, kind: 'correo' })}><Ico.mail /> Correo</EmailButton>
+                        )}
                         <button className={`${s.act} ${s.actMore} ${s.press}`} aria-label={`Registrar visita a ${bizName(c)}`} onClick={() => onOpen({ id: c.id, kind: 'visita' })}><Ico.pin /></button>
                       </div>
                     )}
@@ -265,7 +276,7 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
       </div>
       {opened && (
         <ContactPanel key={`${opened.id}-${opened.kind ?? ''}`} contactId={opened.id} initial={all.find(c => c.id === opened.id)} today={today}
-          variant="overlay" readonly={readonly} waModule={waModule} uid={data.uid} kind={opened.kind} result={opened.result}
+          variant="overlay" readonly={readonly} waModule={waModule} storeName={storeName} uid={data.uid} kind={opened.kind} result={opened.result}
           onSaved={c => { onSaved(c); onOpen(null) }} onClose={() => onOpen(null)} />
       )}
     </>

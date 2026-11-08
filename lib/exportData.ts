@@ -53,7 +53,8 @@ export type SummaryData = {
 const percent = (ratio: number) => Math.round(ratio * 100)
 const countsRow = (name: string, c: DayCounts, ratio: number) => ({
   'Vendedor': name,
-  ...Object.fromEntries(GOAL_KEYS.map(k => [GOAL_LABELS[k], c[k]])),
+  // Correos junto a Llamadas, como en la tabla de Acumulado
+  ...Object.fromEntries(GOAL_KEYS.flatMap(k => k === 'calls' ? [[GOAL_LABELS[k], c[k]], ['Correos', c.emails ?? 0]] : [[GOAL_LABELS[k], c[k]]])),
   'Monto cotizado': c.quoted,
   'Monto vendido': c.sold,
   'Cumplimiento %': percent(ratio),
@@ -68,6 +69,7 @@ export const summaryPeopleRows = (d: SummaryData) => [
 /** Los indicadores de la tienda contra el periodo anterior y la meta. */
 export const summaryTotalsRows = (d: SummaryData) => [
   ...GOAL_KEYS.map(k => ({ 'Indicador': GOAL_LABELS[k], 'Este periodo': d.totals[k], 'Periodo anterior': d.prev[k], 'Meta': d.goals[k] as number | string })),
+  { 'Indicador': 'Correos', 'Este periodo': d.totals.emails ?? 0, 'Periodo anterior': d.prev.emails ?? 0, 'Meta': '' },
   { 'Indicador': 'Monto cotizado', 'Este periodo': d.totals.quoted, 'Periodo anterior': d.prev.quoted, 'Meta': '' },
   { 'Indicador': 'Monto vendido', 'Este periodo': d.totals.sold, 'Periodo anterior': d.prev.sold, 'Meta': '' },
   { 'Indicador': 'Cumplimiento %', 'Este periodo': percent(d.compliance), 'Periodo anterior': percent(d.prevCompliance), 'Meta': 100 },

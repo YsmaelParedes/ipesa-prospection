@@ -88,6 +88,11 @@ export function ActividadView({ reports }: { reports: boolean }) {
                   </div>
                 )
               })}
+              <div className={s.goal}>
+                <span>Correos</span>
+                <span aria-hidden="true" />
+                <em className={s.num}>{p.day.emails ?? 0}</em>
+              </div>
             </article>
           ))}
         </div>

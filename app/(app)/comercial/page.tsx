@@ -212,7 +212,7 @@ function ComercialContent() {
           <div style={{ width: 32, height: 32, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         </div>
       ) : current === 'hoy' ? (
-        <HoyView data={data} wide={wide} sub={sub} zone={zone} segment={segment} query={query} readonly={readonly} waModule={waModule} loadingMore={loadingMore}
+        <HoyView data={data} wide={wide} sub={sub} zone={zone} segment={segment} query={query} readonly={readonly} waModule={waModule} storeName={session?.store?.name} loadingMore={loadingMore}
           onSub={setSub} onZone={setZone} onSegment={setSegment} onQuery={setQuery} onClear={() => { setZone(''); setSegment(''); setQuery('') }}
           onMore={loadMore} onSaved={onSaved} opened={opened} onOpen={setOpened} />
       ) : current === 'cartera' ? (
@@ -221,14 +221,14 @@ function ComercialContent() {
       ) : current === 'oportunidades' ? (
         <OportunidadesView isAdmin={isAdmin} segments={data.segments ?? []} onOpen={setOverlay} />
       ) : current === 'acumulado' ? (
-        <AcumuladoView />
+        <AcumuladoView onOpen={id => setOverlay({ id })} />
       ) : (
         <ActividadView reports={reports} />
       )}
 
       {overlay && data && (
         <ContactPanel key={`${overlay.id}-${overlay.result ?? ''}`} contactId={overlay.id} today={data.today} variant="overlay"
-          readonly={readonly} waModule={waModule} uid={data.uid} kind={overlay.kind} result={overlay.result}
+          readonly={readonly} waModule={waModule} storeName={session?.store?.name} uid={data.uid} kind={overlay.kind} result={overlay.result}
           onSaved={c => { onSaved(c); closeOverlay() }} onClose={closeOverlay} />
       )}
 

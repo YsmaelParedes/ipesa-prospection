@@ -4,13 +4,13 @@ import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
 import { hasSalesTeam, salesTeamRequired, zonedDayStart } from '@/lib/commercialServer'
 import {
-  GOAL_KEYS, RESULT_CHOICES, RESULT_RULES, addDays, compliance, countActivities, goalsFor, parseGoals,
+  EMAIL_RESULT_CHOICES, GOAL_KEYS, RESULT_CHOICES, RESULT_RULES, addDays, compliance, countActivities, goalsFor, parseGoals,
   parseGoalsConfig, todayISO, type ActivityForCount,
 } from '@/lib/commercial'
 
 type Row = ActivityForCount & { user_id: string | null; contact_id: string; created_at: string }
 
-const byResult = (rows: Row[]) => RESULT_CHOICES
+const byResult = (rows: Row[]) => [...new Set([...RESULT_CHOICES, ...EMAIL_RESULT_CHOICES])]
   .map(r => ({ result: r, label: RESULT_RULES[r].label, count: rows.filter(x => x.kind !== 'nota' && (x.result === r || (r === 'contactado' && x.result === 'interes'))).length }))
   .filter(x => x.count > 0)
 

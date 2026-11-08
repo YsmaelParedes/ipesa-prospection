@@ -36,7 +36,25 @@ test('contacto efectivo y conteos del día', () => {
     { kind: 'llamada', result: 'cotizacion', is_followup: true, quote_amount: '17005', sale_amount: null },
     { kind: 'whatsapp', result: 'venta', is_followup: true, quote_amount: null, sale_amount: 9850 },
   ])
-  assert.deepEqual(counts, { calls: 2, effective: 2, quotes: 1, followups: 2, sales: 1, quoted: 17005, sold: 9850 })
+  assert.deepEqual(counts, { calls: 2, effective: 2, quotes: 1, followups: 2, sales: 1, quoted: 17005, sold: 9850, emails: 0 })
+})
+
+test('correo: sus resultados, contacto efectivo y conteo aparte', () => {
+  assert.deepEqual([...c.resultChoicesFor('correo')], ['enviado', 'respondio', 'cotizacion', 'venta', 'no_interesado', 'correo_incorrecto'])
+  assert.deepEqual([...c.resultChoicesFor('llamada')], [...c.RESULT_CHOICES])
+  assert.equal(c.isEffective('enviado'), false)
+  assert.equal(c.isEffective('correo_incorrecto'), false)
+  assert.equal(c.isEffective('respondio'), true)
+  // Un correo incorrecto no marca el teléfono ni cambia el seguimiento
+  assert.equal(c.RESULT_RULES.correo_incorrecto.status, null)
+  assert.equal(c.suggestNext('enviado', '2026-11-07').nextAt, '2026-11-10')
+  assert.equal(c.suggestNext('respondio', '2026-11-07').status, 'contactado')
+  const counts = c.countActivities([
+    { kind: 'correo', result: 'enviado', is_followup: false, quote_amount: null, sale_amount: null },
+    { kind: 'correo', result: 'respondio', is_followup: true, quote_amount: null, sale_amount: null },
+    { kind: 'llamada', result: 'contactado', is_followup: false, quote_amount: null, sale_amount: null },
+  ])
+  assert.deepEqual(counts, { calls: 1, effective: 2, quotes: 0, followups: 1, sales: 0, quoted: 0, sold: 0, emails: 2 })
 })
 
 test('metas: las del Excel por omisión y propias por vendedor', () => {

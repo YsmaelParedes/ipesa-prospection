@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, parseFields, readJson, rpcUserError, serverError, type Schema } from '@/lib/validation'
 import { ACTIVITY_COLUMNS, COMMERCIAL_COLUMNS, getVisibleContact, zonedDayStart } from '@/lib/commercialServer'
-import { ACTIVITY_KINDS, COMMERCIAL_STATUSES, RESULTS, addDays, todayISO } from '@/lib/commercial'
+import { ACTIVITY_KINDS, COMMERCIAL_STATUSES, EMAIL_RESULT_CHOICES, RESULTS, addDays, todayISO } from '@/lib/commercial'
 
 const LOG_LIMIT = 500
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -99,7 +99,7 @@ const ACTIVITY_SCHEMA: Schema = {
 
 /**
  * POST /api/data/commercial/activities — registra una llamada, WhatsApp,
- * visita o nota y actualiza el contacto en la misma transacción. Quien
+ * visita, correo o nota y actualiza el contacto en la misma transacción. Quien
  * registra una llamada, WhatsApp o visita se queda con el contacto.
  */
 export async function POST(req: NextRequest) {
@@ -113,6 +113,10 @@ export async function POST(req: NextRequest) {
   const d = parsed.data
   if (d.kind !== 'nota' && !d.result) return jsonError('Elige el resultado')
   if (d.kind === 'nota' && !d.note) return jsonError('Escribe la nota')
+  // Los resultados de un correo solo valen para un correo, y un correo solo lleva los suyos
+  const emailResult = (EMAIL_RESULT_CHOICES as readonly unknown[]).includes(d.result)
+  const emailOnly = emailResult && d.result !== 'cotizacion' && d.result !== 'venta' && d.result !== 'no_interesado'
+  if (d.kind !== 'nota' && (d.kind === 'correo' ? !emailResult : emailOnly)) return jsonError('Ese resultado no corresponde al tipo de actividad')
 
   const supabase = getServerSupabase()
   const { data: activity, error } = await supabase.rpc('log_commercial_activity', {

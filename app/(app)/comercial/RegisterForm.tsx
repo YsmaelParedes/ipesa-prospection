@@ -3,15 +3,15 @@
 import { useRef, useState } from 'react'
 import { apiFetch } from '@/lib/apiClient'
 import {
-  RESULT_CHOICES, RESULT_RULES, addDays, outcomeText, suggestNext,
+  RESULT_RULES, addDays, outcomeText, resultChoicesFor, suggestNext,
   type CommercialContact, type ResultChoice,
 } from '@/lib/commercial'
 import { fmtDay } from './ui'
 import s from './comercial.module.css'
 
-export type Kind = 'llamada' | 'whatsapp' | 'visita'
+export type Kind = 'llamada' | 'whatsapp' | 'visita' | 'correo'
 
-const KINDS: [Kind, string][] = [['llamada', '📞 Llamada'], ['whatsapp', '💬 WhatsApp'], ['visita', '📍 Visita']]
+const KINDS: [Kind, string, string][] = [['llamada', '📞', 'Llamada'], ['whatsapp', '💬', 'WhatsApp'], ['visita', '📍', 'Visita'], ['correo', '✉️', 'Correo']]
 const RESULT_LOOK: Record<ResultChoice, { icon: string; bg: string; short?: string }> = {
   no_contesta:       { icon: '🔕', bg: 'var(--paper-2)' },
   contactado:        { icon: '🙂', bg: 'var(--c-teal-soft)' },
@@ -19,6 +19,9 @@ const RESULT_LOOK: Record<ResultChoice, { icon: string; bg: string; short?: stri
   venta:             { icon: '💰', bg: 'var(--success-soft)' },
   no_interesado:     { icon: '✋', bg: 'var(--paper-2)' },
   numero_equivocado: { icon: '⚠️', bg: 'var(--danger-soft)', short: 'Núm. incorrecto' },
+  enviado:           { icon: '📤', bg: '#E0F4F8' },
+  respondio:         { icon: '💬', bg: 'var(--c-teal-soft)' },
+  correo_incorrecto: { icon: '⚠️', bg: 'var(--danger-soft)', short: 'Correo incorrecto' },
 }
 
 /** Fecha sugerida y atajos: "En 2 días · sáb 25", "Mañana", "En 1 semana". */
@@ -52,7 +55,8 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
   onSaved: (contact: CommercialContact) => void
 }) {
   const [kind, setKind] = useState<Kind>(initialKind)
-  const [result, setResult] = useState<ResultChoice | null>(initialResult ?? null)
+  const [result, setResult] = useState<ResultChoice | null>(
+    initialResult && resultChoicesFor(initialKind).includes(initialResult) ? initialResult : null)
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [nextAt, setNextAt] = useState(initialResult ? suggestNext(initialResult, today).nextAt ?? '' : '')
@@ -63,7 +67,16 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
   const rule = result ? RESULT_RULES[result] : null
   const asksAmount = result === 'cotizacion' || result === 'venta'
   const choices = result ? dateChoices(result, today) : []
-  const needsDate = !!result && result !== 'numero_equivocado'
+  // Un correo incorrecto no cambia el seguimiento: el teléfono puede servir
+  const keepsNext = result === 'correo_incorrecto'
+  const needsDate = !!result && result !== 'numero_equivocado' && !keepsNext
+  const choicesForKind = resultChoicesFor(kind)
+
+  function chooseKind(k: Kind) {
+    setKind(k)
+    // Si el resultado elegido no existe para el nuevo tipo, se vuelve a elegir
+    if (result && !resultChoicesFor(k).includes(result)) { setResult(null); setNextAt(''); setAmount('') }
+  }
 
   function pick(r: ResultChoice) {
     setResult(r)
@@ -88,8 +101,8 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
           note: note.trim() || null,
           quote_amount: result === 'cotizacion' ? value : null,
           sale_amount: result === 'venta' ? value : null,
-          next_action: needsDate ? rule?.action ?? 'Dar seguimiento' : null,
-          next_action_at: needsDate ? nextAt : null,
+          next_action: needsDate ? rule?.action ?? 'Dar seguimiento' : keepsNext ? contact.next_action : null,
+          next_action_at: needsDate ? nextAt : keepsNext ? contact.next_action_at : null,
           status: rule?.status ?? null,
         }),
       })
@@ -109,8 +122,10 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
       <div className={s.step}>
         <div className={s.stepHead}><span className={s.stepN}>1</span>Tipo</div>
         <div className={s.typeSeg} role="group" aria-label="Tipo de actividad">
-          {KINDS.map(([k, label]) => (
-            <button key={k} type="button" className={s.press} aria-pressed={kind === k} onClick={() => setKind(k)}>{label}</button>
+          {KINDS.map(([k, icon, label]) => (
+            <button key={k} type="button" className={s.press} aria-pressed={kind === k} onClick={() => chooseKind(k)}>
+              <span aria-hidden="true">{icon}</span>{label}
+            </button>
           ))}
         </div>
       </div>
@@ -118,7 +133,7 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
       <div className={s.step}>
         <div className={s.stepHead}><span className={s.stepN}>2</span>Resultado</div>
         <div className={`${s.results} ${wide ? s.wideResults : ''}`} role="group" aria-label="Resultado" data-tour="results">
-          {RESULT_CHOICES.map(r => (
+          {choicesForKind.map(r => (
             <button key={r} type="button" className={`${s.chipPick} ${s.press}`} aria-pressed={result === r} onClick={() => pick(r)}>
               <span className={s.chipIco} style={{ background: RESULT_LOOK[r].bg }} aria-hidden="true">{RESULT_LOOK[r].icon}</span>
               {(wide && RESULT_LOOK[r].short) || (r === 'cotizacion' ? 'Cotización enviada' : RESULT_RULES[r].label)}
@@ -141,7 +156,7 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
         <div className={s.stepHead}><span className={s.stepN}>3</span>Nota y siguiente paso</div>
         <div className={s.field} style={{ marginTop: 0 }}>
           <textarea ref={noteRef} rows={2} maxLength={2000} value={note} onChange={e => setNote(e.target.value)}
-            placeholder="¿Qué quedó?" aria-label="Nota" />
+            placeholder={kind === 'correo' ? '¿Qué le mandaste?' : '¿Qué quedó?'} aria-label="Nota" />
         </div>
         {needsDate && (
           <div className={s.field}>

@@ -36,13 +36,34 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: '1.39.0',
-    date: '4 de noviembre, 2026',
+    version: '1.42.0',
+    date: '7 de noviembre, 2026',
     title: 'Plan Cubeta con más para tu equipo',
     items: [
       'El plan Cubeta ahora incluye hasta 10 usuarios.',
       'En Acumulado puedes descargar un reporte en Excel del periodo que estás viendo, con la actividad y las ventas de cada vendedor.',
       'Acumulado y los reportes en Excel son parte del plan Cubeta, igual que la ayuda para importar tu base y capacitar a tu equipo.',
+    ],
+  },
+  {
+    version: '1.41.0',
+    date: '7 de noviembre, 2026',
+    title: 'Manda correos desde Comercial',
+    items: [
+      'Nuevo botón Correo en la ficha y en las tarjetas de Hoy, cuando el cliente tiene correo. Abre tu app de correo con el destinatario y el asunto ya puestos; en computadora puedes elegir Gmail, Outlook o la app de correo.',
+      'Al volver, la ficha ya tiene Correo elegido como tipo: escoge cómo te fue (Enviado, Respondió, Cotización enviada, Venta, No interesado o Correo incorrecto) y guarda.',
+      'Un correo enviado te recuerda en 3 días ver si respondió. Si respondió, cuenta como contacto efectivo. Correo incorrecto no cambia su próximo seguimiento.',
+      'Actividad diaria y Acumulado muestran cuántos correos registró cada vendedor.',
+    ],
+  },
+  {
+    version: '1.40.0',
+    date: '7 de noviembre, 2026',
+    title: 'En Acumulado, ve a qué clientes cotizaste y vendiste',
+    items: [
+      'Toca Cotizado o Vendido en Acumulado para ver cada cotización o venta del periodo: el cliente, quién la registró, el día y el monto.',
+      'Filtra por vendedor y ordena por monto o por fecha. Cada cotización dice si sigue abierta, si ya se ganó o si se perdió.',
+      'Toca un cliente de la lista para abrir su ficha.',
     ],
   },
   {
