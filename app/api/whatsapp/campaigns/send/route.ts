@@ -197,7 +197,21 @@ export async function POST(req: NextRequest) {
     const worker = async () => {
       while (!stop && next < queue.length) {
         const id = queue[next++]
-        const o = await sendOne(ctx, creds, shared, { contactId: id })
+        let o: Outcome
+        try {
+          o = await sendOne(ctx, creds, shared, { contactId: id })
+        } catch (error) {
+          // Un error con un contacto no tumba el lote: los demás ya enviados
+          // deben llegar al navegador. Si el fallo es del servidor (base lenta,
+          // timeout), se detiene la campaña para no seguir cargándolo.
+          if ((error as { code?: string })?.code === 'P0002') {
+            o = { contactId: id, ok: false, error: 'El teléfono guardado de este contacto no es válido; revísalo en su ficha.' }
+          } else {
+            console.error('[POST /api/whatsapp/campaigns/send] contacto', id, error)
+            o = { contactId: id, ok: false, error: 'No se pudo enviar por un error del servidor.' }
+            stop ??= 'Envío detenido por un error del servidor. Los contactos restantes no recibieron nada; intenta de nuevo en unos minutos.'
+          }
+        }
         results.push(o)
         stop ??= stopReasonOf(o)
       }

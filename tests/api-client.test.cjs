@@ -196,3 +196,16 @@ test('session broadcasts refresh identity without reloading other tabs; store/lo
   assert.equal(reloads, 1)
   assert.equal(api.queryCache.size, 0)
 })
+
+test('a loop of session invalidations is throttled instead of hammering /api/me', async () => {
+  for (let i = 0; i < 5; i++) { profile.invalidateSession(false); await profile.loadSession() }
+  assert.equal(calls.filter(c => c.url === '/api/me').length, 5)
+  profile.invalidateSession(false)
+  const throttled = profile.loadSession()
+  await settle()
+  // The sixth request in the same 10 s waits instead of firing immediately.
+  assert.equal(calls.filter(c => c.url === '/api/me').length, 5)
+  clock += 3_000
+  await throttled
+  assert.equal(calls.filter(c => c.url === '/api/me').length, 6)
+})

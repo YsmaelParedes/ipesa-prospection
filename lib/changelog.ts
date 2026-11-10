@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.45.1',
+    date: '9 de noviembre, 2026',
+    title: 'Campañas más confiables',
+    module: 'campaigns',
+    items: [
+      'Si un contacto tiene el teléfono guardado con otro formato (con 52 al inicio o con espacios), la campaña le llega igual. Y si alguno tiene un problema, se marca en el resultado y la campaña sigue con los demás en vez de detenerse.',
+      'Si el envío se detiene a medias, el resultado muestra exactamente a quién sí le llegó, para que no se lo vuelvas a mandar.',
+    ],
+  },
+  {
     version: '1.45.0',
     date: '9 de noviembre, 2026',
     title: 'Correo para todos los clientes',

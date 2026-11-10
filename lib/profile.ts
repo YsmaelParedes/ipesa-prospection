@@ -62,21 +62,46 @@ let sessionAt = 0
 let sessionGeneration = 0
 let consumers = 0
 let stopRefresh: (() => void) | undefined
+// Freno contra ráfagas: si la sesión ya se pidió 5 veces en 10 s (un ciclo de
+// invalidaciones), las siguientes esperan 3 s entre sí; si /api/me falla, se
+// espera cada vez más antes de reintentar. Sin esto, un ciclo pedía la sesión
+// ~3 veces por segundo y ayudó a saturar el servidor. Lo normal (una recarga
+// por cambio de tienda, de nombre o de plan) no se retrasa.
+const BURST_WINDOW_MS = 10_000
+const BURST_LIMIT = 5
+const BURST_GAP_MS = 3_000
+const MAX_SESSION_BACKOFF_MS = 30_000
+let recentFetches: number[] = []
+let failures = 0
+
+const delay = (ms: number) => new Promise<void>(resolve => { if (ms > 0) setTimeout(resolve, ms); else resolve() })
+
+function sessionFetchDelay(now: number): number {
+  recentFetches = recentFetches.filter(t => now - t < BURST_WINDOW_MS)
+  const last = recentFetches[recentFetches.length - 1] ?? 0
+  const gap = Math.max(
+    recentFetches.length >= BURST_LIMIT ? BURST_GAP_MS : 0,
+    failures ? Math.min(MAX_SESSION_BACKOFF_MS, 1_000 * 2 ** (failures - 1)) : 0,
+  )
+  return last ? Math.max(0, last + gap - now) : 0
+}
 
 export function loadSession(): Promise<Session | null> {
   if (sessionValue !== undefined && Date.now() - sessionAt < 60_000) return Promise.resolve(sessionValue)
   if (!sessionPromise) {
     const generation = sessionGeneration
-    sessionPromise = fetch('/api/me', { cache: 'no-store' })
+    sessionPromise = delay(sessionFetchDelay(Date.now()))
+      .then(() => { recentFetches.push(Date.now()); return fetch('/api/me', { cache: 'no-store' }) })
       .then(async r => {
         if (!r.ok && r.status !== 401) throw new Error('No se pudo comprobar la sesión')
         const value: Session | null = r.ok ? await r.json() : null
+        failures = 0
         if (generation !== sessionGeneration) return loadSession()
         sessionValue = value; sessionAt = Date.now()
         setQueryContext(value)
         window.dispatchEvent(new Event(EVENT))
         return value
-      })
+      }, error => { failures++; throw error })
       .finally(() => { if (generation === sessionGeneration) sessionPromise = null })
   }
   return sessionPromise
