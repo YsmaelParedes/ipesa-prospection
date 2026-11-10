@@ -64,7 +64,7 @@
 .groupHead { display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 11.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); background: var(--paper); }
 .groupHead .count { margin-left: auto; letter-spacing: 0; text-transform: none; font-weight: 700; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.row { display: grid; grid-template-columns: 36px minmax(0, 1.5fr) minmax(0, 1.4fr) 104px 84px; gap: 12px; align-items: center; padding: 10px 14px; box-shadow: 0 -1px 0 var(--line); cursor: pointer; text-align: left; width: 100%; transition-property: background-color; transition-duration: 150ms; transition-timing-function: ease-out; }
+.row { display: grid; grid-template-columns: 36px minmax(0, 1.5fr) minmax(0, 1.4fr) 104px 116px; gap: 12px; align-items: center; padding: 10px 14px; box-shadow: 0 -1px 0 var(--line); cursor: pointer; text-align: left; width: 100%; transition-property: background-color; transition-duration: 150ms; transition-timing-function: ease-out; }
 .row[aria-current='true'] { background: var(--brand-softer); box-shadow: 0 -1px 0 var(--line), inset 3px 0 0 var(--brand); }
 @media (hover: hover) {
   .row:hover { background: var(--paper); }
@@ -332,6 +332,7 @@
   .mailMenu { translate: 0 0; transition: opacity 150ms ease-out; }
 }
 .mailMenuHead { margin: 4px 8px 6px; font-size: 11.5px; font-weight: 700; color: var(--muted); }
+.mailMenuNote { margin: -2px 8px 6px; font-size: 11.5px; font-weight: 600; line-height: 1.35; color: var(--ink-3); text-wrap: pretty; }
 .mailOpt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; border-radius: 10px; text-decoration: none; color: var(--ink); text-align: left; }
 .mailOpt b { display: block; font-size: 13px; font-weight: 700; }
 .mailOpt small { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); }

@@ -8,10 +8,10 @@ import s from './comercial.module.css'
 const EMAIL_RE = /^[^\s@?&#,;<>"]+@[^\s@?&#,;<>"]+\.[^\s@?&#,;<>"]+$/
 
 /** Asunto del correo nuevo: «Tienda · Cliente». */
-export const mailSubject = (store: string | null | undefined, client: string) => [store?.trim(), client].filter(Boolean).join(' · ')
+const mailSubject = (store: string | null | undefined, client: string) => [store?.trim(), client].filter(Boolean).join(' · ')
 
 /** El correo del contacto si sirve para abrir un correo nuevo; si no, ''. */
-export function emailOf(raw: string | null | undefined): string {
+function emailOf(raw: string | null | undefined): string {
   const e = (raw ?? '').trim()
   return EMAIL_RE.test(e) ? e : ''
 }
@@ -40,20 +40,27 @@ function useDesktopPointer(): boolean {
 }
 
 /**
- * Botón «Correo»: abre un correo nuevo al contacto con el asunto puesto, desde
- * la cuenta del propio vendedor (Matices no envía nada). En el celular abre su
- * app de correo; en computadora deja elegir Gmail, Outlook o la app. Al
- * elegir, onOpen() deja la ficha lista para registrar el correo.
+ * Botón «Correo», el único para todo el Sistema Comercial: abre un correo nuevo
+ * con el asunto puesto, desde la cuenta del propio vendedor (Matices no envía
+ * nada). Si el contacto tiene un correo válido ya va como destinatario; si no,
+ * el vendedor lo escribe. En el celular abre su app de correo; en computadora
+ * deja elegir Gmail, Outlook o la app. Al elegir, onOpen() deja la ficha lista
+ * para registrar el correo.
  */
-export function EmailButton({ email, subject, className, label, children, onOpen }: {
-  email: string
-  subject: string
+export function EmailButton({ email: raw, store, client, className, label, children, onOpen }: {
+  /** El correo del contacto tal como está guardado (puede faltar o venir mal). */
+  email: string | null | undefined
+  /** Nombre de la tienda y del cliente, para el asunto. */
+  store: string | null | undefined
+  client: string
   className: string
   /** Para lectores de pantalla, ej. "Correo a Ferretería 33". */
   label?: string
   children: ReactNode
   onOpen: () => void
 }) {
+  const email = emailOf(raw)
+  const subject = mailSubject(store, client)
   const desktop = useDesktopPointer()
   const [open, setOpen] = useState(false)
   const [shown, setShown] = useState(false)
@@ -70,10 +77,10 @@ export function EmailButton({ email, subject, className, label, children, onOpen
     if (!open) return
     const r = btnRef.current?.getBoundingClientRect()
     if (r) {
-      const W = 240, M = 8
+      const W = 240, M = 8, H = email ? 190 : 214
       const left = Math.min(Math.max(M, r.left + r.width / 2 - W / 2), window.innerWidth - W - M)
       const below = r.bottom + 6
-      setPos({ top: below + 190 > window.innerHeight ? Math.max(M, r.top - 6 - 190) : below, left })
+      setPos({ top: below + H > window.innerHeight ? Math.max(M, r.top - 6 - H) : below, left })
     }
     const t = setTimeout(() => { setShown(true); menuRef.current?.querySelector<HTMLElement>('[role=menuitem]')?.focus({ preventScroll: true }) }, 0)
     const outside = (e: PointerEvent) => {
@@ -90,7 +97,7 @@ export function EmailButton({ email, subject, className, label, children, onOpen
       window.removeEventListener('resize', away)
       window.removeEventListener('scroll', away, true)
     }
-  }, [open])
+  }, [open, email])
 
   if (!desktop) {
     return (
@@ -120,6 +127,7 @@ export function EmailButton({ email, subject, className, label, children, onOpen
         <div ref={menuRef} role="menu" aria-label="Abrir el correo con" className={`${s.mailMenu} ${shown ? s.mailMenuShown : ''}`}
           style={{ top: pos.top, left: pos.left }} onKeyDown={onMenuKey} onClick={e => e.stopPropagation()}>
           <p className={s.mailMenuHead}>Abrir con</p>
+          {!email && <p className={s.mailMenuNote}>Sin correo guardado: lo escribes al abrir.</p>}
           {OPTIONS.map(o => (
             <a key={o.key} role="menuitem" href={o.href(email, subject)} className={`${s.mailOpt} ${s.press}`}
               {...(o.key === 'app' ? {} : { target: '_blank', rel: 'noopener noreferrer' })}

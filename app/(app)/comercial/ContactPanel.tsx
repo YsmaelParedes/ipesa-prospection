@@ -10,7 +10,7 @@ import {
 } from '@/lib/commercial'
 import { fmtPhone, normalizePhone, waMeLink } from '@/lib/phone'
 import { RegisterForm, type Kind } from './RegisterForm'
-import { EmailButton, emailOf, mailSubject } from './EmailButton'
+import { EmailButton } from './EmailButton'
 import { Ico, StatusChip, addressOf, bizName, fmtDay, initials, localDay, money, personName, whenPhrase, type ListContact } from './ui'
 import s from './comercial.module.css'
 
@@ -147,12 +147,10 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
         {waModule && phone.length === 10 && contact.line_type !== 'fijo' && (
           <a href={waMeLink(phone)} target="_blank" rel="noopener noreferrer" className={`${s.act} ${s.actWa} ${s.press}`}><Ico.chat /> WhatsApp</a>
         )}
-        {emailOf(contact.email) && (
-          <EmailButton email={emailOf(contact.email)} subject={mailSubject(storeName, bizName(contact))}
-            className={`${s.act} ${s.actMail} ${s.press}`} onOpen={() => { if (!readonly) setFormKind('correo') }}>
-            <Ico.mail /> Correo
-          </EmailButton>
-        )}
+        <EmailButton email={contact.email} store={storeName} client={bizName(contact)}
+          className={`${s.act} ${s.actMail} ${s.press}`} onOpen={() => { if (!readonly) setFormKind('correo') }}>
+          <Ico.mail /> Correo
+        </EmailButton>
         <Link href={`/contactos?id=${contact.id}`} className={`${s.act} ${s.actMore} ${s.press}`} aria-label="Ver en Contactos" title="Ver en Contactos"><Ico.user /></Link>
       </div>
 

@@ -36,6 +36,14 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.45.0',
+    date: '9 de noviembre, 2026',
+    title: 'Correo para todos los clientes',
+    items: [
+      'En el Sistema Comercial, el botón Correo aparece en todos los clientes. Si el cliente no tiene correo guardado, se abre un correo nuevo con el asunto listo y tú escribes a quién va.',
+    ],
+  },
+  {
     version: '1.44.0',
     date: '7 de noviembre, 2026',
     title: 'Nueva pantalla para entrar',
