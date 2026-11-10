@@ -14,7 +14,7 @@ import { tierLabel } from '@/lib/whatsappSafety'
 type Connection = {
   connected: boolean; displayPhone: string | null; connectedAt: string | null; receivesMessages: boolean
   selfService: boolean; coexistence: boolean
-  history: { status: 'requested' | 'importing' | 'done' | 'declined' | 'failed' | null; imported: number } | null
+  history: { status: 'requested' | 'importing' | 'done' | 'declined' | 'failed' | null; imported: number; canRetry?: boolean } | null
   wabaId: string | null
 }
 
@@ -46,6 +46,7 @@ function ConnectionPanel() {
   const [conn, setConn]     = useState<Connection | null>(null)
   const [confirmOff, setConfirmOff] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
+  const [askingHistory, setAskingHistory] = useState(false)
   const healthQuery = useCachedQuery<{ health: Health | null }>(conn?.connected ? '/api/whatsapp/status' : null)
   const health = healthQuery.data?.health ?? null
   const [error, setError]   = useState('')
@@ -75,6 +76,20 @@ function ConnectionPanel() {
       setDisconnecting(false); setConfirmOff(false)
       setError('')
       toast((err as Error).message)
+    }
+  }
+
+  // Coexistencia: el historial no se pidió o falló y Meta aún lo permite (24 h)
+  const retryHistory = async () => {
+    setAskingHistory(true)
+    try {
+      await api('/api/store/whatsapp/history', { method: 'POST' })
+      setConn(c => c && c.history ? { ...c, history: { ...c.history, status: 'requested', canRetry: false } } : c)
+      toast('Listo: pedimos tus chats a Meta. Irán apareciendo en la bandeja.')
+    } catch (err) {
+      toast((err as Error).message)
+    } finally {
+      setAskingHistory(false)
     }
   }
 
@@ -115,6 +130,16 @@ function ConnectionPanel() {
       {conn.connected && conn.history?.status === 'declined' && (
         <div className={s.noteGap}>
           <Note kind="info">Tus chats anteriores no se trajeron porque en WhatsApp Business no se aceptó compartir el historial. Los mensajes nuevos sí llegan.</Note>
+        </div>
+      )}
+      {conn.connected && conn.history?.canRetry && (
+        <div className={s.noteGap}>
+          <Note kind="warn">
+            <b>Tus chats anteriores no llegaron.</b> Meta solo deja traerlos en las primeras 24 horas después de conectar.{' '}
+            <button type="button" className={s.waInlineBtn} onClick={retryHistory} disabled={askingHistory}>
+              {askingHistory ? 'Pidiéndolos…' : 'Pedirlos otra vez'}
+            </button>
+          </Note>
         </div>
       )}
       {conn.connected && conn.selfService && (

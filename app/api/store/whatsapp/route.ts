@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { requireStore } from '@/lib/supabase-server'
 import { credsFromRow, getStoreWhatsAppRow } from '@/lib/storeWhatsApp'
 import { jsonError, serverError } from '@/lib/validation'
-import { SignupError, disconnectEmbedded } from '@/lib/whatsappSignup'
+import { SignupError, canRequestHistory, disconnectEmbedded } from '@/lib/whatsappSignup'
 
 /**
  * GET /api/store/whatsapp (administrador) — si el número de la tienda ya está
@@ -25,7 +25,10 @@ async function GETImpl() {
     /** La conectó la tienda (puede desconectarla); si no, la conectó el asesor */
     selfService: embedded,
     coexistence: row.coexistence,
-    history: embedded && row.coexistence ? { status: row.history_status, imported: row.history_imported } : null,
+    history: embedded && row.coexistence
+      // canRetry: no se pidió o falló y aún está en las 24 h en que Meta lo permite
+      ? { status: row.history_status, imported: row.history_imported, canRetry: canRequestHistory(row) }
+      : null,
     wabaId: embedded ? row.waba_id : null,
   }, { headers: { 'Cache-Control': 'no-store' } })
 }
