@@ -118,7 +118,10 @@ async function insertMessage(supabase: Supabase, row: Record<string, unknown>): 
   throw new Error(`No se guardó el mensaje: ${error.message}`)
 }
 
-const toIso = (timestamp: unknown) => timestamp ? new Date(Number(timestamp) * 1000).toISOString() : undefined
+const toIso = (timestamp: unknown) => {
+  const ms = Number(timestamp) * 1000
+  return Number.isFinite(ms) && ms > 0 ? new Date(ms).toISOString() : undefined
+}
 
 /**
  * Aplica un "change" del webhook a la tienda indicada. Todo se filtra por
@@ -129,8 +132,12 @@ const toIso = (timestamp: unknown) => timestamp ? new Date(Number(timestamp) * 1
  * contestó el agente y sus palomitas. Esos mensajes no avisan al equipo
  * porque los está atendiendo el agente.
  */
-export async function processChange(storeId: string, value: any): Promise<InboundNotification[]> {
+export async function processChange(storeId: string, value: any, field?: string): Promise<InboundNotification[]> {
   const supabase = getServerSupabase()
+  // Coexistencia: historial importado y lo que la tienda manda desde su celular
+  if (field === 'history') { await saveHistory(supabase, storeId, value); return [] }
+  if (field === 'smb_message_echoes') { await saveBusinessEchoes(supabase, storeId, value?.message_echoes); return [] }
+  if (field === 'smb_app_state_sync') return [] // Los contactos del celular no se tocan
   const notifications = await applyEvents(supabase, storeId, value)
   const standby = value?.standby
   if (standby) {
@@ -262,6 +269,112 @@ async function saveAgentEchoes(supabase: Supabase, storeId: string, echoes: any[
     }
   }
   return notifications
+}
+
+/**
+ * Mensajes que la tienda mandó desde la app WhatsApp Business de su celular
+ * (coexistencia): se guardan como salientes con origin 'phone' y no avisan a
+ * nadie. Ediciones y borrados no se reflejan.
+ */
+async function saveBusinessEchoes(supabase: Supabase, storeId: string, echoes: any[] | undefined) {
+  for (const echo of echoes ?? []) {
+    if (echo?.type === 'edit' || echo?.type === 'revoke') continue
+    const phone = normalizePhone(echo?.to)
+    const parsed = parseInbound(echo)
+    if (!phone || !parsed || typeof echo?.id !== 'string') continue
+    const contact = await contactFor(supabase, storeId, phone)
+    await insertMessage(supabase, {
+      store_id:      storeId,
+      contact_id:    contact?.id ?? null,
+      phone,
+      direction:     'outbound',
+      body:          parsed.text.slice(0, 4096),
+      wa_message_id: echo.id,
+      status:        'sent',
+      media_id:      parsed.mediaId ?? null,
+      media_type:    parsed.mediaType ?? null,
+      media_mime:    parsed.mime ?? null,
+      user_id:       null,
+      origin:        'phone',
+      created_at:    toIso(echo.timestamp),
+    })
+  }
+}
+
+const HISTORY_STATUS: Record<string, string> = { sent: 'sent', delivered: 'delivered', read: 'read', played: 'read' }
+const HISTORY_BATCH = 500
+
+/**
+ * Historial de chats que Meta manda una sola vez al conectar un número de
+ * WhatsApp Business (coexistencia), por partes y en desorden. Cada mensaje
+ * se guarda leído (no llena la bandeja de pendientes), sin avisos, ligado al
+ * contacto si ya existe (no se crean contactos). Si la tienda no quiso
+ * compartirlo, Meta manda el error 2593109.
+ */
+async function saveHistory(supabase: Supabase, storeId: string, value: any) {
+  // Archivo de un mensaje del historial (llega después, solo de los últimos 14 días)
+  for (const msg of value?.messages ?? []) {
+    const parsed = parseInbound(msg)
+    if (!parsed?.mediaId || typeof msg?.id !== 'string') continue
+    await supabase.from('whatsapp_messages')
+      .update({ media_id: parsed.mediaId, media_type: parsed.mediaType ?? null, media_mime: parsed.mime ?? null, body: parsed.text.slice(0, 4096) })
+      .eq('store_id', storeId).eq('wa_message_id', msg.id).eq('origin', 'history')
+  }
+
+  for (const chunk of value?.history ?? []) {
+    if (chunk?.errors?.length) {
+      const declined = chunk.errors.some((e: any) => e?.code === 2593109)
+      await supabase.from('store_whatsapp').update({ history_status: declined ? 'declined' : 'failed', updated_at: new Date().toISOString() }).eq('store_id', storeId)
+      continue
+    }
+    const rows: Record<string, unknown>[] = []
+    const readAt = new Date().toISOString()
+    for (const thread of chunk?.threads ?? []) {
+      const phone = normalizePhone(thread?.id)
+      if (!phone) continue
+      const contact = await contactFor(supabase, storeId, phone)
+      for (const msg of thread?.messages ?? []) {
+        if (typeof msg?.id !== 'string') continue
+        const parsed: Inbound | null = msg.type === 'media_placeholder' ? { text: '📎 Archivo' } : parseInbound(msg)
+        if (!parsed) continue
+        const inbound = normalizePhone(msg.from) === phone
+        const status = String(msg.history_context?.status ?? '').toLowerCase()
+        rows.push({
+          store_id:      storeId,
+          contact_id:    contact?.id ?? null,
+          phone,
+          direction:     inbound ? 'inbound' : 'outbound',
+          body:          parsed.text.slice(0, 4096),
+          wa_message_id: msg.id,
+          status:        inbound ? 'received' : (HISTORY_STATUS[status] ?? 'sent'),
+          media_id:      parsed.mediaId ?? null,
+          media_type:    parsed.mediaType ?? null,
+          media_mime:    parsed.mime ?? null,
+          user_id:       null,
+          origin:        'history',
+          read_at:       inbound ? readAt : null,
+          created_at:    toIso(msg.timestamp),
+        })
+      }
+    }
+    let imported = 0
+    for (let i = 0; i < rows.length; i += HISTORY_BATCH) {
+      const batch = rows.slice(i, i + HISTORY_BATCH)
+      // Meta reintenta: lo que ya estaba se salta
+      const { data: existing, error: readError } = await supabase.from('whatsapp_messages')
+        .select('wa_message_id').in('wa_message_id', batch.map(r => r.wa_message_id as string))
+      if (readError) throw new Error(`No se leyó el historial: ${readError.message}`)
+      const seen = new Set((existing ?? []).map(r => r.wa_message_id))
+      const fresh = batch.filter(r => !seen.has(r.wa_message_id as string))
+      if (!fresh.length) continue
+      const { error } = await supabase.from('whatsapp_messages').insert(fresh)
+      if (error) throw new Error(`No se guardó el historial: ${error.message}`)
+      imported += fresh.length
+    }
+    const done = Number(chunk?.metadata?.progress) >= 100
+    const { error } = await supabase.rpc('add_whatsapp_history_imported', { p_store_id: storeId, p_count: imported, p_done: done })
+    if (error) throw new Error(`No se contó el historial: ${error.message}`)
+  }
 }
 
 /** Push a los dispositivos del equipo DE ESA TIENDA con los avisos de WhatsApp activados. */

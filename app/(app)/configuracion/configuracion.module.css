@@ -173,6 +173,12 @@
 .kv small { display: block; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
 .kv strong { display: block; margin-top: 3px; font-size: 13.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .noteGap { margin-top: 14px; }
+.waJustConnected { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding: 12px 16px; border-radius: 14px; background: #E3F7EA; color: #0F5A31; font-size: 14px; line-height: 1.45; }
+.waJustConnected svg { width: 20px; height: 20px; flex-shrink: 0; }
+.waJustConnected a { color: #0F5A31; font-weight: 800; }
+.waFoot { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; padding: 14px 22px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-3); }
+.waFootActions { display: flex; gap: 8px; }
+.waDanger { color: var(--danger); }
 .replyForm { display: flex; flex-direction: column; gap: 8px; padding: 14px 22px; border-top: 1px solid var(--line); background: var(--paper); border-radius: 0 0 15px 15px; }
 .replyForm > button { align-self: flex-end; }
 .note code { padding: 1px 6px; border-radius: 6px; background: var(--paper-2); font-family: var(--font-mono); font-size: 12px; }

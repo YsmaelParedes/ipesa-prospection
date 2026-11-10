@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { readBoundedBody } from '@/lib/boundedBody'
 import { verifyWebhookSignature } from '@/lib/whatsapp'
-import { findEnvStoreForPhone } from '@/lib/storeWhatsApp'
+import { findEmbeddedStoreForWaba, findStoreForPhone } from '@/lib/storeWhatsApp'
+import { clearEmbedded } from '@/lib/whatsappSignup'
 import { notifyStoreTeam, processChange, verifyTokenMatches, type InboundNotification } from '@/lib/whatsappWebhook'
 import { reportError } from '@/lib/errorReport'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * Webhook ORIGINAL (app de Meta configurada en las variables de entorno del
- * servidor). Solo atiende eventos del número del servidor, que pertenece a la
- * tienda original. Las tiendas que conectan su propia app de Meta usan
- * /api/webhooks/whatsapp/[key], verificado con SU app secret.
+ * Webhook CENTRAL (la app de Meta de Matices, variables de entorno del
+ * servidor). Atiende el número del servidor (la tienda original) y los que
+ * las tiendas conectaron en unos clics (Embedded Signup); cada evento se
+ * reparte por phone_number_id. Las tiendas que conectan su propia app de Meta
+ * usan /api/webhooks/whatsapp/[key], verificado con SU app secret.
  */
 
 // GET — verificación del webhook (Meta la llama al guardar la configuración)
@@ -34,7 +36,8 @@ export async function GET(req: NextRequest) {
  * así que se rechaza (falla cerrado).
  */
 export async function POST(req: NextRequest) {
-  const bytes = await readBoundedBody(req.body, 1024 * 1024)
+  // El historial de una tienda puede traer miles de mensajes en un solo aviso
+  const bytes = await readBoundedBody(req.body, 4 * 1024 * 1024)
   if (!bytes) return NextResponse.json({ error: 'Evento demasiado grande' }, { status: 413 })
   const raw = new TextDecoder().decode(bytes)
 
@@ -58,15 +61,24 @@ export async function POST(req: NextRequest) {
     for (const entry of body?.entry ?? []) {
       for (const change of entry?.changes ?? []) {
         const value = change?.value ?? {}
+        // La tienda quitó a Matices de su cuenta desde Meta: se apaga su WhatsApp
+        if (change?.field === 'account_update') {
+          const wabaId = String(entry?.id ?? '')
+          if ((value?.event === 'PARTNER_REMOVED' || value?.event === 'PARTNER_APP_UNINSTALLED') && /^\d{5,30}$/.test(wabaId)) {
+            const store = await findEmbeddedStoreForWaba(wabaId)
+            if (store) await clearEmbedded(store.store_id)
+          }
+          continue
+        }
         // "messaging_handovers" trae el número en `recipient`, no en `metadata`
         const phoneNumberId = String(value?.metadata?.phone_number_id ?? value?.recipient?.phone_number_id ?? '')
         if (!/^\d{5,30}$/.test(phoneNumberId)) continue
-        const store = await findEnvStoreForPhone(phoneNumberId)
+        const store = await findStoreForPhone(phoneNumberId)
         if (!store) {
-          console.warn('[webhook/whatsapp] evento de un número que no es el del servidor:', phoneNumberId)
+          console.warn('[webhook/whatsapp] evento de un número sin tienda conectada:', phoneNumberId)
           continue
         }
-        pending.push({ storeId: store.store_id, items: await processChange(store.store_id, value) })
+        pending.push({ storeId: store.store_id, items: await processChange(store.store_id, value, change?.field) })
       }
     }
   } catch (error: any) {

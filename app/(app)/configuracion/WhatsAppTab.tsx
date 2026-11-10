@@ -4,12 +4,27 @@ import { useCachedQuery, useQueryEffect } from '@/lib/useCachedQuery'
 
 
 import { useCallback, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, Ico, Note, Spinner, WhatsAppGlyph, api, cx, fmtDate, send, useToast } from './ui'
+import { invalidateSession } from '@/lib/profile'
 import s from './configuracion.module.css'
 import { tierLabel } from '@/lib/whatsappSafety'
 
-// Sin datos técnicos: la conexión (credenciales y webhook) la hace el asesor desde su panel
-type Connection = { connected: boolean; displayPhone: string | null; connectedAt: string | null; receivesMessages: boolean }
+// Sin datos técnicos ni secretos. selfService: la tienda lo conectó sola (Embedded Signup) y puede desconectarlo
+type Connection = {
+  connected: boolean; displayPhone: string | null; connectedAt: string | null; receivesMessages: boolean
+  selfService: boolean; coexistence: boolean
+  history: { status: 'requested' | 'importing' | 'done' | 'declined' | 'failed' | null; imported: number } | null
+  wabaId: string | null
+}
+
+const HISTORY_LABEL: Record<string, string> = {
+  requested: 'En camino', importing: 'Llegando…', declined: 'No compartido', failed: 'No disponible',
+}
+const historyText = (h: NonNullable<Connection['history']>) =>
+  h.status === 'done' || (h.imported > 0 && h.status !== 'importing')
+    ? `${h.imported.toLocaleString('es-MX')} mensajes`
+    : h.status === 'importing' ? `${h.imported.toLocaleString('es-MX')} y contando` : HISTORY_LABEL[h.status ?? ''] ?? 'Sin datos'
 type Health = {
   displayPhoneNumber?: string; verifiedName?: string; qualityRating?: string; messagingLimitTier?: string; nameStatus?: string
   canSendMessage?: string; healthNotes?: string[]
@@ -24,7 +39,13 @@ const QUALITY: Record<string, { label: string; cls: string }> = {
 
 /* ── Estado del número ──────────────────────────────────────────────────── */
 function ConnectionPanel() {
+  const router = useRouter()
+  const params = useSearchParams()
+  const justConnected = params.get('conectado') === '1'
+  const [toastNode, toast] = useToast()
   const [conn, setConn]     = useState<Connection | null>(null)
+  const [confirmOff, setConfirmOff] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
   const healthQuery = useCachedQuery<{ health: Health | null }>(conn?.connected ? '/api/whatsapp/status' : null)
   const health = healthQuery.data?.health ?? null
   const [error, setError]   = useState('')
@@ -44,8 +65,29 @@ function ConnectionPanel() {
   if (error) return <Note kind="danger">{error}</Note>
   if (!conn) return <Card title="Tu número"><Spinner /></Card>
 
+  const disconnect = async () => {
+    setDisconnecting(true)
+    try {
+      await api('/api/store/whatsapp', { method: 'DELETE' })
+      invalidateSession()
+      router.replace('/configuracion?tab=whatsapp', { scroll: false })
+    } catch (err) {
+      setDisconnecting(false); setConfirmOff(false)
+      setError('')
+      toast((err as Error).message)
+    }
+  }
+
   const quality = QUALITY[health?.qualityRating ?? 'UNKNOWN'] ?? QUALITY.UNKNOWN
   return (
+    <>
+    {toastNode}
+    {justConnected && conn.connected && (
+      <div className={s.waJustConnected} role="status">
+        <Ico.check />
+        <span><b>¡Listo! Tu WhatsApp quedó conectado.</b> Tus chats ya llegan a la bandeja. <a href="/whatsapp">Ir a WhatsApp →</a></span>
+      </div>
+    )}
     <Card title="Tu número" description="Con él tu tienda atiende a sus clientes desde el CRM.">
       <div className={s.cardBody}>
       <div className={s.waHero}>
@@ -55,7 +97,9 @@ function ConnectionPanel() {
           <span>
             {conn.connected
               ? <>{health?.verifiedName ? `${health.verifiedName} · ` : ''}{conn.connectedAt ? `Conectado el ${fmtDate(conn.connectedAt, { day: 'numeric', month: 'long', year: 'numeric' })}` : 'Conectado'}</>
-              : 'Tu asesor está terminando de conectar el número de tu tienda. Te avisará cuando quede listo.'}
+              : conn.selfService
+                ? 'La conexión con Meta quedó a medias. Termínala en esta misma pantalla.'
+                : 'Tu asesor está terminando de conectar el número de tu tienda. Te avisará cuando quede listo.'}
           </span>
         </div>
         {conn.connected && <span className={cx(s.badge, s.bActive)}><i />Activo</span>}
@@ -64,6 +108,21 @@ function ConnectionPanel() {
         <div className={s.kvs}>
           <div className={s.kv}><small>Calidad</small><strong><span className={cx(s.badge, quality.cls)} style={{ padding: '2px 9px' }}>{quality.label}</span></strong></div>
           <div className={s.kv}><small>Límite de envíos</small><strong>{tierLabel(health?.messagingLimitTier)}</strong></div>
+          {conn.coexistence && <div className={s.kv}><small>En tu celular</small><strong>También activo</strong></div>}
+          {conn.history && <div className={s.kv}><small>Chats importados</small><strong>{historyText(conn.history)}</strong></div>}
+        </div>
+      )}
+      {conn.connected && conn.history?.status === 'declined' && (
+        <div className={s.noteGap}>
+          <Note kind="info">Tus chats anteriores no se trajeron porque en WhatsApp Business no se aceptó compartir el historial. Los mensajes nuevos sí llegan.</Note>
+        </div>
+      )}
+      {conn.connected && conn.selfService && (
+        <div className={s.noteGap}>
+          <Note kind="warn">
+            <b>Para escribirles tú primero</b> (plantillas), Meta pide una tarjeta en tu cuenta de WhatsApp. Responder a quien te escribe no cuesta.{' '}
+            <a href={`https://business.facebook.com/wa/manage/home/${conn.wabaId ? `?waba_id=${encodeURIComponent(conn.wabaId)}` : ''}`} target="_blank" rel="noopener noreferrer">Agregar tarjeta en Meta ↗</a>
+          </Note>
         </div>
       )}
       {conn.connected && health?.qualityRating && health.qualityRating !== 'GREEN' && health.qualityRating !== 'UNKNOWN' && (
@@ -87,7 +146,26 @@ function ConnectionPanel() {
         </div>
       )}
       </div>
+      {conn.selfService && (
+        <div className={s.waFoot}>
+          {confirmOff ? (
+            <>
+              <span>Matices dejará de recibir y enviar mensajes de este número. Tus chats guardados se quedan{conn.coexistence ? ' y tu celular sigue igual' : ''}.</span>
+              <span className={s.waFootActions}>
+                <button type="button" className="btn" onClick={() => setConfirmOff(false)} disabled={disconnecting}>Cancelar</button>
+                <button type="button" className={cx('btn', s.waDanger)} onClick={disconnect} disabled={disconnecting}>{disconnecting ? 'Desconectando…' : 'Sí, desconectar'}</button>
+              </span>
+            </>
+          ) : (
+            <>
+              <span>¿Cambiaste de número o ya no quieres usarlo aquí?</span>
+              <button type="button" className={cx('btn', s.waDanger)} onClick={() => setConfirmOff(true)}>Desconectar</button>
+            </>
+          )}
+        </div>
+      )}
     </Card>
+    </>
   )
 }
 

@@ -72,7 +72,7 @@ function Settings() {
   if (!session || !store) return <Spinner />
   const go = (id: TabId) => router.replace(`${pathname}?tab=${id}`, { scroll: false })
   const waHint = (t: Tab) => t.id === 'whatsapp' && !store.modules.whatsapp
-    ? (!WHATSAPP_OFFERED ? 'Pronto' : store.planIncludesWhatsApp ? 'Por activar' : null)
+    ? (!WHATSAPP_OFFERED && !store.whatsappSignup ? 'Pronto' : store.planIncludesWhatsApp ? 'Por activar' : null)
     : null
 
   return (

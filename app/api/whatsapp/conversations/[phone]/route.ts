@@ -11,7 +11,7 @@ import { jsonError, readJson, serverError } from '@/lib/validation'
 
 type Ctx = { params: Promise<{ phone: string }> }
 
-const MESSAGE_FIELDS = 'id, phone, direction, body, status, error_message, template_name, media_id, media_type, media_mime, profile_name, contact_id, user_id, created_at'
+const MESSAGE_FIELDS = 'id, phone, direction, body, status, error_message, template_name, media_id, media_type, media_mime, profile_name, contact_id, user_id, origin, created_at'
 
 async function phoneParam(params: Ctx['params']): Promise<string | null> {
   const raw = decodeURIComponent((await params).phone)

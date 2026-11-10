@@ -9,6 +9,7 @@ import { Avatar } from '@/components/CrmUI'
 import { WaIcon } from '@/components/WhatsAppUI'
 import { invalidateSession, useSession } from '@/lib/profile'
 import { WHATSAPP_OFFERED } from '@/lib/stores'
+import { WhatsAppConnect } from '@/components/WhatsAppConnect'
 
 const BENEFITS = [
   { icon: <WaIcon.chat size={18} />,      title: 'Todos los chats en un solo lugar', text: 'Tu equipo atiende el WhatsApp de la tienda desde el CRM, sin pasarse el celular.' },
@@ -60,6 +61,9 @@ export function WhatsAppOffer() {
       setSending(false)
     }
   }
+
+  // Alta en unos clics: el administrador conecta el número él mismo
+  if (store?.whatsappSignup && inPlan && canRequest) return <WhatsAppConnect />
 
   if (!WHATSAPP_OFFERED) {
     return (

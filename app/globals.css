@@ -1430,6 +1430,8 @@ a { color: inherit; text-decoration: none; }
 .wa-tick.failed { color: var(--danger); }
 .wa-template-tag { display: flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 700; color: #1B7A3E; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
 .wa-agent-tag { color: #6D28D9; }
+.wa-history-mark { position: static; }
+.wa-history-mark span { background: #E0F6FB; color: #00586C; }
 .wa-error { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11.5px; color: var(--danger); margin-top: 4px; font-weight: 600; }
 .wa-error-x { font-size: 11px; text-decoration: underline; color: var(--danger); }
 .wa-media-img { display: block; max-width: 100%; max-height: 340px; border-radius: 8px; margin: 2px 0 4px; cursor: zoom-in; background: var(--paper); }
@@ -1755,6 +1757,49 @@ a { color: inherit; text-decoration: none; }
 .wa-offer-done { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; background: var(--success-soft); color: var(--success); font-size: 13px; line-height: 1.45; }
 .wa-offer-done span { color: var(--ink-3); }
 .wa-offer .wa-form-error { width: 100%; margin: 0; }
+/* Conectar WhatsApp en unos clics (Embedded Signup) */
+.wa-connect-hero { align-items: stretch; }
+.wa-connect-hero .wa-offer-status { background: #E3F7EA; color: #0F6B39; }
+.wa-connect-hero .wa-offer-status i { background: #128C4A; }
+.wa-connect-lead { margin: -6px 0 18px; font-size: 14.5px; line-height: 1.55; color: var(--ink-3); text-wrap: pretty; }
+.wa-connect-steps { display: flex; flex-direction: column; padding: 22px; border-radius: calc(var(--radius) - 4px); background: var(--paper); }
+.wa-connect-steps h3 { font-family: var(--font-display); font-size: 18px; margin: 0 0 14px; letter-spacing: -0.01em; }
+.wa-connect-steps h3 small { font-family: var(--font-body, inherit); font-size: 13px; font-weight: 700; color: var(--muted); }
+.wa-connect-steps ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 13px; }
+.wa-connect-steps li { display: flex; gap: 11px; align-items: flex-start; font-size: 13.5px; color: var(--ink-3); line-height: 1.45; }
+.wa-connect-steps li strong { display: block; color: var(--ink); font-size: 14px; }
+.wa-connect-steps .wa-offer-num { width: 26px; height: 26px; font-size: 12.5px; }
+.wa-connect-ok { background: #128C4A; }
+.wa-connect-foot { margin-top: auto; padding-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+.wa-connect-btn { min-height: 50px; justify-content: center; font-size: 15.5px; gap: 9px; -webkit-tap-highlight-color: transparent; transition-property: background-color, box-shadow, scale; transition-duration: 150ms; transition-timing-function: ease-out; }
+@media (prefers-reduced-motion: no-preference) { .wa-connect-btn:active:not(:disabled) { scale: .96; } }
+.wa-connect-link { align-self: center; padding: 8px 10px; font-size: 13px; font-weight: 700; color: var(--brand-strong); border-radius: 8px; }
+.wa-connect-link:disabled { color: var(--muted); }
+.wa-connect-msg { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--card); color: var(--ink-2); font-size: 13px; line-height: 1.45; box-shadow: 0 0 0 1px var(--line); }
+.wa-connect-err { background: var(--danger-soft); color: var(--danger); box-shadow: none; }
+.wa-connect-note { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ink-3); text-wrap: pretty; }
+.wa-connect-finishing {
+  align-self: center; width: min(520px, 100%); margin-top: 24px; padding: 32px; display: flex; flex-direction: column; gap: 14px;
+  background: var(--card); border: 1px solid transparent; border-radius: 24px;
+  box-shadow: 0 0 0 1px rgba(19,19,19,.06), 0 2px 4px rgba(19,19,19,.04), 0 24px 48px -24px rgba(19,19,19,.25);
+}
+.wa-connect-finishing h2 { margin: 6px 0 0; font-family: var(--font-display); font-size: 26px; line-height: 1.1; letter-spacing: -0.03em; }
+.wa-connect-finishing > p { margin: 0; font-size: 14.5px; color: var(--ink-3); }
+.wa-connect-finishing ol { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.wa-connect-finishing li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 700; color: var(--muted); }
+.wa-connect-finishing li.now { background: var(--paper); color: var(--ink); }
+.wa-connect-finishing li:first-child { color: var(--ink); }
+.wa-connect-big { width: 52px; height: 52px; border-radius: 16px; }
+.wa-connect-dot { flex: 0 0 24px; height: 24px; border-radius: 50%; box-sizing: border-box; border: 2px solid var(--line-strong, #D9D9DB); display: grid; place-items: center; }
+.wa-connect-dot.done { border: 0; background: #128C4A; color: #fff; }
+.wa-connect-dot.spin { border-width: 2.5px; border-top-color: #128C4A; }
+@media (prefers-reduced-motion: no-preference) { .wa-connect-dot.spin { animation: wa-connect-spin 900ms linear infinite; } }
+@keyframes wa-connect-spin { to { rotate: 360deg; } }
+.wa-connect-info { margin: 0; padding: 12px 14px; border-radius: 12px; background: #E0F6FB; color: #00586C; font-size: 13px; line-height: 1.45; }
+@media (max-width: 960px) {
+  .wa-connect-steps { padding: 18px 16px; }
+  .wa-connect-finishing { padding: 24px 20px; margin-top: 8px; }
+}
 @media (max-width: 960px) {
   .wa-offer-hero { grid-template-columns: 1fr; padding: 22px 18px; gap: 20px; }
   .wa-offer-steps { padding: 20px 18px; }

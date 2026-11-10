@@ -6,7 +6,7 @@ import { useQueryEffect } from '@/lib/useCachedQuery'
 import { apiFetch, invalidateQueries } from '@/lib/apiClient'
 
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Avatar, TipoChip, segmentColor } from '@/components/CrmUI'
@@ -62,6 +62,8 @@ type Message = {
   media_mime: string | null
   /** null en un saliente = lo contestó el agente de IA de Meta (ver whatsappWebhook). */
   user_id?: string | null
+  /** 'phone': lo mandó la tienda desde su celular · 'history': traído de WhatsApp Business */
+  origin?: 'phone' | 'history' | null
   created_at: string
 }
 
@@ -530,6 +532,8 @@ function ChatView({
     }
     return out
   }, [messages])
+  // Marca donde empieza lo traído de WhatsApp Business (coexistencia)
+  const firstHistoryId = useMemo(() => messages.find(m => m.origin === 'history')?.id ?? null, [messages])
 
   return (
     <>
@@ -572,7 +576,12 @@ function ChatView({
         ) : days.map(d => (
           <div className="wa-day-group" key={d.key}>
             <div className="wa-day"><span>{d.label}</span></div>
-            {d.messages.map(m => <Bubble key={m.id} m={m} onDiscard={() => discardFailed(m.id)} />)}
+            {d.messages.map(m => (
+              <Fragment key={m.id}>
+                {m.id === firstHistoryId && <div className="wa-day wa-history-mark"><span>Historial traído de tu WhatsApp Business</span></div>}
+                <Bubble m={m} onDiscard={() => discardFailed(m.id)} />
+              </Fragment>
+            ))}
           </div>
         ))}
       </div>
@@ -592,8 +601,8 @@ function ChatView({
   )
 }
 
-/** Saliente sin usuario ni plantilla = lo contestó el agente de IA (ver whatsappWebhook). */
-const isAgentMessage = (m: Message) => m.direction === 'outbound' && m.user_id === null && !m.template_name
+/** Saliente sin usuario ni plantilla (ni del celular o del historial) = lo contestó el agente de IA (ver whatsappWebhook). */
+const isAgentMessage = (m: Message) => m.direction === 'outbound' && m.user_id === null && !m.template_name && !m.origin
 
 function Bubble({ m, onDiscard }: { m: Message; onDiscard: () => void }) {
   const out = m.direction === 'outbound'
@@ -604,6 +613,7 @@ function Bubble({ m, onDiscard }: { m: Message; onDiscard: () => void }) {
       <div className="wa-bubble">
         {m.template_name && <div className="wa-template-tag"><WaIcon.template size={11} /> Plantilla · {m.template_name.replace(/_/g, ' ')}</div>}
         {byAgent && <div className="wa-template-tag wa-agent-tag"><WaIcon.bolt size={11} /> Agente IA</div>}
+        {m.origin === 'phone' && <div className="wa-template-tag"><WaIcon.phone size={11} /> Desde el celular</div>}
         {m.media_id && m.media_type && <MediaContent mediaId={m.media_id} mediaType={m.media_type} mime={m.media_mime} />}
         {caption && <div className="wa-text"><Linkified text={caption} /></div>}
         <div className="wa-meta">

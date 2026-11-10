@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import type { User } from '@supabase/supabase-js'
 import { ACTIVE_STORE_COOKIE, STORE_COLUMNS, getServerSupabase, invalidateStoreContextCache, type StoreContext, type StoreRow } from './supabase-server'
 import { randomToken } from './crypto'
+import { whatsappSignupOpen } from './whatsappSignup'
 import {
   DEFAULT_CANALES, DEFAULT_MODULES, DEFAULT_PLAN, DEFAULT_SEGMENTS,
   effectiveModules, effectivePlan, normalizeModules, planOf, slugify, storeAccess,
@@ -50,6 +51,7 @@ export function publicStore(store: StoreRow) {
     limits: { contacts: def.maxContacts },
     salesTeam: def.salesTeam,
     planIncludesWhatsApp: def.whatsapp,
+    whatsappSignup: def.whatsapp && whatsappSignupOpen(store.id),
     /** Suscripción de Stripe: estado, próximo cobro y si se cancela al final del periodo */
     subscription: store.stripe_subscription_id ? {
       status: store.subscription_status,

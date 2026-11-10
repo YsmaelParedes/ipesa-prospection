@@ -29,8 +29,10 @@ export type ClientStore = {
   limits: { contacts: number | null }
   /** Reparto de contactos, metas y control diario del sistema comercial (Galón, Cubeta) */
   salesTeam: boolean
-  /** El plan incluye la bandeja de WhatsApp (Cubeta); además el asesor debe conectarlo */
+  /** El plan incluye la bandeja de WhatsApp (Cubeta); además hay que conectar el número */
   planIncludesWhatsApp: boolean
+  /** La tienda puede conectar su WhatsApp sola, en unos clics (Embedded Signup) */
+  whatsappSignup: boolean
   /** Suscripción de Stripe (null = plan gratis o asignado a mano) */
   subscription: { status: string | null; currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean } | null
   /** Puede abrir el portal de Stripe (facturas, tarjeta, cancelar) */

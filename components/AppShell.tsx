@@ -346,7 +346,7 @@ Pantalla: ${pathname}`,
     : null
   const pendingSetup = (id: string) => id === 'whatsapp' && waOff
   // WhatsApp en desarrollo: "Pronto". Cuando se ofrezca: en Cubeta "Por activar"; en Litro y Galón, el nombre del plan
-  const waTag = !WHATSAPP_OFFERED ? 'Pronto' : store?.planIncludesWhatsApp ? 'Por activar' : 'Cubeta'
+  const waTag = !WHATSAPP_OFFERED && !store?.whatsappSignup ? 'Pronto' : store?.planIncludesWhatsApp ? 'Por activar' : 'Cubeta'
 
   const navLink = (it: NavItem) => {
     const Ic = it.icon

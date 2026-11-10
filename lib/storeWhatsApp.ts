@@ -19,9 +19,17 @@ export type StoreWhatsAppRow = {
   verify_token: string
   webhook_key: string
   connected_at: string | null
+  /** 'embedded': la tienda lo conectó sola con la app de Matices (ver lib/whatsappSignup.ts). */
+  connection_method: 'manual' | 'embedded'
+  business_id: string | null
+  coexistence: boolean
+  pin_enc: string | null
+  history_status: 'requested' | 'importing' | 'done' | 'declined' | 'failed' | null
+  history_imported: number
+  setup_error: string | null
 }
 
-const COLUMNS = 'store_id, credentials_source, phone_number_id, waba_id, display_phone, access_token_enc, app_secret_enc, verify_token, webhook_key, connected_at'
+const COLUMNS = 'store_id, credentials_source, phone_number_id, waba_id, display_phone, access_token_enc, app_secret_enc, verify_token, webhook_key, connected_at, connection_method, business_id, coexistence, pin_enc, history_status, history_imported, setup_error'
 
 export function envWhatsAppCreds(): WhatsAppCreds | null {
   const token = process.env.WHATSAPP_ACCESS_TOKEN
@@ -43,7 +51,10 @@ export function credsFromRow(row: StoreWhatsAppRow): WhatsAppCreds | null {
       token: decryptSecret(row.access_token_enc, row.store_id),
       phoneNumberId: row.phone_number_id,
       wabaId: row.waba_id,
-      appSecret: row.app_secret_enc ? decryptSecret(row.app_secret_enc, row.store_id) : null,
+      // Alta en unos clics: el número usa la app de Matices y su secreto
+      appSecret: row.connection_method === 'embedded'
+        ? process.env.WHATSAPP_APP_SECRET || null
+        : row.app_secret_enc ? decryptSecret(row.app_secret_enc, row.store_id) : null,
     }
   } catch (error) {
     console.error('[whatsapp] no se pudieron descifrar las credenciales de la tienda', row.store_id, error)
@@ -63,18 +74,30 @@ export async function getStoreWhatsAppCreds(storeId: string): Promise<WhatsAppCr
   return row ? credsFromRow(row) : null
 }
 
-export const WHATSAPP_NOT_CONNECTED = 'El número de WhatsApp de tu tienda aún no está conectado. Tu asesor lo está configurando.'
+export const WHATSAPP_NOT_CONNECTED = 'El número de WhatsApp de tu tienda aún no está conectado. Conéctalo en Configuración › WhatsApp.'
 
 /**
- * Tienda que usa el número del servidor (variables WHATSAPP_*). El webhook
- * compartido solo atiende a esa tienda: las que conectan su propia app de
- * Meta reciben sus eventos en /api/webhooks/whatsapp/<clave>, firmados con
- * SU app secret, y nunca por aquí.
+ * Tienda dueña de un número que usa la app de Matices: la del número del
+ * servidor (variables WHATSAPP_*) o una que lo conectó en unos clics. Solo
+ * esas reciben eventos por el webhook central; las que conectaron su propia
+ * app de Meta los reciben en /api/webhooks/whatsapp/<clave>, firmados con SU
+ * app secret, y nunca por aquí.
  */
-export async function findEnvStoreForPhone(phoneNumberId: string): Promise<StoreWhatsAppRow | null> {
-  if (!process.env.WHATSAPP_PHONE_NUMBER_ID || phoneNumberId !== process.env.WHATSAPP_PHONE_NUMBER_ID) return null
+export async function findStoreForPhone(phoneNumberId: string): Promise<StoreWhatsAppRow | null> {
+  const db = getServerSupabase()
+  if (process.env.WHATSAPP_PHONE_NUMBER_ID && phoneNumberId === process.env.WHATSAPP_PHONE_NUMBER_ID) {
+    const { data } = await db.from('store_whatsapp').select(COLUMNS).eq('credentials_source', 'env').maybeSingle()
+    return (data as StoreWhatsAppRow | null) ?? null
+  }
+  const { data } = await db.from('store_whatsapp').select(COLUMNS)
+    .eq('phone_number_id', phoneNumberId).eq('connection_method', 'embedded').not('access_token_enc', 'is', null).maybeSingle()
+  return (data as StoreWhatsAppRow | null) ?? null
+}
+
+/** Tienda que conectó en unos clics esa cuenta de WhatsApp (avisos de cuenta de Meta). */
+export async function findEmbeddedStoreForWaba(wabaId: string): Promise<StoreWhatsAppRow | null> {
   const { data } = await getServerSupabase().from('store_whatsapp').select(COLUMNS)
-    .eq('credentials_source', 'env').maybeSingle()
+    .eq('waba_id', wabaId).eq('connection_method', 'embedded').maybeSingle()
   return (data as StoreWhatsAppRow | null) ?? null
 }
 
