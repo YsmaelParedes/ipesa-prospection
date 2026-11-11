@@ -36,6 +36,15 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.47.0',
+    date: '10 de noviembre, 2026',
+    title: 'Resultados de campañas por día',
+    module: 'campaigns',
+    items: [
+      'En Resultados ya puedes elegir un día y ver solo las campañas que mandaste ese día, con sus totales: destinatarios, entregados, leídos, respuestas y no entregados.',
+    ],
+  },
+  {
     version: '1.46.1',
     date: '10 de noviembre, 2026',
     title: 'Campañas grandes sin trabar la app',

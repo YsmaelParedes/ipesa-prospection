@@ -13,6 +13,7 @@ import { WaIcon } from '@/components/WhatsAppUI'
 import { fmtPhone } from '@/lib/phone'
 import { csvStamp, downloadCsv } from '@/lib/csv'
 import { WhatsAppCampaignPeople } from '@/components/WhatsAppCampaignPeople'
+import { Select } from '@/components/Select'
 import {
   FAILURE_KINDS, type CampaignBucket, type CampaignDetail, type CampaignRecipient, type CampaignSummary, type FailureKind,
 } from '@/lib/campaignKinds'
@@ -33,6 +34,22 @@ const tplName = (t: string) => t.replace(/_/g, ' ')
 const when = (iso: string) => new Date(iso).toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
 const clock = (iso: string) => new Date(iso).toLocaleTimeString('es-MX', { hour: 'numeric', minute: '2-digit' })
 const day = (iso: string) => new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
+/** Día local (AAAA-MM-DD) de un envío, para filtrar por día. */
+const dayKey = (iso: string) => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+const ALL_DAYS = 'todos'
+
+/** «Hoy · 10 nov», «Ayer · 9 nov» o «Lun 3 nov». */
+function dayLabel(key: string) {
+  const [y, m, d] = key.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  const today = dayKey(new Date().toISOString())
+  const yesterday = dayKey(new Date(Date.now() - 86_400_000).toISOString())
+  const short = date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
+  if (key === today) return `Hoy · ${short}`
+  if (key === yesterday) return `Ayer · ${short}`
+  const wd = date.toLocaleDateString('es-MX', { weekday: 'short' }).replace('.', '')
+  return `${wd.charAt(0).toUpperCase()}${wd.slice(1)} ${short}`
+}
 
 function duration(a: string, b: string) {
   const min = Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60_000)
@@ -83,6 +100,7 @@ export function WhatsAppCampaignResults({ onRetry, onOpenChat }: {
   const [list, setList]     = useState<CampaignSummary[] | null>(null)
   const [error, setError]   = useState('')
   const [openId, setOpenId] = useState<string | null>(null)
+  const [dayFilter, setDayFilter] = useState(ALL_DAYS)
 
   useQueryEffect(() => {
     let cancelled = false
@@ -94,10 +112,20 @@ export function WhatsAppCampaignResults({ onRetry, onOpenChat }: {
     return () => { cancelled = true }
   }, [days])
 
-  const totals = useMemo(() => (list ?? []).reduce<Counts>(
+  // Días con envíos en el periodo (el más reciente primero) y los envíos del día elegido
+  const dayOptions = useMemo(() => {
+    const count = new Map<string, number>()
+    for (const c of list ?? []) { const k = dayKey(c.startedAt); count.set(k, (count.get(k) ?? 0) + 1) }
+    return [...count].sort((a, b) => (a[0] < b[0] ? 1 : -1))
+      .map(([k, n]) => ({ value: k, label: `${dayLabel(k)} (${plural(n, 'envío', 'envíos')})` }))
+  }, [list])
+  const activeDay = dayFilter !== ALL_DAYS && dayOptions.some(o => o.value === dayFilter) ? dayFilter : ALL_DAYS
+  const shown = useMemo(() => (list ?? []).filter(c => activeDay === ALL_DAYS || dayKey(c.startedAt) === activeDay), [list, activeDay])
+
+  const totals = useMemo(() => shown.reduce<Counts>(
     (a, c) => ({ total: a.total + c.total, read: a.read + c.read, delivered: a.delivered + c.delivered, pending: a.pending + c.pending, failed: a.failed + c.failed, replied: a.replied + c.replied }),
     { total: 0, read: 0, delivered: 0, pending: 0, failed: 0, replied: 0 },
-  ), [list])
+  ), [shown])
 
   if (openId) return <CampaignDetailView id={openId} onBack={() => setOpenId(null)} onRetry={onRetry} onOpenChat={onOpenChat} />
 
@@ -125,8 +153,14 @@ export function WhatsAppCampaignResults({ onRetry, onOpenChat }: {
           <div className="wa-results-title">Resultados de campañas</div>
           <div className="wa-results-sub">Cada envío por separado: quién recibió el mensaje y a quién no le llegó</div>
         </div>
-        <div className="wa-seg">
-          {[7, 30, 90].map(d => <button key={d} className={days === d ? 'active' : ''} onClick={() => setDays(d)}>{d} días</button>)}
+        <div className="wa-results-tools">
+          {dayOptions.length > 0 && (
+            <Select className="wa-select wa-day-select" value={activeDay} onChange={setDayFilter} aria-label="Día de envío"
+              options={[{ value: ALL_DAYS, label: 'Todos los días' }, ...dayOptions]} />
+          )}
+          <div className="wa-seg">
+            {[7, 30, 90].map(d => <button key={d} className={days === d ? 'active' : ''} onClick={() => setDays(d)}>{d} días</button>)}
+          </div>
         </div>
       </div>
 
@@ -139,7 +173,7 @@ export function WhatsAppCampaignResults({ onRetry, onOpenChat }: {
       ) : (
         <>
           <div className="wa-kpis">
-            <Kpi label="Destinatarios" value={totals.total} sub={plural(list.length, 'campaña', 'campañas')} />
+            <Kpi label={activeDay === ALL_DAYS ? 'Destinatarios' : `Destinatarios · ${dayLabel(activeDay)}`} value={totals.total} sub={plural(shown.length, 'campaña', 'campañas')} />
             <Kpi label="Entregados o leídos" value={`${pct(reached, totals.total)}%`} sub={`${reached} de ${totals.total}`} />
             <Kpi label="Leídos" value={`${pct(totals.read, totals.total)}%`} sub={plural(totals.read, 'mensaje', 'mensajes')} />
             <Kpi label="Respondieron" value={`${pct(totals.replied, totals.total)}%`} sub={plural(totals.replied, 'persona', 'personas')} tone="good" />
@@ -149,7 +183,7 @@ export function WhatsAppCampaignResults({ onRetry, onOpenChat }: {
           <Legend />
 
           <div className="wa-camp-list">
-            {list.map(c => (
+            {shown.map(c => (
               <button key={c.id} className="wa-card wa-camp-card" onClick={() => setOpenId(c.id)}>
                 <div className="wa-camp-top">
                   <div style={{ minWidth: 0 }}>
