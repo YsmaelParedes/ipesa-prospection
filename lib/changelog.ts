@@ -36,6 +36,15 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.46.0',
+    date: '10 de noviembre, 2026',
+    title: 'Cada envío de campaña por separado',
+    module: 'campaigns',
+    items: [
+      'En el historial de campañas cada envío aparece por separado, con el segmento al que lo mandaste, aunque uses la misma plantilla varias veces seguidas.',
+    ],
+  },
+  {
     version: '1.45.1',
     date: '9 de noviembre, 2026',
     title: 'Campañas más confiables',

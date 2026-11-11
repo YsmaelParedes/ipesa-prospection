@@ -23,6 +23,7 @@ import { PHONE_FILTERS, PHONE_FILTER_LABELS, phoneKind, type PhoneFilter } from 
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
 import { useWhatsAppCampaignQuota, CampaignQuotaNote, isOverQuota } from '@/components/WhatsAppCampaignQuota'
 import { useCampaignSend, CampaignConfirmPanel, CampaignProgressPanel, CampaignResultsPanel } from '@/components/WhatsAppCampaignSend'
+import { campaignLabelFor } from '@/lib/campaignKinds'
 import { StatusTicks, WindowBadge, fmtTime, mediaCaption } from '@/components/WhatsAppUI'
 
 /* ── Iconos ── */
@@ -874,7 +875,8 @@ function WhatsAppCampaignModal({
 
   const handleConfirmed = async () => {
     if (!selection) return
-    await run(selectedContacts.map(c => ({ id: c.id, name: c.name, phone: c.phone })), selection)
+    await run(selectedContacts.map(c => ({ id: c.id, name: c.name, phone: c.phone })), selection,
+      campaignLabelFor(selectedContacts.map(c => c.segment)))
     refetchQuota()
   }
 

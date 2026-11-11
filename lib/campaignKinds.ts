@@ -68,9 +68,11 @@ export const FAILURE_KINDS: Record<FailureKind, FailureKindInfo> = {
 export type CampaignBucket = 'read' | 'delivered' | 'pending' | 'failed'
 
 export type CampaignSummary = {
-  /** `${plantilla}.${inicio en ms}` — identifica una campaña (un envío). */
+  /** `${plantilla}.${inicio en ms}` (y `.${envío}` si se registró el envío) — identifica una campaña. */
   id: string
   template: string
+  /** A quién se mandó (p. ej. el segmento); null en envíos anteriores a que se guardara. */
+  label: string | null
   startedAt: string
   endedAt: string
   total: number
@@ -111,11 +113,29 @@ export const BATCH_GAP_MS = 30 * 60 * 1000
 /** Una respuesta cuenta si llega dentro de este tiempo después del envío. */
 export const REPLY_WINDOW_MS = 72 * 60 * 60 * 1000
 
-export const campaignIdOf = (template: string, startMs: number) => `${template}.${startMs}`
+export const campaignIdOf = (template: string, startMs: number, sendId?: string | null) =>
+  sendId ? `${template}.${startMs}.${sendId}` : `${template}.${startMs}`
 
-export function parseCampaignId(id: string): { template: string; startMs: number } | null {
-  const m = /^([a-z0-9_]{1,512})\.(\d{10,14})$/.exec(id)
-  return m ? { template: m[1], startMs: Number(m[2]) } : null
+/** sendId: el envío registrado (uno por segmento); sin él, la campaña se arma por cercanía en el tiempo. */
+export function parseCampaignId(id: string): { template: string; startMs: number; sendId: string | null } | null {
+  const m = /^([a-z0-9_]{1,512})\.(\d{10,14})(?:\.([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))?$/.exec(id)
+  return m ? { template: m[1], startMs: Number(m[2]), sendId: m[3] ?? null } : null
+}
+
+/**
+ * Nombre de un envío a partir de los segmentos de los contactos elegidos:
+ * «Ferreterías», «Ferreterías y Pintores» o «Ferreterías, Pintores y 2 más».
+ */
+export function campaignLabelFor(segments: (string | null | undefined)[]): string {
+  const counts = new Map<string, number>()
+  for (const s of segments) {
+    const name = (s ?? '').trim() || 'Sin segmento'
+    counts.set(name, (counts.get(name) ?? 0) + 1)
+  }
+  const names = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'es')).map(([n]) => n)
+  if (names.length <= 1) return names[0] ?? 'Sin segmento'
+  if (names.length === 2) return `${names[0]} y ${names[1]}`
+  return `${names[0]}, ${names[1]} y ${names.length - 2} más`
 }
 
 // ── Resultados por persona ───────────────────────────────────────────────────

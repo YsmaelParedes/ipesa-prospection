@@ -88,9 +88,14 @@ export async function reserveTemplateSend(ctx: Pick<StoreContext, 'storeId' | 'u
 }
 
 /** La reserva ya queda en el historial incluso si Meta o la actualización final fallan. */
-export async function finishTemplateSend(id: string, storeId: string, result: WhatsAppSendResult, contactId: string | null = null) {
+export async function finishTemplateSend(
+  id: string, storeId: string, result: WhatsAppSendResult, contactId: string | null = null,
+  /** Envío de campaña al que pertenece (un segmento): así se ve aparte en el historial. */
+  campaign: { id: string; label: string | null } | null = null,
+) {
   const supabase = getServerSupabase()
   const { error } = await supabase.from('whatsapp_messages').update({
+    ...(campaign ? { campaign_id: campaign.id, campaign_label: campaign.label } : {}),
     wa_message_id: result.messageId ?? null, status: result.ok ? 'sent' : result.code ? 'failed' : 'pending',
     error_message: result.ok ? null : result.error,
     error_code: result.ok ? null : result.code ?? null,

@@ -31,8 +31,10 @@ export function useCampaignSend() {
   const askConfirm = () => setPhase('confirm')
   const backToForm = () => setPhase('idle')
 
-  const run = async (targets: CampaignTarget[], selection: WhatsAppTemplateSelection) => {
+  /** label: a quién va (p. ej. el segmento); todos los lotes comparten un id para verse como un solo envío. */
+  const run = async (targets: CampaignTarget[], selection: WhatsAppTemplateSelection, label?: string) => {
     cancelRef.current = false
+    const campaignId = crypto.randomUUID()
     setPhase('sending'); setTotal(targets.length); setDone(0); setOutcomes([]); setStopReason('')
     const out: CampaignOutcome[] = []
     const nameOf = new Map(targets.map(t => [t.id, t.name]))
@@ -53,6 +55,7 @@ export function useCampaignSend() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             recipients: batch.map(t => ({ contactId: t.id })),
+            campaignId, campaignLabel: label,
             template: selection.templateName, language: selection.language, category: selection.category,
             headerImageUrl: selection.savedImageUrl || undefined, personalize: selection.personalize,
             bodyPreview: selection.bodyPreview, bodyParams: selection.bodyParams,

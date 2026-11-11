@@ -44,6 +44,8 @@ type Shared = {
   templateName: string; languageCode: string; headerImageUrl: string | null
   bodyText: string; varCount: number; fixed: string[]; personalize: boolean
   marketing: boolean; limit: number | null
+  /** Envío de campaña (uno por segmento) y su nombre; null desde el chat. */
+  campaign: { id: string; label: string | null } | null
 }
 
 type Outcome = {
@@ -101,7 +103,7 @@ async function sendOne(ctx: StoreContext, creds: WhatsAppCreds, shared: Shared, 
   })
   if (!reserved.ok) return { contactId, ok: false, skipped: reserved.skipped, error: reserved.error, status: reserved.status }
   const result = await sendWhatsAppTemplate(creds, toWhatsAppNumber(phone), shared.templateName, shared.languageCode, components)
-  await finishTemplateSend(reserved.id, ctx.storeId, result, contact?.id ?? null)
+  await finishTemplateSend(reserved.id, ctx.storeId, result, contact?.id ?? null, shared.campaign)
 
   return result.ok
     ? { contactId, ok: true, messageId: result.messageId, held: result.messageStatus === 'held_for_quality_assessment' }
@@ -122,7 +124,7 @@ function stopReasonOf(o: Outcome): string | null {
  *               personalize?, bodyParams?: string[] }
  *  · Un destinatario (chat): { contactId | phone, force? } →
  *    { ok: true, held? } · { ok: false, error } · { ok: false, skipped: true, error }
- *  · Campaña: { recipients: [{ contactId }] } (hasta CAMPAIGN_BATCH_SIZE) →
+ *  · Campaña: { recipients: [{ contactId }], campaignId?, campaignLabel? } (hasta CAMPAIGN_BATCH_SIZE) →
  *    { results: Outcome[], stop?: string }. Se envía con poca concurrencia,
  *    muy por debajo de los 80 mensajes/s de Meta.
  * A un número que Meta reportó sin WhatsApp no se le envía; `force` (solo con
@@ -135,7 +137,7 @@ export async function POST(req: NextRequest) {
 
   const body = await readJson(req)
   if (!body) return jsonError('Cuerpo de solicitud inválido')
-  const { contactId, template, language, category, headerImageUrl, personalize, bodyPreview, bodyParams, force, recipients } = body
+  const { contactId, template, language, category, headerImageUrl, personalize, bodyPreview, bodyParams, force, recipients, campaignId, campaignLabel } = body
 
   const templateName = typeof template === 'string' ? template.trim() : ''
   if (!/^[a-z0-9_]{1,512}$/.test(templateName)) return jsonError('template es requerido')
@@ -179,6 +181,10 @@ export async function POST(req: NextRequest) {
       // La espera de 24 h tras un 131049 es para marketing; si no se sabe la categoría, se aplica.
       marketing: category !== 'UTILITY' && category !== 'AUTHENTICATION',
       limit,
+      // Todos los lotes de un mismo envío llegan con el mismo campaignId
+      campaign: batch && isUUID(campaignId)
+        ? { id: campaignId, label: typeof campaignLabel === 'string' && campaignLabel.trim() ? campaignLabel.trim().slice(0, 120) : null }
+        : null,
     }
 
     if (!batch) {

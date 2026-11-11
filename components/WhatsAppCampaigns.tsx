@@ -17,7 +17,7 @@ import { useCampaignSend, CampaignConfirmPanel, CampaignProgressPanel, CampaignR
 import { WaIcon } from '@/components/WhatsAppUI'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
 import { MARKETING_RETRY_HOURS, tierLabel } from '@/lib/whatsappSafety'
-import { PERSON_STATES, PERSON_STATE_ORDER, type PersonState } from '@/lib/campaignKinds'
+import { PERSON_STATES, PERSON_STATE_ORDER, campaignLabelFor, type PersonState } from '@/lib/campaignKinds'
 
 type Contact = { id: string; name: string; phone: string; segment?: string | null; wa_opt_out?: boolean; line_type?: string | null }
 
@@ -207,7 +207,8 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
 
   const handleConfirmed = async () => {
     if (!selection) return
-    await run(selectedContacts.map(c => ({ id: c.id, name: c.name, phone: c.phone })), selection)
+    await run(selectedContacts.map(c => ({ id: c.id, name: c.name, phone: c.phone })), selection,
+      retry ? `Reintento · ${retry.label}` : campaignLabelFor(selectedContacts.map(c => c.segment)))
     setRetry(null)
     refetchQuota()
     apiFetch('/api/whatsapp/campaigns/stats').then(r => r.json()).then(d => { if (d.marketingHold) setStats(d) }).catch(() => {})

@@ -154,6 +154,7 @@ export function WhatsAppCampaignResults({ onRetry, onOpenChat }: {
                 <div className="wa-camp-top">
                   <div style={{ minWidth: 0 }}>
                     <div className="wa-camp-name">{tplName(c.template)}</div>
+                    {c.label && <div className="wa-camp-label">{c.label}</div>}
                     <div className="wa-camp-sub">{when(c.startedAt)} · {c.total === 1 ? 'envío individual' : plural(c.total, 'destinatario', 'destinatarios')}</div>
                   </div>
                   <span className={`wa-camp-tag ${c.failed ? 'bad' : c.pending ? 'warn' : 'ok'}`}>
@@ -275,6 +276,7 @@ function CampaignDetailView({ id, onBack, onRetry, onOpenChat }: {
       <div className="wa-results-head">
         <div>
           <div className="wa-results-title" style={{ textTransform: 'capitalize' }}>{tplName(data.template)}</div>
+          {data.label && <div className="wa-camp-label">{data.label}</div>}
           <div className="wa-results-sub">
             {when(data.startedAt)} · {data.total === 1 ? 'envío individual' : `${plural(data.total, 'destinatario', 'destinatarios')} · duró ${duration(data.startedAt, data.endedAt)}`}
           </div>

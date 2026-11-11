@@ -1,8 +1,10 @@
 /**
  * Historial de campañas de WhatsApp, armado a partir de los mensajes de
  * plantilla que ya guarda la app (whatsapp_messages): no hay tabla de
- * campañas. Un envío = los mensajes de una misma plantilla separados por
- * menos de BATCH_GAP_MS (una campaña se envía en pocos minutos). Solo servidor.
+ * campañas. Cada envío (un segmento, por ejemplo) guarda su campaign_id y su
+ * nombre: así dos segmentos con la misma plantilla salen por separado. Los
+ * mensajes de antes de eso se agrupan como antes: misma plantilla y menos de
+ * BATCH_GAP_MS entre uno y otro. Solo servidor.
  */
 import { fetchPaged } from './paged'
 import { getServerSupabase } from './supabase-server'
@@ -22,11 +24,14 @@ export type OutboundRow = {
   error_message: string | null
   created_at: string
   updated_at: string
+  campaign_id?: string | null
+  campaign_label?: string | null
 }
 
 export type Batch = {
   id: string
   template: string
+  label: string | null
   startMs: number
   endMs: number
   /** Un mensaje por número (el último intento). */
@@ -35,7 +40,7 @@ export type Batch = {
   attempts: Map<string, number>
 }
 
-const OUTBOUND_FIELDS = 'id, phone, contact_id, template_name, status, error_message, created_at, updated_at'
+const OUTBOUND_FIELDS = 'id, phone, contact_id, template_name, status, error_message, created_at, updated_at, campaign_id, campaign_label'
 
 // ── Clasificación ────────────────────────────────────────────────────────────
 
@@ -93,7 +98,23 @@ export function bucketOf(status: string): CampaignBucket {
  * inmediato) se conserva el último intento.
  */
 export function groupIntoBatches(rows: OutboundRow[], gapMs = BATCH_GAP_MS): Batch[] {
-  const sorted = rows
+  // Envíos registrados: uno por campaign_id, sin importar cuánto duró
+  const bySend = new Map<string, OutboundRow[]>()
+  const loose: OutboundRow[] = []
+  for (const row of rows) {
+    if (row.campaign_id) bySend.set(row.campaign_id, [...(bySend.get(row.campaign_id) ?? []), row])
+    else loose.push(row)
+  }
+  const registered = [...bySend].map(([sendId, list]) => {
+    const timed = list.map(row => ({ row, t: Date.parse(row.created_at) })).filter(x => Number.isFinite(x.t))
+      .sort((a, b) => a.t - b.t || (a.row.id < b.row.id ? -1 : 1))
+    return timed.length ? {
+      sendId, template: timed[0].row.template_name, label: timed.find(x => x.row.campaign_label)?.row.campaign_label ?? null,
+      startMs: timed[0].t, endMs: timed[timed.length - 1].t, rows: timed.map(x => x.row),
+    } : null
+  }).filter(x => x !== null)
+
+  const sorted = loose
     .map(row => ({ row, t: Date.parse(row.created_at) }))
     .filter(x => Number.isFinite(x.t))
     .sort((a, b) =>
@@ -101,16 +122,17 @@ export function groupIntoBatches(rows: OutboundRow[], gapMs = BATCH_GAP_MS): Bat
       || a.t - b.t
       || (a.row.id < b.row.id ? -1 : 1))
 
-  const groups: { template: string; startMs: number; endMs: number; rows: OutboundRow[] }[] = []
+  const groups: { sendId: string | null; template: string; label: string | null; startMs: number; endMs: number; rows: OutboundRow[] }[] = []
   for (const { row, t } of sorted) {
     const last = groups[groups.length - 1]
     if (last && last.template === row.template_name && t - last.endMs <= gapMs) {
       last.rows.push(row)
       last.endMs = t
     } else {
-      groups.push({ template: row.template_name, startMs: t, endMs: t, rows: [row] })
+      groups.push({ sendId: null, template: row.template_name, label: null, startMs: t, endMs: t, rows: [row] })
     }
   }
+  groups.push(...registered)
 
   return groups.map(g => {
     const latestByPhone = new Map<string, OutboundRow>()
@@ -119,7 +141,7 @@ export function groupIntoBatches(rows: OutboundRow[], gapMs = BATCH_GAP_MS): Bat
       latestByPhone.set(r.phone, r)
       attempts.set(r.phone, (attempts.get(r.phone) ?? 0) + 1)
     }
-    return { id: campaignIdOf(g.template, g.startMs), template: g.template, startMs: g.startMs, endMs: g.endMs, rows: [...latestByPhone.values()], attempts }
+    return { id: campaignIdOf(g.template, g.startMs, g.sendId), template: g.template, label: g.label, startMs: g.startMs, endMs: g.endMs, rows: [...latestByPhone.values()], attempts }
   })
 }
 
@@ -162,6 +184,7 @@ export function summarizeBatch(batch: Batch, replied: ReadonlySet<string>): Camp
   return {
     id: batch.id,
     template: batch.template,
+    label: batch.label,
     startedAt: new Date(batch.startMs).toISOString(),
     endedAt: new Date(batch.endMs).toISOString(),
     total: batch.rows.length,
@@ -223,8 +246,10 @@ export async function loadCampaignDetail(storeId: string, id: string): Promise<C
       .gte('created_at', startIso)
       .order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, to), 10000)
 
-  const [batch, ...later] = groupIntoBatches(rows)
-  if (!batch || batch.startMs !== parsed.startMs) return null
+  const batches = groupIntoBatches(rows)
+  const batch = batches.find(b => b.id === id)
+  if (!batch) return null
+  const later = batches.filter(b => b !== batch && b.startMs > batch.startMs)
 
   // Envíos posteriores de la misma plantilla (p. ej. un reintento)
   const receivedLater = new Set(later.flatMap(b => b.rows.filter(r => r.status !== 'failed').map(r => r.phone)))
