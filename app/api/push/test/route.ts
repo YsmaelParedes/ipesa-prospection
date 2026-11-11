@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   }
 
   const result = await sendPushToSubscriptions(subs, {
-    title: `🔔 ${APP_NAME} — Prueba exitosa`,
+    title: `${APP_NAME} — Prueba exitosa`,
     body:  'Así te llegarán los avisos de tu agenda y de tus clientes en este dispositivo.',
     url:   '/recordatorios',
     tag:   'crm-test',

@@ -6,7 +6,7 @@ import s from './inicio.module.css'
  * "Producto" y "Para tu tienda" abren un panel con sus páginas agrupadas por
  * categoría (ícono, nombre y una línea de qué es). El pie usa los mismos grupos.
  */
-export type MenuItem = { href: string; label: string; desc: string; icon: (p: React.SVGProps<SVGSVGElement>) => React.ReactElement; tone: string }
+export type MenuItem = { href: string; label: string; desc: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; tone: string }
 export type MenuGroup = { title: string; items: MenuItem[] }
 export type NavEntry =
   | { label: string; href: string }

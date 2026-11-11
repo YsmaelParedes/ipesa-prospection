@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { CircleHelp } from 'lucide-react'
 
 /**
  * «¿Cómo funciona?»: el botón y cuándo se muestra la guía de una sección. Sale
@@ -32,9 +33,7 @@ export function useGuide(key: string, ready: boolean) {
 export function GuideButton({ onClick }: { onClick: () => void }) {
   return (
     <button type="button" className="guide-how" onClick={onClick} aria-label="¿Cómo funciona?">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01" />
-      </svg>
+      <CircleHelp aria-hidden="true" />
       <span className="guide-how-text">¿Cómo funciona?</span>
     </button>
   )

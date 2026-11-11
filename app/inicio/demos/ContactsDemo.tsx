@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { initials, norm } from './shared'
 import s from './demos.module.css'
+import { Search } from 'lucide-react'
 
 /**
  * Demo de Contactos: busca sin acentos (o por teléfono), filtra por tipo de
@@ -41,7 +42,7 @@ export function ContactsDemo() {
   return (
     <div data-demo="contacts">
       <label className={s.search}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <Search aria-hidden="true" />
         <input value={q} onChange={e => { setQ(e.target.value); setOpen(null) }} placeholder="Busca «jose», «ferre» o un teléfono" aria-label="Buscar contacto de ejemplo" data-demo-search />
       </label>
       <div className={s.chips} style={{ marginBottom: 12 }}>

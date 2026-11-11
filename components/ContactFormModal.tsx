@@ -12,8 +12,9 @@ import { findContactWithPhone, type IndexContact } from '@/lib/searchIndex'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
 import { segmentColor } from '@/components/CrmUI'
 import { Select, toOptions } from '@/components/Select'
+import { X } from 'lucide-react'
 
-const CloseIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 17, height: 17 }}><path d="M18 6 6 18M6 6l12 12" /></svg>
+const CloseIcon = () => <X size={17} />
 
 /** Solo dígitos, sin el 52 del país, máximo 10. */
 export function phoneDigits(raw: string): string {

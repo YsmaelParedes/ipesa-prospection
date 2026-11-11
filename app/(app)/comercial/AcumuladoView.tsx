@@ -9,6 +9,7 @@ import { downloadSummaryWorkbook } from '@/lib/exportData'
 import { Ico, fmtDay, initials, money, pct } from './ui'
 import { AmountDetail, type AmountKind } from './AmountDetail'
 import s from './comercial.module.css'
+import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp } from 'lucide-react'
 
 type Person = {
   user_id: string; name: string; custom: boolean
@@ -54,7 +55,7 @@ function Delta({ now, before, isMoney }: { now: number; before: number; isMoney?
   const size = before > 0 ? `${Math.round(Math.abs(diff) / before * 100)} %` : isMoney ? money(Math.abs(diff)) : Math.abs(diff).toLocaleString('es-MX')
   return (
     <span className={`${s.delta} ${diff > 0 ? s.up : s.down}`} title={`Antes: ${was}`}>
-      {diff > 0 ? '▲' : '▼'} {size}
+      {diff > 0 ? <TrendingUp className="i-inline" strokeWidth={2.6} /> : <TrendingDown className="i-inline" strokeWidth={2.6} />} {size}
     </span>
   )
 }
@@ -106,10 +107,10 @@ export function AcumuladoView({ onOpen }: { onOpen: (contactId: string) => void 
       </div>
       <div className={s.periodNav}>
         <button className={`${s.navBtn} ${s.press}`} onClick={() => setOffset(o => o + 1)}
-          aria-label={PREV_LABEL[period]}>‹</button>
+          aria-label={PREV_LABEL[period]}><ChevronLeft size={18} strokeWidth={2.4} /></button>
         <span className={s.periodLabel}>{data ? periodLabel(data) : '…'}</span>
         <button className={`${s.navBtn} ${s.press}`} disabled={offset === 0} onClick={() => setOffset(o => Math.max(0, o - 1))}
-          aria-label={NEXT_LABEL[period]}>›</button>
+          aria-label={NEXT_LABEL[period]}><ChevronRight size={18} strokeWidth={2.4} /></button>
       </div>
       {offset > 0 && <button className={`${s.ghostBtn} ${s.press}`} onClick={() => setOffset(0)}>Volver a hoy</button>}
     </div>

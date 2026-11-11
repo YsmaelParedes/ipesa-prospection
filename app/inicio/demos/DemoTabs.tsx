@@ -6,32 +6,32 @@ import { CallDemo } from './CallDemo'
 import { ContactsDemo } from './ContactsDemo'
 import { TeamDemo } from './TeamDemo'
 import s from './demos.module.css'
+import { ChartColumn, Phone, Users } from 'lucide-react'
 
 /** Las demos del sitio. En la portada van en pestañas; cada página de producto muestra la suya. */
 export type DemoKey = 'call' | 'contacts' | 'team'
 
-const icon = (d: React.ReactNode) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>
 
 const DEMOS: Record<DemoKey, {
   tab: string; icon: React.ReactNode; title: string; text: string; steps: string[]; tryIt: string; href: string; more: string
   Demo: () => React.ReactElement
 }> = {
   call: {
-    tab: 'Registrar una llamada', icon: icon(<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />),
+    tab: 'Registrar una llamada', icon: <Phone aria-hidden="true" />,
     title: 'Registrar una llamada', text: 'Así trabaja un vendedor en la pantalla Hoy del Sistema Comercial.',
     steps: ['Toca a un cliente de tu lista.', 'Elige cómo te fue.', 'Acepta la fecha que te sugerimos y guarda.'],
     tryIt: 'Pruébalo: registra una «Cotización» y mira cómo avanza tu meta.', href: '/inicio/sistema-comercial', more: 'Conoce el Sistema Comercial',
     Demo: CallDemo,
   },
   contacts: {
-    tab: 'Contactos', icon: icon(<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>),
+    tab: 'Contactos', icon: <Users aria-hidden="true" />,
     title: 'Contactos', text: 'Encuentra a cualquier cliente aunque escribas sin acentos, y sabe si tiene WhatsApp o hay que llamarle.',
     steps: ['Escribe «jose» o «ferre».', 'Filtra por WhatsApp, fijo o sin teléfono.', 'Toca un contacto para ver su ficha.'],
     tryIt: 'Pruébalo: escribe «jose» y encuentra a José.', href: '/inicio/contactos', more: 'Conoce Contactos',
     Demo: ContactsDemo,
   },
   team: {
-    tab: 'Equipo y metas', icon: icon(<><path d="M3 3v18h18" /><path d="M7 16v-4M12 16V8M17 16v-7" /></>),
+    tab: 'Equipo y metas', icon: <ChartColumn aria-hidden="true" />,
     title: 'Equipo y metas', text: 'El administrador ve a cada vendedor contra su meta del día.',
     steps: ['Registra una venta de un vendedor.', 'Cambia la meta diaria.', 'Mira cómo se mueven las barras.'],
     tryIt: 'Pruébalo: baja la meta a 20 y ve quién la cumple.', href: '/inicio/sistema-comercial#equipo', more: 'Conoce Equipo',

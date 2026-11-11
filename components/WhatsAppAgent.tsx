@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { apiFetch } from '@/lib/apiClient'
 import { fmtPhone } from '@/lib/phone'
 import { WaIcon } from '@/components/WhatsAppUI'
+import { BookOpen, ClipboardList, FlaskConical, Settings, Sparkles, Store, X, type LucideIcon } from 'lucide-react'
 import type { AgentAudience, AgentSettings, HandoffSelection } from '@/lib/metaAgent'
 import type { TestNumber } from '@/lib/agentTestNumbers'
 import type { BusinessInfo, Faq, KnowledgeFile, Skill, Website } from '@/lib/agentKnowledge'
@@ -73,16 +74,16 @@ export function WhatsAppAgent() {
           <AgentStatus settings={settings} testCount={data.testNumbers.length} onChange={setSettings} toast={showToast} />
           <nav className="ag-nav-group" aria-label="Opciones del agente">
             <div className="ag-nav-label">Lo que sabe tu IA</div>
-            <NavItem active={section === 'tienda'} onClick={() => setSection('tienda')} icon="🏪"
+            <NavItem active={section === 'tienda'} onClick={() => setSection('tienda')} icon={Store}
               title="Información de tu tienda" text="Qué vendes, horario, pagos, envíos" />
-            <NavItem active={section === 'conocimientos'} onClick={() => setSection('conocimientos')} icon="📚"
+            <NavItem active={section === 'conocimientos'} onClick={() => setSection('conocimientos')} icon={BookOpen}
               title="Conocimientos" text="Preguntas frecuentes, archivos y tu página web" badge={knowledgeCount ? String(knowledgeCount) : undefined} />
             <div className="ag-nav-label">Qué hace y cómo responde</div>
-            <NavItem active={section === 'reglas'} onClick={() => setSection('reglas')} icon="📋"
+            <NavItem active={section === 'reglas'} onClick={() => setSection('reglas')} icon={ClipboardList}
               title="Reglas" text="Cómo contestar en cada situación" badge={data.skills.length ? String(data.skills.length) : undefined} />
-            <NavItem active={section === 'ajustes'} onClick={() => setSection('ajustes')} icon="⚙️"
+            <NavItem active={section === 'ajustes'} onClick={() => setSection('ajustes')} icon={Settings}
               title="Ajustes de respuestas" text="A quién contesta y cuándo pasa el chat al equipo" />
-            <NavItem active={section === 'prueba'} onClick={() => setSection('prueba')} icon="🧪"
+            <NavItem active={section === 'prueba'} onClick={() => setSection('prueba')} icon={FlaskConical}
               title="Números de prueba" text="Quién habla con la IA mientras pruebas" badge={`${data.testNumbers.length}/20`} />
           </nav>
         </aside>
@@ -106,12 +107,12 @@ export function WhatsAppAgent() {
   )
 }
 
-function NavItem({ active, onClick, icon, title, text, badge }: {
-  active: boolean; onClick: () => void; icon: string; title: string; text: string; badge?: string
+function NavItem({ active, onClick, icon: Icon, title, text, badge }: {
+  active: boolean; onClick: () => void; icon: LucideIcon; title: string; text: string; badge?: string
 }) {
   return (
     <button className={`ag-nav-item ${active ? 'active' : ''}`} onClick={onClick} aria-current={active}>
-      <span className="ag-nav-ico" aria-hidden="true">{icon}</span>
+      <span className="ag-nav-ico" aria-hidden="true"><Icon size={16} /></span>
       <span className="ag-nav-text"><strong>{title}</strong><small>{text}</small></span>
       {badge && <span className="ag-nav-badge">{badge}</span>}
     </button>
@@ -292,7 +293,7 @@ function AgentSettingsForm({ settings, onSaved, toast }: {
           <div className="ag-chips">
             {neverSay.map(p => (
               <span key={p} className="ag-chip">{p}
-                <button aria-label={`Quitar «${p}»`} onClick={() => setNeverSay(neverSay.filter(x => x !== p))}>×</button>
+                <button aria-label={`Quitar «${p}»`} onClick={() => setNeverSay(neverSay.filter(x => x !== p))}><X size={13} /></button>
               </span>
             ))}
           </div>
@@ -390,7 +391,7 @@ function AgentActivate({ notEligible, onActivated }: { notEligible: boolean; onA
   return (
     <div className="wa-scroll">
       <div className="wa-card ag-empty">
-        <div className="ag-empty-ico" aria-hidden="true">✨</div>
+        <div className="ag-empty-ico" aria-hidden="true"><Sparkles size={30} style={{ color: 'var(--brand)' }} /></div>
         <h2 className="ag-title">Agente de IA de WhatsApp</h2>
         {notEligible ? (
           <p className="ag-lead">Meta indica que el número de tu tienda todavía no puede usar el agente de IA. Algunos giros no califican o el número ya usa otro asistente.</p>

@@ -8,12 +8,12 @@ export const REMINDER_PRIORITIES = ['low', 'medium', 'high'] as const
 export type ReminderType = typeof REMINDER_TYPES[number]
 export type ReminderPriority = typeof REMINDER_PRIORITIES[number]
 
-export const REMINDER_TYPE_INFO: Record<ReminderType, { label: string; emoji: string; color: string; bg: string }> = {
-  task:     { label: 'Tarea',    emoji: '📋', color: 'var(--c-purple-ink)',  bg: 'var(--c-purple-soft)' },
-  call:     { label: 'Llamada',  emoji: '📞', color: 'var(--c-cyan-ink)',    bg: 'var(--c-cyan-soft)' },
-  email:    { label: 'Correo',   emoji: '📧', color: 'var(--c-magenta-ink)', bg: 'var(--c-magenta-soft)' },
-  whatsapp: { label: 'WhatsApp', emoji: '💬', color: '#128C4A',              bg: '#E3F7EA' },
-  meeting:  { label: 'Reunión',  emoji: '🤝', color: 'var(--warning)',       bg: 'var(--warning-soft)' },
+export const REMINDER_TYPE_INFO: Record<ReminderType, { label: string; color: string; bg: string }> = {
+  task:     { label: 'Tarea',    color: 'var(--c-purple-ink)',  bg: 'var(--c-purple-soft)' },
+  call:     { label: 'Llamada',  color: 'var(--c-cyan-ink)',    bg: 'var(--c-cyan-soft)' },
+  email:    { label: 'Correo',   color: 'var(--c-magenta-ink)', bg: 'var(--c-magenta-soft)' },
+  whatsapp: { label: 'WhatsApp', color: '#128C4A',              bg: '#E3F7EA' },
+  meeting:  { label: 'Reunión',  color: 'var(--warning)',       bg: 'var(--warning-soft)' },
 }
 export const remTypeInfo = (key?: string | null) => REMINDER_TYPE_INFO[key as ReminderType] ?? REMINDER_TYPE_INFO.task
 

@@ -6,6 +6,7 @@ import { useQueryEffect } from '@/lib/useCachedQuery'
 import { useCallback, useState } from 'react'
 import { Card, Ico, Note, Spinner, api, cx, send, useToast } from './ui'
 import s from './configuracion.module.css'
+import { X } from 'lucide-react'
 
 type ConfigItem = { id: string; type: string; label: string; created_at: string }
 
@@ -144,7 +145,7 @@ export function CatalogsTab({ canEdit }: { canEdit: boolean }) {
                         <span>{item.label}</span>
                         {canEdit && (
                           <button type="button" className={s.catX} onClick={() => setConfirmDel(item.id)} aria-label={`Eliminar ${item.label}`} title="Eliminar">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                            <X strokeWidth={2.4} aria-hidden="true" />
                           </button>
                         )}
                       </>

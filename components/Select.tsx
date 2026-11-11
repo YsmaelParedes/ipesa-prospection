@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Check as CheckIcon, ChevronDown, Search } from 'lucide-react'
 
 /**
  * Desplegable propio de la app (reemplaza al <select> nativo, cuya lista la
@@ -51,15 +52,9 @@ const GAP = 6
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 
-const Chevron = () => (
-  <svg className="sel-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-)
-const Check = () => (
-  <svg className="sel-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7" /></svg>
-)
-const SearchIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
-)
+const Chevron = () => <ChevronDown className="sel-chevron" strokeWidth={2.3} aria-hidden="true" />
+const Check = () => <CheckIcon className="sel-check" strokeWidth={2.8} aria-hidden="true" />
+const SearchIcon = () => <Search strokeWidth={2.2} aria-hidden="true" />
 
 export function Select({
   value, onChange, options, placeholder = 'Selecciona', id, className, disabled, required,

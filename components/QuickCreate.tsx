@@ -8,19 +8,17 @@ import {
   notifyDataChanged, openQuickCreate, useQuickCreateRequests,
   type DataKind, type QuickCreateRequest,
 } from '@/lib/crmEvents'
+import { Check, ChevronDown, Clock, Plus, UserPlus } from 'lucide-react'
 
-const svg = (d: React.ReactNode) => function Icon() {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>
-}
 const Ico = {
-  plus:     svg(<path d="M12 5v14M5 12h14" />),
-  chevron:  svg(<path d="m6 9 6 6 6-6" />),
-  contact:  svg(<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" /></>),
-  reminder: svg(<><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></>),
-  check:    svg(<path d="m5 13 4 4L19 7" />),
+  plus:     () => <Plus aria-hidden="true" />,
+  chevron:  () => <ChevronDown aria-hidden="true" />,
+  contact:  () => <UserPlus aria-hidden="true" />,
+  reminder: () => <Clock aria-hidden="true" />,
+  check:    () => <Check aria-hidden="true" />,
 }
 
-const ITEMS: { kind: QuickCreateRequest['kind']; label: string; hint: string; icon: () => React.ReactElement; tone: string }[] = [
+const ITEMS: { kind: QuickCreateRequest['kind']; label: string; hint: string; icon: React.ComponentType; tone: string }[] = [
   { kind: 'contact',  label: 'Contacto',     hint: 'Un cliente nuevo en tu base',  icon: Ico.contact,  tone: 'cyan' },
   { kind: 'reminder', label: 'Recordatorio', hint: 'Una llamada, visita o tarea',  icon: Ico.reminder, tone: 'amber' },
 ]

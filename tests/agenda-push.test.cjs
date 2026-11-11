@@ -13,14 +13,14 @@ test('resumen de la mañana: primero por hora y los seguimientos comerciales al 
     ],
     overdue: 2, recent: 1,
   })
-  assert.equal(p.title, '📋 Hoy tienes 4 pendientes')
+  assert.equal(p.title, 'Hoy tienes 4 pendientes')
   assert.equal(p.body, '9:00 Visita\n10:30 Llamar a Ana\nVolver a llamar: Ferretería X\ny 1 más · 2 vencidos')
   assert.equal(p.url, '/recordatorios')
 })
 
 test('sin nada para hoy, avisa los vencidos', () => {
   const p = agendaPayload({ today: [], overdue: 1, recent: 1 })
-  assert.equal(p.title, '⚠️ Tienes 1 pendiente vencido')
+  assert.equal(p.title, 'Tienes 1 pendiente vencido')
 })
 
 /* ── Avisos a la hora ─────────────────────────────────────────────────── */
@@ -33,7 +33,7 @@ const rem = (over = {}) => ({
 
 test('aviso a la hora: con cliente, la acción va en el título y la nota en el cuerpo', () => {
   const p = reminderPayload(rem({ lead_name: 'Juan Pérez', nota: 'Confirmar cotización' }))
-  assert.equal(p.title, '📞 Llamar a Juan Pérez')
+  assert.equal(p.title, 'Llamar a Juan Pérez')
   assert.equal(p.body, 'Confirmar cotización')
   assert.equal(p.tag, 'rem-r1')
   assert.equal(p.url, '/recordatorios')
@@ -42,7 +42,7 @@ test('aviso a la hora: con cliente, la acción va en el título y la nota en el 
 
 test('aviso a la hora: sin cliente, la nota es el título', () => {
   const p = reminderPayload(rem({ nota: 'Pedir pintura al proveedor', type: 'task' }))
-  assert.equal(p.title, '⏰ Pedir pintura al proveedor')
+  assert.equal(p.title, 'Pedir pintura al proveedor')
   assert.equal(p.body, 'Recordatorio de las 10:30')
 })
 

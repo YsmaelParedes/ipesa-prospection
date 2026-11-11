@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useToast } from './shared'
 import s from './demos.module.css'
+import { PartyPopper } from 'lucide-react'
 
 /**
  * Demo de Equipo: cada vendedor contra su meta del día. Registras ventas o
@@ -44,7 +45,7 @@ export function TeamDemo() {
             <div key={m.name}>
               <div className={s.who}>
                 <span>{m.name} <small>· {m.calls} llamadas · {m.sales} {m.sales === 1 ? 'venta' : 'ventas'}</small></span>
-                <span>{pct} %{pct >= 100 ? ' 🎉' : ''}</span>
+                <span className="with-icon">{pct} %{pct >= 100 && <PartyPopper size={13} style={{ color: 'var(--brand)' }} aria-hidden="true" />}</span>
               </div>
               <span className={s.track} aria-hidden="true" style={{ display: 'block' }}><b style={{ width: `${pct}%` }} /></span>
             </div>

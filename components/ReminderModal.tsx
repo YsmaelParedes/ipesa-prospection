@@ -12,8 +12,10 @@ import {
 import type { ReminderDefaults } from '@/lib/crmEvents'
 import { QUICK_WHEN, localNow, quickDate, toDbLocal, type QuickWhen } from '@/lib/datetime'
 import { findContacts, type IndexContact } from '@/lib/searchIndex'
+import { REMINDER_TYPE_ICONS } from '@/components/icons'
+import { X } from 'lucide-react'
 
-const CloseIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 17, height: 17 }}><path d="M18 6 6 18M6 6l12 12" /></svg>
+const CloseIcon = () => <X size={17} />
 
 /**
  * Formulario único para crear o editar un recordatorio (Agenda, campana,
@@ -120,10 +122,11 @@ export default function ReminderModal({ reminder, defaults, onClose, onSaved }: 
             <div className="pill-group">
               {REMINDER_TYPES.map(t => {
                 const info = REMINDER_TYPE_INFO[t]
+                const TypeIcon = REMINDER_TYPE_ICONS[t]
                 return (
                   <button key={t} type="button" className={`choice-pill ${type === t ? 'active' : ''}`} onClick={() => setType(t)}
                     style={{ '--pill-color': info.color, '--pill-bg': info.bg } as React.CSSProperties}>
-                    <span aria-hidden="true">{info.emoji}</span> {info.label}
+                    <TypeIcon size={14} aria-hidden="true" /> {info.label}
                   </button>
                 )
               })}
@@ -150,12 +153,12 @@ export default function ReminderModal({ reminder, defaults, onClose, onSaved }: 
             {leadId ? (
               <div className="linked-chip">
                 <span>Cliente · <strong>{leadName}</strong></span>
-                <button type="button" onClick={() => { setLeadId(null); setLeadName('') }} aria-label="Quitar cliente">×</button>
+                <button type="button" onClick={() => { setLeadId(null); setLeadName('') }} aria-label="Quitar cliente"><X size={14} /></button>
               </div>
             ) : subject ? (
               <div className="linked-chip neutral">
                 <span>Cliente · <strong>{subject}</strong></span>
-                <button type="button" onClick={() => setSubject('')} aria-label="Quitar cliente">×</button>
+                <button type="button" onClick={() => setSubject('')} aria-label="Quitar cliente"><X size={14} /></button>
               </div>
             ) : (
               <div className="picker-search">

@@ -138,7 +138,7 @@ export function WhatsAppCampaignPeople({ onOpenChat }: { onOpenChat: (phone: str
           <label className="wa-search">
             <WaIcon.search />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar nombre o teléfono…" aria-label="Buscar persona" />
-            {search && <button onClick={() => setSearch('')} className="wa-clear" aria-label="Limpiar búsqueda">×</button>}
+            {search && <button onClick={() => setSearch('')} className="wa-clear" aria-label="Limpiar búsqueda"><WaIcon.close size={15} /></button>}
           </label>
         </div>
 
@@ -183,7 +183,7 @@ export function WhatsAppCampaignPeople({ onOpenChat }: { onOpenChat: (phone: str
       {visible.length > 0 && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingBottom: 8 }}>
           <button className="btn btn-ghost" onClick={exportList}>Exportar {filter === 'all' && !search ? 'lista' : `estos ${visible.length}`} (CSV)</button>
-          <button className="btn btn-ghost" onClick={copyPhones}>{copied ? 'Copiados ✓' : `Copiar ${visible.length === 1 ? 'el número' : `los ${visible.length} números`}`}</button>
+          <button className="btn btn-ghost" onClick={copyPhones}>{copied ? <span className="with-icon"><WaIcon.check size={14} /> Copiados</span> : `Copiar ${visible.length === 1 ? 'el número' : `los ${visible.length} números`}`}</button>
         </div>
       )}
     </>

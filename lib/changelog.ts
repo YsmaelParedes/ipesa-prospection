@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.48.0',
+    date: '10 de noviembre, 2026',
+    title: 'Iconos nuevos en toda la app',
+    items: [
+      'Los emojis de la app se cambiaron por iconos del mismo estilo que el menú: en Inicio, la Agenda, el Sistema Comercial, Contactos y Configuración.',
+      { text: 'En los chats de WhatsApp, las fotos, audios, documentos, ubicaciones y respuestas con botón ahora se marcan con un icono en lugar de un emoji.', module: 'whatsapp' },
+      'Los avisos en el celular ya no traen emojis en el título.',
+    ],
+  },
+  {
     version: '1.47.0',
     date: '10 de noviembre, 2026',
     title: 'Resultados de campañas por día',
@@ -556,7 +566,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     title: 'Envía archivos por WhatsApp',
     module: 'whatsapp',
     items: [
-      'En el chat de WhatsApp, el clip 📎 junto al cuadro de texto adjunta un archivo: fotos (JPG o PNG), PDF, Word, Excel, PowerPoint, texto o video MP4, de hasta 4 MB.',
+      'En el chat de WhatsApp, el clip junto al cuadro de texto adjunta un archivo: fotos (JPG o PNG), PDF, Word, Excel, PowerPoint, texto o video MP4, de hasta 4 MB.',
       'Puedes escribir un comentario que se envía junto con el archivo. Las fotos se ven en el chat y los documentos se abren con un clic.',
       'Como los mensajes normales, solo se puede enviar mientras la conversación está abierta (24 h desde el último mensaje del cliente).',
     ],
@@ -612,7 +622,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Importante: la app cambió de dirección. Vuelve a activar los avisos en cada celular y computadora con el botón "Activar" que aparece arriba, o en Configuración → Mi cuenta. En iPhone, borra el ícono viejo y agrega la app otra vez desde Safari.',
       'Los recordatorios ahora te avisan a la hora exacta, aunque la app esté cerrada (antes llegaban todos juntos a las 8:00).',
       'A las 8:00 te llega un solo aviso con tu agenda del día y los pendientes vencidos.',
-      'Cada aviso dice qué hacer y con quién, por ejemplo "📞 Llamar a Juan Pérez", y al tocarlo se abre la pantalla correcta aunque la app ya esté abierta.',
+      'Cada aviso dice qué hacer y con quién, por ejemplo "Llamar a Juan Pérez", y al tocarlo se abre la pantalla correcta aunque la app ya esté abierta.',
       'Al activar los avisos te llega una prueba al instante, y si el navegador los tiene bloqueados te decimos cómo permitirlos.',
     ],
   },

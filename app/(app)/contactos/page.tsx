@@ -24,24 +24,26 @@ import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/compon
 import { useWhatsAppCampaignQuota, CampaignQuotaNote, isOverQuota } from '@/components/WhatsAppCampaignQuota'
 import { useCampaignSend, CampaignConfirmPanel, CampaignProgressPanel, CampaignResultsPanel } from '@/components/WhatsAppCampaignSend'
 import { campaignLabelFor } from '@/lib/campaignKinds'
-import { StatusTicks, WindowBadge, fmtTime, mediaCaption } from '@/components/WhatsAppUI'
+import { MessageText, StatusTicks, WindowBadge, fmtTime, mediaCaption } from '@/components/WhatsAppUI'
+import { WhatsAppIcon } from '@/components/icons'
+import { X, Phone, Mail, Plus, Upload, Download, ChevronRight, Check, SquarePen, Trash2, Search, Send, TriangleAlert, UserRound } from 'lucide-react'
 
-/* ── Iconos ── */
+/* ── Iconos (Lucide + logo de WhatsApp) ── */
 const Ico = {
-  close:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 18, height: 18 }}><path d="M18 6 6 18M6 6l12 12"/></svg>,
-  phone:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.961.361 1.904.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.906.339 1.849.573 2.81.7a2 2 0 0 1 1.72 2.03Z"/></svg>,
-  mail:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>,
-  plus:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M12 5v14M5 12h14"/></svg>,
-  upload:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>,
-  download:() => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>,
-  chevron: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--muted-2)' }}><path d="m9 18 6-6-6-6"/></svg>,
-  check:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--warning-fill)' }}><path d="m5 13 4 4L19 7"/></svg>,
-  edit:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-  trash:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>,
-  xmark:   () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}><path d="M18 6 6 18M6 6l12 12"/></svg>,
-  search:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: 'var(--muted)' }}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>,
-  whatsapp: () => <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 14, height: 14 }}><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.8.9-1 1.1c-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.4-.9-.8-1.5-1.8-1.7-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.3-.7.3-1.2.2-1.4 0-.1-.3-.2-.6-.4Zm-5.5 7.5c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.5 4.4-9.9 9.9-9.9s9.9 4.4 9.9 9.9-4.5 9.9-10 9.9Zm8.4-18.3C18.2 1.5 15.2.3 12 .3 5.4.3.1 5.6.1 12.2c0 2.1.6 4.2 1.6 6L0 24l5.9-1.5c1.7 1 3.7 1.5 5.7 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4Z"/></svg>,
-  send:    () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg>,
+  close:    () => <X size={18} />,
+  phone:    () => <Phone size={14} />,
+  mail:     () => <Mail size={14} />,
+  plus:     () => <Plus size={14} strokeWidth={2.4} />,
+  upload:   () => <Upload size={14} />,
+  download: () => <Download size={14} />,
+  chevron:  () => <ChevronRight size={14} style={{ color: 'var(--muted-2)' }} />,
+  check:    () => <Check size={14} strokeWidth={2.4} style={{ color: 'var(--warning-fill)' }} />,
+  edit:     () => <SquarePen size={14} />,
+  trash:    () => <Trash2 size={14} />,
+  xmark:    () => <X size={13} strokeWidth={2.5} />,
+  search:   () => <Search size={16} style={{ color: 'var(--muted)' }} />,
+  whatsapp: () => <WhatsAppIcon size={14} />,
+  send:     () => <Send size={14} />,
 }
 
 const CAMPOS_DESTINO = ['name', 'phone', 'email', 'company', 'address', 'postal_code', 'segment', 'acquisition_channel']
@@ -299,7 +301,7 @@ function ContactosContent() {
           <Ico.search />
           <input placeholder="Buscar por nombre, teléfono, empresa…" value={search} onChange={e => setSearch(e.target.value)}
             onKeyDown={e => { if (e.key === 'Escape') setSearch('') }} />
-          {search && <button onClick={() => setSearch('')} aria-label="Limpiar búsqueda">×</button>}
+          {search && <button onClick={() => setSearch('')} aria-label="Limpiar búsqueda"><X size={15} /></button>}
         </label>
         <div className="filter-bar">
           {segmentOptions.length > 0 && (
@@ -707,7 +709,7 @@ function ContactWhatsApp({ contact: c, readonly, onUpdated }: { contact: any; re
             {data.messages.map(m => (
               <div key={m.id} className={`wa-msg ${m.direction === 'outbound' ? 'out' : 'in'} ${m.status === 'failed' ? 'failed' : ''}`}>
                 <div className="wa-bubble">
-                  <div className="wa-text">{(m.media_id ? mediaCaption(m.body) || m.body : m.body) || '—'}</div>
+                  <div className="wa-text"><MessageText text={(m.media_id ? mediaCaption(m.body) || m.body : m.body) || '—'} /></div>
                   <div className="wa-meta"><span>{fmtTime(m.created_at)}</span>{m.direction === 'outbound' && <StatusTicks status={m.status} />}</div>
                 </div>
               </div>
@@ -1065,7 +1067,7 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
               <label className={`import-drop ${dragging ? 'over' : ''}`}
                 onDragOver={e => { e.preventDefault(); setDragging(true) }}
                 onDragLeave={() => setDragging(false)} onDrop={handleDrop}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 40, height: 40, color: 'var(--muted)', margin: '0 auto 12px', display: 'block' }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                <Upload size={40} strokeWidth={1.5} style={{ color: 'var(--muted)', margin: '0 auto 12px', display: 'block' }} />
                 <div style={{ fontWeight: 600, marginBottom: 4 }}>Arrastra un archivo CSV o Excel</div>
                 <div style={{ color: 'var(--muted)', fontSize: 12, marginBottom: 12 }}>o haz clic para seleccionar</div>
                 <input type="file" accept=".csv,.xlsx,.xls" onChange={e => { const f = e.target.files?.[0]; if (f) parseFile(f) }} />
@@ -1109,8 +1111,8 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
               </div>
               {(preview.invalid > 0 || preview.noName > 0) && (
                 <div style={{ padding: '10px 14px', background: 'var(--paper)', borderRadius: 9, fontSize: 12.5, color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  {preview.invalid > 0  && <span>⚠️ <strong>{preview.invalid}</strong> teléfono{preview.invalid !== 1 ? 's' : ''} con formato inválido</span>}
-                  {preview.noName > 0   && <span>👤 <strong>{preview.noName}</strong> fila{preview.noName !== 1 ? 's' : ''} sin nombre</span>}
+                  {preview.invalid > 0  && <span className="with-icon"><TriangleAlert size={14} style={{ color: 'var(--warning)' }} /> <span><strong>{preview.invalid}</strong> teléfono{preview.invalid !== 1 ? 's' : ''} con formato inválido</span></span>}
+                  {preview.noName > 0   && <span className="with-icon"><UserRound size={14} /> <span><strong>{preview.noName}</strong> fila{preview.noName !== 1 ? 's' : ''} sin nombre</span></span>}
                 </div>
               )}
               {preview.valid.length === 0 && (

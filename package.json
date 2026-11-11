@@ -1,6 +1,6 @@
 {
   "name": "crm-pinturas",
-  "version": "1.47.0",
+  "version": "1.48.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,8 +13,10 @@
     "benchmark:api": "node scripts/benchmark-api.mjs"
   },
   "dependencies": {
+    "@icons-pack/react-simple-icons": "13.15.1",
     "@supabase/ssr": "0.10.3",
     "@supabase/supabase-js": "2.117.2",
+    "lucide-react": "1.61.0",
     "next": "^16.4.2",
     "papaparse": "^5.7.0",
     "react": "19.2.4",

@@ -153,7 +153,7 @@
 .msgIn, .msgOut { margin: 0 0 6px; padding: 8px 11px; max-width: 88%; font-size: 12px; line-height: 1.45; border-radius: 12px; }
 .msgIn { background: var(--paper); border-top-left-radius: 4px; }
 .msgOut { margin-left: auto; background: #DCF8C6; border-top-right-radius: 4px; }
-.ticks { margin-left: 4px; font-size: 10px; color: #34B7F1; letter-spacing: -2px; }
+.ticks { margin-left: 4px; color: #34B7F1; display: inline-flex; vertical-align: -3px; }
 
 
 /* ── Datos rápidos ── */

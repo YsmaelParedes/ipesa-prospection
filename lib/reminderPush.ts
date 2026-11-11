@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server'
 import { getServerSupabase, storeAudience } from './supabase-server'
 import { fetchPaged } from './paged'
 import { sendPushToSubscriptions, type PushPayload, type PushSub } from './push'
-import { remTypeInfo } from './crm'
 import { DEFAULT_TZ, naiveIso, zonedIso } from './datetime'
 
 /**
@@ -150,7 +149,7 @@ export function reminderPayload(r: Row, lateMs = 0): PushPayload {
   // La nota va en el título si no hay cliente; si lo hay, en el cuerpo
   const body = action && nota ? (late ? `${nota} · ${when.toLowerCase()}` : nota) : when
   return {
-    title: clip(action ? `${remTypeInfo(r.type).emoji} ${action}` : `⏰ ${nota || 'Recordatorio'}`, 70),
+    title: clip(action ?? (nota || 'Recordatorio'), 70),
     body:  clip(body, 180),
     url:   '/recordatorios',
     tag:   `rem-${r.id}`,
@@ -179,8 +178,8 @@ export function agendaPayload({ today: items, overdue }: AgendaDay): PushPayload
   ].filter(Boolean)
   if (extra.length) lines.push(extra.join(' · '))
   return today.length
-    ? { title: `📋 Hoy tienes ${today.length} pendiente${s(today.length)}`, body: lines.join('\n'), url: '/recordatorios', tag: 'agenda-hoy' }
-    : { title: `⚠️ Tienes ${overdue} pendiente${s(overdue)} vencido${s(overdue)}`, body: 'Ábrelos en la Agenda para ponerte al día.', url: '/recordatorios', tag: 'agenda-hoy' }
+    ? { title: `Hoy tienes ${today.length} pendiente${s(today.length)}`, body: lines.join('\n'), url: '/recordatorios', tag: 'agenda-hoy' }
+    : { title: `Tienes ${overdue} pendiente${s(overdue)} vencido${s(overdue)}`, body: 'Ábrelos en la Agenda para ponerte al día.', url: '/recordatorios', tag: 'agenda-hoy' }
 }
 
 /* ── A la hora ──────────────────────────────────────────────────────────── */

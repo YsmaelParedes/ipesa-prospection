@@ -11,6 +11,9 @@ import { fmtPhone, normalizePhone, phoneVariants } from './phone'
 import { isOptOutMessage } from './whatsappSafety'
 import { markOptOut } from './whatsappQuota'
 import { configureWebPush, sendPushToSubscriptions } from './push'
+import { stripMessagePrefixes } from './messagePrefix'
+
+const clipText = (t: string, max: number) => (t.length > max ? `${t.slice(0, max - 3)}…` : t)
 
 type Inbound = { text: string; mediaId?: string; mediaType?: string; mime?: string; optOutCandidate?: string }
 
@@ -163,7 +166,7 @@ export function isHandoffMessage(text: string): boolean {
 }
 
 const handoffItem = (phone: string, name: string | undefined): InboundNotification =>
-  ({ phone, title: `🙋 ${name || fmtPhone(phone)}`, text: HANDOFF_TEXT })
+  ({ phone, title: `Atender a ${name || fmtPhone(phone)}`, text: HANDOFF_TEXT })
 
 /** Estados de salientes y mensajes entrantes de un bloque del webhook. */
 async function applyEvents(supabase: Supabase, storeId: string, value: any): Promise<InboundNotification[]> {
@@ -442,8 +445,8 @@ export async function notifyStoreTeam(storeId: string, items: InboundNotificatio
   const latest = new Map(items.map(i => [i.phone, i]))
   for (const item of latest.values()) {
     await sendPushToSubscriptions(subs, {
-      title: `💬 ${item.title}`,
-      body:  item.text.length > 140 ? `${item.text.slice(0, 137)}…` : item.text,
+      title: item.title,
+      body:  clipText(stripMessagePrefixes(item.text), 140),
       url:   `/whatsapp?phone=${item.phone}`,
       // Un aviso por chat; cada mensaje nuevo lo reemplaza y vuelve a sonar
       tag:   `wa-${storeId.slice(0, 8)}-${item.phone}`,

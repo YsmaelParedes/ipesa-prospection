@@ -13,6 +13,11 @@ import { Select, toOptions } from '@/components/Select'
 import { pendingInvite } from '@/lib/pendingInvite'
 import { signOut } from '@/lib/signOut'
 import s from './bienvenida.module.css'
+import { WhatsAppIcon } from '@/components/icons'
+import {
+  LayoutDashboard, Users, Activity, MessageCircle, Clock, FlaskConical, Settings, Megaphone, Upload, Copy, ArrowLeft,
+  Plus, Image as ImageIcon, Store,
+} from 'lucide-react'
 
 /**
  * Asistente de alta de una tienda: datos de la sucursal → logo → equipo →
@@ -51,32 +56,13 @@ const profileOf = (st: ClientStore): Profile => ({
 })
 
 /* ── Iconos ─────────────────────────────────────────────────────────────── */
-type IconProps = React.SVGProps<SVGSVGElement>
-const icon = (d: React.ReactNode) => function Svg(p: IconProps) {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}>{d}</svg>
-}
+type IconProps = { className?: string; style?: React.CSSProperties }
 const Ic = {
-  dashboard: icon(<><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></>),
-  contacts:  icon(<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>),
-  leads:     icon(<path d="M22 12h-4l-3 9L9 3l-3 9H2" />),
-  chat:      icon(<path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.6A8.4 8.4 0 1 1 21 11.5Z" />),
-  clock:     icon(<><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></>),
-  flask:     icon(<><path d="M9 2v6.3a2 2 0 0 1-.3 1L3.5 18a2 2 0 0 0 1.7 3h13.6a2 2 0 0 0 1.7-3l-5.2-8.7a2 2 0 0 1-.3-1V2" /><path d="M7 2h10M6 14h12" /></>),
-  settings:  icon(<><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.9 4.9 7 7M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1" /></>),
-  megaphone: icon(<><path d="m3 11 18-5v12L3 14v-3Z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></>),
-  upload:    icon(<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m17 8-5-5-5 5M12 3v12" /></>),
-  copy:      icon(<><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></>),
-  back:      icon(<path d="M19 12H5M11 18l-6-6 6-6" />),
-  plus:      icon(<path d="M12 5v14M5 12h14" />),
-  image:     icon(<><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" /></>),
-  store:     icon(<><path d="M3 9 4.5 4h15L21 9" /><path d="M3 9h18v1a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9Z" /><path d="M5 13v7h14v-7" /></>),
+  dashboard: LayoutDashboard, contacts: Users, leads: Activity, chat: MessageCircle, clock: Clock, flask: FlaskConical,
+  settings: Settings, megaphone: Megaphone, upload: Upload, copy: Copy, back: ArrowLeft, plus: Plus, image: ImageIcon, store: Store,
 }
 function WhatsAppGlyph(p: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...p}>
-      <path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.8.9-1 1.1c-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.4-.9-.8-1.5-1.8-1.7-2-.2-.3 0-.5.1-.6l.4-.5c.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.3-.7.3-1.2.2-1.4 0-.1-.3-.2-.6-.4Zm-5.5 7.5c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.5 4.4-9.9 9.9-9.9s9.9 4.4 9.9 9.9-4.5 9.9-10 9.9Zm8.4-18.3C18.2 1.5 15.2.3 12 .3 5.4.3.1 5.6.1 12.2c0 2.1.6 4.2 1.6 6L0 24l5.9-1.5c1.7 1 3.7 1.5 5.7 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4Z" />
-    </svg>
-  )
+  return <WhatsAppIcon className={p.className} style={p.style} />
 }
 
 /* ── Página ─────────────────────────────────────────────────────────────── */
@@ -555,7 +541,7 @@ function DoneStep({ store, modules, invites }: { store: ClientStore; modules: St
 }
 
 /* ── Vista previa ───────────────────────────────────────────────────────── */
-const PREVIEW_NAV: { label: string; icon: (p: IconProps) => React.ReactElement; module?: StoreModule }[] = [
+const PREVIEW_NAV: { label: string; icon: React.ComponentType<IconProps>; module?: StoreModule }[] = [
   { label: 'Dashboard', icon: Ic.dashboard },
   { label: 'Contactos', icon: Ic.contacts },
   { label: 'Sistema Comercial', icon: Ic.leads },

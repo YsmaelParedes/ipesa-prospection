@@ -9,6 +9,7 @@ import { Card, Ico, Note, Spinner, WhatsAppGlyph, api, cx, fmtDate, send, useToa
 import { invalidateSession } from '@/lib/profile'
 import s from './configuracion.module.css'
 import { tierLabel } from '@/lib/whatsappSafety'
+import { ExternalLink } from 'lucide-react'
 
 // Sin datos técnicos ni secretos. selfService: la tienda lo conectó sola (Embedded Signup) y puede desconectarlo
 type Connection = {
@@ -146,7 +147,7 @@ function ConnectionPanel() {
         <div className={s.noteGap}>
           <Note kind="warn">
             <b>Para escribirles tú primero</b> (plantillas), Meta pide una tarjeta en tu cuenta de WhatsApp. Responder a quien te escribe no cuesta.{' '}
-            <a href={`https://business.facebook.com/wa/manage/home/${conn.wabaId ? `?waba_id=${encodeURIComponent(conn.wabaId)}` : ''}`} target="_blank" rel="noopener noreferrer">Agregar tarjeta en Meta ↗</a>
+            <a href={`https://business.facebook.com/wa/manage/home/${conn.wabaId ? `?waba_id=${encodeURIComponent(conn.wabaId)}` : ''}`} target="_blank" rel="noopener noreferrer">Agregar tarjeta en Meta <ExternalLink className="i-inline" /></a>
           </Note>
         </div>
       )}

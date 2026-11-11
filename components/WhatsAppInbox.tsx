@@ -15,7 +15,7 @@ import { todayISO } from '@/lib/commercial'
 import { Select, toOptions } from '@/components/Select'
 import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/components/WhatsAppTemplatePicker'
 import {
-  Linkified, MediaContent, StatusTicks, WaIcon, WindowBadge,
+  MediaContent, MessageText, StatusTicks, WaIcon, WindowBadge,
   fmtDayLabel, fmtListWhen, fmtTime, mediaCaption,
 } from '@/components/WhatsAppUI'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
@@ -23,6 +23,7 @@ import { isWindowOpen } from '@/lib/whatsappSafety'
 import { MAX_CAPTION, MAX_SEND_BYTES, SEND_ACCEPT, SEND_TYPES, fmtSize, sendMimeOf } from '@/lib/whatsappFiles'
 import { loadCatalogs, whatsappChannel, type Catalogs } from '@/lib/catalogs'
 import { notifyDataChanged } from '@/lib/crmEvents'
+import { ArrowDown, X } from 'lucide-react'
 import { useSession } from '@/lib/profile'
 import type { NoWhatsApp } from '@/lib/campaignKinds'
 
@@ -114,7 +115,8 @@ function mergeMessages(prev: Message[], incoming: Message[]): Message[] {
     .concat(pending)
 }
 
-const MEDIA_ICONS: Record<string, string> = { image: '📷', audio: '🎤', video: '🎥', document: '📄', sticker: '🏷️' }
+/** Texto de la lista cuando el último mensaje es un archivo sin texto (MessageText le pone el icono). */
+const MEDIA_PREVIEW: Record<string, string> = { image: '📷 Imagen', audio: '🎤 Audio', video: '🎥 Video', document: '📄 Documento', sticker: '🏷️ Sticker' }
 
 function displayName(c: { name: string | null; profileName: string | null; phone: string }) {
   return c.name || (c.profileName ? `~ ${c.profileName}` : fmtPhone(c.phone))
@@ -254,7 +256,7 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
           <label className="wa-search">
             <WaIcon.search />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar nombre o número…" aria-label="Buscar conversación" />
-            {search && <button onClick={() => setSearch('')} aria-label="Limpiar búsqueda" className="wa-clear">×</button>}
+            {search && <button onClick={() => setSearch('')} aria-label="Limpiar búsqueda" className="wa-clear"><X size={15} /></button>}
           </label>
           <div className="wa-filters" role="tablist">
             {([['all', 'Todas'], ['unread', 'No leídas'], ['unknown', 'Sin contacto']] as [Filter, string][]).map(([key, label]) => (
@@ -343,7 +345,7 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
           name={thread?.contact?.name || selectedConvo?.profileName || ''}
           force={templateMode === 'force'}
           onClose={() => setTemplateMode(null)}
-          onSent={() => { setTemplateMode(null); showToast('Plantilla enviada ✓'); loadThread(selected, { silent: true }); loadRef.current() }}
+          onSent={() => { setTemplateMode(null); showToast('Plantilla enviada'); loadThread(selected, { silent: true }); loadRef.current() }}
         />
       )}
 
@@ -361,10 +363,10 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
 
 /* ── Fila de la lista ──────────────────────────────────────────────────── */
 function ConversationRow({ c, active, onClick }: { c: Conversation; active: boolean; onClick: () => void }) {
-  // El texto de un multimedia ya viene como "📷 Imagen · pie" desde el webhook
+  // El texto de un multimedia ya viene como "<marca> Imagen · pie" desde el webhook; MessageText cambia la marca por un icono
   const preview = c.lastTemplate && c.lastDirection === 'outbound'
     ? `Plantilla · ${c.lastBody ?? c.lastTemplate}`
-    : c.lastBody || (c.lastMediaType ? MEDIA_ICONS[c.lastMediaType] ?? '' : '')
+    : c.lastBody || (c.lastMediaType ? MEDIA_PREVIEW[c.lastMediaType] ?? '' : '')
   return (
     <button className={`wa-conv ${active ? 'active' : ''}`} onClick={onClick} aria-current={active}>
       <span className="wa-avatar-wrap">
@@ -379,7 +381,7 @@ function ConversationRow({ c, active, onClick }: { c: Conversation; active: bool
         <span className="wa-conv-bottom">
           <span className="wa-conv-preview">
             {c.lastDirection === 'outbound' && <StatusTicks status={c.lastStatus} />}
-            <span className="wa-ellipsis">{preview}</span>
+            <span className="wa-ellipsis"><MessageText text={preview.split('\n')[0]} /></span>
           </span>
           {c.noWhatsApp && <span className="wa-nowa-tag" title="Meta reportó que no tiene WhatsApp: ya no se le envían campañas">Sin WhatsApp</span>}
           {c.optOut && <span className="wa-optout-mini" title="Pidió no recibir campañas"><WaIcon.ban size={12} /></span>}
@@ -585,7 +587,7 @@ function ChatView({
           </div>
         ))}
       </div>
-      {showJump && <button className="wa-jump" onClick={jumpToBottom}>Nuevos mensajes ↓</button>}
+      {showJump && <button className="wa-jump" onClick={jumpToBottom}>Nuevos mensajes <ArrowDown size={13} className="i-inline" /></button>}
 
       <Composer
         phone={phone}
@@ -615,7 +617,7 @@ function Bubble({ m, onDiscard }: { m: Message; onDiscard: () => void }) {
         {byAgent && <div className="wa-template-tag wa-agent-tag"><WaIcon.bolt size={11} /> Agente IA</div>}
         {m.origin === 'phone' && <div className="wa-template-tag"><WaIcon.phone size={11} /> Desde el celular</div>}
         {m.media_id && m.media_type && <MediaContent mediaId={m.media_id} mediaType={m.media_type} mime={m.media_mime} />}
-        {caption && <div className="wa-text"><Linkified text={caption} /></div>}
+        {caption && <div className="wa-text"><MessageText text={caption} links /></div>}
         <div className="wa-meta">
           <span>{fmtTime(m.created_at)}</span>
           {out && <StatusTicks status={m.status} />}
@@ -886,7 +888,7 @@ function CrmPanel({ phone, thread, convo, onClose, onChanged, toast }: {
           {campaignsOn && <OptOutSection phone={phone} optOut={contact.wa_opt_out} onChanged={onChanged} toast={toast} />}
         </>
       ) : (
-        <SaveContactSection phone={phone} profileName={profileName} config={config} onSaved={() => { onChanged(); notifyDataChanged('contact'); toast('Contacto guardado ✓') }} />
+        <SaveContactSection phone={phone} profileName={profileName} config={config} onSaved={() => { onChanged(); notifyDataChanged('contact'); toast('Contacto guardado') }} />
       )}
     </div>
   )
@@ -1006,7 +1008,7 @@ function ReminderSection({ contact, toast }: { contact: Contact; toast: (m: stri
       const d = await r.json().catch(() => ({}))
       if (!r.ok) { setError(d.error || 'No se pudo crear'); return }
       setNota('')
-      toast('Recordatorio creado ✓')
+      toast('Recordatorio creado')
       notifyDataChanged('reminder')
     } finally { setSaving(false) }
   }

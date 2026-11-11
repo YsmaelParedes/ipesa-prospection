@@ -105,13 +105,13 @@ export function skillPayload(input: Record<string, unknown>): { title: string; d
 /** Reglas listas para encender con un toque (se crean como cualquier otra regla). */
 export const SKILL_PRESETS = [
   {
-    title: 'pide-informacion-del-cliente', icon: '🙋', name: 'Pide información del cliente',
+    title: 'pide-informacion-del-cliente', icon: 'ask', name: 'Pide información del cliente',
     hint: 'Pregunta su nombre y qué necesita antes de cotizar.',
     description: 'Cuando un cliente pide precio, cotización o quiere comprar y todavía no sabemos qué necesita.',
     skill: '1. Pregunta su nombre.\n2. Pregunta qué producto necesita, para qué superficie y cuánto (litros, cubetas o metros cuadrados).\n3. Con eso, contesta o avisa que alguien del equipo le enviará la cotización.',
   },
   {
-    title: 'no-dar-precios-exactos', icon: '💲', name: 'No dar precios exactos',
+    title: 'no-dar-precios-exactos', icon: 'price', name: 'No dar precios exactos',
     hint: 'Da precios aproximados y ofrece una cotización del equipo.',
     description: 'Cuando un cliente pregunta cuánto cuesta un producto o un trabajo.',
     skill: 'No des precios exactos. Da un rango aproximado si lo conoces y ofrece que alguien del equipo le envíe la cotización exacta por este chat.',

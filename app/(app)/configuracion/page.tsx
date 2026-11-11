@@ -18,7 +18,7 @@ import s from './configuracion.module.css'
 type TabId = 'perfil' | 'avisos' | 'seguridad' | 'tienda' | 'equipo' | 'catalogos' | 'whatsapp' | 'plan'
 type Tab = {
   id: TabId; label: string; description: string; group: 'cuenta' | 'tienda'
-  icon: (p: React.SVGProps<SVGSVGElement>) => React.ReactElement; admin?: boolean; module?: StoreModule
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; admin?: boolean; module?: StoreModule
 }
 
 /* Arriba lo de cada persona; abajo lo que toca a toda la tienda */

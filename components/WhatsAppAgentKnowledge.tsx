@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { apiFetch } from '@/lib/apiClient'
 import { WaIcon } from '@/components/WhatsAppUI'
+import { CircleDollarSign, FileText, MessageCircleQuestion, SquarePen, type LucideIcon } from 'lucide-react'
 import {
   FILE_EXTENSIONS, MAX_ANSWER, MAX_BUSINESS_TEXT, MAX_FILE_BYTES, MAX_QUESTION, MAX_SKILL_DO, MAX_SKILL_NAME, MAX_SKILL_WHEN,
   SKILL_PRESETS, SKILL_STATUS_LABELS, fileExtension,
@@ -10,6 +11,8 @@ import {
 } from '@/lib/agentKnowledge'
 
 type Toast = (m: string) => void
+
+const PRESET_ICONS: Record<typeof SKILL_PRESETS[number]['icon'], LucideIcon> = { ask: MessageCircleQuestion, price: CircleDollarSign }
 
 async function call(url: string, init?: RequestInit): Promise<{ ok: boolean; data: any }> {
   try {
@@ -238,7 +241,7 @@ function Files({ list, onChange, toast }: { list: KnowledgeFile[]; onChange: (l:
         <ul className="ag-list">
           {list.map(f => (
             <li key={f.id}>
-              <span className="ag-list-main"><strong>📄 {f.name}</strong></span>
+              <span className="ag-list-main"><strong className="with-icon"><FileText size={14} aria-hidden="true" /> {f.name}</strong></span>
               <button className="btn-icon" onClick={() => remove(f)} disabled={busy === f.id} aria-label={`Borrar ${f.name}`} title="Borrar"><WaIcon.close size={16} /></button>
             </li>
           ))}
@@ -357,7 +360,7 @@ export function Rules({ list, agentId, onChange, toast }: { list: Skill[]; agent
         const current = list.find(s => s.title === p.title)
         return (
           <div key={p.title} className="ag-preset">
-            <span className="ag-nav-ico" aria-hidden="true">{p.icon}</span>
+            <span className="ag-nav-ico" aria-hidden="true">{(() => { const PresetIcon = PRESET_ICONS[p.icon]; return <PresetIcon size={16} /> })()}</span>
             <span className="ag-preset-text">
               <strong>{p.name}</strong><small>{p.hint}</small>
               {current && current.status !== 'active' && <StatusPill status={current.status} />}
@@ -440,9 +443,5 @@ function RuleForm({ initial, busy, onCancel, onSave }: {
 }
 
 function EditIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  )
+  return <SquarePen size={15} aria-hidden="true" />
 }

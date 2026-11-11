@@ -7,6 +7,7 @@ import { BrandLogo } from '@/components/Brand'
 import { APP_NAME } from '@/lib/brand'
 import { NAV, type NavEntry } from './links'
 import s from './inicio.module.css'
+import { ChevronDown } from 'lucide-react'
 
 const pathOf = (href: string) => href.split('#')[0]
 
@@ -76,7 +77,7 @@ export function SiteNav() {
                 }}
               >
                 {e.label}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                <ChevronDown strokeWidth={2.4} aria-hidden="true" />
               </button>
               <div id={`menu-${e.label}`} className={`${s.mega} ${e.groups.length === 1 ? s.megaOne : ''}`} hidden={menu !== e.label}>
                 <div className={s.megaCols}>

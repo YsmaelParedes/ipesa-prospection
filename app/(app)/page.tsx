@@ -15,6 +15,8 @@ import { useSession } from '@/lib/profile'
 import { reminderSubject, reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
 import { fmtAgo, fmtDue, greetingFor, isDueToday, isOverdue } from '@/lib/datetime'
+import { WhatsAppIcon } from '@/components/icons'
+import { AlarmClock, Target, PartyPopper, Check, Phone, MessageCircle, Store, Mail, Pencil } from 'lucide-react'
 
 type Trend = { current: number; previous: number }
 
@@ -144,7 +146,7 @@ export default function DashboardPage() {
       <div className="today-grid">
         <section className="today-card" style={{ order: due.length ? 1 : 3 }}>
           <header className="today-head">
-            <span className="today-icon tone-amber">⏰</span>
+            <span className="today-icon tone-amber"><AlarmClock size={19} /></span>
             <div>
               <h3>Para hoy</h3>
               <p>{reminders === null ? 'Cargando…' : due.length ? `${due.length} recordatorio${due.length !== 1 ? 's' : ''}${overdueCount ? ` · ${overdueCount} vencido${overdueCount !== 1 ? 's' : ''}` : ''}` : 'Nada pendiente para hoy'}</p>
@@ -153,7 +155,7 @@ export default function DashboardPage() {
           </header>
           {reminders !== null && due.length === 0 ? (
             <div className="today-empty">
-              Todo al día. 🎉
+              <span className="with-icon">Todo al día. <PartyPopper size={15} style={{ color: 'var(--brand)' }} /></span>
               {!readonly && <button className="link-btn" onClick={() => openQuickCreate({ kind: 'reminder' })}>Programar un recordatorio</button>}
             </div>
           ) : (
@@ -171,7 +173,7 @@ export default function DashboardPage() {
                         {subject && <> · {subject}</>}
                       </small>
                     </span>
-                    {!readonly && <button className="notif-done" onClick={() => completeReminder(r.id)}>✓ Listo</button>}
+                    {!readonly && <button className="notif-done with-icon" onClick={() => completeReminder(r.id)}><Check size={12} strokeWidth={3} /> Listo</button>}
                   </li>
                 )
               })}
@@ -182,7 +184,7 @@ export default function DashboardPage() {
 
         <section className="today-card" style={{ order: queue.count ? 2 : 4 }}>
           <header className="today-head">
-            <span className="today-icon tone-brand">🎯</span>
+            <span className="today-icon tone-brand"><Target size={19} /></span>
             <div>
               <h3>Llamadas para hoy</h3>
               <p>{queue.count ? `${queue.count} por llamar${m.overdue ? ` · ${m.overdue} vencida${m.overdue !== 1 ? 's' : ''}` : ''}` : 'Sin llamadas pendientes'}</p>
@@ -217,7 +219,7 @@ export default function DashboardPage() {
           <Link href="/whatsapp" className="today-card today-card-wa" style={{ order: wa.unreadConversations ? 0 : 5 }}>
             <header className="today-head">
               <span className="today-icon tone-wa">
-                <svg viewBox="0 0 24 24" fill="currentColor" width={18} height={18} aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.8.9-1 1.1c-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.4-.9-.8-1.5-1.8-1.7-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.3-.7.3-1.2.2-1.4 0-.1-.3-.2-.6-.4Zm-5.5 7.5c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.5 4.4-9.9 9.9-9.9s9.9 4.4 9.9 9.9-4.5 9.9-10 9.9Zm8.4-18.3C18.2 1.5 15.2.3 12 .3 5.4.3.1 5.6.1 12.2c0 2.1.6 4.2 1.6 6L0 24l5.9-1.5c1.7 1 3.7 1.5 5.7 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4Z" /></svg>
+                <WhatsAppIcon size={18} />
               </span>
               <div>
                 <h3>WhatsApp</h3>
@@ -419,14 +421,6 @@ const ACTIVITY_TONE: Record<string, React.CSSProperties> = {
 }
 
 function ActivityIcon({ type }: { type?: string }) {
-  const s = { width: 15, height: 15 }
-  const p = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, style: s }
-  switch (type) {
-    case 'llamada':  return <svg {...p}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z" /></svg>
-    case 'whatsapp': return <svg {...p}><path d="M21 11.5a8.38 8.38 0 0 1-9 8.4 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.2A8.38 8.38 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5Z" /></svg>
-    case 'visita':   return <svg {...p}><path d="M3 9 4.5 4h15L21 9" /><path d="M3 9h18v1a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9Z" /><path d="M5 13v7h14v-7" /></svg>
-    case 'correo':   return <svg {...p}><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-10 6L2 7" /></svg>
-    case 'close':    return <svg {...p} strokeWidth={2.4}><path d="m5 13 4 4L19 7" /></svg>
-    default:         return <svg {...p}><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-  }
+  const Ico = ({ llamada: Phone, whatsapp: MessageCircle, visita: Store, correo: Mail, close: Check } as Record<string, typeof Phone>)[type ?? ''] ?? Pencil
+  return <Ico size={15} strokeWidth={type === 'close' ? 2.4 : 2} />
 }

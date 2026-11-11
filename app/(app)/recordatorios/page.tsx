@@ -11,6 +11,7 @@ import { MESES, QUICK_WHEN, isSameDay, pad, quickDate, toDbLocal, type QuickWhen
 import { addDays, type CommercialContact } from '@/lib/commercial'
 import { StatusChip } from '@/components/CommercialUI'
 import s from './agenda.module.css'
+import { Plus, Check, Trash2, SquarePen, AlarmClock, ChevronRight } from 'lucide-react'
 
 /** GET /api/data/commercial/agenda: seguimientos del sistema comercial con su fecha. */
 type CommercialData = { today: string; followUps: CommercialContact[]; total?: number }
@@ -19,12 +20,12 @@ type AgendaItem = { kind: 'rem'; r: Reminder; at: number } | { kind: 'com'; c: C
 const COMMERCIAL_FILTER = 'commercial'
 
 const Ico = {
-  plus:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}><path d="M12 5v14M5 12h14"/></svg>,
-  check: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}><path d="m5 13 4 4L19 7"/></svg>,
-  trash: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}><path d="M3 6h18M19 6l-1 14H6L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>,
-  edit:  () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-  snooze:() => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M5 3 2 6M22 6l-3-3"/></svg>,
-  chevron: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={s.chev}><path d="m9 6 6 6-6 6"/></svg>,
+  plus:    () => <Plus size={15} strokeWidth={2.4} />,
+  check:   () => <Check size={14} strokeWidth={2.6} />,
+  trash:   () => <Trash2 size={15} />,
+  edit:    () => <SquarePen size={15} />,
+  snooze:  () => <AlarmClock size={15} />,
+  chevron: () => <ChevronRight className={s.chev} />,
 }
 
 /** El punto de color de cada tipo; el seguimiento comercial lleva el rojo de la marca. */
@@ -340,7 +341,7 @@ export default function AgendaPage() {
 
       {toast && (
         <div className="toast-fixed">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14, color: 'var(--warning-fill)' }}><path d="m5 13 4 4L19 7"/></svg>
+          <Check size={14} strokeWidth={2.4} style={{ color: 'var(--warning-fill)' }} />
           {toast}
         </div>
       )}

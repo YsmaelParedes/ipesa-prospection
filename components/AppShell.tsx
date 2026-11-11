@@ -24,6 +24,11 @@ import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEve
 import { fmtDue, isDueToday, isOverdue } from '@/lib/datetime'
 import { enableDevicePush, pushSupport, testDevicePush } from '@/lib/pushClient'
 import { CopyGuard } from '@/components/CopyGuard'
+import { WhatsAppIcon } from '@/components/icons'
+import {
+  House, Users, Activity, CalendarCheck, Settings, Bell, Menu, Plus, CircleHelp, LogOut, Check, ArrowUp,
+  Sparkles, X, Wrench, FlaskConical, Store, ChevronsUpDown, Lock, BellOff,
+} from 'lucide-react'
 
 /** Estado de los avisos push en este dispositivo. */
 function pushStateOf(sub: PushSubscription | null): 'blocked' | 'off' | 'on' {
@@ -34,33 +39,13 @@ function pushStateOf(sub: PushSubscription | null): 'blocked' | 'off' | 'on' {
 /** Cada cuánto se vuelve a sugerir activar los avisos si alguien cerró la sugerencia. */
 const PUSH_PROMPT_SNOOZE_MS = 7 * 86_400_000
 
-/* ── Iconos ── */
-type IconProps = React.SVGProps<SVGSVGElement>
-const stroke = (d: React.ReactNode, w = 2) => function Svg(p: IconProps) {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={w} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}>{d}</svg>
-}
+/* ── Iconos (Lucide + logo de WhatsApp) ── */
+type IconProps = { className?: string; style?: React.CSSProperties; strokeWidth?: number }
 const Icon = {
-  home:      stroke(<><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z" /></>),
-  contacts:  stroke(<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>),
-  commercial: stroke(<path d="M22 12h-4l-3 9L9 3l-3 9H2" />),
-  calendar:  stroke(<><rect x="3" y="4" width="18" height="17" rx="2.5" /><path d="M16 2v4M8 2v4M3 10h18" /><path d="m9 15.5 2 2 4-4" /></>),
-  settings:  stroke(<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>),
-  bell:      stroke(<><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></>),
-  menu:      stroke(<path d="M3 6h18M3 12h18M3 18h18" />, 2.2),
-  plus:      stroke(<path d="M12 5v14M5 12h14" />, 2.4),
-  help:      stroke(<><circle cx="12" cy="12" r="10" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01" /></>),
-  logout:    stroke(<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />),
-  check:     stroke(<path d="m5 13 4 4L19 7" />, 2.4),
-  arrowUp:   stroke(<path d="M12 19V5M5 12l7-7 7 7" />, 2.4),
-  sparkles:  stroke(<><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.1 2.1M15.6 15.6l2.1 2.1M6.3 17.7l2.1-2.1M15.6 8.4l2.1-2.1" /><circle cx="12" cy="12" r="2.2" /></>),
-  close:     stroke(<path d="M18 6 6 18M6 6l12 12" />),
-  wrench:    stroke(<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />),
-  flask:     stroke(<><path d="M9 2v6.3a2 2 0 0 1-.3 1L3.5 18a2 2 0 0 0 1.7 3h13.6a2 2 0 0 0 1.7-3l-5.2-8.7a2 2 0 0 1-.3-1V2" /><path d="M7 2h10M6 14h12" /></>),
-  store:     stroke(<><path d="M3 9 4.5 4h15L21 9" /><path d="M3 9h18v1a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9Z" /><path d="M5 13v7h14v-7" /><path d="M10 20v-4h4v4" /></>),
-  chevrons:  stroke(<path d="m7 15 5 5 5-5M7 9l5-5 5 5" />),
-  lock:      stroke(<><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></>),
-  bellOff:   stroke(<><path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0M2 2l20 20" /></>),
-  whatsapp:  (p: IconProps) => <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...p}><path d="M17.5 14.4c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.1s-.8.9-1 1.1c-.2.2-.4.2-.7.1-.3-.1-1.2-.4-2.4-1.4-.9-.8-1.5-1.8-1.7-2-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5s-.7-1.7-1-2.4c-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4s-1 1-1 2.4 1 2.8 1.2 3c.1.2 2 3.1 4.9 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.7-.7 2-1.4.3-.7.3-1.2.2-1.4 0-.1-.3-.2-.6-.4Zm-5.5 7.5c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4c-1-1.6-1.5-3.4-1.5-5.3 0-5.5 4.4-9.9 9.9-9.9s9.9 4.4 9.9 9.9-4.5 9.9-10 9.9Zm8.4-18.3C18.2 1.5 15.2.3 12 .3 5.4.3.1 5.6.1 12.2c0 2.1.6 4.2 1.6 6L0 24l5.9-1.5c1.7 1 3.7 1.5 5.7 1.5 6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.4Z" /></svg>,
+  home: House, contacts: Users, commercial: Activity, calendar: CalendarCheck, settings: Settings,
+  bell: Bell, menu: Menu, plus: Plus, help: CircleHelp, logout: LogOut, check: Check, arrowUp: ArrowUp,
+  sparkles: Sparkles, close: X, wrench: Wrench, flask: FlaskConical, store: Store, chevrons: ChevronsUpDown,
+  lock: Lock, bellOff: BellOff, whatsapp: WhatsAppIcon,
 }
 
 function initials(name: string) {
@@ -68,7 +53,7 @@ function initials(name: string) {
 }
 
 /* Menú en el orden del día a día. Mismo nombre en computadora y celular (`short` solo si no cabe abajo en el celular). */
-type NavItem = { id: string; href: string; label: string; short?: string; icon: (p: IconProps) => React.ReactElement; mobile: boolean; module?: StoreModule }
+type NavItem = { id: string; href: string; label: string; short?: string; icon: React.ComponentType<IconProps>; mobile: boolean; module?: StoreModule }
 const NAV_ITEMS: NavItem[] = [
   { id: 'inicio',    href: '/',              label: 'Inicio',    icon: Icon.home,     mobile: true },
   { id: 'whatsapp',  href: '/whatsapp',      label: 'WhatsApp',  icon: Icon.whatsapp, mobile: true, module: 'whatsapp' },
@@ -274,7 +259,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
           if (Math.abs(due - t) <= 65_000 && !notifiedRef.current.has(rem.id)) {
             notifiedRef.current.add(rem.id)
             // Misma etiqueta que el aviso del servidor: si llegan los dos, uno reemplaza al otro
-            swRegRef.current.showNotification(due <= t ? '⏰ Recordatorio vencido' : '🔔 Recordatorio próximo', {
+            swRegRef.current.showNotification(due <= t ? 'Recordatorio vencido' : 'Recordatorio próximo', {
               body: reminderTitle(rem),
               icon: '/icon-192.png',
               badge: '/badge-96.png',
@@ -504,7 +489,7 @@ Pantalla: ${pathname}`,
                             {subject && <div className="notif-nota">{subject}</div>}
                             <div className="notif-time" style={{ color: overdue ? 'var(--brand)' : undefined }}>{fmtDue(r.fecha_recordatorio, now)}</div>
                           </div>
-                          {!readonly && <button className="notif-done" onClick={() => completeReminder(r.id)}>✓ Listo</button>}
+                          {!readonly && <button className="notif-done with-icon" onClick={() => completeReminder(r.id)}><Icon.check style={{ width: 12, height: 12 }} strokeWidth={3} /> Listo</button>}
                         </div>
                       )
                     })
@@ -627,7 +612,7 @@ Pantalla: ${pathname}`,
         <div className="modal" onClick={closeWhatsNew}>
           <div className="modal-card" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
             <div className="modal-head">
-              <h3>🎉 Novedades</h3>
+              <h3 className="with-icon" style={{ gap: 8 }}><Icon.sparkles style={{ width: 18, height: 18, color: 'var(--brand)' }} /> Novedades</h3>
               <button className="modal-close btn-icon" onClick={closeWhatsNew} aria-label="Cerrar"><Icon.close style={{ width: 16, height: 16 }} /></button>
             </div>
             <div className="modal-body">

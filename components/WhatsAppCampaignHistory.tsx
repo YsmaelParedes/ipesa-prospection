@@ -376,7 +376,7 @@ function CampaignDetailView({ id, onBack, onRetry, onOpenChat }: {
           <label className="wa-search">
             <WaIcon.search />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar nombre o teléfono…" />
-            {search && <button onClick={() => setSearch('')} className="wa-clear" aria-label="Limpiar búsqueda">×</button>}
+            {search && <button onClick={() => setSearch('')} className="wa-clear" aria-label="Limpiar búsqueda"><WaIcon.close size={15} /></button>}
           </label>
         </div>
 
@@ -416,7 +416,7 @@ function CampaignDetailView({ id, onBack, onRetry, onOpenChat }: {
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingBottom: 8 }}>
         <button className="btn btn-ghost" onClick={() => exportCampaign(data)}>Exportar lista (CSV)</button>
-        {data.failed > 0 && <button className="btn btn-ghost" onClick={copyFailed}>{copied ? 'Copiados ✓' : `Copiar los ${data.failed} números no entregados`}</button>}
+        {data.failed > 0 && <button className="btn btn-ghost" onClick={copyFailed}>{copied ? <span className="with-icon"><WaIcon.check size={14} /> Copiados</span> : `Copiar los ${data.failed} números no entregados`}</button>}
       </div>
     </div>
   )

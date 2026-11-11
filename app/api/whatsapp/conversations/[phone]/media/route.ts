@@ -62,7 +62,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
 
   try {
     const contact = await contactForPhone(ctx.storeId, phone)
-    // Igual que los que llegan: "📄 Documento · cotización.pdf" / "📷 Imagen · pie de foto"
+    // Igual que los que llegan: "<marca> Documento · cotización.pdf" (ver lib/messagePrefix)
     const shown = caption || (kind === 'document' ? filename : '')
     const { data, error } = await supabase.from('whatsapp_messages').insert([{
       store_id: ctx.storeId,

@@ -8,20 +8,29 @@ import {
 } from '@/lib/commercial'
 import { fmtDay } from './ui'
 import s from './comercial.module.css'
+import {
+  Phone, MessageCircle, MapPin, Mail, PhoneMissed, Smile, FileText, CircleDollarSign, Hand, TriangleAlert, Send, MailX,
+  type LucideIcon,
+} from 'lucide-react'
 
 export type Kind = 'llamada' | 'whatsapp' | 'visita' | 'correo'
 
-const KINDS: [Kind, string, string][] = [['llamada', '📞', 'Llamada'], ['whatsapp', '💬', 'WhatsApp'], ['visita', '📍', 'Visita'], ['correo', '✉️', 'Correo']]
-const RESULT_LOOK: Record<ResultChoice, { icon: string; bg: string; short?: string }> = {
-  no_contesta:       { icon: '🔕', bg: 'var(--paper-2)' },
-  contactado:        { icon: '🙂', bg: 'var(--c-teal-soft)' },
-  cotizacion:        { icon: '📄', bg: 'var(--warning-soft)', short: 'Cotización' },
-  venta:             { icon: '💰', bg: 'var(--success-soft)' },
-  no_interesado:     { icon: '✋', bg: 'var(--paper-2)' },
-  numero_equivocado: { icon: '⚠️', bg: 'var(--danger-soft)', short: 'Núm. incorrecto' },
-  enviado:           { icon: '📤', bg: '#E0F4F8' },
-  respondio:         { icon: '💬', bg: 'var(--c-teal-soft)' },
-  correo_incorrecto: { icon: '⚠️', bg: 'var(--danger-soft)', short: 'Correo incorrecto' },
+const KINDS: [Kind, LucideIcon, string][] = [['llamada', Phone, 'Llamada'], ['whatsapp', MessageCircle, 'WhatsApp'], ['visita', MapPin, 'Visita'], ['correo', Mail, 'Correo']]
+const RESULT_LOOK: Record<ResultChoice, { icon: LucideIcon; bg: string; ink: string; short?: string }> = {
+  no_contesta:       { icon: PhoneMissed,      bg: 'var(--paper-2)',      ink: 'var(--muted)' },
+  contactado:        { icon: Smile,            bg: 'var(--c-teal-soft)',  ink: 'var(--c-teal-ink)' },
+  cotizacion:        { icon: FileText,         bg: 'var(--warning-soft)', ink: 'var(--warning)', short: 'Cotización' },
+  venta:             { icon: CircleDollarSign, bg: 'var(--success-soft)', ink: 'var(--success)' },
+  no_interesado:     { icon: Hand,             bg: 'var(--paper-2)',      ink: 'var(--muted)' },
+  numero_equivocado: { icon: TriangleAlert,    bg: 'var(--danger-soft)',  ink: 'var(--danger)', short: 'Núm. incorrecto' },
+  enviado:           { icon: Send,             bg: '#E0F4F8',             ink: '#00708A' },
+  respondio:         { icon: MessageCircle,    bg: 'var(--c-teal-soft)',  ink: 'var(--c-teal-ink)' },
+  correo_incorrecto: { icon: MailX,            bg: 'var(--danger-soft)',  ink: 'var(--danger)', short: 'Correo incorrecto' },
+}
+
+function ResultIcon({ result }: { result: ResultChoice }) {
+  const { icon: Icon, bg, ink } = RESULT_LOOK[result]
+  return <span className={s.chipIco} style={{ background: bg, color: ink }} aria-hidden="true"><Icon size={14} /></span>
 }
 
 /** Fecha sugerida y atajos: "En 2 días · sáb 25", "Mañana", "En 1 semana". */
@@ -122,9 +131,9 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
       <div className={s.step}>
         <div className={s.stepHead}><span className={s.stepN}>1</span>Tipo</div>
         <div className={s.typeSeg} role="group" aria-label="Tipo de actividad">
-          {KINDS.map(([k, icon, label]) => (
+          {KINDS.map(([k, KindIcon, label]) => (
             <button key={k} type="button" className={s.press} aria-pressed={kind === k} onClick={() => chooseKind(k)}>
-              <span aria-hidden="true">{icon}</span>{label}
+              <KindIcon size={16} aria-hidden="true" />{label}
             </button>
           ))}
         </div>
@@ -135,7 +144,7 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
         <div className={`${s.results} ${wide ? s.wideResults : ''}`} role="group" aria-label="Resultado" data-tour="results">
           {choicesForKind.map(r => (
             <button key={r} type="button" className={`${s.chipPick} ${s.press}`} aria-pressed={result === r} onClick={() => pick(r)}>
-              <span className={s.chipIco} style={{ background: RESULT_LOOK[r].bg }} aria-hidden="true">{RESULT_LOOK[r].icon}</span>
+              <ResultIcon result={r} />
               {(wide && RESULT_LOOK[r].short) || (r === 'cotizacion' ? 'Cotización enviada' : RESULT_RULES[r].label)}
             </button>
           ))}

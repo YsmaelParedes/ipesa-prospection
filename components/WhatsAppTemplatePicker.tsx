@@ -9,10 +9,9 @@ import { apiFetch } from '@/lib/apiClient'
 import { useEffect, useMemo, useState } from 'react'
 import type { WhatsAppTemplateDef } from '@/lib/whatsappTemplates'
 import { Select } from '@/components/Select'
+import { Check, Image, Reply, TriangleAlert } from 'lucide-react'
 
-const ImageIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22, color: 'var(--muted-2)' }}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
-)
+const ImageIcon = () => <Image size={22} style={{ color: 'var(--muted-2)' }} aria-hidden="true" />
 
 export type WhatsAppTemplateSelection = {
   templateName: string
@@ -165,7 +164,7 @@ export function WhatsAppTemplatePicker({
               color: t.quality ? QUALITY_DOT[t.quality] : undefined,
             }))} />
         )}
-        {templatesError && <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4 }}>⚠️ {templatesError}</div>}
+        {templatesError && <div className="with-icon" style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 4 }}><TriangleAlert size={13} aria-hidden="true" /> {templatesError}</div>}
       </div>
 
       {template?.quality === 'RED' && !template.unsupported && (
@@ -192,7 +191,7 @@ export function WhatsAppTemplatePicker({
                   <div style={{ fontSize: 13, color: '#111', lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>{previewBody}</div>
                   {template.footer && <div style={{ fontSize: 11.5, color: '#8696a0', marginTop: 6 }}>{template.footer}</div>}
                 </div>
-                {template.buttonLabel && <div className="wa-preview-btn">↩ {template.buttonLabel}</div>}
+                {template.buttonLabel && <div className="wa-preview-btn"><Reply size={13} className="i-inline" aria-hidden="true" /> {template.buttonLabel}</div>}
               </div>
             </div>
           </div>
@@ -206,7 +205,7 @@ export function WhatsAppTemplatePicker({
                   <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Revisando…</div>
                 ) : savedImageUrl && !replacingImage ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12.5, color: 'var(--success)', fontWeight: 600 }}>✓ Ya guardada, se reutiliza automáticamente</span>
+                    <span className="with-icon" style={{ fontSize: 12.5, color: 'var(--success)', fontWeight: 600 }}><Check size={14} strokeWidth={2.6} aria-hidden="true" /> Ya guardada, se reutiliza automáticamente</span>
                     <button type="button" onClick={() => setReplacingImage(true)} className="wa-link-btn">Cambiar</button>
                   </div>
                 ) : (

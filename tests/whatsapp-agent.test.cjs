@@ -101,7 +101,7 @@ test('cuando el agente pasa el chat a una persona se avisa al equipo', async () 
     }] },
   })
   assert.equal(echo.length, 1)
-  assert.match(echo[0].title, /^🙋/)
+  assert.match(echo[0].title, /^Atender a /)
   assert.equal(echo[0].phone, inserted[0].phone)
 
   const passed = await processChange(STORE, {

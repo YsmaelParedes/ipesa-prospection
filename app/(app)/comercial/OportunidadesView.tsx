@@ -9,6 +9,7 @@ import { Select } from '@/components/Select'
 import type { Opened } from './HoyView'
 import { bizName, fmtDay, localDay, money, type ListContact } from './ui'
 import s from './comercial.module.css'
+import { Check } from 'lucide-react'
 
 type Opportunity = ListContact & { owner_name: string | null; quote_amount: number; quoted_at: string | null; probability: number; days_idle: number | null }
 type Data = { today: string; team: boolean; opportunities: Opportunity[]; totals: { open: number; quoted: number; expected: number; stale: number } }
@@ -120,7 +121,7 @@ export function OportunidadesView({ isAdmin, segments, onOpen }: { isAdmin: bool
                   <span className={`${s.right} ${s.optional} ${s.num}`}><b>{money(o.quote_amount)}</b></span>
                   <span className={`${s.right} ${s.optional}`}><span className={`${s.prob} ${s.num}`}>{Math.round(o.probability * 100)} %</span></span>
                   <span className={s.oppActs}>
-                    <button className={`${s.win} ${s.press}`} onClick={() => open(o, 'venta')}>✓ Ganada</button>
+                    <button className={`${s.win} ${s.press}`} onClick={() => open(o, 'venta')}><Check className="i-inline" strokeWidth={2.8} /> Ganada</button>
                     <button className={`${s.lose} ${s.press}`} onClick={() => open(o, 'no_interesado')}>Perdida</button>
                     <button className={`${s.follow} ${s.press}`} onClick={() => open(o)}>Seguimiento</button>
                   </span>

@@ -6,6 +6,7 @@ import { APP_NAME } from '@/lib/brand'
 import { EMAILS } from '@/lib/legal'
 import { CtaBand, Ic, PageHero } from '../_ui'
 import s from '../inicio.module.css'
+import { CheckCheck } from 'lucide-react'
 
 /*
  * WhatsApp y el agente de IA están en desarrollo (ver WHATSAPP_OFFERED en lib/stores.ts):
@@ -60,8 +61,8 @@ export default function WhatsAppPage() {
             <div className={s.waChat}>
               <div className={s.waChatHead}><strong>Karen López</strong><span className={s.waLinked}><Ic.link />Cotización · $4,850</span></div>
               <p className={s.msgIn}>Hola, ¿tienen vinílica blanca en cubeta?</p>
-              <p className={s.msgOut}>¡Hola Karen! Sí, tenemos de 19 L. Te mando tu cotización.<span className={s.ticks}>✓✓</span></p>
-              <p className={s.msgIn}>Perfecto, gracias 🙌</p>
+              <p className={s.msgOut}>¡Hola Karen! Sí, tenemos de 19 L. Te mando tu cotización.<span className={s.ticks}><CheckCheck size={14} aria-hidden="true" /></span></p>
+              <p className={s.msgIn}>Perfecto, muchas gracias.</p>
             </div>
           </div>
           <div>

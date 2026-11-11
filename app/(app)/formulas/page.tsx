@@ -8,6 +8,7 @@ import { apiFetch } from '@/lib/apiClient'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Select } from '@/components/Select'
+import { ChevronLeft, Search, TriangleAlert, X } from 'lucide-react'
 
 /* ══════════════════════════════════════════════════════════
    TIPOS
@@ -155,7 +156,7 @@ export default function FormulasPage() {
         {/* ── Columna izquierda: búsqueda + resultados ── */}
         <div className={`panel formulas-list ${selected ? 'is-hidden' : ''}`} style={{ padding: 16 }}>
           <div className="formulas-search" style={{ marginBottom: 12 }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, color: 'var(--muted)', flexShrink: 0 }}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <Search size={16} style={{ color: 'var(--muted)', flexShrink: 0 }} />
             <input
               placeholder="Buscar por nombre o código (ej. AB238-1, 001-1, Red Planet)…"
               value={query}
@@ -163,7 +164,7 @@ export default function FormulasPage() {
               onKeyDown={e => { if (e.key === 'Escape') setQuery('') }}
             />
             {query && (
-              <button onClick={() => setQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
+              <button onClick={() => setQuery('')} aria-label="Limpiar búsqueda" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', lineHeight: 1, padding: '0 2px', display: 'inline-grid', placeItems: 'center' }}><X size={15} /></button>
             )}
           </div>
 
@@ -193,7 +194,7 @@ export default function FormulasPage() {
                   </div>
                   <span style={{ fontSize: 11, color: 'var(--muted-2)' }}>Base {c.base}</span>
                   {hasWarning && (
-                    <span title="Alguna cantidad de este color necesita verificarse contra el PDF original" style={{ color: 'var(--danger)', fontSize: 14 }}>⚠</span>
+                    <span title="Alguna cantidad de este color necesita verificarse contra el PDF original" style={{ color: 'var(--danger)', display: 'inline-grid' }}><TriangleAlert size={14} /></span>
                   )}
                 </button>
               )
@@ -215,7 +216,7 @@ export default function FormulasPage() {
           ) : (
             <>
               <button className="formulas-back btn btn-ghost" onClick={() => setSelected(null)} style={{ marginBottom: 14, alignItems: 'center', gap: 6 }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 15, height: 15 }}><path d="m15 18-6-6 6-6" /></svg>
+                <ChevronLeft size={15} />
                 Volver a la lista
               </button>
               <div className="panel-head" style={{ marginBottom: 16, gap: 14 }}>
@@ -282,7 +283,7 @@ export default function FormulasPage() {
                           <td data-label="Cantidad">
                             {cn.needsReview || ml == null ? (
                               <span style={{ color: 'var(--danger)', fontWeight: 600 }} title="Este valor no cuadra en el documento fuente — verifica la fórmula original antes de usarla">
-                                ⚠ Verificar fórmula original
+                                <TriangleAlert className="i-inline" /> Verificar fórmula original
                               </span>
                             ) : (
                               <span style={{ fontWeight: 600 }}>{fmtMl(ml)} mL</span>

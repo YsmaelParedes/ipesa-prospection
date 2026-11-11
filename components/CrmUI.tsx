@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { Check, ChevronDown, Search, TrendingDown, TrendingUp, UserRound } from 'lucide-react'
 
 /* ── Helpers visuales compartidos entre todas las páginas V2 ── */
 
@@ -146,7 +147,7 @@ export function OwnerChip({ value, small }: { value: string; small?: boolean }) 
   const { bg, color } = hashChip(value)
   return (
     <span className="chip" style={{ ...smallStyle, background: bg, color, fontWeight: 700 }}>
-      👤 {value}
+      <UserRound size={11} strokeWidth={2.4} className="i-inline" style={{ marginRight: 3 }} aria-hidden="true" />{value}
     </span>
   )
 }
@@ -306,10 +307,8 @@ export function FilterDropdown({
       >
         {triggerLabel(value)}
         {countFor && value !== 'Todos' && <span className="count">{countFor(value)}</span>}
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
-          style={{ width: 12, height: 12, marginLeft: 2, transition: 'transform 0.15s ease', transform: open ? 'rotate(180deg)' : 'none' }}>
-          <path d="m6 9 6 6 6-6"/>
-        </svg>
+        <ChevronDown size={12} strokeWidth={2.4} aria-hidden="true"
+          style={{ marginLeft: 2, transition: 'transform 0.15s ease', transform: open ? 'rotate(180deg)' : 'none' }} />
       </button>
 
       {open && pos && typeof document !== 'undefined' && createPortal(
@@ -320,7 +319,7 @@ export function FilterDropdown({
         >
           {searchable && (
             <label className="sel-search">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+              <Search strokeWidth={2.2} aria-hidden="true" />
               <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder={searchPlaceholder} aria-label={searchPlaceholder} />
             </label>
           )}
@@ -340,7 +339,7 @@ export function FilterDropdown({
                   <span className="sel-text"><span className="sel-label">{label(t)}</span></span>
                   {countFor && <span className="sel-count">{countFor(t)}</span>}
                   {active && (
-                    <svg className="sel-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 13 4 4L19 7" /></svg>
+                    <Check className="sel-check" strokeWidth={2.8} aria-hidden="true" />
                   )}
                 </button>
               )
@@ -355,16 +354,9 @@ export function FilterDropdown({
 
 /* Icono de tendencia */
 export function TrendIcon({ up }: { up: boolean }) {
-  if (up) return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13, color: 'var(--success)' }}>
-      <path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/>
-    </svg>
-  )
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13, color: 'var(--danger)' }}>
-      <path d="m3 7 6 6 4-4 8 8"/><path d="M21 17h-7v-7"/>
-    </svg>
-  )
+  return up
+    ? <TrendingUp size={13} style={{ color: 'var(--success)' }} aria-hidden="true" />
+    : <TrendingDown size={13} style={{ color: 'var(--danger)' }} aria-hidden="true" />
 }
 
 /* SVG Donut */

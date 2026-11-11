@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import s from './demos.module.css'
+import { Pause, Play } from 'lucide-react'
 
 /**
  * Video del hero: un recorrido corto de Matices con datos de ejemplo, sin
@@ -38,8 +39,8 @@ export function HeroVideo() {
       </video>
       <button type="button" className={`${s.videoBtn} ${s.press}`} onClick={toggle} aria-label={playing ? 'Pausar el video' : 'Reproducir el video'}>
         {playing
-          ? <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
-          : <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" /></svg>}
+          ? <Pause fill="currentColor" aria-hidden="true" />
+          : <Play fill="currentColor" aria-hidden="true" />}
         {playing ? 'Pausar' : 'Ver video'}
       </button>
     </div>
