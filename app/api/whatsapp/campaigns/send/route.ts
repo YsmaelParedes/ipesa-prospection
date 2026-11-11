@@ -8,7 +8,8 @@ import {
 import { CAMPAIGN_BATCH_SIZE, CAMPAIGN_CONCURRENCY, STOP_CAMPAIGN_CODES } from '@/lib/whatsappSafety'
 import { finishTemplateSend, getMessagingLimit, reserveTemplateSend, uniqueRecipientsOutsideWindow24h } from '@/lib/whatsappQuota'
 import { contactForPhone } from '@/lib/whatsappInbox'
-import { noWhatsAppFor } from '@/lib/campaignPeople'
+import { noWhatsAppByPhone, noWhatsAppFor } from '@/lib/campaignPeople'
+import type { NoWhatsApp } from '@/lib/campaignKinds'
 import { WHATSAPP_NOT_CONNECTED, getStoreWhatsAppCreds } from '@/lib/storeWhatsApp'
 import { normalizePhone, toWhatsAppNumber } from '@/lib/phone'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
@@ -55,14 +56,33 @@ type Outcome = {
   status?: number
 }
 
+type ContactRow = { id: string; name: string; phone: string; wa_opt_out: boolean; line_type?: string | null }
+const CONTACT_FIELDS = 'id, name, phone, wa_opt_out, line_type'
+
+/**
+ * Lo que un lote de campaña necesita de la base, en dos consultas en vez de
+ * dos por destinatario: con 400 destinatarios eran 800 consultas más.
+ */
+type Preloaded = { contacts: Map<string, ContactRow>; noWhatsApp: Map<string, NoWhatsApp> }
+
+async function preloadBatch(storeId: string, contactIds: string[]): Promise<Preloaded> {
+  const { data, error } = await getServerSupabase().from('contacts').select(CONTACT_FIELDS)
+    .eq('store_id', storeId).in('id', contactIds)
+  if (error) throw error
+  const contacts = new Map((data ?? []).map(c => [c.id, c as ContactRow]))
+  const phones = [...contacts.values()].map(c => normalizePhone(c.phone)).filter(p => /^\d{10}$/.test(p))
+  return { contacts, noWhatsApp: await noWhatsAppByPhone(storeId, phones) }
+}
+
 /** Envía la plantilla a un destinatario respetando bajas, "sin WhatsApp" y el límite de Meta. */
-async function sendOne(ctx: StoreContext, creds: WhatsAppCreds, shared: Shared, target: { contactId?: string; phone?: string; force?: boolean }): Promise<Outcome> {
+async function sendOne(ctx: StoreContext, creds: WhatsAppCreds, shared: Shared, target: { contactId?: string; phone?: string; force?: boolean }, pre?: Preloaded): Promise<Outcome> {
   const supabase = getServerSupabase()
-  let contact: { id: string; name: string; phone: string; wa_opt_out: boolean; line_type?: string | null } | null = null
+  let contact: ContactRow | null = null
   let phone = ''
   if (target.contactId) {
-    const { data } = await supabase.from('contacts').select('id, name, phone, wa_opt_out, line_type')
-      .eq('id', target.contactId).eq('store_id', ctx.storeId).maybeSingle()
+    const data = pre
+      ? pre.contacts.get(target.contactId) ?? null
+      : (await supabase.from('contacts').select(CONTACT_FIELDS).eq('id', target.contactId).eq('store_id', ctx.storeId).maybeSingle()).data as ContactRow | null
     if (!data) return { contactId: target.contactId, ok: false, error: 'Contacto no encontrado' }
     contact = data
     phone = normalizePhone(data.phone)
@@ -80,7 +100,7 @@ async function sendOne(ctx: StoreContext, creds: WhatsAppCreds, shared: Shared, 
   // Sin WhatsApp: no se le vuelve a mandar nada (puede ser un teléfono fijo).
   // En campañas nunca; desde el chat solo si se confirma "intentar de todos modos".
   if (!(target.force && !target.contactId)) {
-    const noWhatsApp = await noWhatsAppFor(ctx.storeId, phone)
+    const noWhatsApp = pre ? pre.noWhatsApp.get(phone) ?? null : await noWhatsAppFor(ctx.storeId, phone)
     if (noWhatsApp) {
       const times = noWhatsApp.failures === 1 ? 'el último envío' : `los últimos ${noWhatsApp.failures} envíos`
       return { contactId, ok: false, skipped: true, noWhatsApp: true, error: `Sin WhatsApp: Meta rechazó ${times}. Puede ser un teléfono fijo.` }
@@ -197,6 +217,7 @@ export async function POST(req: NextRequest) {
 
     // ── Campaña: lote con concurrencia limitada; se corta ante un motivo de paro ──
     const queue = (recipients as { contactId: string }[]).map(r => r.contactId)
+    const pre = await preloadBatch(ctx.storeId, queue)
     const results: Outcome[] = []
     let stop: string | null = null
     let next = 0
@@ -205,7 +226,7 @@ export async function POST(req: NextRequest) {
         const id = queue[next++]
         let o: Outcome
         try {
-          o = await sendOne(ctx, creds, shared, { contactId: id })
+          o = await sendOne(ctx, creds, shared, { contactId: id }, pre)
         } catch (error) {
           // Un error con un contacto no tumba el lote: los demás ya enviados
           // deben llegar al navegador. Si el fallo es del servidor (base lenta,

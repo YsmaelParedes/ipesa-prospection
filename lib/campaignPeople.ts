@@ -152,8 +152,13 @@ export async function noWhatsAppFor(storeId: string, phone: string): Promise<NoW
 
 /** De estos números, los que no tienen WhatsApp según lo último que dijo Meta. */
 export async function noWhatsAppAmong(storeId: string, phones: string[]): Promise<Set<string>> {
+  return new Set((await noWhatsAppByPhone(storeId, phones)).keys())
+}
+
+/** Igual que noWhatsAppFor, pero para varios números con una sola consulta (lotes de campaña). */
+export async function noWhatsAppByPhone(storeId: string, phones: string[]): Promise<Map<string, NoWhatsApp>> {
   const unique = [...new Set(phones)]
-  if (!unique.length) return new Set()
+  if (!unique.length) return new Map()
   const supabase = getServerSupabase()
   const since = sinceIso()
   const parts = await Promise.all(chunks(unique, 150).map(part =>
@@ -168,5 +173,10 @@ export async function noWhatsAppAmong(storeId: string, phones: string[]): Promis
     if (list) list.push(r)
     else byPhone.set(r.phone, [r])
   }
-  return new Set([...byPhone].filter(([, list]) => noWhatsAppOf(list)).map(([phone]) => phone))
+  const out = new Map<string, NoWhatsApp>()
+  for (const [phone, list] of byPhone) {
+    const found = noWhatsAppOf(list)
+    if (found) out.set(phone, found)
+  }
+  return out
 }

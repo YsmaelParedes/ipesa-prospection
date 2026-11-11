@@ -22,7 +22,7 @@ import { decryptSecret, encryptSecret, hasEncryptionKey } from './crypto'
 import { GRAPH_VERSION, graphFetch } from './whatsapp'
 import { externalFetch } from './serverTiming'
 import { getServerSupabase, invalidateStoreContextCache, type StoreContext } from './supabase-server'
-import { getStoreWhatsAppRow } from './storeWhatsApp'
+import { forgetStoreForPhone, getStoreWhatsAppRow } from './storeWhatsApp'
 import { WHATSAPP_OFFERED, planOf } from './stores'
 import { META_ID, canRequestHistory, pickPhone, type SignupInput } from './whatsappSignupParse'
 
@@ -196,6 +196,7 @@ export async function connectEmbedded(ctx: StoreContext, input: SignupInput) {
   const mod = await db.from('stores').update({ modules }).eq('id', storeId)
   if (mod.error) throw mod.error
   invalidateStoreContextCache()
+  forgetStoreForPhone()
 
   // 7. Coexistencia: pedir el historial de chats (si falla, la tienda lo vuelve a pedir desde su panel)
   let historyStatus = sameNumber ? row.history_status : null
@@ -271,4 +272,5 @@ export async function clearEmbedded(storeId: string, modules?: Record<string, bo
   const off = await db.from('stores').update({ modules: { ...current, whatsapp: false } }).eq('id', storeId)
   if (off.error) throw off.error
   invalidateStoreContextCache()
+  forgetStoreForPhone()
 }

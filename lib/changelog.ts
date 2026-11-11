@@ -36,6 +36,15 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.46.1',
+    date: '10 de noviembre, 2026',
+    title: 'Campañas grandes sin trabar la app',
+    module: 'campaigns',
+    items: [
+      'Mandar una campaña a cientos de contactos ya no pone lenta la app mientras llegan las palomitas de entregado y leído.',
+    ],
+  },
+  {
     version: '1.46.0',
     date: '10 de noviembre, 2026',
     title: 'Cada envío de campaña por separado',

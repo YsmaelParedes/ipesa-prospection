@@ -170,8 +170,17 @@ async function applyEvents(supabase: Supabase, storeId: string, value: any): Pro
   const notifications: InboundNotification[] = []
 
   // ── Estados de mensajes salientes ──
+  // Una campaña grande dispara miles de estos avisos en pocos minutos: los
+  // «entregado» y «leído» de un mismo aviso se guardan con una sola consulta
+  // por estado, y el «enviado» no se guarda porque la app ya deja el mensaje
+  // así al mandarlo (si no, el «entregado» lo pone al día de todos modos).
+  const advance = new Map<string, string[]>()
   for (const status of value?.statuses ?? []) {
     if (typeof status?.id !== 'string') continue
+    if (status.status === 'delivered' || status.status === 'read') {
+      advance.set(status.status, [...(advance.get(status.status) ?? []), status.id])
+      continue
+    }
     const now = new Date().toISOString()
     if (status.status === 'failed') {
       const err = status.errors?.[0]
@@ -185,13 +194,15 @@ async function applyEvents(supabase: Supabase, storeId: string, value: any): Pro
       // 131050: se dio de baja del marketing; Meta pide no volver a enviarle
       const contactId = failed?.[0]?.contact_id
       if (code === 131050 && contactId) await markOptOut(storeId, contactId)
-    } else if (STATUS_RANK[status.status]) {
-      await supabase.from('whatsapp_messages')
-        .update({ status: status.status, updated_at: now })
-        .eq('store_id', storeId)
-        .eq('wa_message_id', status.id)
-        .in('status', LOWER_THAN(status.status))
     }
+  }
+  for (const [status, ids] of advance) {
+    const { error } = await supabase.from('whatsapp_messages')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('store_id', storeId)
+      .in('wa_message_id', [...new Set(ids)])
+      .in('status', LOWER_THAN(status))
+    if (error) throw new Error(`No se guardó el estado: ${error.message}`)
   }
 
   // ── Mensajes entrantes ──

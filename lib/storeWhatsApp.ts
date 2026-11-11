@@ -84,6 +84,23 @@ export const WHATSAPP_NOT_CONNECTED = 'El número de WhatsApp de tu tienda aún 
  * app secret, y nunca por aquí.
  */
 export async function findStoreForPhone(phoneNumberId: string): Promise<StoreWhatsAppRow | null> {
+  // Cada aviso de Meta pregunta lo mismo: en una campaña grande eran cientos de consultas por minuto
+  const hit = storeByPhone.get(phoneNumberId)
+  if (hit && Date.now() - hit.at < STORE_BY_PHONE_TTL) return hit.row
+  const row = await lookupStoreForPhone(phoneNumberId)
+  storeByPhone.set(phoneNumberId, { at: Date.now(), row })
+  return row
+}
+
+const STORE_BY_PHONE_TTL = 60_000
+const storeByPhone = new Map<string, { at: number; row: StoreWhatsAppRow | null }>()
+
+/** Al conectar o desconectar un número (en esta instancia; las demás tardan como mucho un minuto). */
+export function forgetStoreForPhone() {
+  storeByPhone.clear()
+}
+
+async function lookupStoreForPhone(phoneNumberId: string): Promise<StoreWhatsAppRow | null> {
   const db = getServerSupabase()
   if (process.env.WHATSAPP_PHONE_NUMBER_ID && phoneNumberId === process.env.WHATSAPP_PHONE_NUMBER_ID) {
     const { data } = await db.from('store_whatsapp').select(COLUMNS).eq('credentials_source', 'env').maybeSingle()
