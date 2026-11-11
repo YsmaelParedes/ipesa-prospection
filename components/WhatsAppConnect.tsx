@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { apiFetch } from '@/lib/apiClient'
 import { WaIcon } from '@/components/WhatsAppUI'
 import { invalidateSession } from '@/lib/profile'
-import { readSessionInfo, type SessionInfo } from '@/lib/whatsappSignupParse'
+import { readSessionInfo, signupExtras, type SessionInfo, type SignupMode as Mode } from '@/lib/whatsappSignupParse'
 
 type Config = { appId: string; configId: string; version: string }
 type Pending = { wabaId: string; phoneNumberId: string | null; coexistence: boolean }
@@ -42,11 +42,23 @@ function loadSdk(config: Config): Promise<void> {
   })
 }
 
-const STEPS = [
-  { title: 'Toca «Conectar con WhatsApp»', text: 'Se abre una ventana de Meta, la empresa de WhatsApp.' },
-  { title: 'Entra con tu Facebook y elige tu negocio', text: 'Si no tienes uno, ahí mismo lo creas.' },
-  { title: 'Escribe el número de tu tienda', text: 'Te llega un código o una confirmación a ese celular. Si ya usas WhatsApp Business, lo sigues usando.' },
+const MODES: { id: Mode; title: string; text: string }[] = [
+  { id: 'app', title: 'Ya uso WhatsApp Business', text: 'Lo sigues usando en tu celular y traemos tus chats de los últimos 6 meses.' },
+  { id: 'new', title: 'Es un número nuevo', text: 'Sin WhatsApp, o que ya borraste de la app. Te llega un código por SMS o llamada.' },
 ]
+
+const STEPS: Record<Mode, { title: string; text: string }[]> = {
+  app: [
+    { title: 'Toca «Conectar con WhatsApp»', text: 'Se abre una ventana de Meta, la empresa de WhatsApp.' },
+    { title: 'Entra con tu Facebook y elige tu negocio', text: 'Si no tienes uno, ahí mismo lo creas.' },
+    { title: 'Confirma desde tu celular', text: 'Escribe tu número, abre WhatsApp Business y sigue los pasos que te muestra. Acepta compartir tus chats para traerlos.' },
+  ],
+  new: [
+    { title: 'Toca «Conectar con WhatsApp»', text: 'Se abre una ventana de Meta, la empresa de WhatsApp.' },
+    { title: 'Entra con tu Facebook y elige tu negocio', text: 'Si no tienes uno, ahí mismo lo creas.' },
+    { title: 'Escribe el número de tu tienda', text: 'Te llega un código por SMS o llamada a ese número; escríbelo en la ventana.' },
+  ],
+}
 
 /**
  * Alta de WhatsApp en unos clics (Embedded Signup): abre la ventana de Meta,
@@ -61,6 +73,7 @@ export function WhatsAppConnect() {
   const [phase, setPhase] = useState<Phase>('idle')
   const [error, setError] = useState('')
   const [coexistence, setCoexistence] = useState(false)
+  const [mode, setMode] = useState<Mode>('app')
   const info = useRef<SessionInfo | null>(null)
 
   useEffect(() => {
@@ -130,7 +143,7 @@ export function WhatsAppConnect() {
       config_id: config.configId,
       response_type: 'code',
       override_default_response_type: true,
-      extras: { setup: {} },
+      extras: signupExtras(mode),
     })
   }
 
@@ -160,8 +173,18 @@ export function WhatsAppConnect() {
 
         <div className="wa-connect-steps">
           <h3>Así se conecta <small>· unos 5 minutos</small></h3>
+          <fieldset className="wa-connect-choice" disabled={phase === 'meta'}>
+            <legend>¿El número de tu tienda ya tiene WhatsApp Business?</legend>
+            {MODES.map(m => (
+              <label key={m.id} className="wa-connect-option">
+                <input type="radio" name="wa-connect-mode" value={m.id} checked={mode === m.id} onChange={() => setMode(m.id)} />
+                <span className="wa-connect-radio" aria-hidden="true" />
+                <span><strong>{m.title}</strong>{m.text}</span>
+              </label>
+            ))}
+          </fieldset>
           <ol>
-            {STEPS.map((st, i) => (
+            {STEPS[mode].map((st, i) => (
               <li key={st.title}><span className="wa-offer-num">{i + 1}</span><span><strong>{st.title}</strong>{st.text}</span></li>
             ))}
             <li><span className="wa-offer-num wa-connect-ok"><WaIcon.check size={14} /></span><span><strong>Listo</strong>Tus chats empiezan a llegar a Matices.</span></li>

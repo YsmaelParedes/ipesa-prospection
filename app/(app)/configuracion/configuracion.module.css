@@ -179,6 +179,8 @@
 .waFoot { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; padding: 14px 22px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-3); }
 .waFootActions { display: flex; gap: 8px; }
 .waDanger { color: var(--danger); }
+.waInlineBtn { padding: 0; border: 0; background: none; font: inherit; font-weight: 800; color: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.waInlineBtn:disabled { cursor: default; opacity: .65; text-decoration: none; }
 .replyForm { display: flex; flex-direction: column; gap: 8px; padding: 14px 22px; border-top: 1px solid var(--line); background: var(--paper); border-radius: 0 0 15px 15px; }
 .replyForm > button { align-self: flex-end; }
 .note code { padding: 1px 6px; border-radius: 6px; background: var(--paper-2); font-family: var(--font-mono); font-size: 12px; }

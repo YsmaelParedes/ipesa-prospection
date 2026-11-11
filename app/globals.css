@@ -1796,6 +1796,20 @@ a { color: inherit; text-decoration: none; }
 @media (prefers-reduced-motion: no-preference) { .wa-connect-dot.spin { animation: wa-connect-spin 900ms linear infinite; } }
 @keyframes wa-connect-spin { to { rotate: 360deg; } }
 .wa-connect-info { margin: 0; padding: 12px 14px; border-radius: 12px; background: #E0F6FB; color: #00586C; font-size: 13px; line-height: 1.45; }
+/* ¿Ya usa WhatsApp Business (coexistencia) o es un número nuevo? */
+.wa-connect-choice { border: 0; margin: 0 0 18px; padding: 0; min-width: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.wa-connect-choice legend { grid-column: 1 / -1; padding: 0; margin-bottom: 8px; font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.wa-connect-choice:disabled { opacity: .6; }
+.wa-connect-option { position: relative; display: flex; gap: 10px; align-items: flex-start; padding: 12px 12px 12px 11px; border-radius: 12px; background: var(--card); box-shadow: 0 0 0 1px var(--line); cursor: pointer; font-size: 12.5px; line-height: 1.4; color: var(--ink-3); -webkit-tap-highlight-color: transparent; transition: box-shadow 150ms ease-out, background-color 150ms ease-out; }
+.wa-connect-option strong { display: block; margin-bottom: 2px; font-size: 13.5px; color: var(--ink); }
+.wa-connect-option:hover { box-shadow: 0 0 0 1px var(--line-strong, #D9D9DB); }
+.wa-connect-option:has(input:checked) { background: #F1FBF4; box-shadow: 0 0 0 2px #128C4A; }
+.wa-connect-option:has(input:focus-visible) { outline: 2px solid var(--brand); outline-offset: 2px; }
+.wa-connect-choice:disabled .wa-connect-option { cursor: default; }
+.wa-connect-option input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.wa-connect-radio { flex: 0 0 18px; height: 18px; margin-top: 1px; border-radius: 50%; box-sizing: border-box; border: 2px solid var(--line-strong, #D9D9DB); background: var(--card); transition: border-color 150ms ease-out, border-width 150ms ease-out; }
+.wa-connect-option:has(input:checked) .wa-connect-radio { border: 5px solid #128C4A; }
+@media (max-width: 520px) { .wa-connect-choice { grid-template-columns: 1fr; } }
 @media (max-width: 960px) {
   .wa-connect-steps { padding: 18px 16px; }
   .wa-connect-finishing { padding: 24px 20px; margin-top: 8px; }

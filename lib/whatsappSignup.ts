@@ -24,9 +24,9 @@ import { externalFetch } from './serverTiming'
 import { getServerSupabase, invalidateStoreContextCache, type StoreContext } from './supabase-server'
 import { getStoreWhatsAppRow } from './storeWhatsApp'
 import { WHATSAPP_OFFERED, planOf } from './stores'
-import { META_ID, type SignupInput } from './whatsappSignupParse'
+import { META_ID, canRequestHistory, pickPhone, type SignupInput } from './whatsappSignupParse'
 
-export { parseSignupInput, type SignupInput } from './whatsappSignupParse'
+export { parseSignupInput, canRequestHistory, type SignupInput } from './whatsappSignupParse'
 
 
 /**
@@ -50,7 +50,7 @@ export class SignupError extends Error {
   constructor(message: string, public status = 400) { super(message) }
 }
 
-type Phone = { id: string; display_phone_number?: string; verified_name?: string }
+type Phone = { id: string; display_phone_number?: string; verified_name?: string; onBizApp?: boolean }
 
 const metaMessage = (data: any) => String(data?.error?.error_user_msg || data?.error?.message || '').slice(0, 300)
 
@@ -69,22 +69,45 @@ async function exchangeCode(code: string): Promise<string> {
   return data.access_token
 }
 
-/** El número elegido, comprobado contra la cuenta con el token de la tienda. */
-async function verifiedPhone(token: string, wabaId: string, wanted: string | null): Promise<Phone> {
+/** ¿El número también está en la app WhatsApp Business (coexistencia)? */
+async function isOnBizApp(token: string, phoneId: string): Promise<boolean> {
+  const r = await graphFetch({ token }, `${phoneId}?fields=is_on_biz_app,platform_type`)
+  return r.ok && r.data?.is_on_biz_app === true
+}
+
+/**
+ * El número elegido, comprobado contra la cuenta con el token de la tienda.
+ * En coexistencia Meta no dice cuál fue: si hay varios, el que está en la
+ * app WhatsApp Business.
+ */
+async function verifiedPhone(token: string, wabaId: string, wanted: string | null, coexistence: boolean): Promise<Phone> {
   const r = await graphFetch({ token }, `${wabaId}/phone_numbers?fields=id,display_phone_number,verified_name`)
   if (!r.ok) {
     console.error('[whatsapp-signup] no se pudo leer la cuenta', r.status, metaMessage(r.data))
     throw new SignupError('No pudimos leer tu cuenta de WhatsApp en Meta. Intenta otra vez.', 502)
   }
-  const phones: Phone[] = Array.isArray(r.data?.data) ? r.data.data.filter((p: any) => META_ID.test(String(p?.id))) : []
-  const phone = wanted ? phones.find(p => p.id === wanted) : phones.length === 1 ? phones[0] : null
+  let phones: Phone[] = Array.isArray(r.data?.data) ? r.data.data.filter((p: any) => META_ID.test(String(p?.id))) : []
+  if (!wanted && coexistence && phones.length > 1) {
+    phones = await Promise.all(phones.map(async p => ({ ...p, onBizApp: await isOnBizApp(token, p.id) })))
+  }
+  const phone = pickPhone(phones, wanted, coexistence)
   if (!phone) throw new SignupError(phones.length > 1 && !wanted
-    ? 'Tu cuenta de WhatsApp tiene varios números. Vuelve a conectar y elige uno.'
+    ? 'Tu cuenta de WhatsApp en Meta tiene varios números y no supimos cuál conectar. Vuelve a conectar con una cuenta que solo tenga el número de tu tienda.'
     : 'Ese número no aparece en tu cuenta de WhatsApp. Vuelve a conectar.')
   return phone
 }
 
 const sixDigits = () => String(randomInt(0, 1_000_000)).padStart(6, '0')
+
+/** Quita la app de Matices de una cuenta de WhatsApp (sin fallar si Meta no responde). */
+async function unsubscribe(token: string, wabaId: string, storeId: string) {
+  try {
+    const r = await graphFetch({ token }, `${wabaId}/subscribed_apps`, { method: 'DELETE' })
+    if (!r.ok) console.warn('[whatsapp-signup] Meta no quitó la suscripción', storeId, metaMessage(r.data))
+  } catch (error) {
+    console.warn('[whatsapp-signup] no se pudo quitar la suscripción', storeId, error)
+  }
+}
 
 /** Conecta (o retoma) el número de la tienda. Devuelve el estado final. */
 export async function connectEmbedded(ctx: StoreContext, input: SignupInput) {
@@ -99,6 +122,11 @@ export async function connectEmbedded(ctx: StoreContext, input: SignupInput) {
   if (row.credentials_source === 'env' || (row.connection_method === 'manual' && row.connected_at)) {
     throw new SignupError('Tu tienda ya tiene un número de WhatsApp conectado.', 409)
   }
+  // Ya conectado y encendido: para cambiar de número primero se desconecta
+  // (así se registra el nuevo, se suelta la cuenta anterior y el historial es del número correcto)
+  if (row.connection_method === 'embedded' && row.connected_at && ctx.store.modules?.whatsapp) {
+    throw new SignupError('Tu WhatsApp ya está conectado. Para cambiar de número, primero desconéctalo en Configuración › WhatsApp.', 409)
+  }
 
   // 1. Token: del código nuevo o, al reintentar, el que ya se guardó para esa cuenta
   let token: string
@@ -107,13 +135,19 @@ export async function connectEmbedded(ctx: StoreContext, input: SignupInput) {
   else throw new SignupError('Vuelve a tocar «Conectar con WhatsApp» para terminar en Meta.')
 
   // 2. El número tiene que ser de esa cuenta
-  const phone = await verifiedPhone(token, input.wabaId, input.phoneNumberId ?? (row.waba_id === input.wabaId ? row.phone_number_id : null))
+  const sameAccount = row.connection_method === 'embedded' && row.waba_id === input.wabaId
+  let coexistence = input.coexistence || (sameAccount && row.coexistence)
+  const phone = await verifiedPhone(token, input.wabaId, input.phoneNumberId ?? (sameAccount ? row.phone_number_id : null), coexistence)
   if (phone.id === process.env.WHATSAPP_PHONE_NUMBER_ID) throw new SignupError('Ese número ya está conectado a otra tienda de Matices.', 409)
-  let coexistence = input.coexistence || (row.waba_id === input.wabaId && row.coexistence)
-  if (!coexistence) {
-    const info = await graphFetch({ token }, `${phone.id}?fields=is_on_biz_app,platform_type`)
-    if (info.ok && info.data?.is_on_biz_app === true) coexistence = true
+  if (!coexistence) coexistence = phone.onBizApp ?? await isOnBizApp(token, phone.id)
+
+  // Un alta a medias con OTRA cuenta: se suelta la anterior para no seguir recibiendo sus mensajes
+  let previous: { token: string; wabaId: string } | null = null
+  if (row.connection_method === 'embedded' && row.access_token_enc && row.waba_id && row.waba_id !== input.wabaId) {
+    try { previous = { token: decryptSecret(row.access_token_enc, storeId), wabaId: row.waba_id } } catch { /* sin token no hay nada que soltar */ }
   }
+  // Mismo número que ya quedó activado: no se vuelve a registrar ni se pierde su historial
+  const sameNumber = sameAccount && row.phone_number_id === phone.id
 
   // 3. Guardar lo obtenido antes de seguir (si algo falla después, se retoma)
   const saved = await db.from('store_whatsapp').update({
@@ -123,14 +157,16 @@ export async function connectEmbedded(ctx: StoreContext, input: SignupInput) {
     app_secret_enc: null,
     phone_number_id: phone.id,
     waba_id: input.wabaId,
-    business_id: input.businessId ?? row.business_id,
+    business_id: input.businessId ?? (sameAccount ? row.business_id : null),
     display_phone: phone.display_phone_number ?? null,
     coexistence,
     setup_error: null,
     updated_at: new Date().toISOString(),
+    ...(sameNumber ? {} : { connected_at: null, history_status: null, history_requested_at: null, history_imported: 0 }),
   }).eq('store_id', storeId)
   if (saved.error?.code === '23505') throw new SignupError('Ese número ya está conectado a otra tienda de Matices.', 409)
   if (saved.error) throw saved.error
+  if (previous) await unsubscribe(previous.token, previous.wabaId, storeId)
 
   const fail = async (step: string, message: string, data: unknown) => {
     console.error(`[whatsapp-signup] falló ${step}`, storeId, metaMessage(data))
@@ -143,7 +179,8 @@ export async function connectEmbedded(ctx: StoreContext, input: SignupInput) {
   if (!sub.ok) await fail('subscribe', 'Meta no activó la recepción de mensajes. Intenta otra vez.', sub.data)
 
   // 5. Número nuevo: registrarlo en la API con un PIN de verificación en dos pasos
-  if (!coexistence && !row.connected_at) {
+  const connectedAt = sameNumber ? row.connected_at : null
+  if (!coexistence && !connectedAt) {
     const pin = row.pin_enc ? decryptSecret(row.pin_enc, storeId) : sixDigits()
     if (!row.pin_enc) await db.from('store_whatsapp').update({ pin_enc: encryptSecret(pin, storeId) }).eq('store_id', storeId)
     const reg = await graphFetch({ token }, `${phone.id}/register`, {
@@ -154,24 +191,48 @@ export async function connectEmbedded(ctx: StoreContext, input: SignupInput) {
 
   // 6. Listo: se enciende WhatsApp en la tienda
   const now = new Date().toISOString()
-  await db.from('store_whatsapp').update({ connected_at: row.connected_at ?? now, setup_error: null, updated_at: now }).eq('store_id', storeId)
+  await db.from('store_whatsapp').update({ connected_at: connectedAt ?? now, setup_error: null, updated_at: now }).eq('store_id', storeId)
   const modules = { ...ctx.store.modules, whatsapp: true }
   const mod = await db.from('stores').update({ modules }).eq('id', storeId)
   if (mod.error) throw mod.error
   invalidateStoreContextCache()
 
-  // 7. Coexistencia: pedir una sola vez el historial de chats
-  let historyStatus = row.history_status
-  if (coexistence && !historyStatus) {
-    const h = await graphFetch({ token }, `${phone.id}/smb_app_data`, {
-      method: 'POST', body: JSON.stringify({ messaging_product: 'whatsapp', sync_type: 'history' }),
-    })
-    historyStatus = h.ok ? 'requested' : 'failed'
-    if (!h.ok) console.error('[whatsapp-signup] no se pidió el historial', storeId, metaMessage(h.data))
-    await db.from('store_whatsapp').update({ history_status: historyStatus, history_requested_at: now }).eq('store_id', storeId)
-  }
+  // 7. Coexistencia: pedir el historial de chats (si falla, la tienda lo vuelve a pedir desde su panel)
+  let historyStatus = sameNumber ? row.history_status : null
+  const history = { coexistence, connected_at: connectedAt ?? now, history_status: historyStatus }
+  if (canRequestHistory(history)) historyStatus = await requestHistory(storeId, token, phone.id)
 
   return { connected: true, displayPhone: phone.display_phone_number ?? null, coexistence, historyStatus }
+}
+
+/**
+ * Pide a Meta el historial de chats de un número en coexistencia. Llega
+ * después por el webhook (campo history). Solo se puede en las primeras 24 h.
+ */
+async function requestHistory(storeId: string, token: string, phoneId: string): Promise<'requested' | 'failed'> {
+  const h = await graphFetch({ token }, `${phoneId}/smb_app_data`, {
+    method: 'POST', body: JSON.stringify({ messaging_product: 'whatsapp', sync_type: 'history' }),
+  })
+  const status = h.ok ? 'requested' : 'failed'
+  if (!h.ok) console.error('[whatsapp-signup] no se pidió el historial', storeId, metaMessage(h.data))
+  const now = new Date().toISOString()
+  await getServerSupabase().from('store_whatsapp')
+    .update({ history_status: status, history_requested_at: now, updated_at: now }).eq('store_id', storeId)
+  return status
+}
+
+/** La tienda vuelve a pedir su historial (no se pidió o falló, y aún está en las 24 h). */
+export async function retryHistory(ctx: StoreContext) {
+  const row = await getStoreWhatsAppRow(ctx.storeId)
+  if (!row || row.connection_method !== 'embedded' || !row.access_token_enc || !row.phone_number_id) {
+    throw new SignupError('Tu WhatsApp no está conectado.', 409)
+  }
+  if (!canRequestHistory(row)) {
+    throw new SignupError('Meta solo deja traer tus chats anteriores en las primeras 24 horas después de conectar.', 409)
+  }
+  const status = await requestHistory(ctx.storeId, decryptSecret(row.access_token_enc, ctx.storeId), row.phone_number_id)
+  if (status === 'failed') throw new SignupError('Meta no aceptó la solicitud de tus chats. Intenta otra vez en unos minutos.', 502)
+  return { status }
 }
 
 /**
@@ -184,13 +245,11 @@ export async function disconnectEmbedded(ctx: StoreContext) {
   const row = await getStoreWhatsAppRow(ctx.storeId)
   if (!row || row.connection_method !== 'embedded') throw new SignupError('Este número lo conectó tu asesor. Escríbenos para cambiarlo.', 409)
   if (row.access_token_enc && row.waba_id) {
-    try {
-      const token = decryptSecret(row.access_token_enc, ctx.storeId)
-      const r = await graphFetch({ token }, `${row.waba_id}/subscribed_apps`, { method: 'DELETE' })
-      if (!r.ok) console.warn('[whatsapp-signup] Meta no quitó la suscripción', ctx.storeId, metaMessage(r.data))
-    } catch (error) {
-      console.warn('[whatsapp-signup] no se pudo quitar la suscripción', ctx.storeId, error)
+    let token: string | null = null
+    try { token = decryptSecret(row.access_token_enc, ctx.storeId) } catch (error) {
+      console.warn('[whatsapp-signup] no se pudo descifrar el token al desconectar', ctx.storeId, error)
     }
+    if (token) await unsubscribe(token, row.waba_id, ctx.storeId)
   }
   await clearEmbedded(ctx.storeId, ctx.store.modules)
 }

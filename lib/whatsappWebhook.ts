@@ -303,6 +303,37 @@ async function saveBusinessEchoes(supabase: Supabase, storeId: string, echoes: a
 
 const HISTORY_STATUS: Record<string, string> = { sent: 'sent', delivered: 'delivered', read: 'read', played: 'read' }
 const HISTORY_BATCH = 500
+// Las búsquedas por lista van en la URL: con lotes chicos no pasan de ~8 KB (414 URI Too Long)
+const ID_LOOKUP_BATCH = 80
+const PHONE_LOOKUP_BATCH = 60
+
+/** Contactos de la tienda para muchos números a la vez (teléfono de 10 dígitos → id). */
+async function contactsFor(supabase: Supabase, storeId: string, phones: string[]): Promise<Map<string, string>> {
+  const found = new Map<string, string>()
+  const unique = [...new Set(phones)]
+  for (let i = 0; i < unique.length; i += PHONE_LOOKUP_BATCH) {
+    const { data, error } = await supabase.from('contacts').select('id, phone')
+      .eq('store_id', storeId).in('phone', unique.slice(i, i + PHONE_LOOKUP_BATCH).flatMap(phoneVariants))
+    if (error) throw new Error(`No se leyeron los contactos del historial: ${error.message}`)
+    for (const c of (data ?? []) as { id: string; phone: string }[]) {
+      const key = normalizePhone(c.phone)
+      if (key && !found.has(key)) found.set(key, c.id)
+    }
+  }
+  return found
+}
+
+/** Ids de mensaje que ya están guardados (Meta reintenta y el índice único es global). */
+async function existingMessageIds(supabase: Supabase, ids: string[]): Promise<Set<string>> {
+  const seen = new Set<string>()
+  for (let i = 0; i < ids.length; i += ID_LOOKUP_BATCH) {
+    const { data, error } = await supabase.from('whatsapp_messages')
+      .select('wa_message_id').in('wa_message_id', ids.slice(i, i + ID_LOOKUP_BATCH))
+    if (error) throw new Error(`No se leyó el historial: ${error.message}`)
+    for (const r of data ?? []) seen.add(r.wa_message_id as string)
+  }
+  return seen
+}
 
 /**
  * Historial de chats que Meta manda una sola vez al conectar un número de
@@ -329,19 +360,24 @@ async function saveHistory(supabase: Supabase, storeId: string, value: any) {
     }
     const rows: Record<string, unknown>[] = []
     const readAt = new Date().toISOString()
-    for (const thread of chunk?.threads ?? []) {
+    const threads: any[] = Array.isArray(chunk?.threads) ? chunk.threads : []
+    // Un solo viaje a la base por lote de números (un aviso puede traer cientos de chats)
+    const contacts = await contactsFor(supabase, storeId, threads.map(t => normalizePhone(t?.id)).filter(Boolean))
+    const ids = new Set<string>()
+    for (const thread of threads) {
       const phone = normalizePhone(thread?.id)
       if (!phone) continue
-      const contact = await contactFor(supabase, storeId, phone)
+      const contactId = contacts.get(phone) ?? null
       for (const msg of thread?.messages ?? []) {
-        if (typeof msg?.id !== 'string') continue
+        if (typeof msg?.id !== 'string' || ids.has(msg.id)) continue
+        ids.add(msg.id)
         const parsed: Inbound | null = msg.type === 'media_placeholder' ? { text: '📎 Archivo' } : parseInbound(msg)
         if (!parsed) continue
         const inbound = normalizePhone(msg.from) === phone
         const status = String(msg.history_context?.status ?? '').toLowerCase()
         rows.push({
           store_id:      storeId,
-          contact_id:    contact?.id ?? null,
+          contact_id:    contactId,
           phone,
           direction:     inbound ? 'inbound' : 'outbound',
           body:          parsed.text.slice(0, 4096),
@@ -361,10 +397,7 @@ async function saveHistory(supabase: Supabase, storeId: string, value: any) {
     for (let i = 0; i < rows.length; i += HISTORY_BATCH) {
       const batch = rows.slice(i, i + HISTORY_BATCH)
       // Meta reintenta: lo que ya estaba se salta
-      const { data: existing, error: readError } = await supabase.from('whatsapp_messages')
-        .select('wa_message_id').in('wa_message_id', batch.map(r => r.wa_message_id as string))
-      if (readError) throw new Error(`No se leyó el historial: ${readError.message}`)
-      const seen = new Set((existing ?? []).map(r => r.wa_message_id))
+      const seen = await existingMessageIds(supabase, batch.map(r => r.wa_message_id as string))
       const fresh = batch.filter(r => !seen.has(r.wa_message_id as string))
       if (!fresh.length) continue
       const { error } = await supabase.from('whatsapp_messages').insert(fresh)
