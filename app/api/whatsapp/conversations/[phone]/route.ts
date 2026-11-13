@@ -1,17 +1,18 @@
 import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse, after } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
-import { markWhatsAppRead, sendWhatsAppText } from '@/lib/whatsapp'
+import { markWhatsAppRead } from '@/lib/whatsapp'
+import { OUTBOX_MESSAGE_FIELDS, openOutbox } from '@/lib/whatsappOutbox'
 import { WHATSAPP_NOT_CONNECTED, getStoreWhatsAppCreds } from '@/lib/storeWhatsApp'
 import { contactForPhone } from '@/lib/whatsappInbox'
 import { noWhatsAppOf } from '@/lib/campaignPeople'
-import { normalizePhone, toWhatsAppNumber } from '@/lib/phone'
+import { normalizePhone } from '@/lib/phone'
 import { isWindowOpen, windowClosesAt } from '@/lib/whatsappSafety'
 import { jsonError, readJson, serverError } from '@/lib/validation'
 
 type Ctx = { params: Promise<{ phone: string }> }
 
-const MESSAGE_FIELDS = 'id, phone, direction, body, status, error_message, template_name, media_id, media_type, media_mime, profile_name, contact_id, user_id, origin, created_at'
+const MESSAGE_FIELDS = OUTBOX_MESSAGE_FIELDS
 
 async function phoneParam(params: Ctx['params']): Promise<string | null> {
   const raw = decodeURIComponent((await params).phone)
@@ -120,33 +121,14 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   if (!text) return jsonError('El mensaje no puede estar vacío')
   if (text.length > 4096) return jsonError('El mensaje excede 4096 caracteres')
 
-  const creds = await getStoreWhatsAppCreds(ctx.storeId)
-  if (!creds) return jsonError(WHATSAPP_NOT_CONNECTED, 409)
+  const outbox = await openOutbox(ctx)
+  if (!outbox) return jsonError(WHATSAPP_NOT_CONNECTED, 409)
 
-  const result = await sendWhatsAppText(creds, toWhatsAppNumber(phone), text)
-  if (!result.ok) return NextResponse.json({ error: result.error, code: result.code }, { status: 502 })
-
-  try {
-    const contact = await contactForPhone(ctx.storeId, phone)
-    const { data, error } = await getServerSupabase()
-      .from('whatsapp_messages')
-      .insert([{
-        store_id: ctx.storeId,
-        contact_id: contact?.id ?? null,
-        phone,
-        direction: 'outbound',
-        body: text,
-        wa_message_id: result.messageId,
-        status: 'sent',
-        user_id: ctx.uid,
-      }])
-      .select(MESSAGE_FIELDS)
-    if (error) throw error
-    return NextResponse.json({ message: data?.[0] })
-  } catch (error) {
-    // El mensaje SÍ salió; solo falló guardarlo en el historial
-    return serverError('POST /api/whatsapp/conversations/[phone]', error, 'El mensaje se envió pero no se pudo guardar en el historial')
-  }
+  const sent = await outbox.text(phone, text)
+  if (sent.status === 'rejected') return NextResponse.json({ error: sent.error, code: sent.code }, { status: 502 })
+  // El mensaje SÍ salió; solo falló guardarlo en el historial
+  if (sent.status === 'unrecorded') return serverError('POST /api/whatsapp/conversations/[phone]', sent.cause, 'El mensaje se envió pero no se pudo guardar en el historial')
+  return NextResponse.json({ message: sent.message })
 }
 
 // PATCH /api/whatsapp/conversations/[phone] — { optOut: boolean } en el contacto vinculado

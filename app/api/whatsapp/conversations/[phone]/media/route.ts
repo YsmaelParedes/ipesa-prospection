@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, requireStore } from '@/lib/supabase-server'
-import { sendWhatsAppMedia, uploadWhatsAppMedia } from '@/lib/whatsapp'
-import { WHATSAPP_NOT_CONNECTED, getStoreWhatsAppCreds } from '@/lib/storeWhatsApp'
-import { contactForPhone } from '@/lib/whatsappInbox'
-import { normalizePhone, toWhatsAppNumber } from '@/lib/phone'
+import { requireStore } from '@/lib/supabase-server'
+import { WHATSAPP_NOT_CONNECTED } from '@/lib/storeWhatsApp'
+import { openOutbox } from '@/lib/whatsappOutbox'
+import { normalizePhone } from '@/lib/phone'
 import {
-  MAX_CAPTION, MAX_SEND_BYTES, SEND_LABELS, SEND_TYPES, cleanFilename, contentMatches, fmtSize, sendMimeOf,
+  MAX_CAPTION, MAX_SEND_BYTES, SEND_TYPES, cleanFilename, contentMatches, fmtSize, sendMimeOf,
 } from '@/lib/whatsappFiles'
 import { jsonError, serverError } from '@/lib/validation'
 
 type Ctx = { params: Promise<{ phone: string }> }
-
-const MESSAGE_FIELDS = 'id, phone, direction, body, status, error_message, template_name, media_id, media_type, media_mime, profile_name, contact_id, user_id, origin, created_at'
 
 async function phoneParam(params: Ctx['params']): Promise<string | null> {
   const raw = decodeURIComponent((await params).phone)
@@ -50,37 +47,12 @@ export async function POST(req: NextRequest, { params }: Ctx) {
   const kind = SEND_TYPES[mime]
   const filename = cleanFilename(file.name)
 
-  const supabase = getServerSupabase()
+  const outbox = await openOutbox(ctx)
+  if (!outbox) return jsonError(WHATSAPP_NOT_CONNECTED, 409)
 
-  const creds = await getStoreWhatsAppCreds(ctx.storeId)
-  if (!creds) return jsonError(WHATSAPP_NOT_CONNECTED, 409)
-
-  const upload = await uploadWhatsAppMedia(creds, new Blob([bytes], { type: mime }), filename)
-  if (!upload.ok) return NextResponse.json({ error: upload.error, code: upload.code }, { status: 502 })
-  const sent = await sendWhatsAppMedia(creds, toWhatsAppNumber(phone), kind, upload.id, { caption: caption || undefined, filename })
-  if (!sent.ok) return NextResponse.json({ error: sent.error, code: sent.code }, { status: 502 })
-
-  try {
-    const contact = await contactForPhone(ctx.storeId, phone)
-    // Igual que los que llegan: "<marca> Documento · cotización.pdf" (ver lib/messagePrefix)
-    const shown = caption || (kind === 'document' ? filename : '')
-    const { data, error } = await supabase.from('whatsapp_messages').insert([{
-      store_id: ctx.storeId,
-      contact_id: contact?.id ?? null,
-      phone,
-      direction: 'outbound',
-      body: shown ? `${SEND_LABELS[kind]} · ${shown}` : SEND_LABELS[kind],
-      media_id: upload.id,
-      media_type: kind,
-      media_mime: mime,
-      wa_message_id: sent.messageId,
-      status: 'sent',
-      user_id: ctx.uid,
-    }]).select(MESSAGE_FIELDS)
-    if (error) throw error
-    return NextResponse.json({ message: data?.[0] })
-  } catch (error) {
-    // El archivo SÍ salió; solo falló guardarlo en el historial
-    return serverError('POST /api/whatsapp/conversations/[phone]/media', error, 'El archivo se envió pero no se pudo guardar en el historial')
-  }
+  const sent = await outbox.media(phone, { bytes, mime, kind, filename, caption })
+  if (sent.status === 'rejected') return NextResponse.json({ error: sent.error, code: sent.code }, { status: 502 })
+  // El archivo SÍ salió; solo falló guardarlo en el historial
+  if (sent.status === 'unrecorded') return serverError('POST /api/whatsapp/conversations/[phone]/media', sent.cause, 'El archivo se envió pero no se pudo guardar en el historial')
+  return NextResponse.json({ message: sent.message })
 }

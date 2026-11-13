@@ -1,8 +1,6 @@
 import { getServerSupabase } from './supabase-server'
-import type { StoreContext } from './supabase-server'
-import { getPhoneHealth, type PhoneHealth, type WhatsAppCreds, type WhatsAppSendResult } from './whatsapp'
-import { FALLBACK_MESSAGING_LIMIT, MARKETING_RETRY_HOURS, STOP_CAMPAIGN_CODES, TIER_LIMITS } from './whatsappSafety'
-import { reportError } from './errorReport'
+import { getPhoneHealth, type PhoneHealth, type WhatsAppCreds } from './whatsapp'
+import { FALLBACK_MESSAGING_LIMIT, TIER_LIMITS } from './whatsappSafety'
 
 export type MessagingLimit = {
   /** Personas únicas por 24 h fuera de la ventana; null = sin límite. */
@@ -59,54 +57,6 @@ export async function uniqueRecipientsOutsideWindow24h(storeId: string): Promise
     if (!data || data.length < PAGE) break
   }
   return phones.size
-}
-
-/** Reserva y registra antes del envío: el bloqueo de tienda evita sobrepasar el límite en paralelo. */
-export async function reserveTemplateSend(ctx: Pick<StoreContext, 'storeId' | 'uid'>, input: {
-  phone: string; template: string; body: string; contactId: string | null
-  /** Límite de Meta (null = sin límite). */
-  limit: number | null
-  /** Plantilla de marketing (o de categoría desconocida): aplica la espera de 24 h tras un 131049. */
-  marketing: boolean
-}): Promise<{ ok: true; id: string } | { ok: false; status: number; error: string; skipped: boolean }> {
-  const { data, error } = await getServerSupabase().rpc('reserve_whatsapp_template', {
-    p_store: ctx.storeId, p_actor: ctx.uid, p_phone: input.phone, p_template: input.template,
-    p_body: input.body, p_contact: input.contactId, p_limit: input.limit, p_marketing: input.marketing,
-  })
-  if (error) throw error
-  if (data?.allowed === true && typeof data.id === 'string') return { ok: true, id: data.id }
-  if (data?.reason === 'quota') return {
-    ok: false, status: 429, skipped: false,
-    error: `Ya se alcanzó el límite de Meta de ${input.limit?.toLocaleString('es-MX')} personas en 24 h. Puedes seguir escribiendo a quien te haya escrito en las últimas 24 h; para el resto, intenta más tarde.`,
-  }
-  if (data?.reason === 'opt_out') return { ok: false, status: 200, skipped: true, error: 'Pidió no recibir campañas (dado de baja)' }
-  if (data?.reason === 'marketing_limit') return {
-    ok: false, status: 200, skipped: true,
-    error: `Meta pidió esperar ${MARKETING_RETRY_HOURS} h antes de reenviarle marketing (límite por persona)`,
-  }
-  throw new Error('Respuesta de reserva inválida')
-}
-
-/** La reserva ya queda en el historial incluso si Meta o la actualización final fallan. */
-export async function finishTemplateSend(
-  id: string, storeId: string, result: WhatsAppSendResult, contactId: string | null = null,
-  /** Envío de campaña al que pertenece (un segmento): así se ve aparte en el historial. */
-  campaign: { id: string; label: string | null } | null = null,
-) {
-  const supabase = getServerSupabase()
-  const { error } = await supabase.from('whatsapp_messages').update({
-    ...(campaign ? { campaign_id: campaign.id, campaign_label: campaign.label } : {}),
-    wa_message_id: result.messageId ?? null, status: result.ok ? 'sent' : result.code ? 'failed' : 'pending',
-    error_message: result.ok ? null : result.error,
-    error_code: result.ok ? null : result.code ?? null,
-    updated_at: new Date().toISOString(),
-  }).eq('id', id).eq('store_id', storeId)
-  if (error) console.error('[whatsapp/finalizar-envío]', error.message)
-  if (result.code === 131050 && contactId) await markOptOut(storeId, contactId)
-  // Un error que afecta a todo el número o la plantilla (token vencido, cuenta restringida…) lo debe saber el operador de la plataforma
-  if (!result.ok && result.code && STOP_CAMPAIGN_CODES.includes(result.code)) {
-    reportError({ source: 'whatsapp', context: `Meta ${result.code} al enviar plantilla`, error: new Error(result.error ?? `Error ${result.code}`), storeId })
-  }
 }
 
 /** 131050: el cliente se dio de baja del marketing y Meta pide no reintentar. */
