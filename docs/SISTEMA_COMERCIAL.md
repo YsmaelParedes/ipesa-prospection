@@ -22,7 +22,7 @@ Estado: **implementado el 20 de octubre de 2026 (versión 4.0.0) sin la geolocal
 **Qué quedó distinto al plan original:**
 - **Sin distancia ni coordenadas:** la cola ordena a los nuevos por antigüedad y se filtra por colonia. La geolocalización sigue descrita abajo por si se retoma.
 - **Cola del dueño:** con reparto (Galón, Cubeta, Interno) ve sus propios contactos; los que no tienen responsable están en "Sin asignar". En Litro (sin reparto) su cola incluye también los sin asignar. Puede ver la cola de cualquier vendedor, pero solo el responsable registra; al registrar en uno sin asignar, se queda con él.
-- **Contacto nuevo:** quien lo da de alta a mano queda como responsable; los importados quedan sin asignar.
+- **Contacto nuevo:** quien lo da de alta a mano queda como responsable; los importados quedan sin asignar. Mientras nadie lo trabaje, sale en Hoy → Nuevos (o Para visita si no tiene teléfono) de quien lo dio de alta, arriba en «Tuyos · aún sin trabajar» (desde 1.49.1; antes solo se veía en Cartera).
 - **"No interesado":** se le pone fecha a 90 días ("Volver a ofrecer") en vez de una columna aparte para ocultarlo.
 - **Ya cambiados:** Inicio (llamadas para hoy, cotizaciones y ventas del mes, resultados), Agenda (muestra las llamadas de hoy y vencidas), ficha de Contactos y de WhatsApp (estado comercial), buscador, exportación ("Historial comercial") y panel `/admin` (actividades en lugar de leads).
 - **Pestañas (como las hojas del Excel, aprobadas en mockup el 20 de octubre):** Resumen (tablero; el dueño entra aquí), Hoy (meta del día + cola en tarjetas con resultado a un toque; el vendedor entra aquí), Seguimiento (tablero por etapa), Actividades (bitácora), Base comercial (con "Por depurar", "Sin asignar", programados y clientes como filtros), Alta de prospectos y Control diario (con observaciones del día).
@@ -230,7 +230,7 @@ Cada una: rama → pruebas → visto bueno → `main` → borrar la rama.
 ## Versión 3 (4.8.0, octubre 2026)
 
 - **Responsable automático:** `log_commercial_activity` con `p_claim = true` deja que cualquiera del equipo registre y le pasa el contacto a quien registra (llamada, WhatsApp o visita; una nota no cambia el responsable). Migración `20261027190000_commercial_owner_follows_activity`. Ya no hay selector de Responsable en la ficha; `getVisibleContact` deja ver toda la base de la tienda.
-- **Hoy:** sub-pestañas Pendientes / Nuevos / Para visita. «Para visita» pagina de a 30 (`vlimit`). Con `q`, la API devuelve `found`: coincidencias en toda la base (máx. 50) con `owner_name`.
+- **Hoy:** sub-pestañas Pendientes / Nuevos / Para visita. Nuevos y Para visita traen primero los míos sin trabajar (`freshMineTotal` / `visitMineTotal`) y luego los sin asignar; los totales suman ambos. «Para visita» pagina de a 30 (`vlimit`). Con `q`, la API devuelve `found`: coincidencias en toda la base (máx. 50) con `owner_name`.
 - **Cartera:** `GET /api/data/commercial/portfolio` (avance, zona, segmento, responsable, búsqueda; de a 50) con conteos por avance.
 - **Guardar:** se queda en el mismo cliente; ya no pasa solo al siguiente.
 - Filtro por segmento en Hoy, Cartera y Oportunidades.

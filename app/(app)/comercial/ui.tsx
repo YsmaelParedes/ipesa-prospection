@@ -17,11 +17,12 @@ export type ListContact = CommercialContact & { quote_amount?: number | null }
 export type TodayData = {
   today: string; uid: string; isAdmin: boolean; salesTeam: boolean; reports: boolean
   zones: string[]; segments: string[]; goals: Goals; counts: DayCounts
-  due: ListContact[]; fresh: ListContact[]; freshTotal: number; offset: number
+  /** Nuevos: primero los míos sin trabajar (cuántos: freshMineTotal) y luego los sin asignar. */
+  due: ListContact[]; fresh: ListContact[]; freshTotal: number; freshMineTotal: number; offset: number
   /** Cuántos pendientes hay en total (la lista trae hasta 500). */
   dueTotal: number
   /** Sin teléfono ("Para visita"): los primeros y cuántos hay. */
-  visit: ListContact[]; visitTotal: number
+  visit: ListContact[]; visitTotal: number; visitMineTotal: number
   /** Con búsqueda: coincidencias en toda la base. */
   found: ListContact[] | null
 }

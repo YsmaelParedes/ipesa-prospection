@@ -19,7 +19,8 @@ const TONE = { late: s.late, soon: s.soon, fresh: s.fresh, later: s.later }
 
 /**
  * "Hoy" en tres partes: Pendientes (vencidos y de hoy), Nuevos (prospectos
- * sin asignar) y Para visita (sin teléfono). Con búsqueda, coincidencias en
+ * que nadie ha trabajado: los tuyos y los sin asignar) y Para visita (sin
+ * teléfono, igual). Con búsqueda, coincidencias en
  * toda la base. En computadora la ficha queda a la derecha con el registro
  * siempre visible; en celular se abre al picar Llamar o WhatsApp. Al guardar
  * se queda en el mismo cliente: el siguiente se elige a mano.
@@ -51,6 +52,11 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
   const searching = data.found !== null && query.trim() !== ''
   const pending = data.dueTotal
 
+  // Nuevos y Para visita: arriba los tuyos (los diste de alta y nadie los ha trabajado), luego los demás
+  const split = (key: string, items: ListContact[], mineTotal: number, total: number, title: string, color: string): Group[] => [
+    { key: `${key}-mine`, title: 'Tuyos · aún sin trabajar', color: 'var(--success)', items: items.filter(c => c.owner_id === data.uid), total: mineTotal },
+    { key, title, color, items: items.filter(c => c.owner_id !== data.uid), total: total - mineTotal },
+  ]
   const groups: Group[] = searching
     ? [{ key: 'found', title: 'Resultados en toda la base', color: 'var(--ink-3)', items: data.found ?? [] }]
     : sub === 'pend'
@@ -59,8 +65,8 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
           { key: 'today', title: 'Para hoy', color: 'var(--warning-fill)', items: data.due.filter(c => c.next_action_at === today) },
         ]
       : sub === 'nuevos'
-        ? [{ key: 'fresh', title: 'Sin asignar · el primero que registra se lo queda', color: 'var(--c-cyan-ink)', items: data.fresh, total: data.freshTotal }]
-        : [{ key: 'visit', title: 'Sin teléfono · para visitar en persona', color: 'var(--ink-3)', items: data.visit, total: data.visitTotal }]
+        ? split('fresh', data.fresh, data.freshMineTotal, data.freshTotal, 'Sin asignar · el primero que registra se lo queda', 'var(--c-cyan-ink)')
+        : split('visit', data.visit, data.visitMineTotal, data.visitTotal, 'Sin teléfono · para visitar en persona', 'var(--ink-3)')
   const all = groups.flatMap(g => g.items)
 
   // En computadora siempre hay alguien abierto: el elegido o el primero de la lista
@@ -139,12 +145,15 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
       {searching ? 'Nadie coincide con la búsqueda en tu base.'
         : filtered ? 'Nada coincide con el filtro.'
         : sub === 'pend' ? <>No tienes pendientes para hoy.{data.freshTotal > 0 && <> <button type="button" className={s.clear} onClick={() => onSub('nuevos')}>Sigue con Nuevos</button></>}</>
-        : sub === 'nuevos' ? 'Ya no quedan prospectos sin asignar. ¡Buen trabajo!'
+        : sub === 'nuevos' ? 'Ya no quedan prospectos por trabajar. ¡Buen trabajo!'
         : 'No hay contactos sin teléfono por visitar.'}
     </div>
   )
 
-  const ownerTag = (c: ListContact) => !c.owner_id ? 'Sin asignar' : c.owner_id === data.uid ? null : `De ${c.owner_name || 'otra persona'}`
+  // «Tuyo» solo en Nuevos y Para visita, donde se mezcla con los sin asignar
+  const ownerTag = (c: ListContact) => !c.owner_id ? 'Sin asignar'
+    : c.owner_id === data.uid ? (sub !== 'pend' && !searching ? 'Tuyo' : null)
+    : `De ${c.owner_name || 'otra persona'}`
   const tags = (c: ListContact) => (
     <span className={s.tags}>
       <StatusChip value={c.commercial_status} />

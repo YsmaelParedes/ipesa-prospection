@@ -64,7 +64,7 @@ export function commercialTour({ isAdmin, salesTeam, reports, readonly, waModule
       body: (
         <ol>
           <li><b>Pendientes:</b> los vencidos (en rojo) y los de hoy. Son clientes a los que quedaste de volver: empieza por aquí.</li>
-          <li><b>Nuevos:</b> prospectos sin dueño para completar tu meta.</li>
+          <li><b>Nuevos:</b> prospectos que nadie ha trabajado: arriba los que diste de alta tú y luego los sin dueño, para completar tu meta.</li>
           <li><b>Para visita:</b> negocios sin teléfono; se trabajan en persona.</li>
         </ol>
       ),

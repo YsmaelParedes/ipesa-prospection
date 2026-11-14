@@ -36,6 +36,14 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.49.1',
+    date: '13 de noviembre, 2026',
+    title: 'Sistema Comercial: tus contactos nuevos ya aparecen en Hoy',
+    items: [
+      'Un contacto que das de alta tú ahora aparece en Hoy → Nuevos, arriba, en «Tuyos · aún sin trabajar», hasta que registres la primera llamada, WhatsApp o visita. Si no tiene teléfono, aparece igual en Para visita.',
+    ],
+  },
+  {
     version: '1.49.0',
     date: '13 de noviembre, 2026',
     title: 'Campañas: avisa antes a quién no le llegará',

@@ -116,13 +116,15 @@ function ComercialContent() {
   const onSaved = useCallback((c: CommercialContact) => {
     setData(d => {
       if (!d) return d
+      // Sigue en Nuevos / Para visita mientras nadie lo trabaje y sea tuyo o sin asignar
+      const untouched = (x: CommercialContact) => !x.last_activity_at && (!x.owner_id || x.owner_id === d.uid)
       const stays = (x: CommercialContact) => x.next_action_at !== null && x.next_action_at <= d.today && x.commercial_status !== 'depurar'
       return {
         ...d,
         due: stays(c) ? d.due.map(x => x.id === c.id ? { ...x, ...c } : x) : d.due.filter(x => x.id !== c.id),
         dueTotal: !stays(c) && d.due.some(x => x.id === c.id) ? Math.max(0, d.dueTotal - 1) : d.dueTotal,
-        fresh: d.fresh.filter(x => x.id !== c.id || (!c.last_activity_at && !c.owner_id)),
-        visit: d.visit.filter(x => x.id !== c.id || (!c.last_activity_at && !c.owner_id)),
+        fresh: d.fresh.filter(x => x.id !== c.id || (untouched(c) && !c.next_action_at)),
+        visit: d.visit.filter(x => x.id !== c.id || untouched(c)),
         found: d.found && d.found.map(x => x.id === c.id ? { ...x, ...c } : x),
       }
     })
