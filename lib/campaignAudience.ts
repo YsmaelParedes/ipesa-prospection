@@ -6,13 +6,15 @@
  */
 import { getServerSupabase } from './supabase-server'
 import { fetchPaged } from './paged'
-import { loadReach, noWhatsAppOf, summarizePerson } from './campaignPeople'
+import { loadReach, noWhatsAppByPhone, noWhatsAppOf, summarizePerson } from './campaignPeople'
 import type { PersonState } from './campaignKinds'
 import { MARKETING_RETRY_HOURS } from './whatsappSafety'
 import { normalizePhone } from './phone'
 
 /** Por qué no se le puede mandar una plantilla a un contacto. */
 export type AudienceBlock = 'opt_out' | 'landline' | 'no_whatsapp'
+/** Para contactos elegidos a mano: además, los que no tienen un celular válido. */
+export type ChosenBlock = AudienceBlock | 'no_phone'
 
 /** La regla única: baja, marcado como fijo o Meta reportó que no tiene WhatsApp (en ese orden). */
 export function audienceBlock(p: { optOut: boolean; lineType?: string | null; noWhatsApp: boolean }): AudienceBlock | null {
@@ -59,6 +61,36 @@ export async function loadAudience(storeId: string): Promise<AudienceContact[]> 
     })
   }
   return out
+}
+
+export type ChosenContact = Omit<AudienceContact, 'history' | 'block'> & { block: ChosenBlock | null }
+
+const chunks = <T,>(list: T[], size: number) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, i * size + size))
+
+/**
+ * Contactos elegidos a mano (desde Contactos) con la misma regla: sin leer el
+ * historial de toda la tienda, solo el de sus números.
+ */
+export async function audienceOf(storeId: string, contactIds: string[]): Promise<ChosenContact[]> {
+  const supabase = getServerSupabase()
+  const parts = await Promise.all(chunks([...new Set(contactIds)], 150).map(async part => {
+    const { data, error } = await supabase.from('contacts').select('id, name, phone, segment, wa_opt_out, line_type')
+      .eq('store_id', storeId).in('id', part)
+    if (error) throw error
+    return (data ?? []) as ContactRow[]
+  }))
+  const contacts = parts.flat()
+  const phoneOf = new Map(contacts.map(c => [c.id, normalizePhone(c.phone ?? '')]))
+  const phones = [...phoneOf.values()].filter(p => p.length === 10)
+  const [noWhatsApp, hold] = await Promise.all([noWhatsAppByPhone(storeId, phones), marketingHoldPhones(storeId)])
+  return contacts.map(c => {
+    const phone = phoneOf.get(c.id) ?? ''
+    return {
+      id: c.id, name: c.name, phone: c.phone, segment: c.segment ?? null,
+      block: phone.length !== 10 ? 'no_phone' : audienceBlock({ optOut: !!c.wa_opt_out, lineType: c.line_type, noWhatsApp: noWhatsApp.has(phone) }),
+      hold: hold.has(phone),
+    }
+  })
 }
 
 /** Números a los que Meta respondió 131049 en las últimas MARKETING_RETRY_HOURS horas. */

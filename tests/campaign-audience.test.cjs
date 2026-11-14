@@ -72,3 +72,18 @@ test('la ruta solo es para administradores con Campañas', async () => {
   h.session.ctx = h.ctxFor({ modules: { whatsapp: true, campaigns: false } })
   assert.equal((await audienceRoute.GET()).status, 403)
 })
+
+test('contactos elegidos a mano: la misma regla, más los que no tienen celular', async () => {
+  const sinTel = h.addContact({ name: 'Sin teléfono 2', phone: null })
+  const ids = [...Object.values(people).map(c => c.id), sinTel.id]
+  const res = await audienceRoute.POST(h.jsonRequest('/api/whatsapp/campaigns/audience', { contactIds: ids }))
+  assert.equal(res.status, 200)
+  const byName = Object.fromEntries((await res.json()).contacts.map(c => [c.name, c]))
+  const full = Object.fromEntries((await loadAudience(h.STORE)).map(c => [c.name, c]))
+  for (const name of Object.keys(full)) {
+    assert.deepEqual([byName[name].block, byName[name].hold], [full[name].block, full[name].hold], name)
+  }
+  assert.equal(byName['Sin teléfono 2'].block, 'no_phone')
+
+  assert.equal((await audienceRoute.POST(h.jsonRequest('/x', { contactIds: ['nope'] }))).status, 400)
+})

@@ -24,6 +24,7 @@ import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/compon
 import { useWhatsAppCampaignQuota, CampaignQuotaNote, isOverQuota } from '@/components/WhatsAppCampaignQuota'
 import { useCampaignSend, CampaignConfirmPanel, CampaignProgressPanel, CampaignResultsPanel } from '@/components/WhatsAppCampaignSend'
 import { campaignLabelFor } from '@/lib/campaignKinds'
+import type { ChosenContact } from '@/lib/campaignAudience'
 import { MessageText, StatusTicks, WindowBadge, fmtTime, mediaCaption } from '@/components/WhatsAppUI'
 import { WhatsAppIcon } from '@/components/icons'
 import { X, Phone, Mail, Plus, Upload, Download, ChevronRight, Check, SquarePen, Trash2, Search, Send, TriangleAlert, UserRound } from 'lucide-react'
@@ -863,12 +864,29 @@ function WhatsAppCampaignModal({
   const { quota, refetch: refetchQuota } = useWhatsAppCampaignQuota()
   const { phase, total, done, sent, failed, skipped, outcomes, stopReason, askConfirm, backToForm, run, cancel } = useCampaignSend()
 
-  const ids = new Set(contactIds)
-  const chosen = contacts.filter(c => ids.has(c.id))
-  // Los dados de baja nunca reciben campañas (el servidor también lo valida)
-  const selectedContacts = chosen.filter(c => !c.wa_opt_out && c.phone)
-  const optedOut = chosen.filter(c => c.wa_opt_out).length
-  const noPhone = chosen.filter(c => !c.wa_opt_out && !c.phone).length
+  // Quién puede recibirla lo decide el servidor con la misma regla que Campañas y el envío
+  const [audience, setAudience] = useState<ChosenContact[] | null>(null)
+  useEffect(() => {
+    apiFetch('/api/whatsapp/campaigns/audience', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contactIds }),
+    }).then(r => r.json()).then(d => setAudience(Array.isArray(d.contacts) ? d.contacts : []))
+      .catch(() => {
+        // Sin respuesta: lo mínimo de antes (el envío vuelve a revisar a cada uno)
+        const ids = new Set(contactIds)
+        setAudience(contacts.filter(c => ids.has(c.id)).map(c => ({
+          id: c.id, name: c.name, phone: c.phone, segment: c.segment ?? null, hold: false,
+          block: c.wa_opt_out ? 'opt_out' : c.phone ? null : 'no_phone',
+        })))
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const marketing = selection?.category !== 'UTILITY' && selection?.category !== 'AUTHENTICATION'
+  const chosen = audience ?? []
+  const selectedContacts = chosen.filter(c => !c.block && !(marketing && c.hold))
+  const optedOut = chosen.filter(c => c.block === 'opt_out').length
+  const noPhone = chosen.filter(c => c.block === 'no_phone').length
+  const noWhatsApp = chosen.filter(c => c.block === 'landline' || c.block === 'no_whatsapp').length
+  const onHold = chosen.filter(c => !c.block && marketing && c.hold).length
   const exampleName = (selectedContacts[0]?.name || 'Cliente').trim().split(/\s+/)[0]
 
   const overQuota = isOverQuota(quota, selectedContacts.length)
@@ -904,10 +922,13 @@ function WhatsAppCampaignModal({
             <>
               <WhatsAppTemplatePicker exampleName={exampleName} onChange={setSelection} />
               <div className="wa-quota" style={{ marginTop: 14 }}>
-                Se enviará a <strong>{selectedContacts.length}</strong> contacto{selectedContacts.length !== 1 ? 's' : ''} seleccionado{selectedContacts.length !== 1 ? 's' : ''}.
-                {optedOut > 0 && <> Se omiten <strong>{optedOut}</strong> que pidieron no recibir campañas.</>}
-                {noPhone > 0 && <> Se omiten <strong>{noPhone}</strong> sin teléfono.</>}
-                {' '}También se omite a quien Meta pidió no reenviarle marketing por 24 h y a quien no tiene WhatsApp.
+                {audience === null ? 'Revisando a quién se le puede enviar…' : <>
+                  Se enviará a <strong>{selectedContacts.length}</strong> contacto{selectedContacts.length !== 1 ? 's' : ''} seleccionado{selectedContacts.length !== 1 ? 's' : ''}.
+                  {optedOut > 0 && <> Se omiten <strong>{optedOut}</strong> que pidieron no recibir campañas.</>}
+                  {noPhone > 0 && <> Se omiten <strong>{noPhone}</strong> sin teléfono.</>}
+                  {noWhatsApp > 0 && <> Se omiten <strong>{noWhatsApp}</strong> sin WhatsApp (pueden ser teléfonos fijos).</>}
+                  {onHold > 0 && <> Se omiten <strong>{onHold}</strong> a quienes Meta pidió no reenviarles marketing por ahora.</>}
+                </>}
               </div>
               <CampaignQuotaNote quota={quota} selectedCount={selectedContacts.length} />
             </>
