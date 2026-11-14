@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getTestUserIds, getUserNameMap, requireStore } from '@/lib/supabase-server'
+import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
+import { storeDays, teamActivities } from '@/lib/storeActivity'
 import { jsonError, serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
-import { hasReports, reportsRequired, zonedDayStart } from '@/lib/commercialServer'
-import { addDays, periodRange, todayISO, type Period } from '@/lib/commercial'
+import { hasReports, reportsRequired } from '@/lib/commercialServer'
+import { periodRange, type Period } from '@/lib/commercial'
 
 type Activity = {
   id: string; contact_id: string; user_id: string | null; created_at: string
@@ -41,26 +42,23 @@ export async function GET(req: NextRequest) {
   if (kind !== 'quoted' && kind !== 'sold') return jsonError('Tipo inválido')
   const column = kind === 'quoted' ? 'quote_amount' : 'sale_amount'
 
-  const tz = ctx.store.timezone || 'America/Mexico_City'
-  const today = todayISO(tz)
+  const calendar = storeDays(ctx)
+  const today = calendar.today
   const { from, to } = periodRange(period, today, offset)
   const end = to > today ? today : to
 
   try {
     const supabase = getServerSupabase()
-    const [allRows, names, tests] = await Promise.all([
-      fetchPaged<Activity>((f, t) => supabase.from('commercial_activities')
-        .select('id, contact_id, user_id, quote_amount, sale_amount, created_at')
-        .eq('store_id', ctx.storeId)
-        .not(column, 'is', null)
-        .gte('created_at', zonedDayStart(from, tz).toISOString())
-        .lt('created_at', zonedDayStart(addDays(end, 1), tz).toISOString())
-        .order('created_at', { ascending: false }).order('id', { ascending: false }).range(f, t), 200000),
+    const [withValue, names] = await Promise.all([
+      // Igual que la tarjeta: sin las cuentas de prueba
+      teamActivities<Activity>(ctx, {
+        columns: 'id, contact_id, user_id, quote_amount, sale_amount, created_at',
+        range: calendar.days(from, end), scope: 'store', newestFirst: true, withValue: column,
+      }),
       getUserNameMap(ctx.storeId).catch(() => new Map<string, string>()),
-      getTestUserIds(ctx.storeId),
     ])
-    // Igual que la tarjeta: sin las cuentas de prueba y sin montos en cero
-    const rows = allRows.filter(r => (!r.user_id || !tests.has(r.user_id)) && Number(r[column]) > 0)
+    // …y sin montos en cero
+    const rows = withValue.filter(r => Number(r[column]) > 0)
 
     const ids = [...new Set(rows.map(r => r.contact_id))]
     const contacts = new Map<string, Contact>()
@@ -74,7 +72,7 @@ export async function GET(req: NextRequest) {
         kind === 'quoted'
           ? fetchPaged<{ contact_id: string; created_at: string }>((f, t) => supabase.from('commercial_activities')
             .select('contact_id, created_at').eq('store_id', ctx.storeId).in('contact_id', part)
-            .not('sale_amount', 'is', null).gte('created_at', zonedDayStart(from, tz).toISOString())
+            .not('sale_amount', 'is', null).gte('created_at', calendar.startOf(from))
             .order('created_at', { ascending: false }).order('id', { ascending: false }).range(f, t), 200000)
           : Promise.resolve([]),
       ])

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getStoreMembers, getTestUserIds, requireStore } from '@/lib/supabase-server'
+import { storeDays, teamActivities } from '@/lib/storeActivity'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
-import { hasSalesTeam, hasSellerGoals, salesTeamRequired, sellerGoalsRequired, storeGoals, zonedDayStart } from '@/lib/commercialServer'
+import { hasSalesTeam, hasSellerGoals, salesTeamRequired, sellerGoalsRequired, storeGoals } from '@/lib/commercialServer'
 import {
-  EMAIL_RESULT_CHOICES, GOAL_KEYS, RESULT_CHOICES, RESULT_RULES, addDays, compliance, countActivities, goalsFor, parseGoals,
-  parseGoalsConfig, todayISO, type ActivityForCount,
+  EMAIL_RESULT_CHOICES, GOAL_KEYS, RESULT_CHOICES, RESULT_RULES, compliance, countActivities, goalsFor, parseGoals,
+  parseGoalsConfig, type ActivityForCount,
 } from '@/lib/commercial'
 
 type Row = ActivityForCount & { user_id: string | null; contact_id: string; created_at: string }
@@ -25,22 +26,20 @@ export async function GET() {
   if (ctx instanceof Response) return ctx
   if (!hasSalesTeam(ctx)) return salesTeamRequired()
 
-  const tz = ctx.store.timezone || 'America/Mexico_City'
-  const today = todayISO(tz)
-  const range = { from: zonedDayStart(today, tz).toISOString(), to: zonedDayStart(addDays(today, 1), tz).toISOString() }
+  const calendar = storeDays(ctx)
+  const today = calendar.today
+  const range = calendar.days(today, today)
 
   try {
     const supabase = getServerSupabase()
     const count = (status: string) => supabase.from('contacts').select('id', { count: 'exact', head: true })
       .eq('store_id', ctx.storeId).eq('commercial_status', status)
-    const [allRows, members, store, prospects, clients, owned, tests] = await Promise.all([
-      fetchPaged<Row>((from, to) => {
-        let q = supabase.from('commercial_activities')
-          .select('user_id, contact_id, kind, result, is_followup, quote_amount, sale_amount, created_at')
-          .eq('store_id', ctx.storeId).gte('created_at', range.from).lt('created_at', range.to)
-        if (!ctx.isAdmin) q = q.eq('user_id', ctx.uid)
-        return q.order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, to)
-      }, 200000),
+    const [rows, members, store, prospects, clients, owned, tests] = await Promise.all([
+      // Hoy: todo el equipo sin cuentas de prueba (administrador) o lo propio (vendedor)
+      teamActivities<Row>(ctx, {
+        columns: 'user_id, contact_id, kind, result, is_followup, quote_amount, sale_amount, created_at',
+        range, scope: ctx.isAdmin ? 'store' : 'mine',
+      }),
       getStoreMembers(ctx.storeId).catch(() => []),
       supabase.from('stores').select('commercial_goals').eq('id', ctx.storeId).maybeSingle(),
       count('nuevo'),
@@ -50,8 +49,6 @@ export async function GET() {
       getTestUserIds(ctx.storeId),
     ])
     if (store.error) throw store.error
-    // Las cuentas de prueba no cuentan en los números del equipo
-    const rows = allRows.filter(r => !r.user_id || !tests.has(r.user_id))
 
     const cfg = storeGoals(ctx, store.data?.commercial_goals)
     const ownedBy = new Map<string, number>()

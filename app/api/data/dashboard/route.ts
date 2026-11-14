@@ -1,35 +1,16 @@
 import { getDashboardWhatsAppUsage } from '@/lib/dashboardWhatsApp'
 import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, getTestUserIds, getUserNameMap, requireStore } from '@/lib/supabase-server'
+import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
 import { serverError } from '@/lib/validation'
-import { fetchPaged } from '@/lib/paged'
+import { storeDays, teamActivities } from '@/lib/storeActivity'
 import { hasSalesTeam } from '@/lib/commercialServer'
 import {
-  KIND_LABELS, NO_ANSWER_LIMIT, RESULT_RULES, countActivities, isCallResult, resultLabel, todayISO,
+  KIND_LABELS, NO_ANSWER_LIMIT, RESULT_RULES, countActivities, isCallResult, resultLabel,
   type ActivityKind, type CommercialStatus,
 } from '@/lib/commercial'
 
 const DAY = 24 * 60 * 60 * 1000
-
-/**
- * Inicio de día/mes en México (UTC-6 todo el año desde 2022) como instante
- * UTC. Sirve tanto para columnas timestamptz como para las `timestamp` sin
- * zona que guardan hora UTC (contacts.created_at): Postgres ignora la "Z".
- */
-function mexicoBoundaries() {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' })
-      .formatToParts(new Date()).map(p => [p.type, p.value]),
-  )
-  const y = Number(parts.year), m = Number(parts.month) - 1, d = Number(parts.day)
-  const at = (yy: number, mm: number, dd: number) => new Date(Date.UTC(yy, mm, dd, 6)).toISOString()
-  return {
-    startOfToday:     at(y, m, d),
-    startOfMonth:     at(y, m, 1),
-    startOfLastMonth: at(y, m - 1, 1),
-  }
-}
 
 type QueueRow = {
   id: string; name: string; company: string | null
@@ -53,10 +34,15 @@ async function GETImpl(req: NextRequest) {
 
   try {
     const supabase = getServerSupabase()
-    const { startOfToday, startOfMonth, startOfLastMonth } = mexicoBoundaries()
+    // Días de la tienda. Los instantes sirven también para las columnas `timestamp`
+    // sin zona que guardan hora UTC (contacts.created_at): Postgres ignora la "Z".
+    const calendar = storeDays(ctx)
+    const startOfToday = calendar.startOf(calendar.today)
+    const startOfMonth = calendar.monthStart(0)
+    const startOfLastMonth = calendar.monthStart(-1)
     const since14d = Date.now() - 14 * DAY
     const since30d = Date.now() - 30 * DAY
-    const today = todayISO(ctx.store.timezone)
+    const today = calendar.today
     const salesTeam = hasSalesTeam(ctx)
 
     const contactsCount = () => supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('store_id', storeId)
@@ -66,12 +52,11 @@ async function GETImpl(req: NextRequest) {
       { count: contactsThisMonth },
       { count: contactsLastMonth },
       queueRes,
-      allActivities,
+      activities,
       { count: waUnread },
       { count: waInboundToday },
       waUsage,
       names,
-      tests,
     ] = await Promise.all([
       // Total y conteo por segmento de toda la base, en una pasada dentro de la base
       // (antes se descargaba la columna de todos los contactos, de 1,000 en 1,000)
@@ -82,22 +67,17 @@ async function GETImpl(req: NextRequest) {
       supabase.rpc('dashboard_queue', {
         p_store: storeId, p_uid: ctx.uid, p_unowned: isAdmin && !salesTeam, p_today: today, p_no_answer_limit: NO_ANSWER_LIMIT,
       }),
-      // Actividad comercial desde el mes pasado: toda la tienda (administrador) o la propia (vendedor)
-      fetchPaged<ActivityRow>((from, to) => {
-        let q = supabase.from('commercial_activities')
-          .select('id, contact_id, user_id, kind, result, note, quote_amount, sale_amount, is_followup, created_at')
-          .eq('store_id', storeId).gte('created_at', startOfLastMonth)
-        if (!isAdmin) q = q.eq('user_id', ctx.uid)
-        return q.order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to)
-      }, 100000),
+      // Actividad comercial desde el mes pasado: toda la tienda sin cuentas de prueba
+      // (administrador) o la propia (vendedor)
+      teamActivities<ActivityRow>(ctx, {
+        columns: 'id, contact_id, user_id, kind, result, note, quote_amount, sale_amount, is_followup, created_at',
+        range: { from: startOfLastMonth }, scope: isAdmin ? 'store' : 'mine', newestFirst: true,
+      }),
       supabase.from('whatsapp_threads').select('phone', { count: 'exact', head: true }).eq('store_id', storeId).gt('unread', 0),
       supabase.from('whatsapp_messages').select('id', { count: 'exact', head: true }).eq('store_id', storeId).eq('direction', 'inbound').gte('created_at', startOfToday),
       req.nextUrl.searchParams.get('includeWhatsApp') !== '0' && isAdmin && ctx.modules.whatsapp ? getDashboardWhatsAppUsage(storeId) : Promise.resolve(null),
       isAdmin ? getUserNameMap(storeId).catch(() => new Map<string, string>()) : Promise.resolve(null),
-      isAdmin ? getTestUserIds(storeId) : Promise.resolve(new Set<string>()),
     ])
-    // Las cuentas de prueba no cuentan en los números de toda la tienda (la vista propia no se filtra)
-    const activities = allActivities.filter(a => !a.user_id || !tests.has(a.user_id))
 
     if (facetsRes.error) throw facetsRes.error
     if (queueRes.error) throw queueRes.error

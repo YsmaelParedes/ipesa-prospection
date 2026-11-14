@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { storeDays } from '@/lib/storeActivity'
 import { getServerSupabase, getStoreMembers, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, parseFields, readJson, serverError, type Schema } from '@/lib/validation'
 import { COMMERCIAL_COLUMNS, getVisibleContact } from '@/lib/commercialServer'
-import { COMMERCIAL_STATUSES, PRIORITIES, todayISO } from '@/lib/commercial'
+import { COMMERCIAL_STATUSES, PRIORITIES } from '@/lib/commercial'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -26,7 +27,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     const contact = data as unknown as { owner_id: string | null }
     const active = members.filter(m => m.status === 'active')
     return NextResponse.json({
-      today: todayISO(ctx.store.timezone),
+      today: storeDays(ctx).today,
       contact: { ...contact, owner_name: contact.owner_id ? (members.find(m => m.user_id === contact.owner_id)?.display_name ?? 'Usuario') : null },
       canWork: true,
       team: ctx.isAdmin ? active.map(m => ({ user_id: m.user_id, name: m.display_name, role: m.role })) : [],

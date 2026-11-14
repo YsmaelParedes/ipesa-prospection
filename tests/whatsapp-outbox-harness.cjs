@@ -36,6 +36,7 @@ function query(table) {
     neq(c, v) { filters.push(r => r[c] !== v); return q },
     in(c, vs) { filters.push(r => vs.includes(r[c])); return q },
     gte(c, v) { filters.push(r => r[c] >= v); return q },
+    lt(c, v) { filters.push(r => r[c] < v); return q },
     is(c, v) { filters.push(r => (r[c] ?? null) === v); return q },
     not(c, opName, v) { filters.push(r => !((r[c] ?? null) === v)); return q },
     order(c, { ascending = true } = {}) { order ??= { c, ascending }; return q },
@@ -115,6 +116,7 @@ function mock(rel, exports) {
 }
 mock('lib/supabase-server', {
   getServerSupabase: () => supabase,
+  getTestUserIds: async storeId => new Set((db.tables.store_members ?? []).filter(m => m.store_id === storeId && m.is_test).map(m => m.user_id)),
   requireStore: async (opts = {}) => {
     const ctx = session.ctx
     if (!ctx) return new Response(JSON.stringify({ error: 'No autenticado' }), { status: 401 })

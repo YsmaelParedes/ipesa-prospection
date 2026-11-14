@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { storeDays } from '@/lib/storeActivity'
 import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, parseFields, readJson, rpcUserError, serverError, type Schema } from '@/lib/validation'
-import { ACTIVITY_COLUMNS, COMMERCIAL_COLUMNS, getVisibleContact, zonedDayStart } from '@/lib/commercialServer'
-import { ACTIVITY_KINDS, COMMERCIAL_STATUSES, EMAIL_RESULT_CHOICES, RESULTS, addDays, todayISO } from '@/lib/commercial'
+import { ACTIVITY_COLUMNS, COMMERCIAL_COLUMNS, getVisibleContact } from '@/lib/commercialServer'
+import { ACTIVITY_KINDS, COMMERCIAL_STATUSES, EMAIL_RESULT_CHOICES, RESULTS } from '@/lib/commercial'
 
 const LOG_LIMIT = 500
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -39,8 +40,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const tz = ctx.store.timezone || 'America/Mexico_City'
-  const from = sp.get('from') || todayISO(tz)
+  const calendar = storeDays(ctx)
+  const from = sp.get('from') || calendar.today
   const to = sp.get('to') || from
   if (!DATE_RE.test(from) || !DATE_RE.test(to) || Number.isNaN(Date.parse(from)) || Number.isNaN(Date.parse(to)) || to < from) {
     return jsonError('Rango de fechas inválido')
@@ -53,9 +54,10 @@ export async function GET(req: NextRequest) {
   if (result && !(RESULTS as readonly string[]).includes(result)) return jsonError('Resultado inválido')
   const only = ctx.isAdmin ? user : ctx.uid
 
+  const range = calendar.days(from, to)
   try {
     let q = supabase.from('commercial_activities').select(ACTIVITY_COLUMNS).eq('store_id', ctx.storeId)
-      .gte('created_at', zonedDayStart(from, tz).toISOString()).lt('created_at', zonedDayStart(addDays(to, 1), tz).toISOString())
+      .gte('created_at', range.from).lt('created_at', range.to)
     if (only) q = q.eq('user_id', only)
     if (kind) q = q.eq('kind', kind)
     if (result) q = q.eq('result', result)

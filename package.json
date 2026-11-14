@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test:cache": "node --test tests/query-cache.test.cjs tests/api-client.test.cjs tests/server-timing.test.cjs tests/dashboard-whatsapp.test.cjs tests/error-report.test.cjs tests/plans.test.cjs tests/whatsapp-agent.test.cjs tests/meta-agent.test.cjs tests/commercial-v2.test.cjs tests/agenda-push.test.cjs tests/session-cache.test.cjs tests/whatsapp-signup.test.cjs tests/campaign-sends.test.cjs tests/whatsapp-outbox.test.cjs tests/campaign-audience.test.cjs",
+    "test:cache": "node --test tests/query-cache.test.cjs tests/api-client.test.cjs tests/server-timing.test.cjs tests/dashboard-whatsapp.test.cjs tests/error-report.test.cjs tests/plans.test.cjs tests/whatsapp-agent.test.cjs tests/meta-agent.test.cjs tests/commercial-v2.test.cjs tests/agenda-push.test.cjs tests/session-cache.test.cjs tests/whatsapp-signup.test.cjs tests/campaign-sends.test.cjs tests/whatsapp-outbox.test.cjs tests/campaign-audience.test.cjs tests/store-activity.test.cjs",
     "test:dashboard": "node --test tests/dashboard-queue-db.test.cjs tests/reserve-whatsapp-template-db.test.cjs tests/whatsapp-thread-state-db.test.cjs",
     "test:billing": "node --test tests/stripe-billing.test.cjs tests/stripe-billing-db.test.cjs",
     "test:retention": "node --test tests/store-retention-db.test.cjs",

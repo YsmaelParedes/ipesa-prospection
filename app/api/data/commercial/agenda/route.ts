@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
+import { storeDays } from '@/lib/storeActivity'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { serverError } from '@/lib/validation'
 import { COMMERCIAL_COLUMNS } from '@/lib/commercialServer'
-import { todayISO } from '@/lib/commercial'
 
 const MAX_ITEMS = 500
 
@@ -15,7 +15,7 @@ const MAX_ITEMS = 500
 export async function GET() {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
-  const today = todayISO(ctx.store.timezone || 'America/Mexico_City')
+  const today = storeDays(ctx).today
 
   try {
     const { data, error, count } = await getServerSupabase().from('contacts').select(COMMERCIAL_COLUMNS, { count: 'exact' })

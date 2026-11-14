@@ -1,11 +1,12 @@
 import { withServerTiming } from '@/lib/serverTiming'
+import { storeDays } from '@/lib/storeActivity'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { jsonError, serverError } from '@/lib/validation'
-import { COMMERCIAL_COLUMNS, hasReports, hasSalesTeam, storeGoals, withOwnerNames, zonedDayStart } from '@/lib/commercialServer'
+import { COMMERCIAL_COLUMNS, hasReports, hasSalesTeam, storeGoals, withOwnerNames } from '@/lib/commercialServer'
 import { withContactSearch } from '@/lib/contactSearch'
 import { fetchPaged } from '@/lib/paged'
-import { addDays, countActivities, goalsFor, todayISO, type ActivityForCount } from '@/lib/commercial'
+import { countActivities, goalsFor, type ActivityForCount } from '@/lib/commercial'
 
 const FRESH_PAGE = 30
 /** Al refrescar se pide de una vez lo que ya se veía (hasta este tope). */
@@ -38,8 +39,9 @@ async function GETImpl(req: NextRequest) {
   // Prospectos nuevos por página; al refrescar, los que ya se veían (sin acentos ni mayúsculas en la búsqueda)
   const freshLimit = Math.max(FRESH_PAGE, Math.min(Number(sp.get('limit')) || FRESH_PAGE, MAX_FRESH))
   const visitLimit = Math.max(VISIT_PAGE, Math.min(Number(sp.get('vlimit')) || VISIT_PAGE, MAX_FRESH))
-  const tz = ctx.store.timezone || 'America/Mexico_City'
-  const today = todayISO(tz)
+  const calendar = storeDays(ctx)
+  const today = calendar.today
+  const todayRange = calendar.days(today, today)
   const supabase = getServerSupabase()
 
   try {
@@ -75,7 +77,7 @@ async function GETImpl(req: NextRequest) {
       visit.order('created_at', { ascending: true }).order('id', { ascending: true }).limit(visitLimit),
       supabase.from('commercial_activities').select('kind, result, is_followup, quote_amount, sale_amount')
         .eq('store_id', ctx.storeId).eq('user_id', ctx.uid)
-        .gte('created_at', zonedDayStart(today, tz).toISOString()).lt('created_at', zonedDayStart(addDays(today, 1), tz).toISOString()),
+        .gte('created_at', todayRange.from).lt('created_at', todayRange.to),
       supabase.from('stores').select('commercial_goals').eq('id', ctx.storeId).maybeSingle(),
       supabase.from('app_config').select('type, label').eq('store_id', ctx.storeId).in('type', ['zone', 'segment']).order('label'),
       found ? found.order('name', { ascending: true }).order('id', { ascending: true }).limit(FOUND_LIMIT) : Promise.resolve({ data: null, error: null }),

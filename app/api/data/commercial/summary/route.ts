@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getStoreMembers, getTestUserIds, requireStore } from '@/lib/supabase-server'
+import { storeDays, teamActivities } from '@/lib/storeActivity'
 import { jsonError, serverError } from '@/lib/validation'
-import { fetchPaged } from '@/lib/paged'
-import { hasReports, reportsRequired, storeGoals, zonedDayStart } from '@/lib/commercialServer'
+import { hasReports, reportsRequired, storeGoals } from '@/lib/commercialServer'
 import {
   GOAL_KEYS, addDays, compliance, countActivities, goalsFor, periodRange,
-  todayISO, workDaysBetween, type ActivityForCount, type Goals, type Period,
+  workDaysBetween, type ActivityForCount, type Goals, type Period,
 } from '@/lib/commercial'
 
 type Row = ActivityForCount & { user_id: string | null; created_at: string }
@@ -36,8 +36,8 @@ export async function GET(req: NextRequest) {
   const offset = Number(sp.get('offset') ?? 0)
   if (!Number.isInteger(offset) || offset < 0 || offset > MAX_OFFSET) return jsonError('Periodo fuera de rango')
 
-  const tz = ctx.store.timezone || 'America/Mexico_City'
-  const today = todayISO(tz)
+  const calendar = storeDays(ctx)
+  const today = calendar.today
   const { from, to } = periodRange(period, today, offset)
   // Un periodo en curso llega hasta hoy; uno pasado, hasta su último día
   const end = to > today ? today : to
@@ -57,23 +57,19 @@ export async function GET(req: NextRequest) {
 
   try {
     const supabase = getServerSupabase()
-    const [allRows, members, store, tests] = await Promise.all([
-      fetchPaged<Row>((f, t) => supabase.from('commercial_activities')
-        .select('user_id, kind, result, is_followup, quote_amount, sale_amount, created_at')
-        .eq('store_id', ctx.storeId)
-        .gte('created_at', zonedDayStart(prev.from, tz).toISOString())
-        .lt('created_at', zonedDayStart(addDays(end, 1), tz).toISOString())
-        .order('created_at', { ascending: true }).order('id', { ascending: true }).range(f, t), 200000),
+    const [rows, members, store, tests] = await Promise.all([
+      // Del periodo anterior a hoy, de todo el equipo sin cuentas de prueba
+      teamActivities<Row>(ctx, {
+        columns: 'user_id, kind, result, is_followup, quote_amount, sale_amount, created_at',
+        range: calendar.days(prev.from, end), scope: 'store',
+      }),
       getStoreMembers(ctx.storeId).catch(() => []),
       supabase.from('stores').select('commercial_goals').eq('id', ctx.storeId).maybeSingle(),
       getTestUserIds(ctx.storeId),
     ])
     if (store.error) throw store.error
-    // Las cuentas de prueba no cuentan en los números del equipo
-    const rows = allRows.filter(r => !r.user_id || !tests.has(r.user_id))
-
-    const startsAt = Date.parse(zonedDayStart(from, tz).toISOString())
-    const prevEndsAt = Date.parse(zonedDayStart(addDays(prevEnd, 1), tz).toISOString())
+    const startsAt = Date.parse(calendar.startOf(from))
+    const prevEndsAt = Date.parse(calendar.startOf(addDays(prevEnd, 1)))
     const current = rows.filter(r => Date.parse(r.created_at) >= startsAt)
     const previous = rows.filter(r => Date.parse(r.created_at) < prevEndsAt)
 

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { storeDays } from '@/lib/storeActivity'
 import { getServerSupabase, getStoreMembers, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, serverError } from '@/lib/validation'
 import { COMMERCIAL_COLUMNS, withOwnerNames } from '@/lib/commercialServer'
 import { withContactSearch } from '@/lib/contactSearch'
-import { NO_ANSWER_LIMIT, todayISO } from '@/lib/commercial'
+import { NO_ANSWER_LIMIT } from '@/lib/commercial'
 
 const PAGE = 50
 const MAX_OFFSET = 100000
@@ -69,7 +70,7 @@ export async function GET(req: NextRequest) {
 
     const rows = (list.data ?? []) as unknown as Record<string, unknown>[]
     return NextResponse.json({
-      today: todayISO(ctx.store.timezone || 'America/Mexico_City'),
+      today: storeDays(ctx).today,
       contacts: await withOwnerNames(ctx.storeId, rows),
       total: list.count ?? rows.length,
       offset,

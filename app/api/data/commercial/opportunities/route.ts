@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { storeDays } from '@/lib/storeActivity'
 import { getServerSupabase, getTestUserIds, getUserNameMap, requireStore } from '@/lib/supabase-server'
 import { serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
 import { COMMERCIAL_COLUMNS } from '@/lib/commercialServer'
-import { STAGE_PROBABILITY, daysSince, todayISO } from '@/lib/commercial'
+import { STAGE_PROBABILITY, daysSince } from '@/lib/commercial'
 
 type Row = Record<string, unknown> & { id: string; owner_id: string | null; last_activity_at: string | null }
 
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
   const team = ctx.isAdmin && req.nextUrl.searchParams.get('scope') === 'team'
-  const today = todayISO(ctx.store.timezone)
+  const today = storeDays(ctx).today
   const supabase = getServerSupabase()
 
   try {
