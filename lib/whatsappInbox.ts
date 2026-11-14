@@ -1,5 +1,5 @@
 import { getServerSupabase } from './supabase-server'
-import { normalizePhone } from './phone'
+import { normalizePhone, phoneVariants } from './phone'
 
 export type ContactSummary = {
   id: string
@@ -21,7 +21,7 @@ const CONTACT_FIELDS = 'id, name, phone, email, company, segment, acquisition_ch
  */
 export async function contactsForPhones(storeId: string, phones: string[], contactIds: string[] = []): Promise<Map<string, ContactSummary>> {
   const supabase = getServerSupabase()
-  const variants = [...new Set(phones)].flatMap(p => [p, `52${p}`, `521${p}`])
+  const variants = [...new Set([...new Set(phones)].flatMap(phoneVariants))]
   const ids = [...new Set(contactIds)]
   // Lotes chicos para no rebasar el largo máximo de URL de PostgREST
   const chunks = <T,>(list: T[], size: number) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, i * size + size))

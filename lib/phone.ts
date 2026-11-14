@@ -25,7 +25,11 @@ export function toWhatsAppNumber(raw: string): string {
 /** Abre el chat en la app de WhatsApp del celular (en computadora, WhatsApp Web o de escritorio). */
 export const waMeLink = (raw: string) => `https://wa.me/${toWhatsAppNumber(raw)}`
 
-/** Variantes con las que un mismo número pudo haberse guardado (datos heredados). */
+/**
+ * Variantes con las que un mismo número pudo haberse guardado (datos
+ * heredados): la regla de «es el mismo número» al buscar un contacto por su
+ * teléfono (bandeja, webhook, envío). Úsala en vez de escribir las variantes.
+ */
 export function phoneVariants(raw: string): string[] {
   const d = normalizePhone(raw)
   if (d.length !== 10) return d ? [d] : []

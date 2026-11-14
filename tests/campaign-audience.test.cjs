@@ -87,3 +87,13 @@ test('contactos elegidos a mano: la misma regla, más los que no tienen celular'
 
   assert.equal((await audienceRoute.POST(h.jsonRequest('/x', { contactIds: ['nope'] }))).status, 400)
 })
+
+test('contacto por teléfono: se reconoce guardado con 52 o 521', async () => {
+  const { contactsForPhones } = require(h.resolveTs('lib/whatsappInbox'))
+  const viejo = h.addContact({ name: 'Viejo', phone: '5212229990001' })
+  const otro = h.addContact({ name: 'Otro', phone: '522229990002' })
+  const found = await contactsForPhones(h.STORE, ['2229990001', '2229990002', '2229990003'])
+  assert.equal(found.get('2229990001').id, viejo.id)
+  assert.equal(found.get('2229990002').id, otro.id)
+  assert.equal(found.has('2229990003'), false)
+})
