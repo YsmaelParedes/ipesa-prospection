@@ -11,6 +11,7 @@ import { PLANS, ROLE_LABELS, type StoreRole } from '@/lib/stores'
 import { Select } from '@/components/Select'
 import { Card, Ico, Note, Spinner, WhatsAppGlyph, api, avatarTone, copyText, cx, fmtDate, initialsOf, send, useToast } from './ui'
 import s from './configuracion.module.css'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 
 type Member = {
   user_id: string; email: string; display_name: string; role: StoreRole; status: 'active' | 'disabled' | string
@@ -207,13 +208,7 @@ export function TeamTab({ store }: { store: ClientStore }) {
                     ) : (
                       <span className={cx(s.badge, ROLE_BADGE[m.role])}>{m.isMain ? 'Administrador principal' : ROLE_LABELS[m.role]}</span>
                     )}
-                    {m.canManage && (confirmId === m.user_id ? (
-                      <>
-                        <button className={cx(s.mini, s.miniDanger)} disabled={busyId === m.user_id}
-                          onClick={() => act(m.user_id, () => api('/api/store/members', send('DELETE', { userId: m.user_id })), `${name} ya no está en el equipo`)}>Quitar</button>
-                        <button className={cx(s.mini, s.miniGhost)} onClick={() => setConfirmId(null)}>Cancelar</button>
-                      </>
-                    ) : (
+                    {m.canManage && (
                       <>
                         <button className={cx('btn btn-ghost', s.btnSm)} disabled={busyId === m.user_id}
                           onClick={() => act(m.user_id, () => api('/api/store/members', send('PATCH', { userId: m.user_id, status: off ? 'active' : 'disabled' })), off ? 'Acceso reactivado' : 'Acceso desactivado')}>
@@ -221,7 +216,7 @@ export function TeamTab({ store }: { store: ClientStore }) {
                         </button>
                         <button className="icon-btn icon-btn-delete" title="Quitar del equipo" aria-label={`Quitar a ${name}`} onClick={() => setConfirmId(m.user_id)}><Ico.trash /></button>
                       </>
-                    ))}
+                    )}
                   </div>
                 </li>
               )
@@ -254,6 +249,18 @@ export function TeamTab({ store }: { store: ClientStore }) {
           </ul>
         )}
       </Card>
+      {(() => {
+        const m = members?.find(x => x.user_id === confirmId)
+        const name = m ? (m.display_name || m.email) : ''
+        return (
+          <ConfirmDialog open={!!m} busy={busyId === confirmId}
+            title={`¿Quitar a ${name} del equipo?`} confirmLabel="Quitar" busyLabel="Quitando…"
+            onConfirm={() => { if (m) act(m.user_id, () => api('/api/store/members', send('DELETE', { userId: m.user_id })), `${name} ya no está en el equipo`) }}
+            onCancel={() => setConfirmId(null)}>
+            Ya no podrá entrar a la tienda. Si después quieres que vuelva, tendrás que enviarle otra invitación.
+          </ConfirmDialog>
+        )
+      })()}
       {toast}
     </>
   )

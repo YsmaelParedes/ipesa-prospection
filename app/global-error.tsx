@@ -18,7 +18,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
         <div style={{ maxWidth: 420 }}>
           <h1 style={{ fontSize: 22, margin: '0 0 8px' }}>Algo salió mal</h1>
           <p style={{ margin: '0 0 20px', fontSize: 14, lineHeight: 1.5, color: '#6B6B6A' }}>Ya avisamos al equipo. Intenta de nuevo en un momento.</p>
-          <button onClick={() => retry()} style={{ background: '#E50A26', color: '#fff', border: 0, borderRadius: 10, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => retry()} style={{ background: '#E50A26', color: '#fff', border: 0, borderRadius: 6, padding: '10px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
             Reintentar
           </button>
         </div>

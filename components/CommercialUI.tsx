@@ -21,7 +21,7 @@ export function StatusChip({ value }: { value: string }) {
   const info = statusInfo(value)
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', padding: '3px 9px', borderRadius: 999,
+      display: 'inline-flex', alignItems: 'center', padding: '3px 9px', borderRadius: 4,
       fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', background: info.bg, color: info.color,
     }}>{info.label}</span>
   )
@@ -33,7 +33,7 @@ export function PriorityChip({ value, showMedia = false }: { value: string | nul
   const info = priorityInfo(value)
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', padding: '3px 9px', borderRadius: 999,
+      display: 'inline-flex', alignItems: 'center', padding: '3px 9px', borderRadius: 4,
       fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', background: info.bg, color: info.color,
     }}>Prioridad {info.label.toLowerCase()}</span>
   )

@@ -19,12 +19,12 @@
 
 /* ── Una sola fila de controles ── */
 .controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.seg { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--paper-2); }
-.seg button { padding: 7px 14px; border-radius: 9px; font-weight: 700; font-size: 13px; color: var(--muted); }
+.seg { display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: var(--paper-2); }
+.seg button { padding: 7px 14px; border-radius: 6px; font-weight: 700; font-size: 13px; color: var(--muted); }
 .seg button[aria-selected='true'] { background: var(--card); color: var(--ink); box-shadow: 0 0 0 1px rgba(19, 19, 19, .06), 0 1px 2px rgba(19, 19, 19, .05); }
 .segN { opacity: .65; margin-left: 5px; font-variant-numeric: tabular-nums; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.chip { padding: 7px 12px; border-radius: 999px; background: var(--card); color: var(--ink-2); font-weight: 700; font-size: 12.5px; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.chip { padding: 7px 12px; border-radius: 6px; background: var(--card); color: var(--ink-2); font-weight: 700; font-size: 12.5px; box-shadow: inset 0 0 0 1px var(--line-strong); }
 .chip[aria-pressed='true'] { background: var(--ink); color: #fff; box-shadow: none; }
 .chipN { opacity: .6; margin-left: 5px; font-variant-numeric: tabular-nums; }
 @media (hover: hover) {
@@ -58,17 +58,17 @@
 button.main, a.main { cursor: pointer; }
 button.main::after, a.main::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
 .main:focus-visible { outline: none; }
-.main:focus-visible::after { outline: 2px solid var(--brand); outline-offset: -3px; border-radius: 10px; }
+.main:focus-visible::after { outline: 2px solid var(--brand); outline-offset: -3px; border-radius: 6px; }
 .title { font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.35; overflow-wrap: anywhere; }
 .meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 3px; font-size: 12px; font-weight: 600; color: var(--muted); }
 .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--muted-2); flex-shrink: 0; }
 .kind { display: inline-flex; align-items: center; gap: 5px; font-weight: 800; color: var(--ink-3); }
 .kind i { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; display: block; }
-.flag { font-size: 10.5px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: var(--danger-soft); color: var(--danger); }
+.flag { font-size: 10.5px; font-weight: 800; padding: 1px 7px; border-radius: 4px; background: var(--danger-soft); color: var(--danger); }
 
 /* ── Acciones: al pasar el cursor en escritorio, siempre en táctil ── */
 .actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; position: relative; }
-.icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 9px; color: var(--muted); }
+.icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 6px; color: var(--muted); }
 .icon svg { width: 15px; height: 15px; display: block; }
 .icon:focus-visible, .doneBtn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 @media (hover: hover) {
@@ -80,21 +80,19 @@ button.main::after, a.main::after { content: ''; position: absolute; inset: 0; b
 @media (prefers-reduced-motion: no-preference) {
   .quiet { transition-property: opacity; transition-duration: 150ms; transition-timing-function: ease-out; }
 }
-.doneBtn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 9px;
+.doneBtn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 6px;
   background: var(--paper-2); color: var(--ink-2); font-weight: 700; font-size: 12.5px; }
 .doneBtn svg { width: 14px; height: 14px; }
 @media (hover: hover) { .doneBtn:hover { background: var(--success); color: #fff; } }
 .chev { width: 16px; height: 16px; color: var(--muted-2); flex-shrink: 0; }
-.confirm { display: flex; align-items: center; gap: 6px; position: relative; }
-.confirm .btn { padding: 7px 11px; font-size: 12px; }
 
 /* ── Posponer ── */
 .snooze { position: relative; }
 .snoozeMenu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; width: 182px; padding: 6px;
-  background: var(--card); border: 1px solid transparent; border-radius: 12px;
+  background: var(--card); border: 1px solid transparent; border-radius: 8px;
   box-shadow: 0 0 0 1px rgba(19, 19, 19, .06), var(--shadow-lg); overscroll-behavior: contain; }
 .snoozeTitle { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 6px 8px 4px; }
-.snoozeMenu button { width: 100%; text-align: left; padding: 8px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.snoozeMenu button { width: 100%; text-align: left; padding: 8px; border-radius: 6px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
 @media (hover: hover) { .snoozeMenu button:hover { background: var(--paper); } }
 
 /* ── Vacío ── */

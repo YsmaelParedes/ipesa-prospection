@@ -24,7 +24,7 @@
 .topRight { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 13px; }
 .topUser { color: var(--muted); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topLink {
-  display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 6px;
   border: 1px solid var(--line); background: var(--card); color: var(--ink-2); font-weight: 700; font-size: 13px;
   max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: border-color .14s, background .14s;
 }
@@ -36,9 +36,9 @@
 .stepper {
   list-style: none; margin: 0; padding: 8px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px;
   background: rgba(255, 255, 255, .78); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-sm);
+  border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow-sm);
 }
-.step { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; min-width: 0; transition: background .2s; }
+.step { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; min-width: 0; transition: background .2s; }
 .stepNum {
   width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center;
   border: 2px solid var(--line-strong); background: var(--card); color: var(--muted);
@@ -63,14 +63,14 @@
 .main { max-width: 1180px; margin: 0 auto; padding: 22px 28px 56px; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 28px; align-items: start; }
 .card {
-  background: var(--card); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow-lg);
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg);
   padding: 34px 36px 28px; animation: enter .38s cubic-bezier(.2, .8, .2, 1);
 }
 .aside { position: sticky; top: 24px; min-width: 0; }
 
 .head { margin-bottom: 22px; }
 .kicker {
-  display: inline-flex; margin-bottom: 12px; padding: 4px 10px; border-radius: 999px;
+  display: inline-flex; margin-bottom: 12px; padding: 4px 10px; border-radius: 6px;
   font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
   color: var(--brand-strong); background: var(--brand-soft);
 }
@@ -80,7 +80,7 @@
 .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
 
 .select {
-  width: 100%; padding: 12px 38px 12px 40px; border: 1px solid var(--line-strong); border-radius: 12px; outline: none;
+  width: 100%; padding: 12px 38px 12px 40px; border: 1px solid var(--line-strong); border-radius: 8px; outline: none;
   font-size: 15px; color: var(--ink); appearance: none; -webkit-appearance: none; cursor: pointer;
   background: var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B6B6A' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 16px;
   transition: border-color .14s, box-shadow .14s;
@@ -97,7 +97,7 @@
 /* ── Botones ── */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 18px;
-  border-radius: 12px; border: 1px solid transparent; font-size: 14.5px; font-weight: 800; white-space: nowrap;
+  border-radius: 8px; border: 1px solid transparent; font-size: 14.5px; font-weight: 800; white-space: nowrap;
   cursor: pointer; text-decoration: none; transition: background .14s, color .14s, border-color .14s, transform .08s, box-shadow .14s;
 }
 .btn svg { width: 17px; height: 17px; flex-shrink: 0; }
@@ -121,15 +121,15 @@
 .danger:hover:not(:disabled) { background: var(--brand-soft); color: var(--brand-strong); }
 .wa { background: #E8F9EF; color: #0A6B37; border-color: #C3EBD2; }
 .wa:hover { background: #D5F4E1; }
-.sm { padding: 8px 12px; font-size: 13px; border-radius: 10px; }
+.sm { padding: 8px 12px; font-size: 13px; border-radius: 6px; }
 .sm svg { width: 15px; height: 15px; }
-.lg { padding: 15px 28px; font-size: 15.5px; border-radius: 14px; }
+.lg { padding: 15px 28px; font-size: 15.5px; border-radius: 8px; }
 .spinSm { width: 16px !important; height: 16px !important; border-width: 2px !important; }
 
 /* ── Logo ── */
 .drop {
   display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
-  padding: 30px 20px 24px; border: 2px dashed var(--line-strong); border-radius: 18px; background: var(--paper);
+  padding: 30px 20px 24px; border: 2px dashed var(--line-strong); border-radius: 8px; background: var(--paper);
   transition: border-color .15s, background-color .15s;
 }
 .dropOver { border-color: var(--brand); background-color: var(--brand-softer); }
@@ -139,7 +139,7 @@
   background: conic-gradient(var(--paper) 25%, #fff 0 50%, var(--paper) 0 75%, #fff 0) 0 0 / 18px 18px;
 }
 .dropIcon {
-  width: 58px; height: 58px; margin-bottom: 8px; border-radius: 16px; display: grid; place-items: center;
+  width: 58px; height: 58px; margin-bottom: 8px; border-radius: 8px; display: grid; place-items: center;
   background: var(--card); color: var(--brand); box-shadow: var(--shadow);
 }
 .dropIcon svg { width: 26px; height: 26px; }
@@ -154,19 +154,19 @@
 .included { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 14px; }
 .includedLabel { margin-right: 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
 .pill {
-  display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 6px;
   background: var(--success-soft); color: var(--success); font-size: 12px; font-weight: 700;
 }
 .pill svg { width: 13px; height: 13px; }
 .mods { display: flex; flex-direction: column; gap: 10px; }
 .mod {
-  display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 16px; cursor: pointer;
+  display: flex; align-items: flex-start; gap: 14px; padding: 16px; border-radius: 8px; cursor: pointer;
   border: 1.5px solid var(--line-strong); background: var(--card); transition: border-color .15s, background .15s;
 }
 .mod:hover { border-color: rgba(19, 19, 19, .26); }
 .modOn, .modOn:hover { border-color: var(--brand); background: var(--brand-softer); }
 .modBlocked { opacity: .62; cursor: not-allowed; }
-.modIcon { width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; display: grid; place-items: center; }
+.modIcon { width: 44px; height: 44px; border-radius: 8px; flex-shrink: 0; display: grid; place-items: center; }
 .modIcon svg { width: 22px; height: 22px; }
 .mod_whatsapp { background: #E8F9EF; color: #128C4B; }
 .mod_campaigns { background: var(--c-magenta-soft); color: var(--c-magenta-ink); }
@@ -193,8 +193,8 @@
 /* ── Equipo ── */
 .inviteForm { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: end; }
 .fieldLabel { display: block; margin-bottom: 6px; font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
-.seg { display: flex; gap: 2px; padding: 4px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line-strong); }
-.seg button { padding: 8px 12px; border-radius: 9px; font-size: 13.5px; font-weight: 700; color: var(--ink-3); white-space: nowrap; transition: background .14s, color .14s; }
+.seg { display: flex; gap: 2px; padding: 4px; border-radius: 8px; background: var(--paper); border: 1px solid var(--line-strong); }
+.seg button { padding: 8px 12px; border-radius: 6px; font-size: 13.5px; font-weight: 700; color: var(--ink-3); white-space: nowrap; transition: background .14s, color .14s; }
 .seg button:hover { color: var(--ink); }
 .seg .segOn { background: var(--card); color: var(--ink); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
 .roleHelp { margin: 10px 0 0; font-size: 12.5px; color: var(--muted); }
@@ -202,7 +202,7 @@
 
 .invites { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .invite {
-  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px;
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px;
   border: 1px solid var(--line); background: var(--paper); animation: enter .3s ease;
 }
 .inviteAvatar {
@@ -216,7 +216,7 @@
 .inviteActions { display: flex; gap: 6px; flex-shrink: 0; }
 
 /* ── Vista previa ── */
-.preview { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 18px; box-shadow: var(--shadow); }
+.preview { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); }
 .previewLabel {
   display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
   font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
@@ -225,7 +225,7 @@
 .previewNote { margin: 12px 2px 0; min-height: 38px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
 
 .mock {
-  border-radius: 14px; overflow: hidden; border: 1px solid var(--line-strong); background: var(--bg);
+  border-radius: 8px; overflow: hidden; border: 1px solid var(--line-strong); background: var(--bg);
   box-shadow: 0 18px 40px -24px rgba(19, 19, 19, .35);
 }
 .mockBar { position: relative; height: 26px; display: flex; align-items: center; gap: 5px; padding: 0 10px; background: var(--card); border-bottom: 1px solid var(--line); }
@@ -235,19 +235,19 @@
 .mockBar i:nth-child(3) { background: #28C840; }
 .mockBody { display: grid; grid-template-columns: 136px minmax(0, 1fr); min-height: 292px; }
 .mockSide { display: flex; flex-direction: column; gap: 8px; padding: 12px 8px; background: var(--card); border-right: 1px solid var(--line); min-width: 0; }
-.mockLogo { align-self: center; height: 34px; width: auto; max-width: 100%; object-fit: contain; border-radius: 6px; }
-.mockBrand { align-self: center; font-size: 11px; padding: 4px 5px; border-radius: 6px; }
+.mockLogo { align-self: center; height: 34px; width: auto; max-width: 100%; object-fit: contain; border-radius: 4px; }
+.mockBrand { align-self: center; font-size: 11px; padding: 4px 5px; border-radius: 4px; }
 .mockStore {
-  display: flex; align-items: center; gap: 5px; min-width: 0; padding: 5px 7px; border-radius: 8px;
+  display: flex; align-items: center; gap: 5px; min-width: 0; padding: 5px 7px; border-radius: 6px;
   background: var(--paper); border: 1px solid var(--line); font-size: 9.5px; font-weight: 800; color: var(--ink);
 }
 .mockStore svg { width: 10px; height: 10px; flex-shrink: 0; color: var(--brand); }
 .mockStore span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.25; overflow-wrap: anywhere; }
 .hl { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--brand); animation: glow 1.8s ease-in-out infinite; }
-.mockNav { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; padding: 2px; border-radius: 8px; }
+.mockNav { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; padding: 2px; border-radius: 6px; }
 .hlNav { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--brand); animation: glow 1.8s ease-in-out infinite; }
 .mockItem {
-  position: relative; display: flex; align-items: center; gap: 6px; padding: 5px 7px; border-radius: 6px;
+  position: relative; display: flex; align-items: center; gap: 6px; padding: 5px 7px; border-radius: 4px;
   font-size: 9.5px; font-weight: 600; color: var(--ink-3); animation: enter .25s ease;
 }
 .mockItem svg { width: 11px; height: 11px; flex-shrink: 0; }
@@ -256,11 +256,11 @@
 .mockMain { display: flex; flex-direction: column; gap: 9px; padding: 12px; min-width: 0; }
 .mockTitle { width: 55%; height: 9px; border-radius: 4px; background: var(--ink); opacity: .85; }
 .mockKpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.mockKpis span { position: relative; height: 34px; overflow: hidden; border-radius: 7px; background: var(--card); border: 1px solid var(--line); }
+.mockKpis span { position: relative; height: 34px; overflow: hidden; border-radius: 4px; background: var(--card); border: 1px solid var(--line); }
 .mockKpis span::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--brand); }
 .mockKpis span:nth-child(2)::before { background: var(--c-cyan); }
 .mockKpis span:nth-child(3)::before { background: var(--success-fill); }
-.mockChart { height: 76px; display: flex; align-items: flex-end; gap: 5px; padding: 8px; border-radius: 8px; background: var(--card); border: 1px solid var(--line); }
+.mockChart { height: 76px; display: flex; align-items: flex-end; gap: 5px; padding: 8px; border-radius: 6px; background: var(--card); border: 1px solid var(--line); }
 .mockChart i { flex: 1; border-radius: 3px 3px 1px 1px; background: var(--c-teal); }
 .mockChart i:nth-child(2) { background: var(--c-cyan); }
 .mockChart i:nth-child(3) { background: var(--c-magenta); }
@@ -269,11 +269,11 @@
 .mockChart i:nth-child(6) { background: var(--brand); }
 .mockChart i:nth-child(7) { background: var(--c-lime); }
 .mockRows { display: flex; flex-direction: column; gap: 5px; }
-.mockRows span { height: 16px; border-radius: 6px; background: var(--card); border: 1px solid var(--line); }
+.mockRows span { height: 16px; border-radius: 4px; background: var(--card); border: 1px solid var(--line); }
 
 .team { display: flex; flex-direction: column; gap: 8px; }
-.member { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 12px; background: var(--paper); border: 1px solid var(--line); animation: enter .3s ease; }
-.memberGhost { padding: 16px 12px; border: 1.5px dashed var(--line-strong); border-radius: 12px; text-align: center; font-size: 12.5px; color: var(--muted); }
+.member { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; background: var(--paper); border: 1px solid var(--line); animation: enter .3s ease; }
+.memberGhost { padding: 16px 12px; border: 1.5px dashed var(--line-strong); border-radius: 8px; text-align: center; font-size: 12.5px; color: var(--muted); }
 .seats { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 .seatsTop { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 12.5px; color: var(--muted); }
 .seatsTop strong { color: var(--ink); }
@@ -283,7 +283,7 @@
 /* ── Listo ── */
 .done {
   position: relative; overflow: hidden; max-width: 900px; margin: 26px auto 0; padding: 48px 40px 40px; text-align: center;
-  background: var(--card); border: 1px solid var(--line); border-radius: 28px; box-shadow: var(--shadow-lg);
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg);
   animation: enter .45s cubic-bezier(.2, .8, .2, 1);
 }
 .done::before {
@@ -305,11 +305,11 @@
 .doneSub strong { color: var(--ink); }
 .next { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 30px; text-align: left; }
 .nextCard {
-  display: flex; flex-direction: column; gap: 6px; padding: 18px; border-radius: 18px;
+  display: flex; flex-direction: column; gap: 6px; padding: 18px; border-radius: 8px;
   border: 1px solid var(--line); background: var(--card); transition: border-color .15s, transform .15s, box-shadow .15s;
 }
 .nextCard:hover { border-color: var(--line-strong); transform: translateY(-2px); box-shadow: var(--shadow); }
-.nextIcon { width: 42px; height: 42px; margin-bottom: 6px; border-radius: 12px; display: grid; place-items: center; }
+.nextIcon { width: 42px; height: 42px; margin-bottom: 6px; border-radius: 8px; display: grid; place-items: center; }
 .nextIcon svg { width: 20px; height: 20px; }
 .nextWa { background: #E8F9EF; color: #128C4B; }
 .nextBrand { background: var(--brand-soft); color: var(--brand-strong); }
@@ -332,7 +332,7 @@
 @media (max-width: 860px) {
   .stepper { display: none; }
   .progressMobile {
-    display: block; padding: 12px 16px; border-radius: 14px; background: var(--card); border: 1px solid var(--line);
+    display: block; padding: 12px 16px; border-radius: 8px; background: var(--card); border: 1px solid var(--line);
     font-size: 13px; color: var(--muted);
   }
   .progressMobile strong { color: var(--ink); }
@@ -346,7 +346,7 @@
   .topLink { max-width: 190px; }
   .stepperWrap { padding: 0 14px; }
   .main { padding: 14px 14px 40px; }
-  .card { padding: 24px 18px 20px; border-radius: 20px; }
+  .card { padding: 24px 18px 20px; border-radius: 8px; }
   .head h1 { font-size: 24px; }
   .head p { font-size: 14.5px; }
   .grid2 { grid-template-columns: minmax(0, 1fr); }
@@ -357,7 +357,7 @@
   .inviteActions { width: 100%; }
   .inviteActions .btn { flex: 1; }
   .actions .primary { flex: 1; }
-  .done { margin-top: 12px; padding: 36px 18px 26px; border-radius: 22px; }
+  .done { margin-top: 12px; padding: 36px 18px 26px; border-radius: 12px; }
   .done h1 { font-size: 26px; }
   .lg { width: 100%; }
 }

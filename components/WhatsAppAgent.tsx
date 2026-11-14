@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { apiFetch } from '@/lib/apiClient'
 import { fmtPhone } from '@/lib/phone'
 import { WaIcon } from '@/components/WhatsAppUI'
-import { BookOpen, ClipboardList, FlaskConical, Settings, Sparkles, Store, X, type LucideIcon } from 'lucide-react'
+import { BookOpen, ClipboardList, CreditCard, FlaskConical, Settings, Sparkles, Store, X, type LucideIcon } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import type { AgentAudience, AgentSettings, HandoffSelection } from '@/lib/metaAgent'
 import type { TestNumber } from '@/lib/agentTestNumbers'
 import type { BusinessInfo, Faq, KnowledgeFile, Skill, Website } from '@/lib/agentKnowledge'
@@ -219,15 +220,11 @@ function AgentSettingsForm({ settings, onSaved, toast }: {
         title="Solo a los números de prueba" text="Sin costo. Ideal para probarla antes." />
       <Choice on={audience === 'EVERYONE'} onClick={() => chooseAudience('EVERYONE')}
         title="A todos los clientes" text="Meta pide un método de pago en tu cuenta y cobra cada respuesta de la IA." />
-      {confirmEveryone && (
-        <div className="ag-callout" role="alert">
-          <p>La IA contestará a <strong>todos</strong> los que escriban. Meta cobra cada respuesta a la cuenta de WhatsApp de tu tienda, y si no tiene método de pago, las respuestas no se envían.</p>
-          <div className="ag-callout-actions">
-            <button className="btn btn-ghost" onClick={() => setConfirmEveryone(false)}>Cancelar</button>
-            <button className="btn btn-dark" onClick={() => { setAudience('EVERYONE'); setConfirmEveryone(false) }}>Sí, contestar a todos</button>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog open={confirmEveryone} tone="warn" icon={CreditCard}
+        title="¿Contestar a todos los clientes?" confirmLabel="Contestar a todos"
+        onConfirm={() => { setAudience('EVERYONE'); setConfirmEveryone(false) }} onCancel={() => setConfirmEveryone(false)}>
+        La IA contestará a todos los que escriban. Meta cobra cada respuesta a la cuenta de WhatsApp de tu tienda, y si no tiene método de pago, las respuestas no se envían.
+      </ConfirmDialog>
 
       <div className="ag-section">
         <h3 className="ag-h3">Cuando pasa el chat al equipo</h3>

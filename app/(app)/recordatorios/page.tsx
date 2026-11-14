@@ -11,6 +11,7 @@ import { MESES, QUICK_WHEN, isSameDay, pad, quickDate, toDbLocal, type QuickWhen
 import { addDays, type CommercialContact } from '@/lib/commercial'
 import { StatusChip } from '@/components/CommercialUI'
 import s from './agenda.module.css'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Plus, Check, Trash2, SquarePen, AlarmClock, ChevronRight } from 'lucide-react'
 
 /** GET /api/data/commercial/agenda: seguimientos del sistema comercial con su fecha. */
@@ -111,28 +112,23 @@ function RemRow({ r, overdue, showDate, readonly, onComplete, onDelete, onSnooze
         <div className={s.main}><span className={s.title}>{title}</span>{meta}</div>
       )}
       <div className={s.actions}>
-        {confirmDel ? (
-          <div className={s.confirm}>
-            <button onClick={() => { onDelete(); setConfirmDel(false) }} className="btn btn-danger">Sí, borrar</button>
-            <button onClick={() => setConfirmDel(false)} className="btn btn-ghost">Cancelar</button>
-          </div>
-        ) : (
-          <>
-            {canEdit && onSnooze && <SnoozeMenu onPick={onSnooze} />}
-            {canEdit && (
-              <button onClick={() => openQuickCreate({ kind: 'reminder', reminder: r })} title="Editar" aria-label="Editar"
-                className={`${s.icon} ${s.quiet} ${s.press}`}><Ico.edit /></button>
-            )}
-            {!readonly && (
-              <button onClick={() => setConfirmDel(true)} title="Eliminar" aria-label="Eliminar"
-                className={`${s.icon} ${s.danger} ${s.quiet} ${s.press}`}><Ico.trash /></button>
-            )}
-            {!readonly && onComplete && (
-              <button onClick={onComplete} className={`${s.doneBtn} ${s.press}`}><Ico.check /> Listo</button>
-            )}
-          </>
+        {canEdit && onSnooze && <SnoozeMenu onPick={onSnooze} />}
+        {canEdit && (
+          <button onClick={() => openQuickCreate({ kind: 'reminder', reminder: r })} title="Editar" aria-label="Editar"
+            className={`${s.icon} ${s.quiet} ${s.press}`}><Ico.edit /></button>
+        )}
+        {!readonly && (
+          <button onClick={() => setConfirmDel(true)} title="Eliminar" aria-label="Eliminar"
+            className={`${s.icon} ${s.danger} ${s.quiet} ${s.press}`}><Ico.trash /></button>
+        )}
+        {!readonly && onComplete && (
+          <button onClick={onComplete} className={`${s.doneBtn} ${s.press}`}><Ico.check /> Listo</button>
         )}
       </div>
+      <ConfirmDialog open={confirmDel} title="¿Eliminar este recordatorio?" confirmLabel="Eliminar"
+        onConfirm={() => { onDelete(); setConfirmDel(false) }} onCancel={() => setConfirmDel(false)}>
+        «{title}» se borra de tu agenda. Esta acción no se puede deshacer.
+      </ConfirmDialog>
     </div>
   )
 }

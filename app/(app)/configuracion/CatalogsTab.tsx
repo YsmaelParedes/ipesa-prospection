@@ -7,6 +7,7 @@ import { useCallback, useState } from 'react'
 import { Card, Ico, Note, Spinner, api, cx, send, useToast } from './ui'
 import s from './configuracion.module.css'
 import { X } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 
 type ConfigItem = { id: string; type: string; label: string; created_at: string }
 
@@ -83,14 +84,17 @@ export function CatalogsTab({ canEdit }: { canEdit: boolean }) {
     }
   }
 
+  const [removing, setRemoving] = useState(false)
   const remove = async (item: ConfigItem) => {
     setError('')
+    setRemoving(true)
     try {
       await api(`/api/data/config/${item.id}`, { method: 'DELETE' })
       showToast(`"${item.label}" eliminado`)
     } catch (err) {
       setError((err as Error).message)
     }
+    setRemoving(false)
     setConfirmDel(null)
     await load()
   }
@@ -130,31 +134,30 @@ export function CatalogsTab({ canEdit }: { canEdit: boolean }) {
             <ul className={s.chips}>
               {items.map(item => {
                 const { bg, color } = chipColor(item.label)
-                const asking = confirmDel === item.id
                 return (
-                  <li key={item.id} className={cx(s.catChip, asking && s.catChipAsk)} style={asking ? undefined : { background: bg, color }}>
-                    {asking ? (
-                      <>
-                        <span>¿Eliminar «{item.label}»?</span>
-                        <button type="button" className={cx(s.mini, s.miniDanger)} onClick={() => remove(item)}>Sí</button>
-                        <button type="button" className={cx(s.mini, s.miniGhost)} onClick={() => setConfirmDel(null)}>No</button>
-                      </>
-                    ) : (
-                      <>
-                        <span className={s.catDot} style={{ background: color }} />
-                        <span>{item.label}</span>
-                        {canEdit && (
-                          <button type="button" className={s.catX} onClick={() => setConfirmDel(item.id)} aria-label={`Eliminar ${item.label}`} title="Eliminar">
-                            <X strokeWidth={2.4} aria-hidden="true" />
-                          </button>
-                        )}
-                      </>
+                  <li key={item.id} className={s.catChip} style={{ background: bg, color }}>
+                    <span className={s.catDot} style={{ background: color }} />
+                    <span>{item.label}</span>
+                    {canEdit && (
+                      <button type="button" className={s.catX} onClick={() => setConfirmDel(item.id)} aria-label={`Eliminar ${item.label}`} title="Eliminar">
+                        <X strokeWidth={2.4} aria-hidden="true" />
+                      </button>
                     )}
                   </li>
                 )
               })}
             </ul>
           )}
+          {(() => {
+            const item = items.find(i => i.id === confirmDel)
+            return (
+              <ConfirmDialog open={!!item} busy={removing}
+                title={`¿Eliminar «${item?.label ?? ''}»?`} confirmLabel="Eliminar" busyLabel="Eliminando…"
+                onConfirm={() => { if (item) remove(item) }} onCancel={() => setConfirmDel(null)}>
+                Deja de aparecer como opción en {cat.title.toLowerCase()}. Los contactos que ya lo tienen no cambian.
+              </ConfirmDialog>
+            )
+          })()}
         </div>
       </Card>
       {toast}

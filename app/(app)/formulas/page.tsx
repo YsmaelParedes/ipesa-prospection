@@ -181,7 +181,7 @@ export default function FormulasPage() {
                   key={c.code}
                   onClick={() => setSelected(c)}
                   style={{
-                    textAlign: 'left', padding: '10px 12px', borderRadius: 9, cursor: 'pointer',
+                    textAlign: 'left', padding: '10px 12px', borderRadius: 6, cursor: 'pointer',
                     border: `1px solid ${isActive ? 'var(--brand)' : 'var(--line)'}`,
                     background: isActive ? 'var(--brand-soft)' : 'var(--card)',
                     display: 'flex', alignItems: 'center', gap: 8,
@@ -252,13 +252,13 @@ export default function FormulasPage() {
                       step="any"
                       value={volumeValue}
                       onChange={e => setVolumeValue(e.target.value)}
-                      style={{ width: 90, padding: '9px 10px', borderRadius: 9, border: '1px solid var(--line)', background: 'var(--card)', fontSize: 13.5, outline: 'none' }}
+                      style={{ width: 90, padding: '9px 10px', borderRadius: 6, border: '1px solid var(--line)', background: 'var(--card)', fontSize: 13.5, outline: 'none' }}
                     />
                     <Select
                       value={volumeUnit}
                       onChange={v => setVolumeUnit(v as VolumeUnit)}
                       aria-label="Unidad"
-                      style={{ padding: '9px 10px', borderRadius: 9, border: '1px solid var(--line)', fontSize: 13.5 }}
+                      style={{ padding: '9px 10px', borderRadius: 6, border: '1px solid var(--line)', fontSize: 13.5 }}
                       options={[{ value: 'L', label: 'Litros' }, { value: 'ml', label: 'mL' }]}
                     />
                   </div>

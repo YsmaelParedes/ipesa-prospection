@@ -5,24 +5,24 @@
 
 /* El hueco iluminado: una sombra enorme oscurece todo lo demás */
 .spot {
-  position: fixed; left: 0; top: 0; border-radius: 14px; pointer-events: none;
+  position: fixed; left: 0; top: 0; border-radius: 8px; pointer-events: none;
   box-shadow: 0 0 0 9999px rgba(19, 19, 19, .58); outline: 2px solid #fff; outline-offset: 2px;
 }
 .spotNone { transform: translate(50vw, 50vh); width: 0; height: 0; outline: 0; }
 
 .pop {
   position: fixed; width: min(380px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; overscroll-behavior: contain;
-  background: var(--card); border: 1px solid transparent; border-radius: 18px;
+  background: var(--card); border: 1px solid transparent; border-radius: 8px;
   box-shadow: 0 0 0 1px rgba(19, 19, 19, .06), 0 28px 64px -24px rgba(19, 19, 19, .45);
 }
 .pop::before { content: ''; display: block; height: 3px; background: var(--spectrum); }
 .center { left: 50%; top: 50%; translate: -50% -50%; }
 .sheet {
   left: 0; right: 0; bottom: 0; top: auto; width: auto; max-height: 56vh;
-  border-radius: 20px 20px 0 0; padding-bottom: env(safe-area-inset-bottom);
+  border-radius: 12px 12px 0 0; padding-bottom: env(safe-area-inset-bottom);
 }
 /* Cuando lo señalado está abajo (la barra de navegación), la tarjeta sube */
-.sheetTop { top: 0; bottom: auto; border-radius: 0 0 20px 20px; padding-top: env(safe-area-inset-top); padding-bottom: 0; }
+.sheetTop { top: 0; bottom: auto; border-radius: 0 0 12px 12px; padding-top: env(safe-area-inset-top); padding-bottom: 0; }
 
 @media (prefers-reduced-motion: no-preference) {
   .spot { transition-property: transform, width, height; transition-duration: 300ms; transition-timing-function: cubic-bezier(0.2, 0, 0, 1); }
@@ -51,7 +51,7 @@
 
 .foot { display: flex; align-items: center; gap: 8px; padding: 14px 20px 18px; }
 .btn {
-  font: inherit; font-size: 14px; font-weight: 700; min-height: 44px; padding: 10px 16px; border-radius: 12px;
+  font: inherit; font-size: 14px; font-weight: 700; min-height: 44px; padding: 10px 16px; border-radius: 8px;
   border: 1px solid transparent; cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }

@@ -9,7 +9,9 @@ import { Card, Ico, Note, Spinner, WhatsAppGlyph, api, cx, fmtDate, send, useToa
 import { invalidateSession } from '@/lib/profile'
 import s from './configuracion.module.css'
 import { tierLabel } from '@/lib/whatsappSafety'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Unplug } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { APP_NAME } from '@/lib/brand'
 
 // Sin datos técnicos ni secretos. selfService: la tienda lo conectó sola (Embedded Signup) y puede desconectarlo
 type Connection = {
@@ -71,6 +73,7 @@ function ConnectionPanel() {
     setDisconnecting(true)
     try {
       await api('/api/store/whatsapp', { method: 'DELETE' })
+      setConfirmOff(false)
       invalidateSession()
       router.replace('/configuracion?tab=whatsapp', { scroll: false })
     } catch (err) {
@@ -174,20 +177,13 @@ function ConnectionPanel() {
       </div>
       {conn.selfService && (
         <div className={s.waFoot}>
-          {confirmOff ? (
-            <>
-              <span>Matices dejará de recibir y enviar mensajes de este número. Tus chats guardados se quedan{conn.coexistence ? ' y tu celular sigue igual' : ''}.</span>
-              <span className={s.waFootActions}>
-                <button type="button" className="btn" onClick={() => setConfirmOff(false)} disabled={disconnecting}>Cancelar</button>
-                <button type="button" className={cx('btn', s.waDanger)} onClick={disconnect} disabled={disconnecting}>{disconnecting ? 'Desconectando…' : 'Sí, desconectar'}</button>
-              </span>
-            </>
-          ) : (
-            <>
-              <span>¿Cambiaste de número o ya no quieres usarlo aquí?</span>
-              <button type="button" className={cx('btn', s.waDanger)} onClick={() => setConfirmOff(true)}>Desconectar</button>
-            </>
-          )}
+          <span>¿Cambiaste de número o ya no quieres usarlo aquí?</span>
+          <button type="button" className={cx('btn', s.waDanger)} onClick={() => setConfirmOff(true)}>Desconectar</button>
+          <ConfirmDialog open={confirmOff} busy={disconnecting} icon={Unplug}
+            title="¿Desconectar este número?" confirmLabel="Desconectar" busyLabel="Desconectando…"
+            onConfirm={disconnect} onCancel={() => setConfirmOff(false)}>
+            {APP_NAME} dejará de recibir y enviar mensajes de este número. Tus chats guardados se quedan{conn.coexistence ? ' y tu celular sigue igual' : ''}.
+          </ConfirmDialog>
         </div>
       )}
     </Card>
@@ -229,9 +225,12 @@ function QuickRepliesPanel({ showToast }: { showToast: (m: string) => void }) {
     }
   }
 
+  const [removing, setRemoving] = useState(false)
   const remove = async (id: string) => {
+    setRemoving(true)
     try { await api(`/api/whatsapp/quick-replies/${id}`, { method: 'DELETE' }); showToast('Respuesta eliminada') }
     catch (err) { setError((err as Error).message) }
+    setRemoving(false)
     setConfirmDel(null)
     await load()
   }
@@ -249,19 +248,22 @@ function QuickRepliesPanel({ showToast }: { showToast: (m: string) => void }) {
                 <div style={{ fontSize: 12.5, color: 'var(--ink-3)', whiteSpace: 'pre-wrap', marginTop: 2 }}>{q.body}</div>
               </div>
               <span className={s.itemActions}>
-                {confirmDel === q.id ? (
-                  <>
-                    <button className={cx(s.mini, s.miniDanger)} onClick={() => remove(q.id)}>Sí</button>
-                    <button className={cx(s.mini, s.miniGhost)} onClick={() => setConfirmDel(null)}>No</button>
-                  </>
-                ) : (
-                  <button className="icon-btn icon-btn-delete" onClick={() => setConfirmDel(q.id)} title="Eliminar" aria-label={`Eliminar ${q.title}`}><Ico.trash /></button>
-                )}
+                <button className="icon-btn icon-btn-delete" onClick={() => setConfirmDel(q.id)} title="Eliminar" aria-label={`Eliminar ${q.title}`}><Ico.trash /></button>
               </span>
             </li>
           ))}
         </ul>
       )}
+      {(() => {
+        const q = items?.find(x => x.id === confirmDel)
+        return (
+          <ConfirmDialog open={!!q} busy={removing}
+            title={`¿Eliminar «${q?.title ?? ''}»?`} confirmLabel="Eliminar" busyLabel="Eliminando…"
+            onConfirm={() => { if (q) remove(q.id) }} onCancel={() => setConfirmDel(null)}>
+            El equipo ya no la verá en el chat. Esta acción no se puede deshacer.
+          </ConfirmDialog>
+        )
+      })()}
       <form onSubmit={add} className={s.replyForm}>
         <input className={s.input} value={title} onChange={e => setTitle(e.target.value)} maxLength={60} placeholder="Título (ej. Horario)" aria-label="Título" />
         <textarea className={s.input} value={body} onChange={e => setBody(e.target.value)} maxLength={1000} rows={3} style={{ resize: 'vertical' }}

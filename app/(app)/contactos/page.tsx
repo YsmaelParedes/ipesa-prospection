@@ -27,6 +27,7 @@ import { campaignLabelFor } from '@/lib/campaignKinds'
 import type { ChosenContact } from '@/lib/campaignAudience'
 import { MessageText, StatusTicks, WindowBadge, fmtTime, mediaCaption } from '@/components/WhatsAppUI'
 import { WhatsAppIcon } from '@/components/icons'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { X, Phone, Mail, Plus, Upload, Download, ChevronRight, Check, SquarePen, Trash2, Search, Send, TriangleAlert, UserRound } from 'lucide-react'
 
 /* ── Iconos (Lucide + logo de WhatsApp) ── */
@@ -258,30 +259,24 @@ function ContactosContent() {
             <span style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--ink)' }}>
               {checkedIds.size} seleccionado{checkedIds.size !== 1 ? 's' : ''}
             </span>
-            {!confirmBulkDel ? (
-              <div className="section-actions">
-                {canCampaign && !readonly && (
-                  <button className="btn" style={{ background: '#1B9E4B', color: '#fff' }} onClick={() => setShowWhatsAppCampaign(true)}>
-                    <Ico.whatsapp /> Enviar WhatsApp
-                  </button>
-                )}
-                {canManage && (
-                  <button className="btn btn-danger" onClick={() => setConfirmBulkDel(true)}>
-                    <Ico.trash /> Eliminar {checkedIds.size}
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="section-actions">
-                <span style={{ fontSize: 13, color: 'var(--danger)', fontWeight: 600 }}>
-                  ¿Eliminar {checkedIds.size} contacto{checkedIds.size !== 1 ? 's' : ''}? No se puede deshacer.
-                </span>
-                <button className="btn btn-ghost" onClick={() => setConfirmBulkDel(false)} disabled={bulkDeleting}>No</button>
-                <button className="btn btn-danger" onClick={handleBulkDelete} disabled={bulkDeleting} style={{ minWidth: 100 }}>
-                  {bulkDeleting ? 'Eliminando…' : 'Sí, eliminar'}
+            <div className="section-actions">
+              {canCampaign && !readonly && (
+                <button className="btn" style={{ background: '#1B9E4B', color: '#fff' }} onClick={() => setShowWhatsAppCampaign(true)}>
+                  <Ico.whatsapp /> Enviar WhatsApp
                 </button>
-              </div>
-            )}
+              )}
+              {canManage && (
+                <button className="btn btn-danger" onClick={() => setConfirmBulkDel(true)}>
+                  <Ico.trash /> Eliminar {checkedIds.size}
+                </button>
+              )}
+            </div>
+            <ConfirmDialog open={confirmBulkDel} busy={bulkDeleting}
+              title={checkedIds.size === 1 ? '¿Eliminar 1 contacto?' : `¿Eliminar ${checkedIds.size.toLocaleString('es-MX')} contactos?`}
+              confirmLabel="Eliminar" busyLabel="Eliminando…"
+              onConfirm={handleBulkDelete} onCancel={() => setConfirmBulkDel(false)}>
+              Esta acción no se puede deshacer.
+            </ConfirmDialog>
           </>
         ) : (
           /* ── Cabecera normal ── */
@@ -351,9 +346,11 @@ function ContactosContent() {
             <thead>
               <tr>
                 {canManage && (
-                  <th style={{ width: 44, paddingRight: 0 }}>
-                    <input type="checkbox" checked={allFilteredChecked} onChange={toggleAll} title="Seleccionar todos" aria-label="Seleccionar todos"
-                      style={{ width: 15, height: 15, cursor: 'pointer', display: 'block', margin: '0 auto' }} />
+                  <th className="check-cell" onClick={e => { if (e.target === e.currentTarget) toggleAll() }}>
+                    <input type="checkbox" checked={allFilteredChecked} onChange={toggleAll}
+                      ref={el => { if (el) el.indeterminate = someChecked && !allFilteredChecked }}
+                      title={allFilteredChecked ? 'Quitar la selección' : 'Seleccionar todos los de esta página'}
+                      aria-label={allFilteredChecked ? 'Quitar la selección' : 'Seleccionar todos los de esta página'} />
                   </th>
                 )}
                 <th>Nombre</th>
@@ -372,9 +369,9 @@ function ContactosContent() {
                     onClick={e => { if (someChecked) toggleCheck(c.id, idx, e.shiftKey); else setSelected(c) }}
                     style={{ background: isChecked ? 'var(--brand-softer)' : undefined, userSelect: 'none' }}>
                     {canManage && (
-                      <td style={{ width: 44, paddingRight: 0 }} onClick={e => { e.stopPropagation(); toggleCheck(c.id, idx, e.shiftKey) }}>
-                        <input type="checkbox" checked={isChecked} onChange={() => {}} aria-label={`Seleccionar ${c.name}`}
-                          style={{ width: 15, height: 15, cursor: 'pointer', display: 'block', margin: '0 auto', pointerEvents: 'none' }} />
+                      <td className="check-cell" onClick={e => { e.stopPropagation(); toggleCheck(c.id, idx, e.shiftKey) }}>
+                        {/* El clic de la casilla sube a la celda (toda la celda es zona de clic, con Shift para rangos) */}
+                        <input type="checkbox" checked={isChecked} onChange={() => {}} aria-label={`Seleccionar ${c.name}`} />
                       </td>
                     )}
                     <td>
@@ -394,7 +391,7 @@ function ContactosContent() {
                     <td data-label="Canal">{c.acquisition_channel ? <CanalChip value={c.acquisition_channel} small /> : <span className="cell-muted">—</span>}</td>
                     <td data-label="Registro" className="cell-muted col-secondary" style={{ whiteSpace: 'nowrap' }}>{fmtDateLong(c.created_at?.slice(0, 10) || '')}</td>
                     <td className="cell-chevron" style={{ width: 40, textAlign: 'right' }}>
-                      {isChecked ? <Ico.check /> : <Ico.chevron />}
+                      {!someChecked && <Ico.chevron />}
                     </td>
                   </tr>
                 )
@@ -639,18 +636,14 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
               </div>
 
               {canDelete && (
-                confirmDel ? (
-                  <div className="danger-box">
-                    <div className="danger-title">¿Eliminar este contacto?</div>
-                    <div className="danger-text">Esta acción no se puede deshacer.</div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button className="btn btn-ghost" onClick={() => setConfirmDel(false)} style={{ flex: 1 }}>Cancelar</button>
-                      <button className="btn btn-danger" onClick={handleDelete} disabled={deleting} style={{ flex: 1 }}>{deleting ? 'Eliminando…' : 'Sí, eliminar'}</button>
-                    </div>
-                  </div>
-                ) : (
+                <>
                   <button className="link-btn danger" onClick={() => setConfirmDel(true)}><Ico.trash /> Eliminar contacto</button>
-                )
+                  <ConfirmDialog open={confirmDel} busy={deleting}
+                    title={`¿Eliminar a ${c.name}?`} confirmLabel="Eliminar" busyLabel="Eliminando…"
+                    onConfirm={handleDelete} onCancel={() => setConfirmDel(false)}>
+                    Esta acción no se puede deshacer.
+                  </ConfirmDialog>
+                </>
               )}
             </>
           )}
@@ -1119,25 +1112,25 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
           {step === 'preview' && preview && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div style={{ padding: '14px 16px', background: 'var(--success-soft)', border: '1px solid #BDE7C9', borderRadius: 10, textAlign: 'center' }}>
+                <div style={{ padding: '14px 16px', background: 'var(--success-soft)', border: '1px solid #BDE7C9', borderRadius: 6, textAlign: 'center' }}>
                   <div style={{ fontSize: 30, fontWeight: 700, color: 'var(--success-fill)', lineHeight: 1 }}>{preview.valid.length}</div>
                   <div style={{ fontSize: 12, color: 'var(--success)', marginTop: 4, fontWeight: 600 }}>Teléfonos válidos</div>
                   <div style={{ fontSize: 11, color: 'var(--success-fill)', marginTop: 2 }}>Se importarán</div>
                 </div>
-                <div style={{ padding: '14px 16px', background: 'var(--danger-soft)', border: '1px solid #F7C1C9', borderRadius: 10, textAlign: 'center' }}>
+                <div style={{ padding: '14px 16px', background: 'var(--danger-soft)', border: '1px solid #F7C1C9', borderRadius: 6, textAlign: 'center' }}>
                   <div style={{ fontSize: 30, fontWeight: 700, color: 'var(--danger)', lineHeight: 1 }}>{preview.invalid + preview.noName}</div>
                   <div style={{ fontSize: 12, color: '#7A0A18', marginTop: 4, fontWeight: 600 }}>Se omitirán</div>
                   <div style={{ fontSize: 11, color: '#E8798A', marginTop: 2 }}>Sin nombre o inválidos</div>
                 </div>
               </div>
               {(preview.invalid > 0 || preview.noName > 0) && (
-                <div style={{ padding: '10px 14px', background: 'var(--paper)', borderRadius: 9, fontSize: 12.5, color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <div style={{ padding: '10px 14px', background: 'var(--paper)', borderRadius: 6, fontSize: 12.5, color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {preview.invalid > 0  && <span className="with-icon"><TriangleAlert size={14} style={{ color: 'var(--warning)' }} /> <span><strong>{preview.invalid}</strong> teléfono{preview.invalid !== 1 ? 's' : ''} con formato inválido</span></span>}
                   {preview.noName > 0   && <span className="with-icon"><UserRound size={14} /> <span><strong>{preview.noName}</strong> fila{preview.noName !== 1 ? 's' : ''} sin nombre</span></span>}
                 </div>
               )}
               {preview.valid.length === 0 && (
-                <div style={{ padding: '12px', background: 'var(--danger-soft)', borderRadius: 9, fontSize: 13, color: 'var(--danger)', textAlign: 'center', fontWeight: 500 }}>
+                <div style={{ padding: '12px', background: 'var(--danger-soft)', borderRadius: 6, fontSize: 13, color: 'var(--danger)', textAlign: 'center', fontWeight: 500 }}>
                   No hay contactos válidos para importar en este archivo.
                 </div>
               )}

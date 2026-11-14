@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.50.0',
+    date: '14 de noviembre, 2026',
+    title: 'Un diseño más sobrio y confirmaciones más claras',
+    items: [
+      'Antes de eliminar o quitar algo, se abre una ventana pequeña para confirmarlo, en lugar de la pregunta dentro de la fila.',
+      'Botones, tarjetas, ventanas y etiquetas tienen esquinas menos redondas, para que la app se vea más formal.',
+      'En Contactos, las casillas para elegir varios ahora muestran la palomita, y la del encabezado marca con una raya cuando solo eliges algunos.',
+    ],
+  },
+  {
     version: '1.49.2',
     date: '14 de noviembre, 2026',
     title: 'WhatsApp: al cambiar de número, la bandeja empieza limpia',
