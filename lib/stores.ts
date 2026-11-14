@@ -39,6 +39,16 @@ export type StoreModules = Record<StoreModule, boolean>
  */
 export const WHATSAPP_OFFERED = false
 
+/**
+ * Cómo se marca WhatsApp cuando la tienda aún no lo tiene activo: 'Pronto'
+ * mientras no se ofrece (salvo a quien ya puede conectarlo en unos clics),
+ * 'Por activar' si su plan lo incluye, o null si su plan no lo incluye.
+ */
+export function whatsappPendingTag(store: { whatsappSignup: boolean; planIncludesWhatsApp: boolean }): 'Pronto' | 'Por activar' | null {
+  if (!WHATSAPP_OFFERED && !store.whatsappSignup) return 'Pronto'
+  return store.planIncludesWhatsApp ? 'Por activar' : null
+}
+
 export const DEFAULT_MODULES: StoreModules = { whatsapp: false, campaigns: false, formulas: false }
 
 export const STATUS_LABELS: Record<StoreStatus, string> = {
@@ -72,6 +82,15 @@ export type PlanDef = {
   sellerGoals: boolean
   reports: boolean
 }
+/** Funciones del plan que una ruta puede exigir con requireStore({ feature }). */
+export type PlanFeature = 'salesTeam' | 'sellerGoals' | 'reports'
+/** Lo que se le dice a quien intenta usarlas sin tenerlas en su plan. */
+export const PLAN_FEATURE_REQUIRED: Record<PlanFeature, string> = {
+  salesTeam: 'Oportunidades, Actividad diaria y las metas del equipo vienen en los planes Galón y Cubeta.',
+  sellerGoals: 'Las metas propias para cada vendedor vienen en el plan Cubeta.',
+  reports: 'Acumulado y los reportes en Excel vienen en el plan Cubeta.',
+}
+
 export const PLANS: Record<PlanId, PlanDef> = {
   litro:   { label: 'Litro',   maxUsers: 1,  allowAdmins: false, maxContacts: 50,   whatsapp: false, paid: false, salesTeam: false, sellerGoals: false, reports: false },
   galon:   { label: 'Galón',   maxUsers: 3,  allowAdmins: false, maxContacts: null, whatsapp: false, paid: true,  salesTeam: true,  sellerGoals: false, reports: false },

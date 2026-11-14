@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from '@/lib/profile'
-import { WHATSAPP_OFFERED, type StoreModule } from '@/lib/stores'
+import { whatsappPendingTag, type StoreModule } from '@/lib/stores'
 import { Ico, SectionHead, Spinner, WhatsAppGlyph, cx } from './ui'
 import { StoreTab } from './StoreTab'
 import { CatalogsTab } from './CatalogsTab'
@@ -72,7 +72,7 @@ function Settings() {
   if (!session || !store) return <Spinner />
   const go = (id: TabId) => router.replace(`${pathname}?tab=${id}`, { scroll: false })
   const waHint = (t: Tab) => t.id === 'whatsapp' && !store.modules.whatsapp
-    ? (!WHATSAPP_OFFERED && !store.whatsappSignup ? 'Pronto' : store.planIncludesWhatsApp ? 'Por activar' : null)
+    ? whatsappPendingTag(store)
     : null
 
   return (

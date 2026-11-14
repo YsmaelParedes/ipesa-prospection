@@ -5,45 +5,12 @@
  * Solo decide qué se MUESTRA: cada ruta de la API vuelve a validar todo.
  */
 import { useEffect, useState } from 'react'
-import type { PlanId, StoreAccess, StoreModules, StoreRole, StoreStatus } from './stores'
+import type { StoreRole } from './stores'
+import type { publicStore } from './storeServer'
 import { broadcastSessionChange, setQueryContext } from './apiClient'
 
-export type ClientStore = {
-  id: string
-  slug: string
-  name: string
-  phone: string | null
-  email: string | null
-  address: string | null
-  city: string | null
-  state: string | null
-  logoUrl: string | null
-  status: StoreStatus
-  /** Plan que aplica hoy (una cortesía vencida ya cuenta como Litro) */
-  plan: PlanId
-  planLabel: string
-  maxUsers: number
-  /** El plan permite más de un administrador */
-  allowAdmins: boolean
-  /** Límites del plan (null = sin límite) */
-  limits: { contacts: number | null }
-  /** Reparto de contactos, metas y control diario del sistema comercial (Galón, Cubeta) */
-  salesTeam: boolean
-  /** El plan incluye la bandeja de WhatsApp (Cubeta); además hay que conectar el número */
-  planIncludesWhatsApp: boolean
-  /** La tienda puede conectar su WhatsApp sola, en unos clics (Embedded Signup) */
-  whatsappSignup: boolean
-  /** Suscripción de Stripe (null = plan gratis o asignado a mano) */
-  subscription: { status: string | null; currentPeriodEnd: string | null; cancelAtPeriodEnd: boolean } | null
-  /** Puede abrir el portal de Stripe (facturas, tarjeta, cancelar) */
-  billingPortal: boolean
-  paidUntil: string | null
-  access: StoreAccess
-  modules: StoreModules
-  onboardingCompleted: boolean
-  /** Pidió activar WhatsApp y un asesor lo contactará */
-  whatsappRequestedAt: string | null
-}
+/** La tienda tal como la manda el servidor (publicStore en lib/storeServer.ts): un solo lugar para agregar campos. */
+export type ClientStore = ReturnType<typeof publicStore>
 
 export type Session = {
   user: { id: string; email: string; name: string }

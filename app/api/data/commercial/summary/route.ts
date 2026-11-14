@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getStoreMembers, getTestUserIds, requireStore } from '@/lib/supabase-server'
 import { storeDays, teamActivities } from '@/lib/storeActivity'
 import { jsonError, serverError } from '@/lib/validation'
-import { hasReports, reportsRequired, storeGoals } from '@/lib/commercialServer'
+import { storeGoals } from '@/lib/commercialServer'
 import {
   GOAL_KEYS, addDays, compliance, countActivities, goalsFor, periodRange,
   workDaysBetween, type ActivityForCount, type Goals, type Period,
@@ -26,9 +26,8 @@ const scale = (goals: Goals, days: number): Goals =>
  * contra el periodo completo), si no siempre se vería a la baja.
  */
 export async function GET(req: NextRequest) {
-  const ctx = await requireStore({ admin: true })
+  const ctx = await requireStore({ admin: true, feature: 'reports' })
   if (ctx instanceof Response) return ctx
-  if (!hasReports(ctx)) return reportsRequired()
 
   const sp = req.nextUrl.searchParams
   const period = (sp.get('period') || 'week') as Period

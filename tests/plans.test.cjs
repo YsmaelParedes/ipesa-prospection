@@ -1,7 +1,7 @@
 require('./register-typescript.cjs')
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
-const { PLANS, DEFAULT_MODULES, effectivePlan, effectiveModules, normalizeModules, storeAccess, planOf } = require('../lib/stores.ts')
+const { PLANS, DEFAULT_MODULES, effectivePlan, effectiveModules, normalizeModules, storeAccess, planOf, whatsappPendingTag } = require('../lib/stores.ts')
 const { planFromLookupKey, subscriptionSnapshot, subscriptionGivesPlan, formatPlanPrice } = require('../lib/billing.ts')
 const { parsePlanLimitError, remainingSlots, planLimitMessage } = require('../lib/planLimits.ts')
 
@@ -124,4 +124,10 @@ test('the Acumulado report has one row per seller, the store total and the compa
   const totals = summaryTotalsRows(data)
   assert.deepEqual(totals[0], { 'Indicador': 'Llamadas', 'Este periodo': 12, 'Periodo anterior': 8, 'Meta': 30 })
   assert.deepEqual(totals.at(-1), { 'Indicador': 'Cumplimiento %', 'Este periodo': 50, 'Periodo anterior': 26, 'Meta': 100 })
+})
+
+test('WhatsApp pendiente: Pronto mientras no se ofrece, salvo a quien puede conectarlo en unos clics', () => {
+  assert.equal(whatsappPendingTag({ whatsappSignup: false, planIncludesWhatsApp: true }), 'Pronto')
+  assert.equal(whatsappPendingTag({ whatsappSignup: true, planIncludesWhatsApp: true }), 'Por activar')
+  assert.equal(whatsappPendingTag({ whatsappSignup: true, planIncludesWhatsApp: false }), null)
 })

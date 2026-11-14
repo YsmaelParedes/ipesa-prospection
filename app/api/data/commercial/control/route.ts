@@ -3,7 +3,7 @@ import { getServerSupabase, getStoreMembers, getTestUserIds, requireStore } from
 import { storeDays, teamActivities } from '@/lib/storeActivity'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
-import { hasSalesTeam, hasSellerGoals, salesTeamRequired, sellerGoalsRequired, storeGoals } from '@/lib/commercialServer'
+import { hasSellerGoals, sellerGoalsRequired, storeGoals } from '@/lib/commercialServer'
 import {
   EMAIL_RESULT_CHOICES, GOAL_KEYS, RESULT_CHOICES, RESULT_RULES, compliance, countActivities, goalsFor, parseGoals,
   parseGoalsConfig, type ActivityForCount,
@@ -22,9 +22,8 @@ const byResult = (rows: Row[]) => [...new Set([...RESULT_CHOICES, ...EMAIL_RESUL
  * (/summary). Vendedor: solo lo suyo. Las cuentas de prueba no cuentan.
  */
 export async function GET() {
-  const ctx = await requireStore()
+  const ctx = await requireStore({ feature: 'salesTeam' })
   if (ctx instanceof Response) return ctx
-  if (!hasSalesTeam(ctx)) return salesTeamRequired()
 
   const calendar = storeDays(ctx)
   const today = calendar.today
@@ -106,9 +105,8 @@ export async function GET() {
  * le quita sus metas propias.
  */
 export async function PATCH(req: NextRequest) {
-  const ctx = await requireStore({ admin: true, write: true })
+  const ctx = await requireStore({ admin: true, write: true, feature: 'salesTeam' })
   if (ctx instanceof Response) return ctx
-  if (!hasSalesTeam(ctx)) return salesTeamRequired()
 
   const body = await readJson(req)
   if (!body) return jsonError('Cuerpo de solicitud inválido')

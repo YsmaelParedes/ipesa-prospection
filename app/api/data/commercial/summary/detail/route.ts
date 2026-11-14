@@ -3,7 +3,6 @@ import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-
 import { storeDays, teamActivities } from '@/lib/storeActivity'
 import { jsonError, serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
-import { hasReports, reportsRequired } from '@/lib/commercialServer'
 import { periodRange, type Period } from '@/lib/commercial'
 
 type Activity = {
@@ -29,9 +28,8 @@ const LOST = new Set(['no_interesado', 'depurar'])
  * «abierta».
  */
 export async function GET(req: NextRequest) {
-  const ctx = await requireStore({ admin: true })
+  const ctx = await requireStore({ admin: true, feature: 'reports' })
   if (ctx instanceof Response) return ctx
-  if (!hasReports(ctx)) return reportsRequired()
 
   const sp = req.nextUrl.searchParams
   const period = (sp.get('period') || 'week') as Period

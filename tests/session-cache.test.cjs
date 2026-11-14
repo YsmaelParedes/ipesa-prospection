@@ -12,7 +12,7 @@ const stores = require('../lib/stores.ts')
 function setup({ now = 1_000_000 } = {}) {
   const state = {
     now, token: 'token-a', expiresAt: (now + 3_600_000) / 1000,
-    authCalls: 0, memberCalls: 0, authFails: false, cookie: undefined,
+    authCalls: 0, memberCalls: 0, authFails: false, cookie: undefined, plan: 'cubeta',
   }
   const client = {
     auth: {
@@ -29,7 +29,7 @@ function setup({ now = 1_000_000 } = {}) {
     order: async () => {
       state.memberCalls++
       await new Promise(r => setImmediate(r))
-      return { data: [{ store_id: 'store-1', role: 'admin', created_at: '2026-01-01', stores: { id: 'store-1', plan: 'cubeta', status: 'active', paid_until: null, modules: {}, timezone: 'America/Mexico_City' } }], error: null }
+      return { data: [{ store_id: 'store-1', role: 'admin', created_at: '2026-01-01', stores: { id: 'store-1', plan: state.plan, status: 'active', paid_until: null, modules: {}, timezone: 'America/Mexico_City' } }], error: null }
     },
   }
   const source = fs.readFileSync(path.join(__dirname, '../lib/supabase-server.ts'), 'utf8')
@@ -125,4 +125,15 @@ test('membresías: 10 s en caché, compartidas entre peticiones simultáneas y b
   api.invalidateStoreContextCache()
   await api.resolveStoreContext(user)
   assert.equal(state.memberCalls, 4)
+})
+
+test('requireStore({ feature }): 403 PLAN_FEATURE si el plan no la incluye', async () => {
+  const { api, state } = setup()
+  assert.equal((await api.requireStore({ feature: 'reports' })).storeId, 'store-1')
+  api.invalidateStoreContextCache()
+  state.plan = 'galon'
+  const res = await api.requireStore({ feature: 'reports' })
+  assert.equal(res.status, 403)
+  assert.deepEqual(await res.json(), { error: 'Acumulado y los reportes en Excel vienen en el plan Cubeta.', code: 'PLAN_FEATURE' })
+  assert.equal((await api.requireStore({ feature: 'salesTeam' })).storeId, 'store-1')
 })

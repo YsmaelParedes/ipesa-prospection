@@ -44,13 +44,19 @@ export function publicStore(store: StoreRow) {
     state: store.state,
     logoUrl: storeLogoUrl(store.logo_path),
     status: store.status,
+    /** Plan que aplica hoy (una cortesía vencida ya cuenta como Litro) */
     plan,
     planLabel: def.label,
     maxUsers: def.maxUsers,
+    /** El plan permite más de un administrador */
     allowAdmins: def.allowAdmins,
+    /** Límites del plan (null = sin límite) */
     limits: { contacts: def.maxContacts },
+    /** Reparto de contactos, metas y control diario del sistema comercial (Galón, Cubeta) */
     salesTeam: def.salesTeam,
+    /** El plan incluye la bandeja de WhatsApp (Cubeta); además hay que conectar el número */
     planIncludesWhatsApp: def.whatsapp,
+    /** La tienda puede conectar su WhatsApp sola, en unos clics (Embedded Signup) */
     whatsappSignup: def.whatsapp && whatsappSignupOpen(store.id),
     /** Suscripción de Stripe: estado, próximo cobro y si se cancela al final del periodo */
     subscription: store.stripe_subscription_id ? {
@@ -64,6 +70,7 @@ export function publicStore(store: StoreRow) {
     access: storeAccess(store),
     modules: effectiveModules(store),
     onboardingCompleted: !!store.onboarding_completed_at,
+    /** Pidió activar WhatsApp y un asesor lo contactará */
     whatsappRequestedAt: store.whatsapp_requested_at ?? null,
   }
 }

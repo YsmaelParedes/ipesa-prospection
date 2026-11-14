@@ -1,5 +1,5 @@
 import { getServerSupabase, getUserNameMap, type StoreContext } from './supabase-server'
-import { planOf } from './stores'
+import { PLAN_FEATURE_REQUIRED, planOf } from './stores'
 import { parseGoalsConfig, type GoalsConfig } from './commercial'
 
 export const COMMERCIAL_COLUMNS =
@@ -26,19 +26,9 @@ export function storeGoals(ctx: StoreContext, raw: unknown): GoalsConfig {
   return hasSellerGoals(ctx) ? cfg : { ...cfg, byUser: {} }
 }
 
-export function salesTeamRequired(): Response {
-  return Response.json(
-    { error: 'Oportunidades, Actividad diaria y las metas del equipo vienen en los planes Galón y Cubeta.', code: 'PLAN_FEATURE' },
-    { status: 403 },
-  )
-}
-
+/** Para una comprobación que depende de la petición (las rutas enteras usan requireStore({ feature })). */
 export function sellerGoalsRequired(): Response {
-  return Response.json({ error: 'Las metas propias para cada vendedor vienen en el plan Cubeta.', code: 'PLAN_FEATURE' }, { status: 403 })
-}
-
-export function reportsRequired(): Response {
-  return Response.json({ error: 'Acumulado y los reportes en Excel vienen en el plan Cubeta.', code: 'PLAN_FEATURE' }, { status: 403 })
+  return Response.json({ error: PLAN_FEATURE_REQUIRED.sellerGoals, code: 'PLAN_FEATURE' }, { status: 403 })
 }
 
 /**

@@ -18,7 +18,7 @@ import { signOut } from '@/lib/signOut'
 import { CURRENT_VERSION, changelogFor } from '@/lib/changelog'
 import { SYSTEM_NOTICE } from '@/lib/systemNotice'
 import { EMAILS } from '@/lib/legal'
-import { ROLE_LABELS, STATUS_LABELS, WHATSAPP_OFFERED, type StoreModule } from '@/lib/stores'
+import { ROLE_LABELS, STATUS_LABELS, whatsappPendingTag, type StoreModule } from '@/lib/stores'
 import { reminderSubject, reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
 import { fmtDue, isDueToday, isOverdue } from '@/lib/datetime'
@@ -331,7 +331,8 @@ Pantalla: ${pathname}`,
     : null
   const pendingSetup = (id: string) => id === 'whatsapp' && waOff
   // WhatsApp en desarrollo: "Pronto". Cuando se ofrezca: en Cubeta "Por activar"; en Litro y Galón, el nombre del plan
-  const waTag = !WHATSAPP_OFFERED && !store?.whatsappSignup ? 'Pronto' : store?.planIncludesWhatsApp ? 'Por activar' : 'Cubeta'
+  // Sin el plan que lo incluye, el menú invita a Cubeta
+  const waTag = (store ? whatsappPendingTag(store) : 'Pronto') ?? 'Cubeta'
 
   const navLink = (it: NavItem) => {
     const Ic = it.icon

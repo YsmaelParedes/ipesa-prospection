@@ -5,8 +5,8 @@ import { createClient, type SupabaseClient, type User } from '@supabase/supabase
 import { cookies } from 'next/headers'
 import { SESSION_COOKIE_OPTIONS } from './sessionCookie'
 import {
-  audienceUsers, effectiveModules, effectivePlan, isStoreAdminRole, mainAdminOf, normalizeModules, storeAccess,
-  type PlanId, type StoreAccess, type StoreModule, type StoreModules, type StoreRole, type StoreStatus,
+  PLAN_FEATURE_REQUIRED, audienceUsers, effectiveModules, effectivePlan, isStoreAdminRole, mainAdminOf, normalizeModules, planOf, storeAccess,
+  type PlanFeature, type PlanId, type StoreAccess, type StoreModule, type StoreModules, type StoreRole, type StoreStatus,
 } from './stores'
 
 const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -250,7 +250,7 @@ export async function resolveStoreContext(user: User): Promise<StoreContext | nu
 }
 
 // ─── Respuestas estándar ─────────────────────────────────────────────────────
-type ErrorCode = 'UNAUTHENTICATED' | 'NO_STORE' | 'FORBIDDEN' | 'MODULE_DISABLED' | 'STORE_READONLY' | 'PLAN_ADMIN_ONLY'
+type ErrorCode = 'UNAUTHENTICATED' | 'NO_STORE' | 'FORBIDDEN' | 'MODULE_DISABLED' | 'STORE_READONLY' | 'PLAN_ADMIN_ONLY' | 'PLAN_FEATURE'
 
 function errorResponse(status: number, code: ErrorCode, error: string) {
   return Response.json({ error, code }, { status })
@@ -276,6 +276,8 @@ export type RequireStoreOptions = {
   admin?: boolean
   /** Módulo que debe estar activo en la tienda. */
   module?: StoreModule
+  /** Función que debe incluir el plan de la tienda (403 PLAN_FEATURE si no). */
+  feature?: PlanFeature
 }
 
 /**
@@ -304,6 +306,9 @@ export async function requireStore(opts: RequireStoreOptions = {}): Promise<Stor
   if (opts.write && ctx.access === 'readonly') {
     return errorResponse(402, 'STORE_READONLY',
       'Tu tienda está en modo solo lectura: está suspendida o cancelada.')
+  }
+  if (opts.feature && !planOf(ctx.plan)[opts.feature]) {
+    return errorResponse(403, 'PLAN_FEATURE', PLAN_FEATURE_REQUIRED[opts.feature])
   }
   return ctx
 }

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
-import { hasSalesTeam, salesTeamRequired } from '@/lib/commercialServer'
 
 const MAX_IDS = 500
 
@@ -11,9 +10,8 @@ const MAX_IDS = 500
  *   { ids, split: uuid[] }       → en partes iguales, en el orden de ids
  */
 export async function POST(req: NextRequest) {
-  const ctx = await requireStore({ admin: true, write: true })
+  const ctx = await requireStore({ admin: true, write: true, feature: 'salesTeam' })
   if (ctx instanceof Response) return ctx
-  if (!hasSalesTeam(ctx)) return salesTeamRequired()
 
   const body = await readJson(req)
   const ids = body?.ids
