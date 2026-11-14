@@ -110,8 +110,8 @@ export function summarizePerson(rows: readonly PersonRow[], optOut: boolean): Om
   }
 }
 
-/** Una fila por número al que se le mandó alguna plantilla en el último año (lo más reciente primero). */
-export async function loadPeople(storeId: string): Promise<CampaignPerson[]> {
+/** Mensajes del periodo agrupados por número (lo que se sabe de cada uno para campañas). */
+export async function loadReach(storeId: string): Promise<Map<string, PersonRow[]>> {
   const supabase = getServerSupabase()
   const since = sinceIso()
   const rows = await fetchPaged<PersonRow>((from, to) =>
@@ -125,6 +125,12 @@ export async function loadPeople(storeId: string): Promise<CampaignPerson[]> {
     if (list) list.push(r)
     else byPhone.set(r.phone, [r])
   }
+  return byPhone
+}
+
+/** Una fila por número al que se le mandó alguna plantilla en el último año (lo más reciente primero). */
+export async function loadPeople(storeId: string): Promise<CampaignPerson[]> {
+  const byPhone = await loadReach(storeId)
   const sent = [...byPhone].filter(([, list]) => list.some(r => r.direction === 'outbound' && r.template_name))
 
   // Por teléfono actual: si a un contacto le corrigieron el número, el viejo ya no es suyo

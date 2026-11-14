@@ -27,6 +27,7 @@ import { contactForPhone } from './whatsappInbox'
 import { noWhatsAppByPhone, noWhatsAppFor } from './campaignPeople'
 import type { NoWhatsApp } from './campaignKinds'
 import { getStoreWhatsAppCreds } from './storeWhatsApp'
+import { audienceBlock } from './campaignAudience'
 import { normalizePhone, toWhatsAppNumber } from './phone'
 import { SEND_LABELS, type SendKind } from './whatsappFiles'
 import { reportError } from './errorReport'
@@ -192,18 +193,21 @@ async function deliverTemplate(
   const contactId = target.contactId
   if (!/^\d{10}$/.test(phone)) return { contactId, ok: false, reason: 'invalid_phone', error: 'Sin teléfono válido registrado' }
 
-  if (contact?.wa_opt_out) return { contactId, ok: false, reason: 'opt_out', skipped: true, error: 'Pidió no recibir campañas (dado de baja)' }
-  // Marcado como fijo en su ficha: no tiene WhatsApp
-  if (target.contactId && contact?.line_type === 'fijo') return { contactId, ok: false, reason: 'landline', skipped: true, noWhatsApp: true, error: 'Sin WhatsApp: está marcado como teléfono fijo.' }
-
-  // Sin WhatsApp: no se le vuelve a mandar nada (puede ser un teléfono fijo).
-  // En campañas nunca; desde el chat solo si se confirma "intentar de todos modos".
-  if (!(target.force && !target.contactId)) {
-    const noWhatsApp = pre ? pre.noWhatsApp.get(phone) ?? null : await noWhatsAppFor(sender.storeId, phone)
-    if (noWhatsApp) {
-      const times = noWhatsApp.failures === 1 ? 'el último envío' : `los últimos ${noWhatsApp.failures} envíos`
-      return { contactId, ok: false, reason: 'no_whatsapp', skipped: true, noWhatsApp: true, error: `Sin WhatsApp: Meta rechazó ${times}. Puede ser un teléfono fijo.` }
-    }
+  // Bajas, fijos y "sin WhatsApp": la misma regla con la que Campañas deja elegir.
+  // A un número sin WhatsApp no se le vuelve a mandar nada (puede ser un teléfono
+  // fijo); desde el chat solo si se confirma "intentar de todos modos".
+  const optOut = !!contact?.wa_opt_out
+  const lineType = target.contactId ? contact?.line_type ?? null : null
+  let noWhatsApp: NoWhatsApp | null = null
+  if (!optOut && lineType !== 'fijo' && !(target.force && !target.contactId)) {
+    noWhatsApp = pre ? pre.noWhatsApp.get(phone) ?? null : await noWhatsAppFor(sender.storeId, phone)
+  }
+  const block = audienceBlock({ optOut, lineType, noWhatsApp: !!noWhatsApp })
+  if (block === 'opt_out') return { contactId, ok: false, reason: 'opt_out', skipped: true, error: 'Pidió no recibir campañas (dado de baja)' }
+  if (block === 'landline') return { contactId, ok: false, reason: 'landline', skipped: true, noWhatsApp: true, error: 'Sin WhatsApp: está marcado como teléfono fijo.' }
+  if (block === 'no_whatsapp' && noWhatsApp) {
+    const times = noWhatsApp.failures === 1 ? 'el último envío' : `los últimos ${noWhatsApp.failures} envíos`
+    return { contactId, ok: false, reason: 'no_whatsapp', skipped: true, noWhatsApp: true, error: `Sin WhatsApp: Meta rechazó ${times}. Puede ser un teléfono fijo.` }
   }
 
   // ── Variables del cuerpo: {{1}} = nombre (si se personaliza) o texto fijo ──

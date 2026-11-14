@@ -15,11 +15,12 @@ import { WhatsAppTemplatePicker, type WhatsAppTemplateSelection } from '@/compon
 import { useWhatsAppCampaignQuota, CampaignQuotaNote, isOverQuota } from '@/components/WhatsAppCampaignQuota'
 import { useCampaignSend, CampaignConfirmPanel, CampaignProgressPanel, CampaignResultsPanel } from '@/components/WhatsAppCampaignSend'
 import { WaIcon } from '@/components/WhatsAppUI'
-import { fmtPhone, normalizePhone } from '@/lib/phone'
+import { fmtPhone } from '@/lib/phone'
 import { MARKETING_RETRY_HOURS, tierLabel } from '@/lib/whatsappSafety'
 import { PERSON_STATES, PERSON_STATE_ORDER, campaignLabelFor, type PersonState } from '@/lib/campaignKinds'
+import type { AudienceContact } from '@/lib/campaignAudience'
 
-type Contact = { id: string; name: string; phone: string; segment?: string | null; wa_opt_out?: boolean; line_type?: string | null }
+type Contact = AudienceContact
 
 /** Reintento desde Resultados: plantilla y contactos que se preseleccionan (el envío se confirma como siempre). */
 export type CampaignPreset = { template: string; contactIds: string[]; label: string }
@@ -28,8 +29,6 @@ type Health = {
   config: { connected: boolean; source: 'store' | 'env'; businessAccount: boolean; appSecret: boolean }
   health: { displayPhoneNumber?: string; verifiedName?: string; qualityRating?: string; messagingLimitTier?: string; canSendMessage?: string; healthNotes?: string[] } | null
 }
-
-type Stats = { marketingHold: string[]; states?: Record<string, PersonState> }
 
 /** Filtro "Historial": cómo le fue a cada contacto con las campañas ('never' = nunca se le ha enviado una). */
 type History = 'all' | 'never' | PersonState
@@ -104,23 +103,19 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
   const [history, setHistory]     = useState<History>('all')
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set())
   const [selection, setSelection] = useState<WhatsAppTemplateSelection | null>(null)
-  const [stats, setStats]         = useState<Stats | null>(null)
   const { quota, refetch: refetchQuota } = useWhatsAppCampaignQuota()
   const { phase, total, done, sent, failed, skipped, outcomes, stopReason, askConfirm, backToForm, run, cancel, reset } = useCampaignSend()
 
-  // Efectos separados: refrescar estadísticas o catálogos no vuelve a descargar toda la base
+  // Destinatarios con su historial y si se les puede mandar (la regla vive en el servidor)
+  const loadAudience = () => apiFetch('/api/whatsapp/campaigns/audience')
+    .then(r => r.json())
+    .then(d => { if (Array.isArray(d.contacts)) setContacts(d.contacts) })
+    .catch(() => {})
   useQueryEffect(() => {
-    apiFetch('/api/data/contacts?fields=lite&all=1&line=con_telefono')
-      .then(r => r.json())
-      .then(d => setContacts((d.contacts || []).filter((c: Contact) => normalizePhone(c.phone).length === 10)))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
-  useQueryEffect(() => {
+    loadAudience().finally(() => setLoading(false))
     loadCatalogs()
       .then(d => setSegmentos(d.segments))
       .catch(() => {})
-    apiFetch('/api/whatsapp/campaigns/stats').then(r => r.json()).then(d => { if (d.marketingHold) setStats(d) }).catch(() => {})
   }, [])
 
   // Reintento: al cargar los contactos se preselecciona a quienes no recibieron el mensaje
@@ -129,22 +124,17 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
     if (!retry || presetApplied.current || loading) return
     presetApplied.current = true
     const ids = new Set(retry.contactIds)
-    setCheckedIds(new Set(contacts.filter(c => ids.has(c.id) && !c.wa_opt_out).map(c => c.id)))
+    setCheckedIds(new Set(contacts.filter(c => ids.has(c.id) && c.block !== 'opt_out').map(c => c.id)))
     onPresetApplied?.()
   }, [retry, loading, contacts, onPresetApplied])
 
   // Meta pidió esperar 24 h antes de reenviarles marketing (error 131049); no aplica a plantillas de servicio
   const marketing = selection?.category !== 'UTILITY' && selection?.category !== 'AUTHENTICATION'
-  const holdPhones = useMemo(
-    () => new Set(marketing ? (stats?.marketingHold ?? []) : []),
-    [stats, marketing],
-  )
-  const historyOf = (c: Contact): Exclude<History, 'all'> =>
-    c.wa_opt_out ? 'opt_out' : stats?.states?.[normalizePhone(c.phone)] ?? 'never'
+  const historyOf = (c: Contact): Exclude<History, 'all'> => c.history
   const blockedReason = (c: Contact): string | null => {
-    if (c.wa_opt_out) return 'Dado de baja'
-    if (historyOf(c) === 'no_whatsapp' || c.line_type === 'fijo') return 'Sin WhatsApp'
-    if (holdPhones.has(normalizePhone(c.phone))) return `Meta pidió esperar ${MARKETING_RETRY_HOURS} h`
+    if (c.block === 'opt_out') return 'Dado de baja'
+    if (c.block) return 'Sin WhatsApp'
+    if (marketing && c.hold) return `Meta pidió esperar ${MARKETING_RETRY_HOURS} h`
     return null
   }
 
@@ -156,8 +146,8 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
     }
     return map
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contacts, stats])
-  const noWhatsAppCount = historyCounts.get('no_whatsapp') ?? 0
+  }, [contacts])
+  const noWhatsAppCount = useMemo(() => contacts.filter(c => c.block === 'no_whatsapp').length, [contacts])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -169,7 +159,7 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
       return c.name?.toLowerCase().includes(q) || (digits.length >= 3 && c.phone.includes(digits))
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contacts, search, segmentFilter, history, stats])
+  }, [contacts, search, segmentFilter, history])
 
   // Si cambian las exclusiones, quita de la selección a quien ya no es elegible
   useEffect(() => {
@@ -178,7 +168,7 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
       return next.size === prev.size ? prev : next
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [holdPhones, contacts])
+  }, [marketing, contacts])
 
   const toggle = (c: Contact) => {
     if (blockedReason(c)) return
@@ -211,7 +201,7 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
       retry ? `Reintento · ${retry.label}` : campaignLabelFor(selectedContacts.map(c => c.segment)))
     setRetry(null)
     refetchQuota()
-    apiFetch('/api/whatsapp/campaigns/stats').then(r => r.json()).then(d => { if (d.marketingHold) setStats(d) }).catch(() => {})
+    loadAudience()
   }
 
   if (phase !== 'idle') {
