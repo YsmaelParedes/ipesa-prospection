@@ -31,6 +31,7 @@ import { audienceBlock } from './campaignAudience'
 import { normalizePhone, toWhatsAppNumber } from './phone'
 import { SEND_LABELS, type SendKind } from './whatsappFiles'
 import { reportError } from './errorReport'
+import type { ThreadMessage } from './whatsappThreadTypes'
 
 export const OUTBOX_MESSAGE_FIELDS = 'id, phone, direction, body, status, error_message, template_name, media_id, media_type, media_mime, profile_name, contact_id, user_id, origin, created_at'
 
@@ -61,9 +62,8 @@ export type TemplateMessage = {
 /** Envío de campaña (uno por segmento) al que pertenece cada mensaje. */
 export type CampaignTag = { id: string; label: string | null }
 
-export type MessageRow = Record<string, unknown>
 export type ConversationSend =
-  | { status: 'sent'; message: MessageRow }
+  | { status: 'sent'; message: ThreadMessage }
   | { status: 'rejected'; error?: string; code?: number }
   /** Salió por WhatsApp pero no se pudo guardar en el historial. */
   | { status: 'unrecorded'; cause: unknown }
@@ -330,7 +330,7 @@ async function sendConversation(
       user_id: sender.uid,
     }]).select(OUTBOX_MESSAGE_FIELDS)
     if (error) throw error
-    return { status: 'sent', message: data?.[0] as MessageRow }
+    return { status: 'sent', message: data?.[0] as ThreadMessage }
   } catch (cause) {
     return { status: 'unrecorded', cause }
   }

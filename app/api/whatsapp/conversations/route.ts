@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { contactsForPhones } from '@/lib/whatsappInbox'
 import { noWhatsAppAmong } from '@/lib/campaignPeople'
+import type { ConversationSummary } from '@/lib/whatsappThreadTypes'
 import { isWindowOpen } from '@/lib/whatsappSafety'
 import { serverError } from '@/lib/validation'
 
@@ -43,7 +44,7 @@ async function GETImpl(req: NextRequest) {
       rows.map(r => r.contact_id).filter(Boolean),
     )
 
-    let conversations = rows.map(r => {
+    let conversations = rows.map((r): ConversationSummary => {
       const contact = contacts.get(r.phone)
       return {
         phone:         r.phone as string,

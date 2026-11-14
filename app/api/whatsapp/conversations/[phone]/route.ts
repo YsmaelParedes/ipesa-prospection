@@ -9,6 +9,7 @@ import { noWhatsAppOf } from '@/lib/campaignPeople'
 import { normalizePhone } from '@/lib/phone'
 import { isWindowOpen, windowClosesAt } from '@/lib/whatsappSafety'
 import { jsonError, readJson, serverError } from '@/lib/validation'
+import type { ThreadCommercial, ThreadMessage, ThreadPayload } from '@/lib/whatsappThreadTypes'
 
 type Ctx = { params: Promise<{ phone: string }> }
 
@@ -49,13 +50,13 @@ async function GETImpl(req: NextRequest, { params }: Ctx) {
         .order('created_at', { ascending: false }).limit(1).maybeSingle(),
     ])
     if (error) throw error
-    const messages = (newestFirst ?? []).reverse()
+    const messages = (newestFirst ?? []).reverse() as ThreadMessage[]
 
     const linkedId = lastInbound?.contact_id ?? messages.find(m => m.contact_id)?.contact_id ?? null
     const contact = await contactForPhone(ctx.storeId, phone, linkedId)
 
     // Sistema comercial: el detalle (próxima acción y nota) solo para su responsable o el administrador
-    let commercial: { status: string; next_action: string | null; next_action_at: string | null; last_note: string | null; mine: boolean } | null = null
+    let commercial: ThreadCommercial | null = null
     if (contact) {
       const { data } = await supabase.from('contacts')
         .select('commercial_status, owner_id, next_action, next_action_at, last_note')
@@ -91,7 +92,7 @@ async function GETImpl(req: NextRequest, { params }: Ctx) {
       }
     }
 
-    return NextResponse.json({
+    const payload: ThreadPayload = {
       phone,
       messages,
       contact,
@@ -102,7 +103,8 @@ async function GETImpl(req: NextRequest, { params }: Ctx) {
       windowClosesAt: windowClosesAt(lastInbound?.created_at),
       noWhatsApp: noWhatsAppOf(messages),
       markedRead,
-    })
+    }
+    return NextResponse.json(payload)
   } catch (error) {
     return serverError('GET /api/whatsapp/conversations/[phone]', error, 'Error al obtener la conversación')
   }

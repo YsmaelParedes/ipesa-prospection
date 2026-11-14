@@ -26,64 +26,15 @@ import { notifyDataChanged } from '@/lib/crmEvents'
 import { ArrowDown, X } from 'lucide-react'
 import { useSession } from '@/lib/profile'
 import type { NoWhatsApp } from '@/lib/campaignKinds'
+import type { ConversationSummary, ThreadCommercial, ThreadContact, ThreadMessage, ThreadPayload } from '@/lib/whatsappThreadTypes'
 
 /* ══════════════════════════════════════════════════════════════════════════
    Tipos
 ══════════════════════════════════════════════════════════════════════════ */
-type Conversation = {
-  phone: string
-  contactId: string | null
-  name: string | null
-  profileName: string | null
-  segment: string | null
-  optOut: boolean
-  lastBody: string | null
-  lastDirection: 'inbound' | 'outbound'
-  lastStatus: string
-  lastMediaType: string | null
-  lastTemplate: string | null
-  lastAt: string
-  unread: number
-  lastInboundAt: string | null
-  windowOpen: boolean
-  /** Meta reportó que el número no tiene WhatsApp (puede ser un fijo): ya no se le envían campañas. */
-  noWhatsApp?: boolean
-}
-
-type Message = {
-  id: string
-  phone: string
-  direction: 'inbound' | 'outbound'
-  body: string | null
-  status: string
-  error_message: string | null
-  template_name: string | null
-  media_id: string | null
-  media_type: string | null
-  media_mime: string | null
-  /** null en un saliente = lo contestó el agente de IA de Meta (ver whatsappWebhook). */
-  user_id?: string | null
-  /** 'phone': lo mandó la tienda desde su celular · 'history': traído de WhatsApp Business */
-  origin?: 'phone' | 'history' | null
-  created_at: string
-}
-
-type Contact = {
-  id: string; name: string; phone: string; email: string | null; company: string | null
-  segment: string | null; acquisition_channel: string | null; wa_opt_out: boolean
-}
-
-type CommercialLite = { status: string; next_action: string | null; next_action_at: string | null; last_note: string | null; mine: boolean }
-
-type Thread = {
-  phone: string
-  messages: Message[]
-  contact: Contact | null
-  commercial: CommercialLite | null
-  profileName: string | null
-  lastInboundAt: string | null
-  noWhatsApp: NoWhatsApp | null
-}
+type Conversation = ConversationSummary
+type Message = ThreadMessage
+type Contact = ThreadContact
+type Thread = Omit<ThreadPayload, 'windowOpen' | 'windowClosesAt' | 'markedRead'>
 
 type QuickReply = { id: string; title: string; body: string }
 type Filter = 'all' | 'unread' | 'unknown'
@@ -948,7 +899,7 @@ function SaveContactSection({ phone, profileName, config, onSaved }: {
   )
 }
 
-function CommercialSection({ contact, commercial }: { contact: Contact; commercial: CommercialLite | null }) {
+function CommercialSection({ contact, commercial }: { contact: Contact; commercial: ThreadCommercial | null }) {
   const today = todayISO()
   const next = commercial ? nextLabel(commercial.next_action_at, today) : null
   return (
