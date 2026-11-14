@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.49.0',
+    date: '13 de noviembre, 2026',
+    title: 'Campañas: avisa antes a quién no le llegará',
+    module: 'campaigns',
+    items: [
+      'Al mandar una plantilla desde Contactos, antes de enviar ya se ve cuántos contactos se omiten y por qué: dados de baja, sin teléfono, sin WhatsApp (pueden ser teléfonos fijos) o porque Meta pidió esperar antes de reenviarles marketing.',
+      'Al elegir destinatarios en Campañas, un número al que Meta ya no pudo entregar un mensaje aparece como «Sin WhatsApp» aunque nunca haya recibido una campaña.',
+    ],
+  },
+  {
     version: '1.48.0',
     date: '10 de noviembre, 2026',
     title: 'Iconos nuevos en toda la app',
