@@ -43,10 +43,10 @@ async function GETImpl(req: NextRequest, { params }: Ctx) {
   try {
     const supabase = getServerSupabase()
     const [{ data: newestFirst, error }, { data: lastInbound }] = await Promise.all([
-      supabase.from('whatsapp_messages').select(MESSAGE_FIELDS).eq('store_id', ctx.storeId).eq('phone', phone)
+      supabase.from('whatsapp_messages').select(MESSAGE_FIELDS).eq('store_id', ctx.storeId).eq('phone', phone).is('archived_number', null)
         .order('created_at', { ascending: false }).limit(limit),
       supabase.from('whatsapp_messages').select('created_at, profile_name, contact_id, wa_message_id')
-        .eq('store_id', ctx.storeId).eq('phone', phone).eq('direction', 'inbound')
+        .eq('store_id', ctx.storeId).eq('phone', phone).is('archived_number', null).eq('direction', 'inbound')
         .order('created_at', { ascending: false }).limit(1).maybeSingle(),
     ])
     if (error) throw error

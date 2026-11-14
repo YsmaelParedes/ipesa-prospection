@@ -21,6 +21,8 @@ const MEDIA_LABELS: Record<string, string> = {
   image: '📷 Imagen', audio: '🎤 Audio', video: '🎥 Video', document: '📄 Documento', sticker: '🏷️ Sticker',
 }
 
+export const UNSUPPORTED_TEXT = 'Mensaje que WhatsApp no permite ver aquí'
+
 /** Convierte cualquier tipo de mensaje entrante en texto legible + referencia multimedia. */
 export function parseInbound(msg: any): Inbound | null {
   switch (msg.type) {
@@ -54,6 +56,10 @@ export function parseInbound(msg: any): Inbound | null {
       return msg.reaction?.emoji ? { text: `Reaccionó ${msg.reaction.emoji}` } : null
     case 'system':
       return null
+    // Historial o mensajes que WhatsApp no entrega a la API (llegan con type errors o unsupported)
+    case 'errors':
+    case 'unsupported':
+      return { text: UNSUPPORTED_TEXT }
     default:
       return { text: `[${msg.type ?? 'mensaje'}]` }
   }

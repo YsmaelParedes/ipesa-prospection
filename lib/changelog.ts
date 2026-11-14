@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.49.2',
+    date: '14 de noviembre, 2026',
+    title: 'WhatsApp: al cambiar de número, la bandeja empieza limpia',
+    module: 'whatsapp',
+    items: [
+      'Si conectas un número de WhatsApp distinto, la bandeja ya no muestra los chats del número anterior. No se borran: siguen en el historial de cada cliente en Contactos.',
+      'Los mensajes que WhatsApp no deja ver aquí ahora lo dicen, en lugar de «[errors]».',
+    ],
+  },
+  {
     version: '1.49.1',
     date: '13 de noviembre, 2026',
     title: 'Sistema Comercial: tus contactos nuevos ya aparecen en Hoy',

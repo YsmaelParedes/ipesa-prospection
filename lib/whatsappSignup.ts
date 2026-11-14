@@ -149,6 +149,16 @@ export async function connectEmbedded(ctx: StoreContext, input: SignupInput) {
   // Mismo número que ya quedó activado: no se vuelve a registrar ni se pierde su historial
   const sameNumber = sameAccount && row.phone_number_id === phone.id
 
+  // Otro número que el anterior: sus chats se archivan (no se borran) para que la bandeja
+  // muestre solo los del número nuevo. Va antes de pedir el historial del número nuevo.
+  const priorId = row.phone_number_id ?? row.previous_phone_number_id
+  if (priorId && priorId !== phone.id) {
+    const label = (row.phone_number_id ? row.display_phone : row.previous_display_phone) ?? 'número anterior'
+    const archived = await db.from('whatsapp_messages').update({ archived_number: label })
+      .eq('store_id', storeId).is('archived_number', null)
+    if (archived.error) throw archived.error
+  }
+
   // 3. Guardar lo obtenido antes de seguir (si algo falla después, se retoma)
   const saved = await db.from('store_whatsapp').update({
     credentials_source: 'store',
@@ -258,7 +268,10 @@ export async function disconnectEmbedded(ctx: StoreContext) {
 /** Borra la conexión y apaga el módulo (también cuando la tienda quita a Matices desde Meta). */
 export async function clearEmbedded(storeId: string, modules?: Record<string, boolean>) {
   const db = getServerSupabase()
+  // Se recuerda el número: si después se conecta otro, sus chats se archivan (ver connectEmbedded)
+  const { data: before } = await db.from('store_whatsapp').select('phone_number_id, display_phone').eq('store_id', storeId).maybeSingle()
   const { error } = await db.from('store_whatsapp').update({
+    ...(before?.phone_number_id ? { previous_phone_number_id: before.phone_number_id, previous_display_phone: before.display_phone } : {}),
     connection_method: 'manual', access_token_enc: null, app_secret_enc: null, phone_number_id: null, waba_id: null,
     business_id: null, display_phone: null, coexistence: false, pin_enc: null, connected_at: null, setup_error: null,
     history_status: null, history_requested_at: null, history_imported: 0, updated_at: new Date().toISOString(),

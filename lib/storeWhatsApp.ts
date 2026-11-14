@@ -27,9 +27,12 @@ export type StoreWhatsAppRow = {
   history_status: 'requested' | 'importing' | 'done' | 'declined' | 'failed' | null
   history_imported: number
   setup_error: string | null
+  /** Último número conectado antes de desconectar: al reconectar otro, sus chats se archivan. */
+  previous_phone_number_id: string | null
+  previous_display_phone: string | null
 }
 
-const COLUMNS = 'store_id, credentials_source, phone_number_id, waba_id, display_phone, access_token_enc, app_secret_enc, verify_token, webhook_key, connected_at, connection_method, business_id, coexistence, pin_enc, history_status, history_imported, setup_error'
+const COLUMNS = 'store_id, credentials_source, phone_number_id, waba_id, display_phone, access_token_enc, app_secret_enc, verify_token, webhook_key, connected_at, connection_method, business_id, coexistence, pin_enc, history_status, history_imported, setup_error, previous_phone_number_id, previous_display_phone'
 
 export function envWhatsAppCreds(): WhatsAppCreds | null {
   const token = process.env.WHATSAPP_ACCESS_TOKEN

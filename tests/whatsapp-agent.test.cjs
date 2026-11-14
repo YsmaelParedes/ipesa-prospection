@@ -127,3 +127,10 @@ test('una respuesta normal del agente no avisa', async () => {
   })
   assert.deepEqual(n, [])
 })
+
+test('los mensajes que WhatsApp no entrega a la API se explican, no dicen «[errors]»', () => {
+  const { parseInbound, UNSUPPORTED_TEXT } = require('../lib/whatsappWebhook.ts')
+  assert.equal(parseInbound({ type: 'errors', errors: [{ code: 131051 }] }).text, UNSUPPORTED_TEXT)
+  assert.equal(parseInbound({ type: 'unsupported' }).text, UNSUPPORTED_TEXT)
+  assert.equal(parseInbound({ type: 'otro_tipo' }).text, '[otro_tipo]')
+})

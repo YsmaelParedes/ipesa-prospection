@@ -13,12 +13,12 @@ const REFERENCE_VIEW = `
   create view public.whatsapp_threads_reference as
   SELECT DISTINCT ON (store_id, phone) phone, body AS last_body, direction AS last_direction, status AS last_status,
     media_type AS last_media_type, template_name AS last_template, created_at AS last_at,
-    (SELECT count(*)::integer FROM whatsapp_messages u WHERE u.store_id = m.store_id AND u.phone = m.phone AND u.direction = 'inbound' AND u.read_at IS NULL) AS unread,
-    (SELECT max(i.created_at) FROM whatsapp_messages i WHERE i.store_id = m.store_id AND i.phone = m.phone AND i.direction = 'inbound') AS last_inbound_at,
-    (SELECT p.profile_name FROM whatsapp_messages p WHERE p.store_id = m.store_id AND p.phone = m.phone AND p.profile_name IS NOT NULL ORDER BY p.created_at DESC LIMIT 1) AS profile_name,
-    (SELECT c.contact_id FROM whatsapp_messages c WHERE c.store_id = m.store_id AND c.phone = m.phone AND c.contact_id IS NOT NULL ORDER BY c.created_at DESC LIMIT 1) AS contact_id,
+    (SELECT count(*)::integer FROM whatsapp_messages u WHERE u.store_id = m.store_id AND u.phone = m.phone AND u.archived_number IS NULL AND u.direction = 'inbound' AND u.read_at IS NULL) AS unread,
+    (SELECT max(i.created_at) FROM whatsapp_messages i WHERE i.store_id = m.store_id AND i.phone = m.phone AND i.archived_number IS NULL AND i.direction = 'inbound') AS last_inbound_at,
+    (SELECT p.profile_name FROM whatsapp_messages p WHERE p.store_id = m.store_id AND p.phone = m.phone AND p.archived_number IS NULL AND p.profile_name IS NOT NULL ORDER BY p.created_at DESC LIMIT 1) AS profile_name,
+    (SELECT c.contact_id FROM whatsapp_messages c WHERE c.store_id = m.store_id AND c.phone = m.phone AND c.archived_number IS NULL AND c.contact_id IS NOT NULL ORDER BY c.created_at DESC LIMIT 1) AS contact_id,
     store_id
-  FROM whatsapp_messages m ORDER BY store_id, phone, created_at DESC;`
+  FROM whatsapp_messages m WHERE m.archived_number IS NULL ORDER BY store_id, phone, created_at DESC;`
 
 let db, seq = 0, seed = 42
 const rand = n => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed % n }
@@ -36,7 +36,7 @@ before(async () => {
       id uuid primary key default gen_random_uuid(), contact_id uuid, phone text not null,
       direction text not null check (direction in ('inbound','outbound')), body text, wa_message_id text,
       status text not null default 'sent', template_name text, created_at timestamptz not null default now(),
-      read_at timestamptz, media_type text, profile_name text,
+      read_at timestamptz, media_type text, profile_name text, archived_number text,
       store_id uuid not null references stores(id) on delete cascade,
       foreign key (store_id, contact_id) references contacts(store_id, id) on delete set null (contact_id)
     );
@@ -47,6 +47,8 @@ before(async () => {
   for (let i = 0; i < 25; i++) await insertOne()
   await db.exec(REFERENCE_VIEW)
   await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261113032150_whatsapp_thread_state.sql'), 'utf8'))
+  await db.exec('create table public.store_whatsapp (store_id uuid primary key)')
+  await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261114163642_whatsapp_previous_number.sql'), 'utf8'))
 })
 after(() => db?.close())
 
@@ -77,6 +79,7 @@ const OPS = [
     await db.query(`insert into contacts values ($1, $2)`, [id, STORES[0]])
   }],
   ['borrar un mensaje', () => db.query(`delete from whatsapp_messages where id = (select id from whatsapp_messages order by created_at desc limit 1)`)],
+  ['cambiar de número (archiva los chats de la tienda)', () => db.query(`update whatsapp_messages set archived_number = 'número anterior' where store_id = $1 and archived_number is null`, [pick(STORES)])],
   ['borrar un chat completo', () => db.query(`delete from whatsapp_messages where store_id = $1 and phone = $2`, [pick(STORES), pick(PHONES)])],
 ]
 
