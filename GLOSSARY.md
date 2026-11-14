@@ -38,6 +38,10 @@ _Avoid_: difusión, broadcast, masivo
 Una campaña mandada a un segmento en un momento dado; el historial muestra cada envío por separado.
 _Avoid_: lote (el lote es solo cómo se reparte el trabajo), batch
 
+**Audiencia de campaña**:
+Los contactos con celular a los que se les puede mandar una campaña, y para los demás, por qué no (baja, sin WhatsApp o espera de Meta).
+_Avoid_: destinatarios elegibles, público, lista de envío
+
 **Baja**:
 Un contacto que pidió no recibir campañas; ya no se le manda ninguna plantilla.
 _Avoid_: opt-out, bloqueado
