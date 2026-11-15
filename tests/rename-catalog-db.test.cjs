@@ -17,7 +17,7 @@ before(async () => {
     create table public.app_config (id uuid primary key, store_id uuid not null, type text not null, label text not null);
     create table public.contacts (id uuid primary key, store_id uuid not null, segment text, acquisition_channel text, zone text);
   `)
-  await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261115210000_rename_catalog_item.sql'), 'utf8'))
+  await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261115041450_rename_catalog_item.sql'), 'utf8'))
 })
 after(async () => { await db?.close() })
 
