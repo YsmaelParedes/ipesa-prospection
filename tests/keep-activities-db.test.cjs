@@ -51,7 +51,7 @@ before(async () => {
     create trigger store_members_release_contacts after update of status on public.store_members
       for each row when (old.status is distinct from new.status) execute function public.release_contacts_of_inactive_member();
   `)
-  await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261114220000_keep_activities_and_reassign_owners.sql'), 'utf8'))
+  await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261115033541_keep_activities_and_reassign_owners.sql'), 'utf8'))
 })
 after(async () => { await db?.close() })
 
