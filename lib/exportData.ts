@@ -6,6 +6,7 @@
  *  · downloadSummaryWorkbook: el periodo que se ve en Acumulado, por vendedor.
  */
 import { normalizePhone } from './phone'
+import { dayInZone } from './datetime'
 import { GOAL_KEYS, GOAL_LABELS, KIND_LABELS, resultLabel, statusInfo, type ActivityKind, type DayCounts, type Goals } from './commercial'
 
 type Row = Record<string, any>
@@ -15,7 +16,6 @@ const REMINDER_LABELS: Record<string, string> = {
   task: 'Tarea', call: 'Llamada', email: 'Correo', whatsapp: 'WhatsApp', meeting: 'Reunión',
 }
 
-const day = (iso: unknown) => (typeof iso === 'string' && iso ? iso.slice(0, 10) : '')
 /** "2026-10-15T14:05:00" → "2026-10-15 14:05" (hora local para fechas con zona) */
 function dateTime(iso: unknown, local = true) {
   if (typeof iso !== 'string' || !iso) return ''
@@ -26,7 +26,8 @@ function dateTime(iso: unknown, local = true) {
 }
 const amount = (v: unknown) => (v === null || v === undefined || v === '' ? '' : Number(v))
 
-export const contactRows = (list: Row[]) => list.map(c => ({
+/** `timezone`: la de la tienda, para que la fecha de registro sea su día (no el de UTC). */
+export const contactRows = (list: Row[], timezone?: string) => list.map(c => ({
   'Nombre':           c.name || '',
   'Teléfono':         normalizePhone(c.phone),
   'Correo':           c.email || '',
@@ -41,7 +42,7 @@ export const contactRows = (list: Row[]) => list.map(c => ({
   'Próxima acción':   c.next_action_at ? c.next_action || '' : '',
   'Fecha próxima':    c.next_action_at || '',
   'Última nota':      c.last_note || '',
-  'Fecha registro':   day(c.created_at),
+  'Fecha registro':   dayInZone(c.created_at, timezone),
 }))
 
 export type SummaryData = {
@@ -108,7 +109,7 @@ async function fetchPart(part: string): Promise<Row[]> {
 }
 
 /** Todo lo de la tienda en un archivo. `onStep` avisa qué parte se está descargando. */
-export async function downloadStoreWorkbook(slug: string, onStep?: (label: string) => void) {
+export async function downloadStoreWorkbook(slug: string, onStep?: (label: string) => void, timezone?: string) {
   onStep?.('Contactos'); const contacts = await fetchPart('contacts')
   onStep?.('Historial comercial'); const activities = await fetchPart('activities')
   onStep?.('Agenda'); const reminders = await fetchPart('reminders')
@@ -116,7 +117,7 @@ export async function downloadStoreWorkbook(slug: string, onStep?: (label: strin
 
   const contactName = new Map(contacts.map(c => [c.id, c.company?.trim() || c.name]))
   await writeWorkbook(`${slug}-informacion-${new Date().toLocaleDateString('en-CA')}.xlsx`, [
-    { name: 'Contactos', rows: contactRows(contacts) },
+    { name: 'Contactos', rows: contactRows(contacts, timezone) },
     { name: 'Historial comercial', rows: activities.map(a => ({
       'Fecha':          dateTime(a.created_at),
       // Contacto borrado: el nombre que tenía (sus ventas y llamadas siguen contando)

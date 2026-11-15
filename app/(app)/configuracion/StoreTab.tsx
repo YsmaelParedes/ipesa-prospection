@@ -176,7 +176,7 @@ function ExportPanel({ store, onDone }: { store: ClientStore; onDone: (msg: stri
     setError('')
     setStep('Contactos')
     try {
-      const n = await downloadStoreWorkbook(store.slug, setStep)
+      const n = await downloadStoreWorkbook(store.slug, setStep, store.timezone)
       onDone(`Descargado: ${n.contacts.toLocaleString('es-MX')} contactos, ${n.activities.toLocaleString('es-MX')} actividades comerciales y ${n.reminders.toLocaleString('es-MX')} pendientes de agenda`)
     } catch (e) {
       setError((e as Error).message)

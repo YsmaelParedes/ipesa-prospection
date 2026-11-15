@@ -264,7 +264,21 @@ export function periodRange(period: Period, today: string, offset = 0): { from: 
   return { from, to: addDays(addMonths(from, 1), -1) }
 }
 
-export type ActivityForCount = { kind: string; result: string | null; is_followup: boolean; quote_amount: number | string | null; sale_amount: number | string | null }
+/**
+ * Con qué se compara un periodo que va de `from` a `end`: los mismos días
+ * naturales del periodo anterior (si el mes va en el día 14, contra el 1–14
+ * del mes pasado), para que un periodo a medias no se compare con uno
+ * completo. Un mes anterior más corto (febrero) se topa en su último día.
+ * La usan el Acumulado y las tendencias del Inicio.
+ */
+export function previousSameDays(period: Period, from: string, end: string): { from: string; to: string } {
+  const prev = periodRange(period, from, 1)
+  const elapsed = Math.round((Date.parse(end) - Date.parse(from)) / 86_400_000)
+  const sameDay = addDays(prev.from, elapsed)
+  return { from: prev.from, to: sameDay > prev.to ? prev.to : sameDay }
+}
+
+export type ActivityForCount ={ kind: string; result: string | null; is_followup: boolean; quote_amount: number | string | null; sale_amount: number | string | null }
 /** emails: correos registrados (no tienen meta). */
 export type DayCounts = Goals & { quoted: number; sold: number; emails: number }
 

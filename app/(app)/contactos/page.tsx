@@ -16,6 +16,7 @@ import { StatusChip, fmtDay } from '@/components/CommercialUI'
 import { Select, toOptions } from '@/components/Select'
 import { phoneDigits } from '@/components/ContactFormModal'
 import { useSession } from '@/lib/profile'
+import { dayInZone } from '@/lib/datetime'
 import { useCatalogs } from '@/lib/catalogs'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
 import { normText } from '@/lib/searchIndex'
@@ -399,7 +400,7 @@ function ContactosContent() {
                     <td data-label="Teléfono" style={{ whiteSpace: 'nowrap' }}><PhoneCell contact={c} /></td>
                     <td data-label="Segmento">{c.segment ? <TipoChip value={c.segment} small /> : <span className="cell-muted">—</span>}</td>
                     <td data-label="Canal">{c.acquisition_channel ? <CanalChip value={c.acquisition_channel} small /> : <span className="cell-muted">—</span>}</td>
-                    <td data-label="Registro" className="cell-muted col-secondary" style={{ whiteSpace: 'nowrap' }}>{fmtDateLong(c.created_at?.slice(0, 10) || '')}</td>
+                    <td data-label="Registro" className="cell-muted col-secondary" style={{ whiteSpace: 'nowrap' }}>{fmtDateLong(dayInZone(c.created_at, session?.store?.timezone))}</td>
                     <td className="cell-chevron" style={{ width: 40, textAlign: 'right' }}>
                       {!someChecked && <Ico.chevron />}
                     </td>
@@ -480,6 +481,7 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
   onUpdated: (c: any) => void; onDeleted: (id: string) => void
 }) {
   const { segments, canales, zones } = useCatalogs()
+  const timezone = useSession()?.store?.timezone
   const [editing, setEditing]     = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
   const [saving, setSaving]       = useState(false)
@@ -549,7 +551,7 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
           <div className="detail-meta">
             {c.segment && <TipoChip value={c.segment} small />}
             {c.acquisition_channel && <CanalChip value={c.acquisition_channel} small />}
-            <span className="cell-muted">Cliente desde {fmtDateLong(c.created_at?.slice(0, 10) || '')}</span>
+            <span className="cell-muted">Cliente desde {fmtDateLong(dayInZone(c.created_at, timezone))}</span>
           </div>
         </div>
 
@@ -792,6 +794,7 @@ function ExportModal({ filterParams, total, visibleTotal, filtered, onClose }: {
   filterParams: Record<string, string>; total: number; visibleTotal: number; filtered: boolean; onClose: () => void
 }) {
   const [mode, setMode] = useState<'visible' | 'all'>(filtered ? 'visible' : 'all')
+  const timezone = useSession()?.store?.timezone
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const count = mode === 'visible' ? visibleTotal : total
@@ -815,7 +818,7 @@ function ExportModal({ filterParams, total, visibleTotal, filtered, onClose }: {
         'Zona':           c.zone || '',
         'Dirección':      c.address || '',
         'C.P.':           c.postal_code || '',
-        'Fecha registro': c.created_at?.slice(0, 10) || '',
+        'Fecha registro': dayInZone(c.created_at, timezone),
       }))
       const XLSX = await import('xlsx')
       const ws = XLSX.utils.json_to_sheet(rows)

@@ -6,6 +6,7 @@ import { noWhatsAppAmong } from '@/lib/campaignPeople'
 import type { ConversationSummary } from '@/lib/whatsappThreadTypes'
 import { isWindowOpen } from '@/lib/whatsappSafety'
 import { serverError } from '@/lib/validation'
+import { searchWords } from '@/lib/contactSearch'
 
 const PAGE = 100
 
@@ -14,29 +15,32 @@ const PAGE = 100
  * Una fila por número de la tienda (vista whatsapp_threads), con el contacto del
  * CRM vinculado, no leídos, estado de la ventana de 24 h y si Meta reportó que
  * el número no tiene WhatsApp.
+ * El filtro y la búsqueda se hacen en la base sobre TODOS los chats
+ * (whatsapp_thread_list), sin acentos ni mayúsculas, como en Contactos.
  */
 async function GETImpl(req: NextRequest) {
   const ctx = await requireStore({ module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
 
   const filter = req.nextUrl.searchParams.get('filter') ?? 'all'
-  const q      = (req.nextUrl.searchParams.get('q') ?? '').trim().toLowerCase().slice(0, 60)
+  const q      = (req.nextUrl.searchParams.get('q') ?? '').trim().slice(0, 60)
   const before = req.nextUrl.searchParams.get('before')
+  // Solo números (3 o más): busca en el teléfono; si no, palabra por palabra
+  const digits = q.replace(/\D/g, '')
+  const byPhone = digits.length >= 3 && !/[a-zA-ZÀ-ſ]/.test(q)
 
   try {
-    let query = getServerSupabase()
-      .from('whatsapp_threads')
-      .select('*')
-      .eq('store_id', ctx.storeId)
-      .order('last_at', { ascending: false })
-      // Con búsqueda se filtra en memoria sobre un rango mayor
-      .limit(q ? 1000 : PAGE + 1)
-    if (filter === 'unread') query = query.gt('unread', 0)
-    if (before && !Number.isNaN(Date.parse(before))) query = query.lt('last_at', before)
-
-    const { data, error } = await query
+    const { data, error } = await getServerSupabase().rpc('whatsapp_thread_list', {
+      p_store: ctx.storeId,
+      p_unread: filter === 'unread',
+      p_unknown: filter === 'unknown',
+      p_words: byPhone ? [] : searchWords(q),
+      p_digits: byPhone ? digits : null,
+      p_before: before && !Number.isNaN(Date.parse(before)) ? before : null,
+      p_limit: PAGE + 1,
+    })
     if (error) throw error
-    const rows = data ?? []
+    const rows = (data ?? []) as Record<string, any>[]
 
     const contacts = await contactsForPhones(
       ctx.storeId,
@@ -44,7 +48,7 @@ async function GETImpl(req: NextRequest) {
       rows.map(r => r.contact_id).filter(Boolean),
     )
 
-    let conversations = rows.map((r): ConversationSummary => {
+    const conversations = rows.map((r): ConversationSummary => {
       const contact = contacts.get(r.phone)
       return {
         phone:         r.phone as string,
@@ -64,15 +68,6 @@ async function GETImpl(req: NextRequest) {
         windowOpen:    isWindowOpen(r.last_inbound_at),
       }
     })
-
-    if (filter === 'unknown') conversations = conversations.filter(c => !c.contactId)
-    if (q) {
-      const digits = q.replace(/\D/g, '')
-      conversations = conversations.filter(c =>
-        (c.name ?? '').toLowerCase().includes(q) ||
-        (c.profileName ?? '').toLowerCase().includes(q) ||
-        (digits.length >= 3 && c.phone.includes(digits)))
-    }
 
     const hasMore = conversations.length > PAGE
     const page = conversations.slice(0, PAGE)

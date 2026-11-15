@@ -125,5 +125,20 @@ export function zonedIso(date: Date, tz = DEFAULT_TZ): string {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`
 }
 
+/**
+ * Día (AAAA-MM-DD) en la zona de la tienda de un instante de la base.
+ * contacts.created_at es `timestamp` SIN zona pero guarda hora UTC: sin "Z" se
+ * toma como UTC (cortarlo con slice(0, 10) daba el día siguiente a las altas
+ * de la noche). Sirve en navegador y servidor.
+ */
+export function dayInZone(iso: string | null | undefined, tz = DEFAULT_TZ): string {
+  if (!iso) return ''
+  const s = String(iso).trim().replace(' ', 'T')
+  if (!s.includes('T')) return s.slice(0, 10)   // ya es un día
+  const date = new Date(/(?:Z|[+-]\d{2}:?\d{2})$/i.test(s) ? s : `${s}Z`)
+  if (Number.isNaN(date.getTime())) return s.slice(0, 10)
+  return zonedIso(date, tz).slice(0, 10)
+}
+
 /** reminder_date tal como llega de la base → "YYYY-MM-DDTHH:MM:SS". */
 export const naiveIso = (v: unknown) => toDbLocal(String(v).slice(0, 19))

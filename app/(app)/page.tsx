@@ -20,14 +20,18 @@ import { AlarmClock, Target, PartyPopper, Check, Phone, MessageCircle, Store, Ma
 
 type Trend = { current: number; previous: number }
 
-/** Comparativo real contra el mes anterior. */
+/**
+ * Comparativo contra el mes pasado A ESTA FECHA (del 1 al mismo día): el
+ * servidor ya manda `previous` con esos días, igual que el Acumulado.
+ */
+const VS_LAST_MONTH = 'vs el mes pasado a esta fecha'
 function trendOf(t: Trend | undefined, unit: 'count' | 'pts' = 'count'): { up: boolean; delta: string; note: string } | null {
   if (!t) return null
   const diff = t.current - t.previous
-  if (unit === 'pts') return { up: diff >= 0, delta: `${diff >= 0 ? '+' : '−'}${Math.abs(diff)} pts`, note: 'vs mes anterior' }
+  if (unit === 'pts') return { up: diff >= 0, delta: `${diff >= 0 ? '+' : '−'}${Math.abs(diff)} pts`, note: VS_LAST_MONTH }
   if (t.previous === 0) return t.current > 0 ? { up: true, delta: `+${t.current}`, note: 'este mes' } : null
   const pct = Math.round((diff / t.previous) * 100)
-  return { up: diff >= 0, delta: `${pct >= 0 ? '+' : '−'}${Math.abs(pct)}%`, note: 'vs mes anterior' }
+  return { up: diff >= 0, delta: `${pct >= 0 ? '+' : '−'}${Math.abs(pct)}%`, note: VS_LAST_MONTH }
 }
 
 const toIsoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -122,7 +126,9 @@ export default function DashboardPage() {
   const upcoming: any[] = data?.upcoming ?? []
   const activity: any[] = data?.activity ?? []
   const queue = data?.queue ?? { count: 0, contacts: [] }
-  const todayIso = toIsoDay(now)
+  // «Hoy» de la tienda (lo manda el servidor), no el del reloj del dispositivo
+  const todayIso: string = data?.today ?? toIsoDay(now)
+  const fresh: number = m.freshCount ?? 0
 
   const due = (reminders ?? []).filter(r => isDueToday(r.fecha_recordatorio, now))
   const overdueCount = due.filter(r => isOverdue(r.fecha_recordatorio, now)).length
@@ -182,12 +188,16 @@ export default function DashboardPage() {
           )}
         </section>
 
-        <section className="today-card" style={{ order: queue.count ? 2 : 4 }}>
+        <section className="today-card" style={{ order: queue.count || fresh ? 2 : 4 }}>
           <header className="today-head">
             <span className="today-icon tone-brand"><Target size={19} /></span>
             <div>
               <h3>Llamadas para hoy</h3>
-              <p>{queue.count ? `${queue.count} por llamar${m.overdue ? ` · ${m.overdue} vencida${m.overdue !== 1 ? 's' : ''}` : ''}` : 'Sin llamadas pendientes'}</p>
+              {/* Los mismos números que Comercial › Hoy: Pendientes y, aparte, Nuevos */}
+              <p>
+                {queue.count ? `${queue.count} por llamar${m.overdue ? ` · ${m.overdue} vencida${m.overdue !== 1 ? 's' : ''}` : ''}` : 'Sin llamadas pendientes'}
+                {fresh > 0 && ` · ${fresh.toLocaleString('es-MX')} nuevo${fresh !== 1 ? 's' : ''} sin llamar`}
+              </p>
             </div>
             <Link href="/comercial" className="today-link">Sistema comercial →</Link>
           </header>
@@ -208,8 +218,8 @@ export default function DashboardPage() {
                   </span>
                 </li>
               ))}
-              {queue.count > queue.contacts.length && (
-                <li className="today-more"><Link href="/comercial">Ver las {queue.count} en el sistema comercial →</Link></li>
+              {queue.count + fresh > queue.contacts.length && (
+                <li className="today-more"><Link href="/comercial">Ver todo en el sistema comercial →</Link></li>
               )}
             </ul>
           )}
@@ -241,7 +251,8 @@ export default function DashboardPage() {
         <KpiCard label="Contactos" value={(m.totalContacts ?? 0).toLocaleString('es-MX')} color="var(--c-cyan)"
           note={m.newContactsMonth ? `+${m.newContactsMonth} este mes` : 'Sin altas este mes'} />
         <KpiCard label="Para llamar hoy" value={m.queueToday ?? 0} color="var(--brand)"
-          note={m.overdue ? `${m.overdue} vencida${m.overdue !== 1 ? 's' : ''}` : 'Ninguna vencida'} />
+          note={[m.overdue ? `${m.overdue} vencida${m.overdue !== 1 ? 's' : ''}` : 'Ninguna vencida',
+            fresh ? `${fresh.toLocaleString('es-MX')} nuevo${fresh !== 1 ? 's' : ''}` : ''].filter(Boolean).join(' · ')} />
         <KpiCard label="Cotizaciones del mes" value={m.quotesMonth ?? 0} color="var(--c-magenta)"
           note={m.quotedMonth ? `${money(m.quotedMonth)} cotizado` : 'Sin montos cotizados'} />
         <KpiCard label="Ventas del mes" value={m.salesMonth ?? 0} color="var(--success-fill)" trend={trendOf(t.sales)} hint="ventas registradas" />
@@ -401,13 +412,13 @@ function KpiCard({ label, value, color, trend, hint, note }: {
       {note ? (
         <div className="kpi-trend"><span>{note}</span></div>
       ) : trend ? (
-        <div className={`kpi-trend ${trend.up ? 'up' : 'down'}`} title={hint ? `${hint}: comparación contra el mes anterior` : undefined}>
+        <div className={`kpi-trend ${trend.up ? 'up' : 'down'}`} title={hint ? `${hint}: comparación contra los mismos días del mes pasado` : undefined}>
           <TrendIcon up={trend.up} />
           <span className="delta">{trend.delta}</span>
           <span>{trend.note}</span>
         </div>
       ) : (
-        <div className="kpi-trend"><span>Sin datos del mes anterior</span></div>
+        <div className="kpi-trend"><span>Sin datos del mes pasado a esta fecha</span></div>
       )}
       <div className="kpi-stripe" style={{ background: color }}></div>
     </div>

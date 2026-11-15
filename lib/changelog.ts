@@ -36,6 +36,17 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.53.0',
+    date: '15 de noviembre, 2026',
+    title: 'Números que cuadran entre pantallas',
+    items: [
+      '«Para llamar hoy» en el Inicio da lo mismo que «Pendientes» en el Sistema Comercial. Los prospectos nuevos sin llamar se cuentan aparte.',
+      'Las flechas del Inicio comparan el mes en curso contra los mismos días del mes pasado (del 1 a hoy), como el Acumulado. Así, a principio de mes ya no salen en rojo sin razón.',
+      'La fecha de registro de los contactos es la de tu tienda: los que diste de alta en la noche ya no aparecen con el día siguiente.',
+      { text: 'En la bandeja de WhatsApp, «Sin contacto» y la búsqueda revisan todos los chats, no solo los más recientes, y encuentran «José» aunque escribas «jose».', module: 'whatsapp' },
+    ],
+  },
+  {
     version: '1.52.0',
     date: '14 de noviembre, 2026',
     title: 'Eliminar y quitar sin perder tus números',

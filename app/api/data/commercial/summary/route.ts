@@ -4,7 +4,7 @@ import { storeDays, teamActivities } from '@/lib/storeActivity'
 import { jsonError, serverError } from '@/lib/validation'
 import { storeGoals } from '@/lib/commercialServer'
 import {
-  GOAL_KEYS, addDays, compliance, countActivities, goalsFor, periodRange,
+  GOAL_KEYS, addDays, compliance, countActivities, goalsFor, periodRange, previousSameDays,
   workDaysBetween, type ActivityForCount, type Goals, type Period,
 } from '@/lib/commercial'
 
@@ -46,12 +46,9 @@ export async function GET(req: NextRequest) {
   // en domingo aún no tiene días hábiles: se mide contra el periodo completo
   const goalDays = period === 'day' ? 1 : days || fullDays
 
-  const prev = periodRange(period, from, 1)
   // Los mismos días naturales del periodo anterior, para que la comparación sea justa
-  const elapsed = Math.round((Date.parse(end) - Date.parse(from)) / 86_400_000)
-  const sameDay = addDays(prev.from, elapsed)
-  // Un mes anterior más corto (febrero) no puede pasarse de su último día
-  const prevEnd = sameDay > prev.to ? prev.to : sameDay
+  const prev = periodRange(period, from, 1)
+  const prevEnd = previousSameDays(period, from, end).to
   const prevGoalDays = period === 'day' ? 1 : workDaysBetween(prev.from, prevEnd) || workDaysBetween(prev.from, prev.to)
 
   try {
@@ -99,7 +96,8 @@ export async function GET(req: NextRequest) {
       period, offset, from, to, end, today,
       // goalDays: días hábiles ya transcurridos (o los del periodo completo si aún no hay ninguno)
       goalDays, fullDays, startedDays: days,
-      elapsedDays: elapsed + 1,
+      // Días naturales del periodo que ya van (los mismos que se toman del anterior)
+      elapsedDays: Math.round((Date.parse(end) - Date.parse(from)) / 86_400_000) + 1,
       partial: end < to,
       prevFrom: prev.from, prevEnd,
       totals, prev: before,

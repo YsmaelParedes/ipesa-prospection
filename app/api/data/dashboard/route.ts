@@ -4,10 +4,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
 import { serverError } from '@/lib/validation'
 import { storeDays, teamActivities } from '@/lib/storeActivity'
-import { activityClient, hasSalesTeam, liveContactIds } from '@/lib/commercialServer'
+import { activityClient, liveContactIds } from '@/lib/commercialServer'
 import {
-  KIND_LABELS, NO_ANSWER_LIMIT, RESULT_RULES, countActivities, isCallResult, resultLabel,
-  type ActivityKind, type CommercialStatus,
+  KIND_LABELS, NO_ANSWER_LIMIT, RESULT_RULES, addDays, countActivities, isCallResult, previousSameDays, resultLabel,
+  startOfMonth as startOfMonthDay, type ActivityKind, type CommercialStatus,
 } from '@/lib/commercial'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -17,8 +17,11 @@ type QueueRow = {
   commercial_status: CommercialStatus; next_action: string | null; next_action_at: string | null
   last_activity_at?: string | null
 }
-/** Cola y próximos calculados en la base (función dashboard_queue). */
-type QueueSummary = { count: number; overdue: number; top: QueueRow[]; upcoming: QueueRow[] }
+/**
+ * Cola y próximos calculados en la base (función dashboard_queue), con la
+ * misma regla que Comercial › Hoy: count = Pendientes, fresh = Nuevos.
+ */
+type QueueSummary = { count: number; overdue: number; fresh: number; top: QueueRow[]; upcoming: QueueRow[] }
 type Facets = { total: number; segment: Record<string, number> }
 type ActivityRow = {
   id: string; contact_id: string | null; contact_name: string | null; user_id: string | null; kind: ActivityKind; result: string | null; note: string | null
@@ -37,13 +40,18 @@ async function GETImpl(req: NextRequest) {
     // Días de la tienda. Los instantes sirven también para las columnas `timestamp`
     // sin zona que guardan hora UTC (contacts.created_at): Postgres ignora la "Z".
     const calendar = storeDays(ctx)
-    const startOfToday = calendar.startOf(calendar.today)
+    const today = calendar.today
+    const startOfToday = calendar.startOf(today)
     const startOfMonth = calendar.monthStart(0)
-    const startOfLastMonth = calendar.monthStart(-1)
+    // Las tendencias comparan el mes en curso contra los MISMOS días del mes
+    // pasado (del 1 al día de hoy), igual que el Acumulado
+    const prevDays = previousSameDays('month', startOfMonthDay(today), today)
+    const prevFrom = calendar.startOf(prevDays.from)
+    const prevTo = calendar.startOf(addDays(prevDays.to, 1))
     const since14d = Date.now() - 14 * DAY
     const since30d = Date.now() - 30 * DAY
-    const today = calendar.today
-    const salesTeam = hasSalesTeam(ctx)
+    // Lo más viejo que se necesita: el mes pasado o 30 días (marzo: febrero tiene 28)
+    const activitiesFrom = new Date(Math.min(Date.parse(prevFrom), since30d)).toISOString()
 
     const contactsCount = () => supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('store_id', storeId)
 
@@ -62,16 +70,16 @@ async function GETImpl(req: NextRequest) {
       // (antes se descargaba la columna de todos los contactos, de 1,000 en 1,000)
       supabase.rpc('contact_facets', { p_store: storeId }),
       contactsCount().gte('created_at', startOfMonth),
-      contactsCount().gte('created_at', startOfLastMonth).lt('created_at', startOfMonth),
-      // Mi cola: los míos (y, sin reparto, los que no tienen responsable); la base cuenta y elige las filas
+      contactsCount().gte('created_at', prevFrom).lt('created_at', prevTo),
+      // Mi cola con la regla de Comercial › Hoy (míos y sin asignar); la base cuenta y elige las filas
       supabase.rpc('dashboard_queue', {
-        p_store: storeId, p_uid: ctx.uid, p_unowned: isAdmin && !salesTeam, p_today: today, p_no_answer_limit: NO_ANSWER_LIMIT,
+        p_store: storeId, p_uid: ctx.uid, p_unowned: true, p_today: today, p_no_answer_limit: NO_ANSWER_LIMIT,
       }),
       // Actividad comercial desde el mes pasado: toda la tienda sin cuentas de prueba
       // (administrador) o la propia (vendedor)
       teamActivities<ActivityRow>(ctx, {
         columns: 'id, contact_id, contact_name, user_id, kind, result, note, quote_amount, sale_amount, is_followup, created_at',
-        range: { from: startOfLastMonth }, scope: isAdmin ? 'store' : 'mine', newestFirst: true,
+        range: { from: activitiesFrom }, scope: isAdmin ? 'store' : 'mine', newestFirst: true,
       }),
       supabase.from('whatsapp_threads').select('phone', { count: 'exact', head: true }).eq('store_id', storeId).gt('unread', 0),
       supabase.from('whatsapp_messages').select('id', { count: 'exact', head: true }).eq('store_id', storeId).is('archived_number', null).eq('direction', 'inbound').gte('created_at', startOfToday),
@@ -85,15 +93,15 @@ async function GETImpl(req: NextRequest) {
     const totalContacts = facets?.total ?? 0
 
     // ── Cola de hoy y próximos seguimientos ────────────────────────────────
-    const queue = (queueRes.data ?? { count: 0, overdue: 0, top: [], upcoming: [] }) as QueueSummary
+    const queue = { fresh: 0, ...(queueRes.data ?? { count: 0, overdue: 0, top: [], upcoming: [] }) } as QueueSummary
     const overdue = queue.overdue
     const upcoming = queue.upcoming
 
-    // ── Mes actual contra el anterior ───────────────────────────────────────
+    // ── Mes en curso contra los mismos días del mes pasado ──────────────────
     const at = (a: ActivityRow) => Date.parse(a.created_at)
     const monthFrom = Date.parse(startOfMonth)
     const thisMonth = countActivities(activities.filter(a => at(a) >= monthFrom))
-    const lastMonth = countActivities(activities.filter(a => at(a) < monthFrom))
+    const lastMonth = countActivities(activities.filter(a => at(a) >= Date.parse(prevFrom) && at(a) < Date.parse(prevTo)))
 
     // ── Resultados de llamadas y llamadas por vendedor (30 días) ────────────
     const last30 = activities.filter(a => at(a) >= since30d && a.kind !== 'nota')
@@ -139,6 +147,8 @@ async function GETImpl(req: NextRequest) {
         totalContacts:    totalContacts || 0,
         newContactsMonth: contactsThisMonth || 0,
         queueToday:       queue.count,
+        // Prospectos sin trabajar (Comercial › Hoy › Nuevos): aparte, no son «para llamar hoy»
+        freshCount:       queue.fresh,
         overdue,
         quotesMonth:      thisMonth.quotes,
         quotedMonth:      thisMonth.quoted,
@@ -170,6 +180,8 @@ async function GETImpl(req: NextRequest) {
       byOwner,
       activity,
       isAdmin,
+      // Hoy en la tienda (para las etiquetas «Hoy / Vencido» del navegador)
+      today,
     })
   } catch (error) {
     return serverError('GET /api/data/dashboard', error, 'Error al obtener métricas')

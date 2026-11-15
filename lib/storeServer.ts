@@ -11,6 +11,7 @@ import {
   effectiveModules, effectivePlan, normalizeModules, planOf, slugify, storeAccess,
 } from './stores'
 import type { Schema } from './validation'
+import { DEFAULT_TZ } from './datetime'
 
 /** Perfil editable de la tienda (lista blanca + validación). */
 export const STORE_PROFILE_SCHEMA: Schema = {
@@ -44,6 +45,8 @@ export function publicStore(store: StoreRow) {
     state: store.state,
     logoUrl: storeLogoUrl(store.logo_path),
     status: store.status,
+    /** Zona horaria de la tienda: las fechas se muestran en sus días */
+    timezone: store.timezone || DEFAULT_TZ,
     /** Plan que aplica hoy (una cortesía vencida ya cuenta como Litro) */
     plan,
     planLabel: def.label,
