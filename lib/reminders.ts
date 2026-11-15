@@ -9,6 +9,8 @@ import { REMINDER_PRIORITIES, REMINDER_TYPES } from './crm'
 export const REMINDER_SCHEMA: Schema = {
   nota:               { type: 'text', max: 1000, label: 'Nota' },
   lead_id:            { type: 'uuid', nullable: true, label: 'Lead' },
+  /** El contacto del recordatorio (lead_name guarda su nombre en texto por si se borra). */
+  contact_id:         { type: 'uuid', nullable: true, label: 'Cliente' },
   lead_name:          { type: 'text', max: 200, label: 'Nombre' },
   completado:         { type: 'bool', label: 'Completado' },
   fecha_recordatorio: { type: 'text', max: 19, label: 'Fecha', pattern: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/ },

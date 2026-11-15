@@ -11,7 +11,7 @@ import type { Opened } from './HoyView'
 import { Filters, StatusChip, bizName, initials, whenOf, type ListContact, type Member } from './ui'
 import s from './comercial.module.css'
 
-type Stage = 'nuevo' | 'contactado' | 'cotizacion' | 'cliente' | 'no_contesta'
+type Stage = 'nuevo' | 'contactado' | 'cotizacion' | 'cliente' | 'no_contesta' | 'depurar' | 'sin_fecha'
 type Data = { today: string; contacts: ListContact[]; total: number; offset: number; team: Member[]; counts: Record<Stage, number> }
 
 const STAGES: [Stage, string, string][] = [
@@ -20,6 +20,11 @@ const STAGES: [Stage, string, string][] = [
   ['cotizacion', 'En cotización', 'var(--warning-fill)'],
   ['cliente', 'Clientes', 'var(--success)'],
   ['no_contesta', 'No contesta', 'var(--danger)'],
+]
+/** Lo que no sale en Hoy y conviene revisar: se ven solo si hay alguno. */
+const REVIEW: [Stage, string, string][] = [
+  ['depurar', 'Número incorrecto', 'Corrige el teléfono y vuelven a tu lista de hoy'],
+  ['sin_fecha', 'Sin seguimiento', 'Ya se trabajaron pero no tienen próxima fecha'],
 ]
 const TONE = { late: s.late, soon: s.soon, fresh: s.fresh, later: s.later }
 
@@ -110,6 +115,17 @@ export function CarteraView({ uid, isAdmin, zones, segments, zone, segment, onZo
           </button>
         ))}
       </div>
+      {data && REVIEW.some(([key]) => data.counts[key] > 0 || stage === key) && (
+        <div className={s.review} role="group" aria-label="Para revisar">
+          {REVIEW.filter(([key]) => data.counts[key] > 0 || stage === key).map(([key, label, hint]) => (
+            <button key={key} type="button" className={`${s.reviewChip} ${key === 'sin_fecha' ? s.reviewWarn : ''} ${s.press}`} aria-pressed={stage === key} title={hint}
+              onClick={() => setStage(st => st === key ? '' : key)}>
+              {label} <b className={s.num}>{data.counts[key].toLocaleString('es-MX')}</b>
+            </button>
+          ))}
+          {stage && REVIEW.some(([key]) => key === stage) && <span className={s.reviewHint}>{REVIEW.find(([key]) => key === stage)![2]}</span>}
+        </div>
+      )}
 
       <Filters zones={zones} segments={segments} zone={zone} segment={segment} onZone={onZone} onSegment={onSegment}
         query={query} onQuery={setQuery} placeholder="Buscar en la cartera: negocio o teléfono" extra={ownerFilter}

@@ -31,6 +31,8 @@ export function useDataChanged(kinds: DataKind[], cb: () => void) {
 
 export type ReminderDefaults = {
   lead_id?: string | null
+  /** El contacto al que se liga (su nombre va en lead_name). */
+  contact_id?: string | null
   /** Nombre del cliente o del lead (queda como "de quién es" el recordatorio). */
   lead_name?: string
   nota?: string

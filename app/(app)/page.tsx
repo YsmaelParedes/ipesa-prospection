@@ -176,7 +176,7 @@ export default function DashboardPage() {
                       <strong>{reminderTitle(r)}</strong>
                       <small style={overdue ? { color: 'var(--brand)' } : undefined}>
                         {fmtDue(r.fecha_recordatorio, now)}
-                        {subject && <> · {subject}</>}
+                        {subject && <> · {r.contact_id ? <Link href={`/comercial?id=${r.contact_id}`}>{subject}</Link> : subject}</>}
                       </small>
                     </span>
                     {!readonly && <button className="notif-done with-icon" onClick={() => completeReminder(r.id)}><Check size={12} strokeWidth={3} /> Listo</button>}

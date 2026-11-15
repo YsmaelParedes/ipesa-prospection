@@ -76,8 +76,9 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
   const rule = result ? RESULT_RULES[result] : null
   const asksAmount = result === 'cotizacion' || result === 'venta'
   const choices = result ? dateChoices(result, today) : []
-  // Un correo incorrecto no cambia el seguimiento: el teléfono puede servir
-  const keepsNext = result === 'correo_incorrecto'
+  // Un correo incorrecto no cambia el seguimiento (el teléfono puede servir).
+  // Si no tenía fecha, se pide una: si no, el cliente se quedaría sin seguimiento
+  const keepsNext = result === 'correo_incorrecto' && !!contact.next_action_at
   const needsDate = !!result && result !== 'numero_equivocado' && !keepsNext
   const choicesForKind = resultChoicesFor(kind)
 
@@ -189,7 +190,9 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
         {saving ? 'Guardando…' : 'Guardar'}
       </button>
       <div className={s.saveSub} aria-live="polite">
-        {result ? outcomeText(result) : 'Elige el resultado para ver qué pasa con este cliente'}
+        {!result ? 'Elige el resultado para ver qué pasa con este cliente'
+          : result === 'correo_incorrecto' && !keepsNext ? 'Corrige el correo en Contactos. Elige cuándo llamarle para que no se quede sin seguimiento'
+          : outcomeText(result)}
       </div>
     </div>
   )

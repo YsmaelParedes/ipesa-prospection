@@ -1054,6 +1054,10 @@ a { color: inherit; text-decoration: none; }
 }
 .import-drop:hover, .import-drop.over { border-color: var(--brand); background: var(--brand-softer); }
 .import-drop input[type="file"] { display: none; }
+/* Resultado de la importación: se queda hasta cerrar */
+.import-result-main { display: flex; align-items: center; gap: 8px; margin: 0; padding: 14px 16px; border-radius: var(--radius-sm); background: var(--success-soft); color: var(--success); font-size: 15px; }
+.import-result-main strong { font-size: 22px; font-family: var(--font-display); }
+.import-result ul { margin: 12px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--ink-3); line-height: 1.45; }
 .map-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .map-row:last-child { border-bottom: none; }
 .map-label { font-size: 12px; font-weight: 700; color: var(--ink-2); }

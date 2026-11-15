@@ -50,6 +50,17 @@
 .fbox small { display: block; font-weight: 700; color: var(--muted); font-size: 12px; }
 .fbox b { font-family: var(--font-display); font-size: 22px; }
 .fbox i { display: block; height: 4px; border-radius: 6px; margin-top: 8px; }
+/* Para revisar (no salen en Hoy): Número incorrecto y Sin seguimiento */
+.review { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: -4px 0 12px; }
+.reviewChip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 6px;
+  font-size: 12.5px; font-weight: 700; color: var(--danger); background: var(--danger-soft);
+  border: 1px solid transparent;
+}
+.reviewChip b { color: inherit; }
+.reviewChip[aria-pressed='true'] { border-color: currentColor; }
+.reviewWarn { color: var(--warning); background: var(--warning-soft); }
+.reviewHint { font-size: 12.5px; color: var(--muted); }
 .pRow { display: grid; grid-template-columns: 36px minmax(0, 1.4fr) minmax(0, 1fr) 120px 96px auto; gap: 12px; align-items: center; padding: 11px 14px; box-shadow: 0 -1px 0 var(--line); cursor: pointer; text-align: left; width: 100%; }
 .pRow:hover { background: var(--paper); }
 .pHead { cursor: default; padding: 9px 14px; font-size: 11.5px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; background: var(--paper); }
@@ -239,6 +250,13 @@
 .doneHour { font-size: 12px; font-weight: 800; color: var(--ink-3); }
 .nextBox { margin-top: 10px; padding: 9px 12px; border-radius: 6px; background: var(--paper); font-size: 12.5px; color: var(--ink-3); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .nextBox b { color: var(--ink); }
+/* Ficha con «Número incorrecto»: corregir el teléfono ahí mismo */
+.fixBox { margin-top: 10px; padding: 10px 12px; border-radius: 6px; background: var(--danger-soft); font-size: 12.5px; color: #7A0A18; }
+.fixBox p { margin: 0; line-height: 1.45; }
+.fixBox b { color: var(--danger); }
+.fixRow { display: flex; gap: 8px; margin-top: 8px; }
+.fixRow input { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--card); font-size: 14px; }
+.fixRow input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-ring); }
 .nextBox a { margin-left: auto; font-weight: 700; color: var(--brand-strong); }
 .nextClose { font: inherit; font-weight: 700; color: var(--ink-3); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .nextClose:disabled { opacity: .6; cursor: default; }

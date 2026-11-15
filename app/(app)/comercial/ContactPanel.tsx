@@ -142,6 +142,10 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
         </div>
       )}
 
+      {contact.commercial_status === 'depurar' && !readonly && (
+        <FixPhone contact={contact} onFixed={c => { onSaved(c); load() }} />
+      )}
+
       <div className={s.actions}>
         {phone && <a href={`tel:${phone}`} className={`${s.act} ${s.actCall} ${s.press}`}><Ico.phone /> Llamar</a>}
         {waModule && phone.length === 10 && contact.line_type !== 'fijo' && (
@@ -200,6 +204,48 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
   return variant === 'pane'
     ? <aside className={`${s.elev} ${s.pane}`} aria-label={`Cliente ${bizName(contact)}`}>{content}</aside>
     : <Overlay onClose={onClose} label={`Cliente ${bizName(contact)}`}>{content}</Overlay>
+}
+
+/**
+ * «Número incorrecto»: se corrige aquí mismo. Al guardar, el servidor lo saca
+ * de ese estado y lo deja para llamarle hoy (ver PUT /api/data/contacts/[id]).
+ */
+function FixPhone({ contact, onFixed }: { contact: ListContact; onFixed: (c: CommercialContact) => void }) {
+  const [value, setValue] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const ready = value.length === 10 && value !== normalizePhone(contact.phone)
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault()
+    if (!ready) return
+    setSaving(true); setError('')
+    try {
+      const r = await apiFetch(`/api/data/contacts/${contact.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: value }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { setError(d.error || 'No se pudo guardar el teléfono'); return }
+      const updated = Array.isArray(d) ? d[0] : d
+      onFixed({ ...contact, ...updated, no_answer_streak: 0 } as CommercialContact)
+    } catch {
+      setError('Sin conexión. Intenta de nuevo.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form className={s.fixBox} onSubmit={save}>
+      <p><b>Número incorrecto.</b> Escribe el teléfono correcto y vuelve a tu lista de hoy.</p>
+      <div className={s.fixRow}>
+        <input inputMode="numeric" maxLength={10} value={value} placeholder="10 dígitos" aria-label="Teléfono correcto"
+          onChange={e => setValue(e.target.value.replace(/\D/g, '').slice(0, 10))} />
+        <button type="submit" className="btn btn-primary" disabled={!ready || saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
+      </div>
+      {error && <p className={s.error} role="alert">{error}</p>}
+    </form>
+  )
 }
 
 function Overlay({ children, onClose, label }: { children: React.ReactNode; onClose?: () => void; label?: string }) {

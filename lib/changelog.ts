@@ -36,6 +36,18 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.54.0',
+    date: '15 de noviembre, 2026',
+    title: 'Que ningún cliente se pierda',
+    items: [
+      'En la ficha de un cliente con «Número incorrecto» puedes escribir el teléfono correcto ahí mismo. Al guardarlo, vuelve a tu lista de hoy.',
+      'En Cartera hay dos listas para revisar lo que no sale en Hoy: «Número incorrecto» y «Sin seguimiento».',
+      'Al registrar «Correo incorrecto» a un cliente sin fecha, te pide cuándo volver a contactarlo para que no se quede sin seguimiento.',
+      'Los recordatorios quedan ligados al cliente que eliges: desde la Agenda y el Inicio abres su ficha con un toque.',
+      'Al importar tu Excel, un correo mal escrito ya no descarta al contacto: entra sin correo. El resumen se queda en pantalla hasta que pulses «Listo».',
+    ],
+  },
+  {
     version: '1.53.0',
     date: '15 de noviembre, 2026',
     title: 'Números que cuadran entre pantallas',

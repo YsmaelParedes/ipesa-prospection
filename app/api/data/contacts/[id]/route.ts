@@ -1,10 +1,29 @@
 import { withServerTiming } from '@/lib/serverTiming'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSupabase, requireStore } from '@/lib/supabase-server'
+import { getServerSupabase, requireStore, type StoreContext } from '@/lib/supabase-server'
+import { storeDays } from '@/lib/storeActivity'
+import { isEffective } from '@/lib/commercial'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 import { CONTACT_COLUMNS, duplicateContactMessage, linkWhatsAppMessages, parseContact } from '@/lib/contacts'
 
 type Ctx = { params: Promise<{ id: string }> }
+
+/**
+ * Lo que cambia en el sistema comercial cuando a un contacto con «Número
+ * incorrecto» le corrigen el teléfono: sale de ese estado y queda para
+ * llamarle hoy (Contactado si ya hubo una conversación; si no, Prospecto).
+ */
+async function reopenAfterPhoneFix(ctx: StoreContext, contactId: string) {
+  const { data } = await getServerSupabase().from('commercial_activities').select('result')
+    .eq('store_id', ctx.storeId).eq('contact_id', contactId).not('result', 'is', null)
+  const talked = (data ?? []).some(a => isEffective(a.result as string))
+  return {
+    commercial_status: talked ? 'contactado' : 'nuevo',
+    next_action: 'Llamar al número corregido',
+    next_action_at: storeDays(ctx).today,
+    no_answer_streak: 0,
+  }
+}
 
 async function GETImpl(_req: NextRequest, { params }: Ctx) {
   const ctx = await requireStore()
@@ -40,14 +59,20 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   if (Object.keys(updates).length === 0) return jsonError('No se proporcionaron campos válidos para actualizar')
 
   if ('phone' in updates || 'address' in updates) {
-    const { data: prev } = await getServerSupabase().from('contacts').select('phone, address').eq('id', id).eq('store_id', ctx.storeId).maybeSingle()
+    const { data: prev } = await getServerSupabase().from('contacts').select('phone, address, commercial_status').eq('id', id).eq('store_id', ctx.storeId).maybeSingle()
     if (prev) {
       // Sin teléfono tiene que quedar la dirección para visitarlo
       const phone = 'phone' in updates ? updates.phone : prev.phone
       const address = String(('address' in updates ? updates.address : prev.address) ?? '').trim()
       if (!phone && !address) return jsonError('Escribe el teléfono o, si no tiene, la dirección para visitarlo')
+      const newPhone = 'phone' in updates && prev.phone !== updates.phone
       // Número nuevo: lo que se sabía del anterior (WhatsApp o fijo) ya no aplica
-      if ('phone' in updates && !('line_type' in updates) && prev.phone !== updates.phone) updates.line_type = null
+      if (newPhone && !('line_type' in updates)) updates.line_type = null
+      // Tenía «Número incorrecto» y ya le pusieron otro: vuelve a la lista de hoy
+      // de su responsable, como Contactado si alguna vez se habló con él o como Prospecto
+      if (newPhone && updates.phone && prev.commercial_status === 'depurar') {
+        Object.assign(updates, await reopenAfterPhoneFix(ctx, id))
+      }
     }
   }
 

@@ -4,10 +4,11 @@ import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 import { REMINDER_SCHEMA, reminderToApp, reminderToDB } from '@/lib/reminders'
 import { getAccessibleLead } from '@/lib/leads'
+import { getVisibleContact } from '@/lib/commercialServer'
 import { naiveIso, zonedIso } from '@/lib/datetime'
 import { fetchPaged } from '@/lib/paged'
 
-const COLUMNS = 'id, user_id, lead_id, lead_name, nota, reminder_date, completado, completado_at, created_at, type, priority'
+const COLUMNS = 'id, user_id, lead_id, contact_id, lead_name, nota, reminder_date, completado, completado_at, created_at, type, priority'
 
 /** GET /api/data/reminders — la agenda personal del usuario en la tienda activa. */
 async function GETImpl() {
@@ -42,6 +43,10 @@ export async function POST(req: NextRequest) {
   // Solo se puede ligar a un lead visible para el usuario
   if (parsed.data.lead_id && !(await getAccessibleLead(ctx, parsed.data.lead_id as string))) {
     return jsonError('Lead no encontrado', 404)
+  }
+  // Y solo a un contacto de esta tienda
+  if (parsed.data.contact_id && !(await getVisibleContact(ctx, parsed.data.contact_id as string))) {
+    return jsonError('Cliente no encontrado', 404)
   }
 
   // push_sent: si la hora ya pasó al capturarlo, no hay nada que avisar (quien

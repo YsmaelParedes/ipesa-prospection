@@ -9,8 +9,13 @@ import { NO_ANSWER_LIMIT } from '@/lib/commercial'
 const PAGE = 50
 const MAX_OFFSET = 100000
 
-/** Cajas de avance de la Cartera (no_contesta = 3 "Sin contacto" seguidos). */
-const PORTFOLIO_STAGES = ['nuevo', 'contactado', 'cotizacion', 'cliente', 'no_contesta'] as const
+/**
+ * Cajas de avance de la Cartera (no_contesta = 3 "Sin contacto" seguidos) y
+ * dos listas para revisar que no salen en Hoy:
+ *  · depurar: «Número incorrecto» (al corregir el teléfono vuelven a Hoy)
+ *  · sin_fecha: ya se trabajaron pero no tienen próximo seguimiento
+ */
+const PORTFOLIO_STAGES = ['nuevo', 'contactado', 'cotizacion', 'cliente', 'no_contesta', 'depurar', 'sin_fecha'] as const
 type Stage = typeof PORTFOLIO_STAGES[number]
 
 /**
@@ -53,6 +58,8 @@ export async function GET(req: NextRequest) {
     if (s === 'contactado') return r.in('commercial_status', ['contactado', 'interes'])
     if (s === 'cotizacion' || s === 'cliente') return r.eq('commercial_status', s)
     if (s === 'no_contesta') return r.gte('no_answer_streak', NO_ANSWER_LIMIT)
+    if (s === 'depurar') return r.eq('commercial_status', 'depurar')
+    if (s === 'sin_fecha') return r.not('last_activity_at', 'is', null).is('next_action_at', null).neq('commercial_status', 'depurar')
     return r
   }
 

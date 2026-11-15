@@ -50,6 +50,9 @@ const Ico = {
 }
 
 const CAMPOS_DESTINO = ['name', 'phone', 'email', 'company', 'address', 'postal_code', 'segment', 'acquisition_channel']
+/** Al importar: largos máximos de la base (lib/contacts CONTACT_SCHEMA) y la misma regla de correo. */
+const IMPORT_MAX: Record<string, number> = { name: 200, email: 254, company: 200, address: 500, segment: 100, acquisition_channel: 100 }
+const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const CAMPO_LABELS: Record<string, string> = {
   name: 'Nombre', phone: 'Teléfono', email: 'Correo', company: 'Empresa',
   address: 'Dirección', postal_code: 'C.P.', segment: 'Segmento', acquisition_channel: 'Canal',
@@ -963,7 +966,7 @@ function WhatsAppCampaignModal({
 
 /* ── Modal de importación CSV/XLSX (con previsualización y solo celulares) ── */
 function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summary: string) => void }) {
-  type Step = 'drop' | 'map' | 'preview' | 'importing'
+  type Step = 'drop' | 'map' | 'preview' | 'importing' | 'done'
   const [step, setStep]         = useState<Step>('drop')
   const [rows, setRows]         = useState<any[]>([])
   const [headers, setHeaders]   = useState<string[]>([])
@@ -974,6 +977,8 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
   const [error, setError]       = useState('')
   const [preview, setPreview]   = useState<{
     valid: any[]; invalid: number; noName: number
+    /** Correos mal escritos: el contacto se importa sin correo */
+    badEmail: number
   } | null>(null)
 
   // Sugerir el mapeo por el nombre de la columna (Nombre, Teléfono, Correo…)
@@ -1030,7 +1035,7 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
   }
 
   const buildPreview = () => {
-    let invalid = 0, noName = 0
+    let invalid = 0, noName = 0, badEmail = 0
     const valid: any[] = []
     for (const row of rows) {
       const contact: any = {}
@@ -1043,9 +1048,14 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
       const normalized = normalizePhone(raw)
       if (!raw || normalized.length !== 10) { invalid++; continue }
       contact.phone = normalized
+      // Lo que el servidor rechazaría se arregla aquí para no perder el contacto:
+      // un correo mal escrito se omite y los textos largos se recortan
+      if (contact.email && !EMAIL_OK.test(contact.email)) { contact.email = ''; badEmail++ }
+      for (const [k, max] of Object.entries(IMPORT_MAX)) if (typeof contact[k] === 'string') contact[k] = contact[k].slice(0, max)
+      if (contact.postal_code) contact.postal_code = contact.postal_code.replace(/\D/g, '').slice(0, 5)
       valid.push(contact)
     }
-    setPreview({ valid, invalid, noName })
+    setPreview({ valid, invalid, noName, badEmail })
     setStep('preview')
   }
 
@@ -1076,24 +1086,28 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
       done += chunk.length; setProgress(done)
     }
     })
-    const parts = [`${inserted} importado${inserted !== 1 ? 's' : ''}`]
-    if (duplicates) parts.push(`${duplicates} ya existían`)
-    if (skipped) parts.push(`${skipped} no cupieron en tu plan`)
-    if (failed) parts.push(`${failed} con error`)
-    onDone(`Importación: ${parts.join(' · ')}${limitMessage ? `. ${limitMessage}` : ''}`)
+    // El resultado se queda en la ventana hasta que se cierre (antes era un aviso de 2 s)
+    setResult({ inserted, duplicates, skipped, failed, limitMessage })
+    setStep('done')
+  }
+  const [result, setResult] = useState<{ inserted: number; duplicates: number; skipped: number; failed: number; limitMessage: string } | null>(null)
+  const finish = () => {
+    if (!result) return onClose()
+    const n = result.inserted
+    onDone(`Importación: ${n} contacto${n !== 1 ? 's' : ''} nuevo${n !== 1 ? 's' : ''}`)
   }
 
   const titleMap: Record<Step, string> = {
     drop: 'Importar contactos', map: 'Relaciona las columnas',
-    preview: 'Revisa antes de importar', importing: 'Importando…',
+    preview: 'Revisa antes de importar', importing: 'Importando…', done: 'Importación terminada',
   }
 
   return (
-    <div className="modal" onClick={step === 'importing' ? undefined : onClose}>
+    <div className="modal" onClick={step === 'importing' ? undefined : step === 'done' ? finish : onClose}>
       <div className="modal-card" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
         <div className="modal-head">
           <h3>{titleMap[step]}</h3>
-          {step !== 'importing' && <button className="modal-close btn-icon" onClick={onClose} aria-label="Cerrar"><Ico.close /></button>}
+          {step !== 'importing' && <button className="modal-close btn-icon" onClick={step === 'done' ? finish : onClose} aria-label="Cerrar"><Ico.close /></button>}
         </div>
         <div className="modal-body">
           {step === 'drop' && (
@@ -1149,11 +1163,28 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
                   {preview.noName > 0   && <span className="with-icon"><UserRound size={14} /> <span><strong>{preview.noName}</strong> fila{preview.noName !== 1 ? 's' : ''} sin nombre</span></span>}
                 </div>
               )}
+              {preview.badEmail > 0 && (
+                <div className="soft-note" style={{ margin: 0 }}>
+                  <strong>{preview.badEmail}</strong> correo{preview.badEmail !== 1 ? 's' : ''} con formato inválido: esos contactos se importan sin correo.
+                </div>
+              )}
               {preview.valid.length === 0 && (
                 <div style={{ padding: '12px', background: 'var(--danger-soft)', borderRadius: 6, fontSize: 13, color: 'var(--danger)', textAlign: 'center', fontWeight: 500 }}>
                   No hay contactos válidos para importar en este archivo.
                 </div>
               )}
+            </div>
+          )}
+          {step === 'done' && result && (
+            <div className="import-result">
+              <p className="import-result-main"><Ico.check /> <strong>{result.inserted.toLocaleString('es-MX')}</strong> contacto{result.inserted !== 1 ? 's' : ''} nuevo{result.inserted !== 1 ? 's' : ''}</p>
+              <ul>
+                {result.duplicates > 0 && <li><strong>{result.duplicates.toLocaleString('es-MX')}</strong> ya existían (mismo teléfono): no se duplicaron.</li>}
+                {result.skipped > 0 && <li><strong>{result.skipped.toLocaleString('es-MX')}</strong> no cupieron en tu plan.{result.limitMessage ? ` ${result.limitMessage}` : ''}</li>}
+                {result.failed > 0 && <li><strong>{result.failed.toLocaleString('es-MX')}</strong> no se pudieron guardar. Revisa esas filas en tu archivo e inténtalo de nuevo; los que ya entraron no se duplican.</li>}
+                {(preview?.invalid ?? 0) + (preview?.noName ?? 0) > 0 && <li><strong>{((preview?.invalid ?? 0) + (preview?.noName ?? 0)).toLocaleString('es-MX')}</strong> filas se omitieron antes de importar (sin nombre o teléfono inválido).</li>}
+                {(preview?.badEmail ?? 0) > 0 && <li><strong>{preview!.badEmail.toLocaleString('es-MX')}</strong> entraron sin correo porque estaba mal escrito.</li>}
+              </ul>
             </div>
           )}
           {step === 'importing' && (
@@ -1163,7 +1194,12 @@ function ImportModal({ onClose, onDone }: { onClose: () => void; onDone: (summar
             </div>
           )}
         </div>
-        {step !== 'importing' && (
+        {step === 'done' && (
+          <div className="modal-foot">
+            <button className="btn btn-primary" onClick={finish}>Listo</button>
+          </div>
+        )}
+        {step !== 'importing' && step !== 'done' && (
           <div className="modal-foot">
             <button className="btn btn-ghost" onClick={
               step === 'preview' ? () => setStep('map')

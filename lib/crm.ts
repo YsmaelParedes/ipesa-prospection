@@ -27,6 +27,8 @@ export const PRIORITY_INFO: Record<ReminderPriority, { label: string; color: str
 export type Reminder = {
   id: string
   lead_id: string | null
+  /** El contacto del recordatorio (null: sin cliente, o se borró y queda su nombre en lead_name) */
+  contact_id?: string | null
   lead_name: string
   nota: string
   fecha_recordatorio: string

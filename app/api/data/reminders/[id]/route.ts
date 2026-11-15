@@ -3,6 +3,7 @@ import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, parseFields, readJson, serverError } from '@/lib/validation'
 import { REMINDER_SCHEMA, reminderToApp, reminderToDB } from '@/lib/reminders'
 import { getAccessibleLead } from '@/lib/leads'
+import { getVisibleContact } from '@/lib/commercialServer'
 import { naiveIso, zonedIso } from '@/lib/datetime'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -31,6 +32,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const own = await ownReminder(ctx.uid, ctx.storeId, id)
   if (!own) return jsonError('Recordatorio no encontrado', 404)
   if (updates.lead_id && !(await getAccessibleLead(ctx, updates.lead_id as string))) return jsonError('Lead no encontrado', 404)
+  if (updates.contact_id && !(await getVisibleContact(ctx, updates.contact_id as string))) return jsonError('Cliente no encontrado', 404)
 
   // Al reprogramarlo (o posponerlo) o reabrirlo, vuelve a quedar pendiente de
   // aviso; si esa hora ya pasó, no (ya lo tiene a la vista).

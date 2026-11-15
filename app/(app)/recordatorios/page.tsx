@@ -12,7 +12,7 @@ import { addDays, type CommercialContact } from '@/lib/commercial'
 import { StatusChip } from '@/components/CommercialUI'
 import s from './agenda.module.css'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { Plus, Check, Trash2, SquarePen, AlarmClock, ChevronRight } from 'lucide-react'
+import { Plus, Check, Trash2, SquarePen, AlarmClock, ChevronRight, UserRound } from 'lucide-react'
 
 /** GET /api/data/commercial/agenda: seguimientos del sistema comercial con su fecha. */
 type CommercialData = { today: string; followUps: CommercialContact[]; total?: number }
@@ -27,6 +27,7 @@ const Ico = {
   edit:    () => <SquarePen size={15} />,
   snooze:  () => <AlarmClock size={15} />,
   chevron: () => <ChevronRight className={s.chev} />,
+  client:  () => <UserRound size={15} />,
 }
 
 /** El punto de color de cada tipo; el seguimiento comercial lleva el rojo de la marca. */
@@ -112,6 +113,11 @@ function RemRow({ r, overdue, showDate, readonly, onComplete, onDelete, onSnooze
         <div className={s.main}><span className={s.title}>{title}</span>{meta}</div>
       )}
       <div className={s.actions}>
+        {/* Recordatorio ligado a un contacto: su ficha comercial, para registrar la llamada o la visita */}
+        {r.contact_id && (
+          <Link href={`/comercial?id=${r.contact_id}`} title={`Abrir la ficha de ${subject ?? 'su cliente'}`} aria-label={`Abrir la ficha de ${subject ?? 'su cliente'}`}
+            className={`${s.icon} ${s.quiet} ${s.press}`}><Ico.client /></Link>
+        )}
         {canEdit && onSnooze && <SnoozeMenu onPick={onSnooze} />}
         {canEdit && (
           <button onClick={() => openQuickCreate({ kind: 'reminder', reminder: r })} title="Editar" aria-label="Editar"

@@ -39,6 +39,8 @@ export default function ReminderModal({ reminder, defaults, onClose, onSaved }: 
   const [leadId, setLeadId]     = useState<string | null>(reminder?.lead_id ?? defaults?.lead_id ?? null)
   const [leadName, setLeadName] = useState((reminder?.lead_id ? reminder.lead_name : defaults?.lead_id ? defaults.lead_name : '') ?? '')
   const [subject, setSubject]   = useState(initialSubject)
+  // El contacto elegido (con su ficha); subject es su nombre
+  const [contactId, setContactId] = useState<string | null>(reminder ? reminder.contact_id ?? null : defaults?.contact_id ?? null)
   const [leadQ, setLeadQ]       = useState('')
   const [contactMatches, setContactMatches] = useState<IndexContact[]>([])
   const [saving, setSaving]     = useState(false)
@@ -71,6 +73,7 @@ export default function ReminderModal({ reminder, defaults, onClose, onSaved }: 
       fecha_recordatorio: toDbLocal(fecha),
       type, priority,
       lead_id: leadId,
+      contact_id: leadId ? null : contactId,
       lead_name: leadId ? leadName : (subject || nota.trim()),
     }
     try {
@@ -158,7 +161,7 @@ export default function ReminderModal({ reminder, defaults, onClose, onSaved }: 
             ) : subject ? (
               <div className="linked-chip neutral">
                 <span>Cliente · <strong>{subject}</strong></span>
-                <button type="button" onClick={() => setSubject('')} aria-label="Quitar cliente"><X size={14} /></button>
+                <button type="button" onClick={() => { setSubject(''); setContactId(null) }} aria-label="Quitar cliente"><X size={14} /></button>
               </div>
             ) : (
               <div className="picker-search">
@@ -167,7 +170,7 @@ export default function ReminderModal({ reminder, defaults, onClose, onSaved }: 
                   <div className="picker-results" role="listbox">
                     {contactMatches.map(c => (
                       <button key={c.id} type="button" role="option" aria-selected="false"
-                        onClick={() => { setSubject(c.name); setLeadQ('') }}>
+                        onClick={() => { setSubject(c.name); setContactId(c.id); setLeadQ('') }}>
                         <strong>{c.name}</strong><small>{c.company && c.company !== c.name ? c.company : c.segment ?? ''}</small>
                       </button>
                     ))}
