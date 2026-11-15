@@ -35,7 +35,7 @@ before(async () => {
   `)
   // La versión original (permisos) y la de la fase 2 (la regla de Hoy)
   await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261103160000_dashboard_queue.sql'), 'utf8'))
-  await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261115120000_same_today_and_inbox_search.sql'), 'utf8'))
+  await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261115035026_same_today_and_inbox_search.sql'), 'utf8'))
   await db.exec('grant select on all tables in schema public to service_role;')
 
   // Mezcla determinista de todos los casos: fechas pasadas, hoy y futuras, sin

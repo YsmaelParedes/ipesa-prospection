@@ -38,7 +38,7 @@ before(async () => {
              last_at, unread, last_inbound_at, profile_name, contact_id, store_id
       from public.whatsapp_thread_state;
   `)
-  await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261115120000_same_today_and_inbox_search.sql'), 'utf8'))
+  await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261115035026_same_today_and_inbox_search.sql'), 'utf8'))
   await db.exec('grant select on all tables in schema public to service_role;')
 
   // 150 chats, uno por minuto (el 1 es el más reciente). Contactos para los pares;
