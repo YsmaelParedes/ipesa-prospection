@@ -12,6 +12,7 @@ import { addDays, type CommercialContact } from '@/lib/commercial'
 import { StatusChip } from '@/components/CommercialUI'
 import s from './agenda.module.css'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { LoadFailed } from '@/components/LoadFailed'
 import { Plus, Check, Trash2, SquarePen, AlarmClock, ChevronRight, UserRound } from 'lucide-react'
 
 /** GET /api/data/commercial/agenda: seguimientos del sistema comercial con su fecha. */
@@ -197,13 +198,19 @@ export default function AgendaPage() {
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2400) }
 
+  const [loadError, setLoadError] = useState('')
   const load = useCallback(async () => {
     try {
       const [remRes, comRes] = await Promise.all([apiFetch('/api/data/reminders'), apiFetch('/api/data/commercial/agenda')])
-      const remData = await remRes.json()
+      const remData = await remRes.json().catch(() => ({}))
+      // Si falló, no se muestra «Todo al día»: se dice que no se pudo cargar
+      if (!remRes.ok) throw new Error(remData.error || 'No se pudo cargar tu agenda')
       setReminders(remData.reminders || [])
       if (comRes.ok) setCommercial(await comRes.json())
-    } catch {} finally { setLoading(false) }
+      setLoadError('')
+    } catch (e) {
+      if ((e as Error)?.name !== 'AbortError') setLoadError(e instanceof Error && e.message ? e.message : 'No se pudo cargar tu agenda')
+    } finally { setLoading(false) }
   }, [])
 
   useQueryEffect(() => { load() }, [load])
@@ -311,6 +318,8 @@ export default function AgendaPage() {
         <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
           <div style={{ width: 28, height: 28, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         </div>
+      ) : loadError && reminders.length === 0 && !commercial ? (
+        <LoadFailed message={loadError} onRetry={() => { setLoading(true); load() }} />
       ) : tab === 'pending' ? (
         remsF.length === 0 && followF.length === 0 ? (
           <div className={s.empty} style={{ marginTop: 26 }}>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireStore } from '@/lib/supabase-server'
 import { WHATSAPP_NOT_CONNECTED } from '@/lib/storeWhatsApp'
 import { openOutbox } from '@/lib/whatsappOutbox'
-import { normalizePhone } from '@/lib/phone'
+import { waChatPhone } from '@/lib/phone'
 import {
   MAX_CAPTION, MAX_SEND_BYTES, SEND_TYPES, cleanFilename, contentMatches, fmtSize, sendMimeOf,
 } from '@/lib/whatsappFiles'
@@ -13,8 +13,8 @@ type Ctx = { params: Promise<{ phone: string }> }
 async function phoneParam(params: Ctx['params']): Promise<string | null> {
   const raw = decodeURIComponent((await params).phone)
   if (!/^\+?\d{10,15}$/.test(raw)) return null
-  const phone = normalizePhone(raw)
-  return /^\d{10}$/.test(phone) ? phone : null
+  // México a 10 dígitos; otro país con su lada completa (lib/phone waChatPhone)
+  return waChatPhone(raw) || null
 }
 
 /**

@@ -29,6 +29,7 @@ import type { ChosenContact } from '@/lib/campaignAudience'
 import { MessageText, StatusTicks, WindowBadge, fmtTime, mediaCaption } from '@/components/WhatsAppUI'
 import { WhatsAppIcon } from '@/components/icons'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { LoadFailed } from '@/components/LoadFailed'
 import { X, Phone, Mail, Plus, Upload, Download, ChevronRight, Check, SquarePen, Trash2, Search, Send, TriangleAlert, UserRound } from 'lucide-react'
 
 /* ── Iconos (Lucide + logo de WhatsApp) ── */
@@ -117,6 +118,7 @@ function ContactosContent() {
   const [facets, setFacets]           = useState<Facets | null>(() => cached?.facets ?? null)
   const [loading, setLoading]         = useState(() => !cached)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [loadError, setLoadError]     = useState('')
   useDataReady(loading, 'contactos')
   const [selected, setSelected]       = useState<any | null>(null)
   const [showImport, setShowImport]   = useState(false)
@@ -148,14 +150,21 @@ function ContactosContent() {
     if (mode === 'more') setLoadingMore(true)
     try {
       const r = await apiFetch(url)
-      const d = await r.json()
+      const d = await r.json().catch(() => ({}))
       if (id !== requestRef.current) return
+      // Una respuesta con error no es «no hay contactos»: se dice que falló
+      if (!r.ok) throw new Error(d.error || 'No se pudieron cargar los contactos')
+      setLoadError('')
       const list: any[] = d.contacts || []
       setContacts(prev => (mode === 'more' ? [...prev, ...list.filter(c => !prev.some(p => p.id === c.id))] : list))
       setTotal(d.total ?? 0)
       if (d.facets) setFacets(d.facets)
       setSelected((prev: any) => prev ? (list.find(c => c.id === prev.id) ?? prev) : prev)
-    } catch {} finally {
+    } catch (e) {
+      if (id === requestRef.current && (e as Error)?.name !== 'AbortError') {
+        setLoadError(e instanceof Error && e.message ? e.message : 'No se pudieron cargar los contactos')
+      }
+    } finally {
       if (id === requestRef.current) { setLoading(false); setLoadingMore(false) }
     }
   }, [firstPageUrl, filterParams])
@@ -345,6 +354,8 @@ function ContactosContent() {
         <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
           <div style={{ width: 32, height: 32, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         </div>
+      ) : loadError && filtered.length === 0 ? (
+        <LoadFailed message={loadError} onRetry={() => { setLoading(true); load('reset') }} />
       ) : filtered.length === 0 ? (
         <div className="empty-state">
           {filtersOn
@@ -507,9 +518,13 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
 
   const upd = (k: keyof typeof editForm, v: string) => setEditForm(f => ({ ...f, [k]: v }))
   const phoneErr = editForm.phone.length > 0 && editForm.phone.length < 10
+  // Segmento y canal: obligatorios si el contacto ya los tenía (no se pueden borrar);
+  // a uno viejo sin ellos se le puede corregir el teléfono sin llenarlos
+  const needSegment = segments.length > 0 && !!c.segment
+  const needCanal = canales.length > 0 && !!c.acquisition_channel
   // Sin teléfono queda "Para visita": entonces necesita dirección
   const canSaveEdit = editForm.name.trim() && (editForm.phone.length === 10 || (editForm.phone.length === 0 && editForm.address.trim()))
-    && (!segments.length || !!editForm.segment) && (!canales.length || !!editForm.acquisition_channel)
+    && (!needSegment || !!editForm.segment) && (!needCanal || !!editForm.acquisition_channel)
   const opt = (list: string[], current: string) => current && !list.includes(current) ? [current, ...list] : list
 
   const handleSave = async () => {
@@ -580,12 +595,12 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
               </div>
               <div className="field-row">
                 <div className="field">
-                  <label>Segmento{segments.length ? ' *' : ''}</label>
+                  <label>Segmento{needSegment ? ' *' : ''}</label>
                   <Select value={editForm.segment} onChange={v => upd('segment', v)} aria-label="Segmento"
                     options={toOptions(opt(segments, editForm.segment), segmentColor)} placeholder="Elegir segmento" />
                 </div>
                 <div className="field">
-                  <label>¿Cómo nos conoció?{canales.length ? ' *' : ''}</label>
+                  <label>¿Cómo nos conoció?{needCanal ? ' *' : ''}</label>
                   <Select value={editForm.acquisition_channel} onChange={v => upd('acquisition_channel', v)} aria-label="¿Cómo nos conoció?"
                     options={toOptions(opt(canales, editForm.acquisition_channel))} placeholder="Elegir canal" />
                 </div>

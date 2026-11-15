@@ -16,6 +16,7 @@ import { reminderSubject, reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
 import { fmtAgo, fmtDue, greetingFor, isDueToday, isOverdue } from '@/lib/datetime'
 import { WhatsAppIcon } from '@/components/icons'
+import { LoadFailed } from '@/components/LoadFailed'
 import { AlarmClock, Target, PartyPopper, Check, Phone, MessageCircle, Store, Mail, Pencil } from 'lucide-react'
 
 type Trend = { current: number; previous: number }
@@ -77,11 +78,16 @@ export default function DashboardPage() {
   const [reminders, setReminders] = useState<Reminder[] | null>(null)
   const [now, setNow]             = useState(() => new Date())
 
+  // Con un error se dice que no se pudo cargar (antes las cifras salían en cero, como si no hubiera actividad)
+  const [dashError, setDashError] = useState('')
   const loadDashboard = useCallback(() => {
     apiFetch('/api/data/dashboard?includeWhatsApp=0')
-      .then(r => r.json())
-      .then(setData)
-      .catch(console.error)
+      .then(async r => {
+        const d = await r.json().catch(() => ({}))
+        if (!r.ok) throw new Error(d.error || 'No se pudieron cargar tus cifras')
+        setData(d); setDashError('')
+      })
+      .catch(e => { if (e?.name !== 'AbortError') setDashError(e instanceof Error && e.message ? e.message : 'No se pudieron cargar tus cifras') })
       .finally(() => setLoading(false))
   }, [])
   const loadReminders = useCallback(() => {
@@ -106,6 +112,8 @@ export default function DashboardPage() {
       <div style={{ width: 36, height: 36, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
     </div>
   )
+  if (!data && dashError) return <LoadFailed message={dashError} onRetry={() => { setLoading(true); loadDashboard(); loadReminders() }} />
+
 
   const m = data?.metrics ?? {}
   const t = data?.trends ?? {}

@@ -14,6 +14,7 @@ import { ActividadView } from './ActividadView'
 import { AcumuladoView } from './AcumuladoView'
 import { ContactPanel } from './ContactPanel'
 import { GuideButton, useGuide } from '@/components/GuideModal'
+import { LoadFailed } from '@/components/LoadFailed'
 import { CommercialTour } from './CommercialTour'
 import { commercialTour, type CommercialStep } from './tourSteps'
 import { Ico, bizName, useWide, whenPhrase, type TodayData } from './ui'
@@ -84,11 +85,17 @@ function ComercialContent() {
   // Cuántos se ven: al refrescar (por un guardado) se conservan los ya cargados
   const shown = useRef({ fresh: 0, visit: 0 })
   shown.current = { fresh: data?.fresh.length ?? 0, visit: data?.visit?.length ?? 0 }
+  const [loadError, setLoadError] = useState('')
   const load = useCallback(async (keep = false) => {
     try {
       const r = await apiFetch(keep ? url(shown.current.fresh, shown.current.visit) : url())
-      if (r.ok) setData(await r.json())
-    } catch {} finally { setLoading(false) }
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(d.error || 'No se pudo cargar tu lista de hoy')
+      setData(d); setLoadError('')
+    } catch (e) {
+      // Sin datos se dice que falló (antes se quedaba cargando para siempre)
+      if ((e as Error)?.name !== 'AbortError') setLoadError(e instanceof Error && e.message ? e.message : 'No se pudo cargar tu lista de hoy')
+    } finally { setLoading(false) }
   }, [url])
   useQueryEffect(() => { load() }, [load])
   useDataChanged(['contact', 'commercial'], () => load(true))
@@ -209,7 +216,9 @@ function ComercialContent() {
           onClose={endTour} />
       )}
 
-      {loading || !data ? (
+      {!data && loadError && !loading ? (
+        <LoadFailed message={loadError} onRetry={() => { setLoading(true); load() }} />
+      ) : loading || !data ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
           <div style={{ width: 32, height: 32, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
         </div>

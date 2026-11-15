@@ -18,7 +18,7 @@ import {
   MediaContent, MessageText, StatusTicks, WaIcon, WindowBadge,
   fmtDayLabel, fmtListWhen, fmtTime, mediaCaption,
 } from '@/components/WhatsAppUI'
-import { fmtPhone, normalizePhone } from '@/lib/phone'
+import { fmtPhone, isForeignPhone, normalizePhone, waChatPhone } from '@/lib/phone'
 import { isWindowOpen } from '@/lib/whatsappSafety'
 import { MAX_CAPTION, MAX_SEND_BYTES, SEND_ACCEPT, SEND_TYPES, fmtSize, sendMimeOf } from '@/lib/whatsappFiles'
 import { loadCatalogs, whatsappChannel, type Catalogs } from '@/lib/catalogs'
@@ -83,7 +83,7 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
   const router       = useRouter()
   const pathname     = usePathname()
   const searchParams = useSearchParams()
-  const urlPhone     = normalizePhone(searchParams.get('phone') || '')
+  const urlPhone     = waChatPhone(searchParams.get('phone') || '')
 
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loadingList, setLoadingList]     = useState(true)
@@ -104,7 +104,8 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
   const listRequest = useRef(0)
   const threadRequest = useRef(0)
   const selectedRef = useRef<string | null>(null)
-  const selected = /^\d{10}$/.test(urlPhone) ? urlPhone : null
+  // 10 dígitos (México) o, de otro país, con su lada completa (lib/phone waChatPhone)
+  const selected = /^\d{10,15}$/.test(urlPhone) ? urlPhone : null
   selectedRef.current = selected
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2600) }
 
@@ -831,6 +832,21 @@ function SaveContactSection({ phone, profileName, config, onSaved }: {
     if (!segment && config.segments.length) setSegment(config.segments[0])
     if (!canal && config.canales.length) setCanal(whatsappChannel(config.canales))
   }, [config, segment, canal])
+
+  // Los contactos son números de México (10 dígitos): uno de otro país se
+  // guardaría recortado, como si fuera otro número
+  if (isForeignPhone(phone)) {
+    return (
+      <section className="wa-panel-section">
+        <div className="wa-unknown">
+          <Avatar name={profileName || phone} size={52} />
+          <div className="wa-profile-name">{profileName ? `~ ${profileName}` : fmtPhone(phone)}</div>
+          <div className="wa-profile-phone">{fmtPhone(phone)}</div>
+          <p>Es un número de otro país. Puedes contestarle aquí, pero por ahora los contactos solo aceptan números de México.</p>
+        </div>
+      </section>
+    )
+  }
 
   const save = async () => {
     setSaving(true); setError('')

@@ -16,7 +16,12 @@ export async function POST(req: NextRequest) {
   const body = await readJson(req)
   const contactId = body?.contact_id
   if (!isUUID(contactId)) return jsonError('Contacto inválido')
-  if (!(await getVisibleContact(ctx, contactId))) return jsonError('Contacto no encontrado', 404)
+  const contact = await getVisibleContact(ctx, contactId)
+  if (!contact) return jsonError('Contacto no encontrado', 404)
+  // Solo su responsable (o un administrador) cierra su seguimiento; uno sin asignar, cualquiera
+  if (!ctx.isAdmin && contact.owner_id && contact.owner_id !== ctx.uid) {
+    return jsonError('Este contacto lo trabaja otra persona del equipo', 403)
+  }
 
   const { data, error } = await getServerSupabase().from('contacts')
     .update({ next_action: null, next_action_at: null, updated_at: new Date().toISOString() })

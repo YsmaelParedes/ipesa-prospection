@@ -121,13 +121,16 @@ export function suggestNext(result: CallResult, today: string) {
   }
 }
 
-/** Qué va a pasar al guardar, en palabras del vendedor. */
-export function outcomeText(result: CallResult): string {
+/**
+ * Qué va a pasar al guardar, en palabras del vendedor. `opportunities`: la
+ * tienda tiene la pestaña Oportunidades (Galón y Cubeta; Litro no).
+ */
+export function outcomeText(result: CallResult, { opportunities = true }: { opportunities?: boolean } = {}): string {
   switch (result) {
     case 'no_contesta':       return 'Vuelve a aparecer en tu lista en la fecha que elijas'
     case 'contactado':        return 'Pasa a Contactado · 50 %'
     case 'interes':           return 'Pasa a Contactado · 50 %'
-    case 'cotizacion':        return 'Pasa a Cotización · 75 % y aparece en tus Oportunidades'
+    case 'cotizacion':        return opportunities ? 'Pasa a Cotización · 75 % y aparece en tus Oportunidades' : 'Pasa a Cotización · 75 %'
     case 'venta':             return 'Pasa a Cliente. Te recordamos ofrecer recompra'
     case 'reprogramar':       return 'Vuelve en la fecha que elijas'
     case 'no_interesado':     return 'Sale de tu lista y vuelve en 90 días'

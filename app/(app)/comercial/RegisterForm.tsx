@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { apiFetch } from '@/lib/apiClient'
+import { useSession } from '@/lib/profile'
 import {
   RESULT_RULES, addDays, outcomeText, resultChoicesFor, suggestNext,
   type CommercialContact, type ResultChoice,
@@ -81,6 +82,8 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
   const keepsNext = result === 'correo_incorrecto' && !!contact.next_action_at
   const needsDate = !!result && result !== 'numero_equivocado' && !keepsNext
   const choicesForKind = resultChoicesFor(kind)
+  // Oportunidades es de Galón y Cubeta: en Litro no se menciona
+  const opportunities = !!useSession()?.store?.salesTeam
 
   function chooseKind(k: Kind) {
     setKind(k)
@@ -192,7 +195,7 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
       <div className={s.saveSub} aria-live="polite">
         {!result ? 'Elige el resultado para ver qué pasa con este cliente'
           : result === 'correo_incorrecto' && !keepsNext ? 'Corrige el correo en Contactos. Elige cuándo llamarle para que no se quede sin seguimiento'
-          : outcomeText(result)}
+          : outcomeText(result, { opportunities })}
       </div>
     </div>
   )

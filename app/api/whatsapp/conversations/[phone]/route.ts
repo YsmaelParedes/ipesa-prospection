@@ -6,7 +6,7 @@ import { OUTBOX_MESSAGE_FIELDS, openOutbox } from '@/lib/whatsappOutbox'
 import { WHATSAPP_NOT_CONNECTED, getStoreWhatsAppCreds } from '@/lib/storeWhatsApp'
 import { contactForPhone } from '@/lib/whatsappInbox'
 import { noWhatsAppOf } from '@/lib/campaignPeople'
-import { normalizePhone } from '@/lib/phone'
+import { waChatPhone } from '@/lib/phone'
 import { isWindowOpen, windowClosesAt } from '@/lib/whatsappSafety'
 import { jsonError, readJson, serverError } from '@/lib/validation'
 import type { ThreadCommercial, ThreadMessage, ThreadPayload } from '@/lib/whatsappThreadTypes'
@@ -19,8 +19,8 @@ async function phoneParam(params: Ctx['params']): Promise<string | null> {
   const raw = decodeURIComponent((await params).phone)
   // Solo dígitos (con o sin "+" y lada): nada de sufijos como ".png"
   if (!/^\+?\d{10,15}$/.test(raw)) return null
-  const phone = normalizePhone(raw)
-  return /^\d{10}$/.test(phone) ? phone : null
+  // México a 10 dígitos; otro país con su lada completa (lib/phone waChatPhone)
+  return waChatPhone(raw) || null
 }
 
 /**

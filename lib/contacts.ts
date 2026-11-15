@@ -3,6 +3,8 @@ import { parseFields, type ParseResult, type Schema } from './validation'
 import { normalizePhone } from './phone'
 import { PRIORITIES } from './commercial'
 import { LINE_TYPES } from './lineType'
+import { isOptOutMessage } from './whatsappSafety'
+import { markOptOut } from './whatsappQuota'
 
 /** Columnas que se devuelven al cliente (sin columnas heredadas sin uso). */
 export const CONTACT_COLUMNS = 'id, name, phone, email, company, address, postal_code, colonia, zone, segment, acquisition_channel, wa_opt_out, line_type, owner_id, commercial_status, next_action, next_action_at, last_note, priority, potential_monthly, origin, created_at, updated_at'
@@ -60,15 +62,21 @@ export function duplicateContactMessage(dbMessage = ''): string {
 
 /**
  * Vincula a los contactos recién creados/editados los mensajes de WhatsApp
- * de su número que llegaron cuando aún no estaban registrados.
+ * de su número que llegaron cuando aún no estaban registrados. Si en esos
+ * mensajes pidió la baja («BAJA», «STOP», botón «Detener promociones»), el
+ * contacto nace dado de baja: así no le llegan campañas por haberlo
+ * registrado después.
  */
 export async function linkWhatsAppMessages(storeId: string, contacts: { id: string; phone: string | null }[]) {
-  await Promise.all(contacts.filter(c => c.phone).map(c =>
-    getServerSupabase()
+  await Promise.all(contacts.filter(c => c.phone).map(async c => {
+    const { data } = await getServerSupabase()
       .from('whatsapp_messages')
       .update({ contact_id: c.id })
       .eq('store_id', storeId)
       .eq('phone', normalizePhone(c.phone))
-      .is('contact_id', null),
-  ))
+      .is('contact_id', null)
+      .select('direction, body')
+    const askedOut = (data ?? []).some(m => m.direction === 'inbound' && typeof m.body === 'string' && isOptOutMessage(m.body))
+    if (askedOut) await markOptOut(storeId, c.id)
+  }))
 }

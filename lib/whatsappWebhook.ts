@@ -7,7 +7,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { getServerSupabase, storeAudience } from './supabase-server'
 import { effectiveModules } from './stores'
 import { friendlyWhatsAppError } from './whatsapp'
-import { fmtPhone, normalizePhone, phoneVariants } from './phone'
+import { fmtPhone, normalizePhone, phoneVariants, waChatPhone } from './phone'
 import { isOptOutMessage } from './whatsappSafety'
 import { markOptOut } from './whatsappQuota'
 import { configureWebPush, sendPushToSubscriptions } from './push'
@@ -166,7 +166,7 @@ async function applyEvents(supabase: Supabase, storeId: string, value: any): Pro
   )
 
   for (const msg of value?.messages ?? []) {
-    const phone = normalizePhone(msg?.from)
+    const phone = waChatPhone(msg?.from)
     const parsed = parseInbound(msg)
     if (!phone || !parsed || typeof msg?.id !== 'string') continue
 
@@ -209,7 +209,7 @@ async function applyEvents(supabase: Supabase, storeId: string, value: any): Pro
 async function saveBusinessEchoes(supabase: Supabase, storeId: string, echoes: any[] | undefined) {
   for (const echo of echoes ?? []) {
     if (echo?.type === 'edit' || echo?.type === 'revoke') continue
-    const phone = normalizePhone(echo?.to)
+    const phone = waChatPhone(echo?.to)
     const parsed = parseInbound(echo)
     if (!phone || !parsed || typeof echo?.id !== 'string') continue
     const contact = await contactFor(supabase, storeId, phone)
@@ -292,10 +292,10 @@ async function saveHistory(supabase: Supabase, storeId: string, value: any) {
     const readAt = new Date().toISOString()
     const threads: any[] = Array.isArray(chunk?.threads) ? chunk.threads : []
     // Un solo viaje a la base por lote de números (un aviso puede traer cientos de chats)
-    const contacts = await contactsFor(supabase, storeId, threads.map(t => normalizePhone(t?.id)).filter(Boolean))
+    const contacts = await contactsFor(supabase, storeId, threads.map(t => waChatPhone(t?.id)).filter(Boolean))
     const ids = new Set<string>()
     for (const thread of threads) {
-      const phone = normalizePhone(thread?.id)
+      const phone = waChatPhone(thread?.id)
       if (!phone) continue
       const contactId = contacts.get(phone) ?? null
       for (const msg of thread?.messages ?? []) {
@@ -303,7 +303,7 @@ async function saveHistory(supabase: Supabase, storeId: string, value: any) {
         ids.add(msg.id)
         const parsed: Inbound | null = msg.type === 'media_placeholder' ? { text: '📎 Archivo' } : parseInbound(msg)
         if (!parsed) continue
-        const inbound = normalizePhone(msg.from) === phone
+        const inbound = waChatPhone(msg.from) === phone
         const status = String(msg.history_context?.status ?? '').toLowerCase()
         rows.push({
           store_id:      storeId,

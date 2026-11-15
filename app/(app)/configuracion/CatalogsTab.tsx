@@ -6,7 +6,8 @@ import { useQueryEffect } from '@/lib/useCachedQuery'
 import { useCallback, useState } from 'react'
 import { Card, Ico, Note, Spinner, api, cx, send, useToast } from './ui'
 import s from './configuracion.module.css'
-import { X } from 'lucide-react'
+import { PencilLine, X } from 'lucide-react'
+import { notifyDataChanged } from '@/lib/crmEvents'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 
 type ConfigItem = { id: string; type: string; label: string; created_at: string }
@@ -59,11 +60,35 @@ export function CatalogsTab({ canEdit }: { canEdit: boolean }) {
   const [error, setError]     = useState('')
   const [saving, setSaving]   = useState(false)
   const [confirmDel, setConfirmDel] = useState<string | null>(null)
+  // Cambiar el nombre: la opción y los contactos que la tienen
+  const [renaming, setRenaming] = useState<ConfigItem | null>(null)
+  const [newLabel, setNewLabel] = useState('')
+  const [renameBusy, setRenameBusy] = useState(false)
+  const [renameError, setRenameError] = useState('')
 
   const cat = CATALOGS.find(c => c.type === active)!
   const items = lists?.[active] ?? []
 
-  const pick = (type: CatalogType) => { setActive(type); setLabel(''); setError(''); setConfirmDel(null) }
+  const pick = (type: CatalogType) => { setActive(type); setLabel(''); setError(''); setConfirmDel(null); setRenaming(null) }
+
+  const askRename = (item: ConfigItem) => { setRenaming(item); setNewLabel(item.label); setRenameError('') }
+  const rename = async () => {
+    if (!renaming) return
+    const next = newLabel.trim()
+    if (!next || next === renaming.label) { setRenaming(null); return }
+    setRenameBusy(true); setRenameError('')
+    try {
+      const r = await api<{ label: string; contacts: number }>(`/api/data/config/${renaming.id}`, send('PATCH', { label: next }))
+      showToast(r.contacts ? `«${renaming.label}» ahora es «${r.label}» en ${r.contacts.toLocaleString('es-MX')} contacto${r.contacts !== 1 ? 's' : ''}` : `«${renaming.label}» ahora es «${r.label}»`)
+      setRenaming(null)
+      notifyDataChanged('contact')
+      await load()
+    } catch (err) {
+      setRenameError((err as Error).message)
+    } finally {
+      setRenameBusy(false)
+    }
+  }
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -139,15 +164,30 @@ export function CatalogsTab({ canEdit }: { canEdit: boolean }) {
                     <span className={s.catDot} style={{ background: color }} />
                     <span>{item.label}</span>
                     {canEdit && (
-                      <button type="button" className={s.catX} onClick={() => setConfirmDel(item.id)} aria-label={`Eliminar ${item.label}`} title="Eliminar">
-                        <X strokeWidth={2.4} aria-hidden="true" />
-                      </button>
+                      <>
+                        <button type="button" className={s.catX} onClick={() => askRename(item)} aria-label={`Cambiar el nombre de ${item.label}`} title="Cambiar el nombre">
+                          <PencilLine strokeWidth={2.2} aria-hidden="true" />
+                        </button>
+                        <button type="button" className={s.catX} onClick={() => setConfirmDel(item.id)} aria-label={`Eliminar ${item.label}`} title="Eliminar">
+                          <X strokeWidth={2.4} aria-hidden="true" />
+                        </button>
+                      </>
                     )}
                   </li>
                 )
               })}
             </ul>
           )}
+          <ConfirmDialog open={!!renaming} busy={renameBusy} error={renameError} tone="warn" icon={PencilLine} focusField
+            title={`Cambiar el nombre de «${renaming?.label ?? ''}»`} confirmLabel="Guardar" busyLabel="Guardando…"
+            onConfirm={rename} onCancel={() => { if (!renameBusy) setRenaming(null) }}
+            field={<>
+              <label htmlFor="catalog-rename">Nombre nuevo</label>
+              <input id="catalog-rename" value={newLabel} maxLength={active === 'zone' ? 60 : 100} disabled={renameBusy}
+                onChange={e => setNewLabel(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); rename() } }} />
+            </>}>
+            Los contactos que tienen esta opción se actualizan con el nombre nuevo.
+          </ConfirmDialog>
           {(() => {
             const item = items.find(i => i.id === confirmDel)
             return (

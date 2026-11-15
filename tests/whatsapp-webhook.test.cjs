@@ -41,6 +41,17 @@ test('un mensaje normal se guarda y avisa al equipo', async () => {
   assert.equal(notifications[0].title, 'Luis')
 })
 
+test('un número de otro país se guarda completo (no como un número de México)', async () => {
+  inserted.length = 0
+  await processChange(STORE, {
+    ...meta,
+    contacts: [{ profile: { name: 'John' }, wa_id: '15551234567' }],
+    messages: [{ from: '15551234567', id: 'wamid.US', timestamp: '1792700000', type: 'text', text: { body: 'Hi' } }],
+  })
+  assert.equal(inserted.length, 1)
+  assert.equal(inserted[0].phone, '15551234567')
+})
+
 test('los estados entregado y leído se guardan', async () => {
   updated.length = 0
   await processChange(STORE, { ...meta, statuses: [{ id: 'wamid.S', status: 'delivered' }, { id: 'wamid.S', status: 'read' }] })

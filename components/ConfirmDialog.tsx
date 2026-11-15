@@ -16,7 +16,7 @@ import { Trash2, TriangleAlert, type LucideIcon } from 'lucide-react'
  */
 export function ConfirmDialog({
   open, title, children, field, error, confirmLabel, busyLabel, cancelLabel = 'Cancelar',
-  tone = 'danger', icon, busy = false, onConfirm, onCancel,
+  tone = 'danger', icon, busy = false, focusField = false, onConfirm, onCancel,
 }: {
   open: boolean
   title: string
@@ -33,6 +33,8 @@ export function ConfirmDialog({
   tone?: 'danger' | 'warn'
   icon?: LucideIcon
   busy?: boolean
+  /** El foco empieza en el campo de `field` (para escribir) en lugar de en «Cancelar». */
+  focusField?: boolean
   onConfirm: () => void
   onCancel: () => void
 }) {
@@ -48,9 +50,10 @@ export function ConfirmDialog({
   useEffect(() => {
     if (!open) return
     const before = document.activeElement as HTMLElement | null
-    cancelRef.current?.focus()
+    const input = focusField ? cardRef.current?.querySelector<HTMLElement>('.cdlg-field input, .cdlg-field textarea') : null
+    ;(input ?? cancelRef.current)?.focus()
     return () => { before?.focus?.() }
-  }, [open])
+  }, [open, focusField])
 
   // Esc cancela y Tab se queda dentro de la ventana
   useEffect(() => {

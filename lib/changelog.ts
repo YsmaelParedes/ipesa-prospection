@@ -36,6 +36,20 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.55.0',
+    date: '15 de noviembre, 2026',
+    title: 'Detalles que faltaban',
+    items: [
+      'En Configuración › Catálogos puedes cambiar el nombre de un segmento, canal o zona. Los contactos que la tenían cambian con ella.',
+      'Si una pantalla no puede cargar por la conexión, ahora lo dice y te deja reintentar, en lugar de mostrarse vacía o en ceros.',
+      'Al editar un contacto viejo ya no te obliga a elegir segmento y canal si nunca los tuvo.',
+      'En el plan Litro, registrar una cotización ya no menciona «Oportunidades», que es de los planes Galón y Cubeta.',
+      'Solo el responsable de un cliente o un administrador puede cerrar su seguimiento.',
+      { text: 'La bandeja de WhatsApp reconoce los números de otro país (por ejemplo +1 de EE. UU.) y les contesta a su número.', module: 'whatsapp' },
+      { text: 'Si alguien pidió la baja por WhatsApp antes de ser tu contacto, al registrarlo queda dado de baja de las campañas.', module: 'whatsapp' },
+    ],
+  },
+  {
     version: '1.54.0',
     date: '15 de noviembre, 2026',
     title: 'Que ningún cliente se pierda',

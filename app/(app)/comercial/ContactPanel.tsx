@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { apiFetch } from '@/lib/apiClient'
+import { useSession } from '@/lib/profile'
 import { useQueryEffect } from '@/lib/useCachedQuery'
 import {
   KIND_LABELS, NO_ANSWER_LIMIT, STAGE_PROBABILITY, resultLabel,
@@ -56,6 +57,7 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
   const [closing, setClosing] = useState(false)
   // «Correo» en la ficha deja el formulario listo para registrar el correo
   const [formKind, setFormKind] = useState<Kind | undefined>(kind)
+  const isAdmin = !!useSession()?.isAdmin
   const contact = detail?.contact ?? initial ?? null
 
   const load = useCallback(async () => {
@@ -106,6 +108,8 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
   const addr = addressOf(contact)
   const mine = !!uid && contact.owner_id === uid
   const ownerLabel = !contact.owner_id ? 'Sin asignar' : mine ? 'Tuyo' : contact.owner_name ? `De ${contact.owner_name}` : null
+  // Cerrar el seguimiento: su responsable o un administrador (el servidor también lo revisa)
+  const canClose = isAdmin || !contact.owner_id || mine
 
   const content = (
     <>
@@ -134,7 +138,7 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
         <div className={s.nextBox}>
           <span>Próximo seguimiento: <b>{contact.next_action || 'Dar seguimiento'}</b> · {whenPhrase(contact.next_action_at, today)}</span>
           <Link href="/recordatorios">Ver en Agenda</Link>
-          {!readonly && (
+          {!readonly && canClose && (
             <button type="button" className={`${s.nextClose} ${s.press}`} disabled={closing} onClick={closeFollowUp}>
               {closing ? 'Cerrando…' : 'Cerrar seguimiento'}
             </button>
