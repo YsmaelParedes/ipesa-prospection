@@ -79,31 +79,6 @@ export function verifyTokenMatches(received: string, expected: string): boolean 
   return wanted.length > 0 && given.length === wanted.length && timingSafeEqual(given, wanted)
 }
 
-/**
- * Copia de un mensaje que mandó otro responsable del número (el agente de IA
- * de Meta). `message` es el cuerpo tal como se envió a /messages: solo las
- * plantillas y los interactivos tienen otra forma que un mensaje entrante.
- */
-export function parseAgentEcho(message: any): Inbound | null {
-  switch (message?.type) {
-    case 'template':
-      return { text: `📋 Plantilla · ${String(message.template?.name ?? '').replace(/_/g, ' ')}` }
-    case 'interactive': {
-      const i = message.interactive ?? {}
-      const options = [
-        ...(i.action?.buttons ?? []).map((b: any) => b?.reply?.title),
-        ...(i.action?.sections ?? []).flatMap((sec: any) => (sec?.rows ?? []).map((r: any) => r?.title)),
-      ].filter(Boolean)
-      const text = [i.header?.text, i.body?.text, i.footer?.text].filter(Boolean).join('\n')
-      return { text: [text, options.length ? `👉 ${options.join(' · ')}` : ''].filter(Boolean).join('\n') || '[mensaje interactivo]' }
-    }
-    default: {
-      const parsed = parseInbound(message)
-      return parsed && { ...parsed, optOutCandidate: undefined }
-    }
-  }
-}
-
 type Supabase = ReturnType<typeof getServerSupabase>
 
 async function contactFor(supabase: Supabase, storeId: string, phone: string) {
@@ -135,11 +110,6 @@ const toIso = (timestamp: unknown) => {
 /**
  * Aplica un "change" del webhook a la tienda indicada. Todo se filtra por
  * store_id: un evento nunca toca mensajes ni contactos de otra tienda.
- *
- * Mientras el agente de IA de Meta atiende un chat, lo de ese chat llega en
- * `value.standby` (campo "standby"): mensajes del cliente, copias de lo que
- * contestó el agente y sus palomitas. Esos mensajes no avisan al equipo
- * porque los está atendiendo el agente.
  */
 export async function processChange(storeId: string, value: any, field?: string): Promise<InboundNotification[]> {
   const supabase = getServerSupabase()
@@ -147,32 +117,8 @@ export async function processChange(storeId: string, value: any, field?: string)
   if (field === 'history') { await saveHistory(supabase, storeId, value); return [] }
   if (field === 'smb_message_echoes') { await saveBusinessEchoes(supabase, storeId, value?.message_echoes); return [] }
   if (field === 'smb_app_state_sync') return [] // Los contactos del celular no se tocan
-  const notifications = await applyEvents(supabase, storeId, value)
-  const standby = value?.standby
-  if (standby) {
-    await applyEvents(supabase, storeId, standby)
-    notifications.push(...await saveAgentEchoes(supabase, storeId, standby.message_echoes))
-  }
-  // El agente le pasó el chat al CRM (campo "messaging_handovers")
-  if (value?.type === 'control_passed' && value.control_passed?.new_owner_role !== 'ai_agent') {
-    const phone = normalizePhone(value.sender?.phone_number)
-    if (phone) notifications.push(handoffItem(phone, (await contactFor(supabase, storeId, phone))?.name))
-  }
-  return notifications
+  return applyEvents(supabase, storeId, value)
 }
-
-const HANDOFF_TEXT = 'El agente de IA pidió que alguien del equipo conteste.'
-
-/**
- * ¿El agente avisó que pasará el chat a una persona? Respaldo del evento
- * "control_passed", que Meta no manda cuando el agente solo suelta el chat.
- */
-export function isHandoffMessage(text: string): boolean {
-  return /\b(representante|alguien (de|del) (nuestro )?equipo|persona del equipo|agente humano|a representative|someone from (our|the) team)\b/i.test(text)
-}
-
-const handoffItem = (phone: string, name: string | undefined): InboundNotification =>
-  ({ phone, title: `Atender a ${name || fmtPhone(phone)}`, text: HANDOFF_TEXT })
 
 /** Estados de salientes y mensajes entrantes de un bloque del webhook. */
 async function applyEvents(supabase: Supabase, storeId: string, value: any): Promise<InboundNotification[]> {
@@ -251,42 +197,6 @@ async function applyEvents(supabase: Supabase, storeId: string, value: any): Pro
     }
 
     notifications.push({ phone, title: contact?.name || profileName || fmtPhone(phone), text: parsed.text })
-  }
-  return notifications
-}
-
-/**
- * Respuestas del agente de IA: salientes sin user_id ni plantilla. Así las
- * distingue la bandeja, porque lo que manda el equipo o una campaña siempre
- * lleva user_id. Si el agente dice que pasará el chat a una persona, se
- * avisa al equipo.
- */
-async function saveAgentEchoes(supabase: Supabase, storeId: string, echoes: any[] | undefined) {
-  const notifications: InboundNotification[] = []
-  for (const echo of echoes ?? []) {
-    const phone = normalizePhone(echo?.message?.to)
-    const parsed = parseAgentEcho(echo?.message)
-    if (!phone || !parsed || typeof echo?.id !== 'string') continue
-
-    const contact = await contactFor(supabase, storeId, phone)
-    const saved = await insertMessage(supabase, {
-      store_id:      storeId,
-      contact_id:    contact?.id ?? null,
-      phone,
-      direction:     'outbound',
-      body:          parsed.text.slice(0, 4096),
-      wa_message_id: echo.id,
-      status:        'sent',
-      media_id:      parsed.mediaId ?? null,
-      media_type:    parsed.mediaType ?? null,
-      media_mime:    parsed.mime ?? null,
-      user_id:       null,
-      template_name: null,
-      created_at:    toIso(echo.timestamp),
-    })
-    if (saved && isHandoffMessage(parsed.text)) {
-      notifications.push(handoffItem(phone, contact?.name))
-    }
   }
   return notifications
 }

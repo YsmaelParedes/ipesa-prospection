@@ -71,7 +71,7 @@ export function WhatsAppOffer() {
         <section className="wa-offer-hero">
           <div className="wa-offer-copy">
             <span className="wa-offer-status"><i />Próximamente</span>
-            <h2>WhatsApp y un agente de IA, muy pronto en tu CRM</h2>
+            <h2>WhatsApp, muy pronto en tu CRM</h2>
             <ul className="wa-offer-benefits">
               {BENEFITS.map(b => (
                 <li key={b.title}>

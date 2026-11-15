@@ -46,7 +46,7 @@ const GROUPS: { id: string; title: string; items: { q: string; a: string }[] }[]
   {
     id: 'whatsapp', title: 'WhatsApp',
     items: [
-      { q: '¿Matices tiene WhatsApp?', a: 'Muy pronto. Estamos terminando la conexión para que vincules el WhatsApp de tu tienda tú mismo, en unos clics, junto con un agente de IA que contesta por ti. Estará en el plan Cubeta.' },
+      { q: '¿Matices tiene WhatsApp?', a: 'Muy pronto. Estamos terminando la conexión para que vincules el WhatsApp de tu tienda tú mismo, en unos clics. Estará en el plan Cubeta.' },
       { q: '¿Cómo me entero cuando esté listo?', a: `Escríbenos a ${EMAILS.hola} y te avisamos. Si ya tienes cuenta, también lo verás en tu CRM.` },
       { q: '¿Meta cobra aparte?', a: 'WhatsApp Business Platform es de Meta y puede cobrar por los mensajes según sus tarifas vigentes.' },
     ],

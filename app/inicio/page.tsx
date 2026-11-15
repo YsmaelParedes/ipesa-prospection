@@ -24,7 +24,7 @@ const FEATURES = [
   { icon: Ic.contacts,  tone: s.tCyan,    title: 'Contactos', text: 'Tu base por zonas, con WhatsApp o fijo, importada desde Excel y lista para visitar.', href: '/inicio/contactos' },
   { icon: Ic.bell,      tone: s.tTeal,    title: 'Agenda y avisos', text: 'Cada recordatorio a su hora y el resumen de la mañana en tu celular, aunque la app esté cerrada.', href: '/inicio/funciones#agenda' },
   { icon: Ic.users,     tone: s.tAmber,   title: 'Tu equipo y tu base, protegidos', text: 'Administradores y vendedores, cada quien con su usuario. Exportar y borrar, solo administradores.', href: '/inicio/funciones#equipo' },
-  { icon: Ic.chat,      tone: s.tWa,      title: 'Próximamente: WhatsApp', text: 'Atiende el WhatsApp de tu tienda desde el CRM, con un agente de IA que contesta por ti.', href: '/inicio/whatsapp' },
+  { icon: Ic.chat,      tone: s.tWa,      title: 'Próximamente: WhatsApp', text: 'Atiende el WhatsApp de tu tienda desde el CRM, con todo tu equipo en la misma bandeja.', href: '/inicio/whatsapp' },
 ]
 
 const STEPS = [

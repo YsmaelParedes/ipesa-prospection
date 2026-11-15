@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.51.0',
+    date: '14 de noviembre, 2026',
+    title: 'WhatsApp sin agente de IA',
+    module: 'whatsapp',
+    items: [
+      'Quitamos la pestaña «Agente IA» de WhatsApp. Los chats los atiende tu equipo desde la Bandeja.',
+      'En los chats ya no aparecen el botón «Devolver al agente» ni la marca «Agente IA».',
+    ],
+  },
+  {
     version: '1.50.0',
     date: '14 de noviembre, 2026',
     title: 'Un diseño más sobrio y confirmaciones más claras',

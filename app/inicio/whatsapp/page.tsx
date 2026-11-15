@@ -9,12 +9,12 @@ import s from '../inicio.module.css'
 import { CheckCheck } from 'lucide-react'
 
 /*
- * WhatsApp y el agente de IA están en desarrollo (ver WHATSAPP_OFFERED en lib/stores.ts):
- * esta página solo los anuncia, sin demo ni forma de pedirlos. /inicio/agente-ia redirige aquí.
+ * WhatsApp está en desarrollo (ver WHATSAPP_OFFERED en lib/stores.ts):
+ * esta página solo lo anuncia, sin demo ni forma de pedirlo.
  */
 export const metadata: Metadata = pageMeta({
-  title: `WhatsApp y agente de IA, próximamente · ${APP_NAME}`,
-  description: 'Muy pronto podrás atender el WhatsApp de tu tienda desde Matices, con un agente de IA que contesta por ti. Escríbenos y te avisamos cuando esté listo.',
+  title: `WhatsApp, próximamente · ${APP_NAME}`,
+  description: 'Muy pronto podrás atender el WhatsApp de tu tienda desde Matices, con todo tu equipo en la misma bandeja. Escríbenos y te avisamos cuando esté listo.',
   path: '/inicio/whatsapp',
 })
 
@@ -23,16 +23,15 @@ const NOTIFY = `mailto:${EMAILS.hola}?subject=${encodeURIComponent('Avísenme cu
 const POINTS = [
   { icon: Ic.chat, tone: s.tWa, title: 'Una bandeja para todo el equipo', text: 'Los chats del número de tu tienda en el CRM, sin pasarse el celular.' },
   { icon: Ic.link, tone: s.tBrand, title: 'Cada chat con su cliente', text: 'Mientras respondes ves su historial, sus cotizaciones y su siguiente paso.' },
-  { icon: Ic.layers, tone: s.tMagenta, title: 'Un agente de IA que contesta por ti', text: 'Responde a cualquier hora con la información de tu tienda y pasa el chat a tu equipo cuando hace falta.' },
   { icon: Ic.store, tone: s.tCyan, title: 'Lo conectas tú, en unos clics', text: 'Vinculas el número de tu tienda desde tu CRM, sin trámites técnicos.' },
 ]
 
 export default function WhatsAppPage() {
   return (
     <>
-      <JsonLd data={breadcrumbJsonLd('WhatsApp y agente de IA', '/inicio/whatsapp')} />
+      <JsonLd data={breadcrumbJsonLd('WhatsApp', '/inicio/whatsapp')} />
       <PageHero
-        title={<><span className={s.waText}>WhatsApp</span> y un agente de IA, <span className={s.spectrumText}>muy pronto</span></>}
+        title={<><span className={s.waText}>WhatsApp</span> en tu CRM, <span className={s.spectrumText}>muy pronto</span></>}
         lead="Estamos terminando la conexión para que vincules el WhatsApp de tu tienda tú mismo. Mientras, ordena tus ventas con el Sistema Comercial y tus Contactos."
       >
         <div className={s.heroCtas}>

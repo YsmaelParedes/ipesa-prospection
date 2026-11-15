@@ -70,8 +70,7 @@ export async function POST(req: NextRequest) {
           }
           continue
         }
-        // "messaging_handovers" trae el número en `recipient`, no en `metadata`
-        const phoneNumberId = String(value?.metadata?.phone_number_id ?? value?.recipient?.phone_number_id ?? '')
+        const phoneNumberId = String(value?.metadata?.phone_number_id ?? '')
         if (!/^\d{5,30}$/.test(phoneNumberId)) continue
         const store = await findStoreForPhone(phoneNumberId)
         if (!store) {

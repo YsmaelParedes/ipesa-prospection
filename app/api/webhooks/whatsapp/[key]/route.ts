@@ -49,8 +49,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       for (const change of entry?.changes ?? []) {
         const value = change?.value ?? {}
         // Solo eventos del número conectado a esta tienda
-        // "messaging_handovers" trae el número en `recipient`, no en `metadata`
-        if (String(value?.metadata?.phone_number_id ?? value?.recipient?.phone_number_id ?? '') !== row.phone_number_id) continue
+        if (String(value?.metadata?.phone_number_id ?? '') !== row.phone_number_id) continue
         items.push(...await processChange(row.store_id, value, change?.field))
       }
     }

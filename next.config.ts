@@ -70,6 +70,8 @@ const nextConfig: NextConfig = {
     return [
       { source: '/plataforma', destination: '/admin/tiendas', permanent: false },
       { source: '/leads', destination: '/comercial', permanent: false },
+      // Página vieja del agente de IA (retirado): los enlaces guardados llevan a WhatsApp
+      { source: '/inicio/agente-ia', destination: '/inicio/whatsapp', permanent: true },
     ]
   },
 

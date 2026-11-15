@@ -385,22 +385,6 @@ function ChatView({
   const lastInbound = thread?.lastInboundAt ?? convo?.lastInboundAt ?? null
   const windowOpen  = isWindowOpen(lastInbound)
   const messages    = thread?.messages ?? []
-  // Solo en chats donde ha contestado el agente de IA
-  const usesAgent   = messages.some(isAgentMessage)
-  const [releasing, setReleasing] = useState(false)
-
-  async function returnToAgent() {
-    setReleasing(true)
-    try {
-      const r = await apiFetch(`/api/whatsapp/conversations/${phone}/agent`, { method: 'POST' })
-      const d = await r.json().catch(() => ({}))
-      toast(r.ok ? 'El agente de IA vuelve a atender este chat' : d.error || 'No se pudo devolver el chat al agente')
-    } catch {
-      toast('No se pudo devolver el chat al agente')
-    } finally {
-      setReleasing(false)
-    }
-  }
 
   // Al abrir: hasta abajo. Con mensajes nuevos: seguir abajo solo si ya estabas ahí.
   const lastCount = useRef(0)
@@ -505,12 +489,6 @@ function ChatView({
           </span>
         </button>
         <span className="wa-head-window"><WindowBadge lastInboundAt={lastInbound} /></span>
-        {usesAgent && (
-          <button className="wa-agent-btn" onClick={returnToAgent} disabled={releasing}
-            title="Devolver al agente: el agente de IA vuelve a contestar este chat" aria-label="Devolver al agente">
-            <WaIcon.bolt size={14} /><span className="wa-agent-label">{releasing ? 'Devolviendo…' : 'Devolver al agente'}</span>
-          </button>
-        )}
         <a className="wa-icon-btn wa-hide-sm" href={`tel:${phone}`} title="Llamar"><WaIcon.phone size={17} /></a>
         <button className={`wa-icon-btn ${panelOpen ? 'on' : ''}`} onClick={onTogglePanel} title="Ficha del CRM" aria-label="Ficha del CRM" aria-pressed={panelOpen}>
           <WaIcon.info />
@@ -554,18 +532,13 @@ function ChatView({
   )
 }
 
-/** Saliente sin usuario ni plantilla (ni del celular o del historial) = lo contestó el agente de IA (ver whatsappWebhook). */
-const isAgentMessage = (m: Message) => m.direction === 'outbound' && m.user_id === null && !m.template_name && !m.origin
-
 function Bubble({ m, onDiscard }: { m: Message; onDiscard: () => void }) {
   const out = m.direction === 'outbound'
-  const byAgent = isAgentMessage(m)
   const caption = m.media_id ? mediaCaption(m.body) : m.body
   return (
     <div className={`wa-msg ${out ? 'out' : 'in'} ${m.status === 'failed' ? 'failed' : ''}`}>
       <div className="wa-bubble">
         {m.template_name && <div className="wa-template-tag"><WaIcon.template size={11} /> Plantilla · {m.template_name.replace(/_/g, ' ')}</div>}
-        {byAgent && <div className="wa-template-tag wa-agent-tag"><WaIcon.bolt size={11} /> Agente IA</div>}
         {m.origin === 'phone' && <div className="wa-template-tag"><WaIcon.phone size={11} /> Desde el celular</div>}
         {m.media_id && m.media_type && <MediaContent mediaId={m.media_id} mediaType={m.media_type} mime={m.media_mime} />}
         {caption && <div className="wa-text"><MessageText text={caption} links /></div>}

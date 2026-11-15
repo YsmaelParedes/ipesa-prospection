@@ -42,7 +42,7 @@ export type ThreadMessage = {
   media_mime: string | null
   profile_name?: string | null
   contact_id?: string | null
-  /** null en un saliente = lo contestó el agente de IA de Meta (ver whatsappWebhook). */
+  /** null en un saliente = no lo mandó alguien del equipo desde Matices (celular o historial; ver `origin`). */
   user_id?: string | null
   /** 'phone': lo mandó la tienda desde su celular · 'history': traído de WhatsApp Business */
   origin?: 'phone' | 'history' | null

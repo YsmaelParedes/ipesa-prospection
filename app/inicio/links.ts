@@ -32,7 +32,7 @@ const PRODUCT: MenuGroup[] = [
   {
     title: 'Próximamente',
     items: [
-      { href: '/inicio/whatsapp', label: 'WhatsApp y agente de IA', desc: 'Muy pronto en tu CRM', icon: Ic.chat, tone: s.tWa },
+      { href: '/inicio/whatsapp', label: 'WhatsApp', desc: 'Muy pronto en tu CRM', icon: Ic.chat, tone: s.tWa },
     ],
   },
 ]

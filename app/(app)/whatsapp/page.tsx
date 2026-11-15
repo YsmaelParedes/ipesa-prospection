@@ -7,10 +7,9 @@ import { WhatsAppCampaigns, type CampaignPreset } from '@/components/WhatsAppCam
 import { WhatsAppCampaignResults } from '@/components/WhatsAppCampaignHistory'
 import { WaIcon } from '@/components/WhatsAppUI'
 import { WhatsAppOffer } from '@/components/WhatsAppOffer'
-import { WhatsAppAgent } from '@/components/WhatsAppAgent'
 import { useSession } from '@/lib/profile'
 
-type Tab = 'bandeja' | 'campanas' | 'resultados' | 'agente'
+type Tab = 'bandeja' | 'campanas' | 'resultados'
 
 export default function WhatsAppPage() {
   const session = useSession()
@@ -26,8 +25,6 @@ export default function WhatsAppPage() {
       ['campanas', 'Campañas', <WaIcon.megaphone key="i" />],
       ['resultados', 'Resultados', <WaIcon.chart key="i" />],
     ] : []),
-    // Agente de IA de Meta: lo configuran los administradores
-    ...(isAdmin ? [['agente', 'Agente IA', <WaIcon.bolt key="i" />]] : []),
   ] as [Tab, string, React.ReactNode][])
   const current: Tab = tabs.some(([key]) => key === tab) ? tab : 'bandeja'
 
@@ -61,7 +58,6 @@ export default function WhatsAppPage() {
           onOpenChat={phone => { router.push(`/whatsapp?phone=${phone}`); setTab('bandeja') }}
         />
       )}
-      {current === 'agente' && <WhatsAppAgent />}
     </div>
   )
 }
