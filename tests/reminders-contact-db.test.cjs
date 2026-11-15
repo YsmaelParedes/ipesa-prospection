@@ -25,7 +25,7 @@ before(async () => {
   await db.query(`insert into public.reminders (id, store_id, lead_id, lead_name, nota) values
     ($1, $2, $3, 'Pinturas Juárez', 'Llamar'), ($4, $2, $5, 'Lead sin contacto', 'Visitar'), ($6, $2, null, 'Texto libre', 'Tarea')`,
     [uuid(21), STORE, uuid(11), uuid(22), uuid(12), uuid(23)])
-  await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261115200000_reminders_contact.sql'), 'utf8'))
+  await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261115040043_reminders_contact.sql'), 'utf8'))
 })
 after(async () => { await db?.close() })
 
