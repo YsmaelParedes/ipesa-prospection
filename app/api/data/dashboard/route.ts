@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
 import { serverError } from '@/lib/validation'
 import { storeDays, teamActivities } from '@/lib/storeActivity'
-import { hasSalesTeam } from '@/lib/commercialServer'
+import { activityClient, hasSalesTeam, liveContactIds } from '@/lib/commercialServer'
 import {
   KIND_LABELS, NO_ANSWER_LIMIT, RESULT_RULES, countActivities, isCallResult, resultLabel,
   type ActivityKind, type CommercialStatus,
@@ -21,7 +21,7 @@ type QueueRow = {
 type QueueSummary = { count: number; overdue: number; top: QueueRow[]; upcoming: QueueRow[] }
 type Facets = { total: number; segment: Record<string, number> }
 type ActivityRow = {
-  id: string; contact_id: string; user_id: string | null; kind: ActivityKind; result: string | null; note: string | null
+  id: string; contact_id: string | null; contact_name: string | null; user_id: string | null; kind: ActivityKind; result: string | null; note: string | null
   quote_amount: number | null; sale_amount: number | null; is_followup: boolean; created_at: string
 }
 
@@ -70,7 +70,7 @@ async function GETImpl(req: NextRequest) {
       // Actividad comercial desde el mes pasado: toda la tienda sin cuentas de prueba
       // (administrador) o la propia (vendedor)
       teamActivities<ActivityRow>(ctx, {
-        columns: 'id, contact_id, user_id, kind, result, note, quote_amount, sale_amount, is_followup, created_at',
+        columns: 'id, contact_id, contact_name, user_id, kind, result, note, quote_amount, sale_amount, is_followup, created_at',
         range: { from: startOfLastMonth }, scope: isAdmin ? 'store' : 'mine', newestFirst: true,
       }),
       supabase.from('whatsapp_threads').select('phone', { count: 'exact', head: true }).eq('store_id', storeId).gt('unread', 0),
@@ -118,14 +118,15 @@ async function GETImpl(req: NextRequest) {
 
     // ── Actividad reciente (14 días) ────────────────────────────────────────
     const recent = activities.filter(a => at(a) >= since14d).slice(0, 8)
-    const ids = Array.from(new Set(recent.map(a => a.contact_id)))
+    const ids = liveContactIds(recent)
     const { data: recentContacts } = ids.length
       ? await supabase.from('contacts').select('id, name, company').eq('store_id', storeId).in('id', ids)
       : { data: [] as { id: string; name: string; company: string | null }[] }
     const contactName = new Map((recentContacts ?? []).map(c => [c.id, bizName(c)]))
     const activity = recent.map(a => ({
+      // Sin contactId si el contacto se borró: la actividad se ve, pero no abre ficha
       id: a.id, type: a.result === 'venta' ? 'close' : a.kind, contactId: a.contact_id,
-      contactName: contactName.get(a.contact_id) ?? 'Contacto',
+      contactName: activityClient(a, contactName),
       title: [KIND_LABELS[a.kind] ?? 'Actividad', a.result && isCallResult(a.result) ? RESULT_RULES[a.result].label : ''].filter(Boolean).join(' · '),
       text: a.note ? a.note.slice(0, 120) : '',
       amount: a.sale_amount ?? a.quote_amount,

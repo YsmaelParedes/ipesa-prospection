@@ -17,7 +17,7 @@ const EXPORT_PAGE = 1000
 
 const PARTS = {
   contacts:   { table: 'contacts',        columns: CONTACT_COLUMNS, order: 'created_at' },
-  activities: { table: 'commercial_activities', columns: 'id, contact_id, kind, result, note, quote_amount, sale_amount, next_action, next_action_at, created_at, user_id', order: 'created_at' },
+  activities: { table: 'commercial_activities', columns: 'id, contact_id, contact_name, kind, result, note, quote_amount, sale_amount, next_action, next_action_at, created_at, user_id', order: 'created_at' },
   reminders:  { table: 'reminders',       columns: 'id, lead_id, lead_name, nota, reminder_date, type, completado, completado_at, user_id', order: 'reminder_date' },
   catalogs:   { table: 'app_config',      columns: 'id, type, label', order: 'type' },
 } as const

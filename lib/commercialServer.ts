@@ -6,8 +6,22 @@ export const COMMERCIAL_COLUMNS =
   'id, name, phone, email, company, address, postal_code, colonia, zone, segment, acquisition_channel, line_type, owner_id, commercial_status, ' +
   'next_action, next_action_at, last_activity_at, last_result, last_note, no_answer_streak, priority, potential_monthly, origin, created_at'
 
+/** contact_id es null si el contacto se borró; entonces contact_name dice cómo se llamaba. */
 export const ACTIVITY_COLUMNS =
-  'id, contact_id, user_id, kind, result, note, quote_amount, sale_amount, next_action, next_action_at, is_followup, created_at'
+  'id, contact_id, contact_name, user_id, kind, result, note, quote_amount, sale_amount, next_action, next_action_at, is_followup, created_at'
+
+/** Nombre para mostrar de una actividad: el del contacto si existe, si no el que tenía al borrarse. */
+export function activityClient(
+  a: { contact_id: string | null; contact_name?: string | null },
+  current: Map<string, string>,
+): string {
+  if (a.contact_id) return current.get(a.contact_id) ?? 'Contacto'
+  return a.contact_name ? `${a.contact_name} (borrado)` : 'Cliente borrado'
+}
+
+/** Ids de contacto de una lista de actividades, sin los borrados (null). */
+export const liveContactIds = (rows: { contact_id: string | null }[]): string[] =>
+  Array.from(new Set(rows.map(r => r.contact_id).filter((id): id is string => !!id)))
 
 /** Reparto, metas y control diario: Galón, Cubeta e Interno (Litro solo tiene la cola). */
 export const hasSalesTeam = (ctx: StoreContext) => planOf(ctx.plan).salesTeam

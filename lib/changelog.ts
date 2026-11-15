@@ -36,6 +36,17 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.52.0',
+    date: '14 de noviembre, 2026',
+    title: 'Eliminar y quitar sin perder tus números',
+    items: [
+      'Al eliminar un contacto, sus llamadas, cotizaciones y ventas siguen contando en el Inicio, Actividad diaria y Acumulado. En los reportes aparece con su nombre y la marca «borrado».',
+      'Al quitar o desactivar a alguien del equipo, eliges a quién pasan sus clientes o los dejas sin asignar. Antes podían quedarse a nombre de quien ya no está y no salirle a nadie.',
+      'En Contactos, si cambias la búsqueda o un filtro, se quita la selección: así «Eliminar» solo afecta a lo que ves.',
+      'Si eliminar un contacto falla, la ventana te lo dice en lugar de quedarse igual.',
+    ],
+  },
+  {
     version: '1.51.0',
     date: '14 de noviembre, 2026',
     title: 'WhatsApp sin agente de IA',

@@ -54,6 +54,9 @@ const CAMPO_LABELS: Record<string, string> = {
   address: 'Dirección', postal_code: 'C.P.', segment: 'Segmento', acquisition_channel: 'Canal',
 }
 
+/** Lo que pasa al eliminar contactos (su historial comercial sigue contando en los reportes). */
+const DELETE_NOTE = 'Sus llamadas, cotizaciones y ventas se quedan en tus números y reportes. El contacto no se puede recuperar.'
+
 /** Contactos por página y lo más que se vuelve a pedir de una vez al refrescar. */
 const PAGE = 50
 const MAX_PAGE = 200
@@ -192,6 +195,13 @@ function ContactosContent() {
     lastCheckedIdx.current = null
     setConfirmBulkDel(false)
   }
+  // Otra búsqueda o filtro: lo elegido antes ya no se ve, así que se suelta
+  // (si no, «Eliminar 5» podría borrar contactos que no están en pantalla)
+  useEffect(() => {
+    setCheckedIds(new Set())
+    lastCheckedIdx.current = null
+    setConfirmBulkDel(false)
+  }, [filterParams])
 
   const toggleAll = () => {
     setCheckedIds(prev => {
@@ -275,7 +285,7 @@ function ContactosContent() {
               title={checkedIds.size === 1 ? '¿Eliminar 1 contacto?' : `¿Eliminar ${checkedIds.size.toLocaleString('es-MX')} contactos?`}
               confirmLabel="Eliminar" busyLabel="Eliminando…"
               onConfirm={handleBulkDelete} onCancel={() => setConfirmBulkDel(false)}>
-              Esta acción no se puede deshacer.
+              {DELETE_NOTE}
             </ConfirmDialog>
           </>
         ) : (
@@ -474,6 +484,7 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
   const [confirmDel, setConfirmDel] = useState(false)
   const [saving, setSaving]       = useState(false)
   const [deleting, setDeleting]   = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const [editForm, setEditForm]   = useState({
     name: c.name || '', phone: normalizePhone(c.phone), email: c.email || '',
     company: c.company || '', segment: c.segment || '',
@@ -514,10 +525,16 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
   }
 
   const handleDelete = async () => {
-    setDeleting(true)
-    const r = await apiFetch(`/api/data/contacts/${c.id}`, { method: 'DELETE' })
-    if (r.ok) onDeleted(c.id)
-    else setDeleting(false)
+    setDeleting(true); setDeleteError('')
+    try {
+      const r = await apiFetch(`/api/data/contacts/${c.id}`, { method: 'DELETE' })
+      if (r.ok) { onDeleted(c.id); return }
+      const d = await r.json().catch(() => ({}))
+      setDeleteError(d.error || 'No se pudo eliminar. Intenta de nuevo.')
+    } catch {
+      setDeleteError('Sin conexión. Intenta de nuevo.')
+    }
+    setDeleting(false)
   }
 
 
@@ -638,10 +655,10 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
               {canDelete && (
                 <>
                   <button className="link-btn danger" onClick={() => setConfirmDel(true)}><Ico.trash /> Eliminar contacto</button>
-                  <ConfirmDialog open={confirmDel} busy={deleting}
+                  <ConfirmDialog open={confirmDel} busy={deleting} error={deleteError}
                     title={`¿Eliminar a ${c.name}?`} confirmLabel="Eliminar" busyLabel="Eliminando…"
-                    onConfirm={handleDelete} onCancel={() => setConfirmDel(false)}>
-                    Esta acción no se puede deshacer.
+                    onConfirm={handleDelete} onCancel={() => { setConfirmDel(false); setDeleteError('') }}>
+                    {DELETE_NOTE}
                   </ConfirmDialog>
                 </>
               )}

@@ -16,7 +16,11 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 type Member = {
   user_id: string; email: string; display_name: string; role: StoreRole; status: 'active' | 'disabled' | string
   joined_at: string; last_sign_in_at: string | null; isMe: boolean; isMain?: boolean; canManage: boolean
+  /** Contactos a su nombre en el sistema comercial */
+  clients: number
 }
+/** Quitar del equipo o desactivar: se confirma y, si tiene clientes, se elige a quién pasan. */
+type MemberAction = { userId: string; kind: 'remove' | 'disable' }
 type Invitation = { id: string; email: string; role: 'admin' | 'employee'; expiresAt: string; status: 'valid' | 'expired' | 'used' | 'revoked' }
 type NewLink = { email: string; link: string }
 
@@ -42,7 +46,10 @@ export function TeamTab({ store }: { store: ClientStore }) {
   const [error, setError]       = useState('')
   const [newLink, setNewLink]   = useState<NewLink | null>(null)
   const [busyId, setBusyId]     = useState<string | null>(null)
-  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [pendingAction, setPendingAction] = useState<MemberAction | null>(null)
+  const [ownerTo, setOwnerTo] = useState('')
+  const [actionError, setActionError] = useState('')
+  const [actionBusy, setActionBusy] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const linkRef = useRef<HTMLDivElement>(null)
 
@@ -97,7 +104,27 @@ export function TeamTab({ store }: { store: ClientStore }) {
       setError((err as Error).message)
     } finally {
       setBusyId(null)
-      setConfirmId(null)
+    }
+  }
+
+  // Desactivar sin clientes a su nombre es inmediato (se puede reactivar); con clientes, se pregunta a quién pasan
+  const askAction = (m: Member, kind: MemberAction['kind']) => {
+    setOwnerTo(''); setActionError('')
+    setPendingAction({ userId: m.user_id, kind })
+  }
+  const closeAction = () => { if (!actionBusy) { setPendingAction(null); setActionError('') } }
+  const runAction = async (m: Member, kind: MemberAction['kind'], name: string) => {
+    setActionBusy(true); setActionError('')
+    try {
+      const payload = { userId: m.user_id, ownerTo: m.clients > 0 && ownerTo ? ownerTo : null }
+      await api('/api/store/members', kind === 'remove' ? send('DELETE', payload) : send('PATCH', { ...payload, status: 'disabled' }))
+      showToast(kind === 'remove' ? `${name} ya no está en el equipo` : 'Acceso desactivado')
+      setPendingAction(null)
+      await load()
+    } catch (err) {
+      setActionError((err as Error).message)
+    } finally {
+      setActionBusy(false)
     }
   }
 
@@ -211,10 +238,12 @@ export function TeamTab({ store }: { store: ClientStore }) {
                     {m.canManage && (
                       <>
                         <button className={cx('btn btn-ghost', s.btnSm)} disabled={busyId === m.user_id}
-                          onClick={() => act(m.user_id, () => api('/api/store/members', send('PATCH', { userId: m.user_id, status: off ? 'active' : 'disabled' })), off ? 'Acceso reactivado' : 'Acceso desactivado')}>
+                          onClick={() => !off && m.clients > 0
+                            ? askAction(m, 'disable')
+                            : act(m.user_id, () => api('/api/store/members', send('PATCH', { userId: m.user_id, status: off ? 'active' : 'disabled' })), off ? 'Acceso reactivado' : 'Acceso desactivado')}>
                           {off ? 'Reactivar' : 'Desactivar'}
                         </button>
-                        <button className="icon-btn icon-btn-delete" title="Quitar del equipo" aria-label={`Quitar a ${name}`} onClick={() => setConfirmId(m.user_id)}><Ico.trash /></button>
+                        <button className="icon-btn icon-btn-delete" title="Quitar del equipo" aria-label={`Quitar a ${name}`} onClick={() => askAction(m, 'remove')}><Ico.trash /></button>
                       </>
                     )}
                   </div>
@@ -250,14 +279,33 @@ export function TeamTab({ store }: { store: ClientStore }) {
         )}
       </Card>
       {(() => {
-        const m = members?.find(x => x.user_id === confirmId)
+        const m = members?.find(x => x.user_id === pendingAction?.userId)
+        const kind = pendingAction?.kind ?? 'remove'
         const name = m ? (m.display_name || m.email) : ''
+        const removing = kind === 'remove'
+        // A quién pueden pasar sus clientes: la gente activa del equipo, menos esa persona
+        const heirs = (members ?? []).filter(x => x.status === 'active' && x.user_id !== m?.user_id)
+        const n = m?.clients ?? 0
         return (
-          <ConfirmDialog open={!!m} busy={busyId === confirmId}
-            title={`¿Quitar a ${name} del equipo?`} confirmLabel="Quitar" busyLabel="Quitando…"
-            onConfirm={() => { if (m) act(m.user_id, () => api('/api/store/members', send('DELETE', { userId: m.user_id })), `${name} ya no está en el equipo`) }}
-            onCancel={() => setConfirmId(null)}>
-            Ya no podrá entrar a la tienda. Si después quieres que vuelva, tendrás que enviarle otra invitación.
+          <ConfirmDialog open={!!m} busy={actionBusy} error={actionError}
+            title={removing ? `¿Quitar a ${name} del equipo?` : `¿Desactivar a ${name}?`}
+            confirmLabel={removing ? 'Quitar' : 'Desactivar'} busyLabel={removing ? 'Quitando…' : 'Desactivando…'}
+            onConfirm={() => { if (m) runAction(m, kind, name) }}
+            onCancel={closeAction}
+            field={n > 0 && (
+              <>
+                <label id="team-heir-label">{n === 1 ? 'Su cliente pasa a' : `Sus ${n.toLocaleString('es-MX')} clientes pasan a`}</label>
+                <Select value={ownerTo} onChange={setOwnerTo} aria-labelledby="team-heir-label" disabled={actionBusy}
+                  options={[
+                    { value: '', label: 'Sin asignar', hint: 'Los toma quien los trabaje primero' },
+                    ...heirs.map(h => ({ value: h.user_id, label: h.isMe ? `${h.display_name || h.email} (tú)` : (h.display_name || h.email), hint: ROLE_LABELS[h.role] })),
+                  ]} />
+              </>
+            )}>
+            {removing
+              ? 'Ya no podrá entrar a la tienda. Si después quieres que vuelva, tendrás que enviarle otra invitación.'
+              : 'No podrá entrar a la tienda hasta que reactives su acceso.'}
+            {n > 0 && ' Sus llamadas y ventas registradas se quedan en los reportes.'}
           </ConfirmDialog>
         )
       })()}

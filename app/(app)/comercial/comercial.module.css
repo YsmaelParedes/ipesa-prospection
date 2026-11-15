@@ -230,8 +230,10 @@
 .stat { cursor: pointer; }
 @media (hover: hover) {
   .stripBtn:hover, .stat:hover { background: var(--paper-2); }
-  .doneRow:hover { background: var(--paper); }
+  .doneRow:hover:not(:disabled) { background: var(--paper); }
 }
+/* De un contacto borrado: se lee igual, pero no abre nada */
+.doneRow:disabled { cursor: default; }
 .doneRow { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 11px 14px; text-align: left; box-shadow: 0 -1px 0 var(--line); color: var(--muted); }
 .doneRow .name { color: var(--ink); display: block; }
 .doneHour { font-size: 12px; font-weight: 800; color: var(--ink-3); }

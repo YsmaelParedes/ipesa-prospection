@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { storeDays } from '@/lib/storeActivity'
 import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, parseFields, readJson, rpcUserError, serverError, type Schema } from '@/lib/validation'
-import { ACTIVITY_COLUMNS, COMMERCIAL_COLUMNS, getVisibleContact } from '@/lib/commercialServer'
+import { ACTIVITY_COLUMNS, COMMERCIAL_COLUMNS, activityClient, getVisibleContact, liveContactIds } from '@/lib/commercialServer'
 import { ACTIVITY_KINDS, COMMERCIAL_STATUSES, EMAIL_RESULT_CHOICES, RESULTS } from '@/lib/commercial'
 
 const LOG_LIMIT = 500
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
     ])
     if (error) throw error
     const rows = data ?? []
-    const ids = Array.from(new Set(rows.map(a => a.contact_id as string)))
+    const ids = liveContactIds(rows)
     const contactName = new Map<string, string>()
     for (let i = 0; i < ids.length; i += 150) {
       const { data: part } = await supabase.from('contacts').select('id, name, company')
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
       truncated: rows.length === LOG_LIMIT,
       activities: rows.map(a => ({
         ...a,
-        contact_name: contactName.get(a.contact_id) ?? 'Contacto',
+        contact_name: activityClient(a, contactName),
         user_name: a.user_id ? (names.get(a.user_id) ?? 'Usuario') : null,
       })),
     })

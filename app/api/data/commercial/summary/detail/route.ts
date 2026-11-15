@@ -4,9 +4,11 @@ import { storeDays, teamActivities } from '@/lib/storeActivity'
 import { jsonError, serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
 import { periodRange, type Period } from '@/lib/commercial'
+import { activityClient, liveContactIds } from '@/lib/commercialServer'
 
 type Activity = {
-  id: string; contact_id: string; user_id: string | null; created_at: string
+  /** null si el contacto se borró: contact_name dice cómo se llamaba */
+  id: string; contact_id: string | null; contact_name: string | null; user_id: string | null; created_at: string
   quote_amount: number | string | null; sale_amount: number | string | null
 }
 type Contact = { id: string; name: string; company: string | null; commercial_status: string }
@@ -50,7 +52,7 @@ export async function GET(req: NextRequest) {
     const [withValue, names] = await Promise.all([
       // Igual que la tarjeta: sin las cuentas de prueba
       teamActivities<Activity>(ctx, {
-        columns: 'id, contact_id, user_id, quote_amount, sale_amount, created_at',
+        columns: 'id, contact_id, contact_name, user_id, quote_amount, sale_amount, created_at',
         range: calendar.days(from, end), scope: 'store', newestFirst: true, withValue: column,
       }),
       getUserNameMap(ctx.storeId).catch(() => new Map<string, string>()),
@@ -58,7 +60,7 @@ export async function GET(req: NextRequest) {
     // …y sin montos en cero
     const rows = withValue.filter(r => Number(r[column]) > 0)
 
-    const ids = [...new Set(rows.map(r => r.contact_id))]
+    const ids = liveContactIds(rows)
     const contacts = new Map<string, Contact>()
     // Para el estado de cada cotización: la venta más reciente de cada cliente
     const lastSale = new Map<string, string>()
@@ -79,16 +81,16 @@ export async function GET(req: NextRequest) {
     }
 
     const items = rows.map(r => {
-      const c = contacts.get(r.contact_id)
+      const c = r.contact_id ? contacts.get(r.contact_id) : undefined
       let status: QuoteStatus | undefined
       if (kind === 'quoted') {
-        const sale = lastSale.get(r.contact_id)
+        const sale = r.contact_id ? lastSale.get(r.contact_id) : undefined
         status = sale && sale >= r.created_at ? 'ganada' : c && LOST.has(c.commercial_status) ? 'perdida' : 'abierta'
       }
       return {
         id: r.id,
         contact_id: r.contact_id,
-        client: c ? (c.company?.trim() || c.name) : 'Cliente borrado',
+        client: c ? (c.company?.trim() || c.name) : activityClient(r, new Map()),
         exists: !!c,
         user_id: r.user_id,
         seller: r.user_id ? (names.get(r.user_id) ?? 'Usuario') : 'Sin vendedor',

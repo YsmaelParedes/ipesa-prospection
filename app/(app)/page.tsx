@@ -362,8 +362,8 @@ export default function DashboardPage() {
             <p className="panel-empty">Aquí verás las llamadas, visitas y ventas que registre tu equipo.</p>
           ) : (
             <div>
-              {activity.map((a: any) => (
-                <Link className="activity-row" key={a.id} href={`/comercial?id=${a.contactId}`}>
+              {activity.map((a: any) => {
+                const body = <>
                   <div className="activity-icon" style={ACTIVITY_TONE[a.type] ?? ACTIVITY_TONE.default}>
                     <ActivityIcon type={a.type} />
                   </div>
@@ -373,8 +373,12 @@ export default function DashboardPage() {
                     {a.text && <div className="activity-desc">{a.text}</div>}
                     <div className="activity-time">{fmtAgo(a.at, now)}{a.who ? ` · ${a.who}` : ''}</div>
                   </div>
-                </Link>
-              ))}
+                </>
+                // De un contacto borrado: se ve, pero ya no hay ficha que abrir
+                return a.contactId
+                  ? <Link className="activity-row" key={a.id} href={`/comercial?id=${a.contactId}`}>{body}</Link>
+                  : <div className="activity-row" key={a.id}>{body}</div>
+              })}
             </div>
           )}
         </div>

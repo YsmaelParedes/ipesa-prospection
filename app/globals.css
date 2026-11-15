@@ -775,6 +775,11 @@ a { color: inherit; text-decoration: none; }
 .cdlg-text { margin-top: 6px; font-size: 13px; line-height: 1.5; color: var(--ink-3); text-wrap: pretty; }
 .cdlg-text p { margin: 0; }
 .cdlg-text p + p { margin-top: 6px; }
+/* Lo que se elige antes de confirmar, alineado con el texto (después del ícono) */
+.cdlg-field { margin: 16px 0 0 50px; }
+.cdlg-field label { display: block; font-size: 12px; font-weight: 700; color: var(--ink-3); margin-bottom: 6px; }
+.cdlg-error { margin: 12px 0 0 50px; font-size: 12.5px; font-weight: 600; color: var(--danger); line-height: 1.45; }
+@media (max-width: 480px) { .cdlg-field, .cdlg-error { margin-left: 0; } }
 .cdlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 .cdlg-actions .btn { min-height: 38px; min-width: 96px; }
 @media (max-width: 480px) {

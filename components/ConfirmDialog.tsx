@@ -15,12 +15,17 @@ import { Trash2, TriangleAlert, type LucideIcon } from 'lucide-react'
  *   hasta que termine y muestra `busyLabel` mientras tanto.
  */
 export function ConfirmDialog({
-  open, title, children, confirmLabel, busyLabel, cancelLabel = 'Cancelar',
+  open, title, children, field, error, confirmLabel, busyLabel, cancelLabel = 'Cancelar',
   tone = 'danger', icon, busy = false, onConfirm, onCancel,
 }: {
   open: boolean
   title: string
+  /** La explicación (una o dos frases). */
   children?: React.ReactNode
+  /** Algo que elegir antes de confirmar (p. ej. a quién pasan los clientes). */
+  field?: React.ReactNode
+  /** Si la acción falló: la ventana sigue abierta y lo dice aquí. */
+  error?: string
   confirmLabel: string
   busyLabel?: string
   cancelLabel?: string
@@ -52,6 +57,8 @@ export function ConfirmDialog({
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        // Con un selector abierto dentro de la ventana, Esc solo cierra el selector
+        if (document.querySelector('.sel-panel')) return
         e.stopPropagation()
         if (!busy) onCancel()
         return
@@ -82,6 +89,8 @@ export function ConfirmDialog({
             {children && <div id={textId} className="cdlg-text">{children}</div>}
           </div>
         </div>
+        {field && <div className="cdlg-field">{field}</div>}
+        {error && <p className="cdlg-error" role="alert">{error}</p>}
         <div className="cdlg-actions">
           <button ref={cancelRef} type="button" className="btn btn-ghost" onClick={onCancel} disabled={busy}>{cancelLabel}</button>
           <button type="button" className={`btn ${tone === 'danger' ? 'btn-danger' : 'btn-dark'}`} onClick={onConfirm} disabled={busy}>

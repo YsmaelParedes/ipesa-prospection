@@ -3,13 +3,13 @@ import { getServerSupabase, getStoreMembers, getTestUserIds, requireStore } from
 import { storeDays, teamActivities } from '@/lib/storeActivity'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 import { fetchPaged } from '@/lib/paged'
-import { hasSellerGoals, sellerGoalsRequired, storeGoals } from '@/lib/commercialServer'
+import { hasSellerGoals, liveContactIds, sellerGoalsRequired, storeGoals } from '@/lib/commercialServer'
 import {
   EMAIL_RESULT_CHOICES, GOAL_KEYS, RESULT_CHOICES, RESULT_RULES, compliance, countActivities, goalsFor, parseGoals,
   parseGoalsConfig, type ActivityForCount,
 } from '@/lib/commercial'
 
-type Row = ActivityForCount & { user_id: string | null; contact_id: string; created_at: string }
+type Row = ActivityForCount & { user_id: string | null; contact_id: string | null; created_at: string }
 
 const byResult = (rows: Row[]) => [...new Set([...RESULT_CHOICES, ...EMAIL_RESULT_CHOICES])]
   .map(r => ({ result: r, label: RESULT_RULES[r].label, count: rows.filter(x => x.kind !== 'nota' && (x.result === r || (r === 'contactado' && x.result === 'interes'))).length }))
@@ -68,7 +68,7 @@ export async function GET() {
       })
 
     // Segmento solo de los contactos con actividad hoy (no hace falta leer toda la base)
-    const ids = Array.from(new Set(rows.filter(r => r.kind !== 'nota').map(r => r.contact_id)))
+    const ids = liveContactIds(rows.filter(r => r.kind !== 'nota'))
     const segmentOf = new Map<string, string>()
     for (let i = 0; i < ids.length; i += 150) {
       const { data, error } = await supabase.from('contacts').select('id, segment')
@@ -79,7 +79,7 @@ export async function GET() {
     const bySegment = new Map<string, number>()
     for (const r of rows) {
       if (r.kind === 'nota') continue
-      const s = segmentOf.get(r.contact_id) ?? 'Sin segmento'
+      const s = (r.contact_id && segmentOf.get(r.contact_id)) || 'Sin segmento'
       bySegment.set(s, (bySegment.get(s) ?? 0) + 1)
     }
     const day = countActivities(rows)

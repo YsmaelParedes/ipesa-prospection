@@ -11,7 +11,7 @@ import s from './comercial.module.css'
 export type AmountKind = 'quoted' | 'sold'
 type Status = 'abierta' | 'ganada' | 'perdida'
 type Item = {
-  id: string; contact_id: string; client: string; exists: boolean
+  id: string; contact_id: string | null; client: string; exists: boolean
   user_id: string | null; seller: string; amount: number; at: string; status?: Status
 }
 type Detail = { kind: AmountKind; total: number; items: Item[] }
@@ -102,7 +102,7 @@ export function AmountDetail({ kind, period, offset, title, onClose, onOpen }: {
   const noun = quoted ? (list.length === 1 ? 'cotización' : 'cotizaciones') : (list.length === 1 ? 'venta' : 'ventas')
 
   const open = (i: Item) => {
-    if (!i.exists) return
+    if (!i.exists || !i.contact_id) return
     if (sheet) onClose()
     onOpen(i.contact_id)
   }

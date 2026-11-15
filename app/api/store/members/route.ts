@@ -17,9 +17,19 @@ async function GETImpl() {
   const ctx = await requireStore({ admin: true })
   if (ctx instanceof Response) return ctx
   try {
-    const [members, main] = await Promise.all([getStoreMembers(ctx.storeId), getMainAdmin(ctx.storeId)])
+    const [members, main, owned] = await Promise.all([
+      getStoreMembers(ctx.storeId),
+      getMainAdmin(ctx.storeId),
+      // Clientes de cada quien: al quitarlo o desactivarlo se pregunta a quién pasan
+      getServerSupabase().rpc('store_owner_counts', { p_store: ctx.storeId }),
+    ])
+    if (owned.error) throw owned.error
+    const clients = new Map(((owned.data ?? []) as { owner_id: string; contacts: number }[]).map(r => [r.owner_id, Number(r.contacts)]))
     return NextResponse.json({
-      members: members.map(m => ({ ...m, isMe: m.user_id === ctx.uid, isMain: m.user_id === main, canManage: m.user_id !== ctx.uid && m.user_id !== main })),
+      members: members.map(m => ({
+        ...m, isMe: m.user_id === ctx.uid, isMain: m.user_id === main, canManage: m.user_id !== ctx.uid && m.user_id !== main,
+        clients: clients.get(m.user_id) ?? 0,
+      })),
     }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     return serverError('GET /api/store/members', error, 'No se pudo cargar el equipo')
@@ -33,7 +43,17 @@ async function targetMember(ctx: StoreContext, userId: unknown) {
   return data as { user_id: string; role: StoreRole; status: string } | null
 }
 
-// PATCH /api/store/members { userId, role?, status? }
+/**
+ * A quién pasan los clientes de quien se quita o desactiva: el id de alguien
+ * activo del equipo (la base lo revisa), o null / sin enviar = «sin asignar».
+ * false si el valor no sirve.
+ */
+function parseOwnerTo(value: unknown): string | null | false {
+  if (value === undefined || value === null) return null
+  return isUUID(value) ? value : false
+}
+
+// PATCH /api/store/members { userId, role?, status?, ownerTo? }
 export async function PATCH(req: NextRequest) {
   const ctx = await requireStore({ admin: true })
   if (ctx instanceof Response) return ctx
@@ -59,12 +79,15 @@ export async function PATCH(req: NextRequest) {
     updates.status = body.status
   }
   if (!Object.keys(updates).length) return jsonError('Nada que actualizar')
+  const ownerTo = parseOwnerTo(body.ownerTo)
+  if (ownerTo === false) return jsonError('Elige a quién pasan sus clientes')
 
   // Revalida rol y cupo bajo el mismo bloqueo que aceptar invitaciones.
-  // La revocación de invitaciones emitidas forma parte de esta transacción.
+  // La revocación de invitaciones emitidas y el traspaso de clientes forman parte de esta transacción.
   const { error } = await getServerSupabase().rpc('manage_store_member', {
     p_store: ctx.storeId, p_actor: ctx.uid, p_target: target.user_id,
     p_role: updates.role ?? null, p_status: updates.status ?? null, p_remove: false, p_plans: PLANS,
+    p_owner_to: ownerTo,
   })
   const known = rpcUserError(error)
   if (known) return jsonError(known.message, known.status)
@@ -73,7 +96,7 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json({ ok: true })
 }
 
-// DELETE /api/store/members { userId } — lo quita de esta tienda (su cuenta sigue existiendo)
+// DELETE /api/store/members { userId, ownerTo? } — lo quita de esta tienda (su cuenta sigue existiendo)
 export async function DELETE(req: NextRequest) {
   const ctx = await requireStore({ admin: true })
   if (ctx instanceof Response) return ctx
@@ -83,10 +106,13 @@ export async function DELETE(req: NextRequest) {
   if (!target) return jsonError('Usuario no encontrado', 404)
   if (target.user_id === ctx.uid) return jsonError('No puedes quitarte a ti mismo')
   if (target.user_id === await getMainAdmin(ctx.storeId)) return jsonError('Es el administrador principal de la tienda: nadie puede quitarlo ni cambiarle el acceso.', 403)
+  const ownerTo = parseOwnerTo(body?.ownerTo)
+  if (ownerTo === false) return jsonError('Elige a quién pasan sus clientes')
 
   const { error } = await getServerSupabase().rpc('manage_store_member', {
     p_store: ctx.storeId, p_actor: ctx.uid, p_target: target.user_id,
     p_role: null, p_status: null, p_remove: true, p_plans: PLANS,
+    p_owner_to: ownerTo,
   })
   const known = rpcUserError(error)
   if (known) return jsonError(known.message, known.status)

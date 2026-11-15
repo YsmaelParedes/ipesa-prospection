@@ -9,7 +9,8 @@ import s from './comercial.module.css'
 export type Metric = 'calls' | 'effective' | 'quotes' | 'followups' | 'sales'
 
 type Activity = {
-  id: string; contact_id: string; contact_name: string; kind: ActivityKind; result: string | null
+  /** null si el contacto se borró (contact_name ya lo dice) */
+  id: string; contact_id: string | null; contact_name: string; kind: ActivityKind; result: string | null
   note: string | null; quote_amount: number | null; sale_amount: number | null; is_followup: boolean; created_at: string
 }
 
@@ -80,7 +81,7 @@ export function DoneToday({ today, uid, initial, onOpen, onClose }: {
               : !list ? <div className={s.emptyList}>Cargando…</div>
               : shown.length === 0 ? <div className={s.emptyList}>Todavía no hay {current.label.toLowerCase()} hoy.</div>
               : shown.map(a => (
-                <button key={a.id} type="button" className={s.doneRow} onClick={() => onOpen(a.contact_id)}>
+                <button key={a.id} type="button" className={s.doneRow} disabled={!a.contact_id} onClick={() => { if (a.contact_id) onOpen(a.contact_id) }}>
                   <span className={`${s.num} ${s.doneHour}`}>{hour(a.created_at)}</span>
                   <span style={{ minWidth: 0 }}>
                     <span className={s.name}>{a.contact_name}</span>

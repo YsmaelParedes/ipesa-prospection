@@ -119,7 +119,8 @@ export async function downloadStoreWorkbook(slug: string, onStep?: (label: strin
     { name: 'Contactos', rows: contactRows(contacts) },
     { name: 'Historial comercial', rows: activities.map(a => ({
       'Fecha':          dateTime(a.created_at),
-      'Cliente':        contactName.get(a.contact_id) ?? '',
+      // Contacto borrado: el nombre que tenía (sus ventas y llamadas siguen contando)
+      'Cliente':        (a.contact_id && contactName.get(a.contact_id)) || (a.contact_name ? `${a.contact_name} (borrado)` : ''),
       'Tipo':           KIND_LABELS[a.kind as ActivityKind] ?? a.kind ?? '',
       'Resultado':      resultLabel(a.result),
       'Nota':           a.note || '',
