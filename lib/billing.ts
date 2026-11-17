@@ -74,6 +74,9 @@ export const subscriptionGivesPlan = (status: string | null | undefined) =>
 /** Precio de un plan para mostrar ("$499" al mes). */
 export type PlanPrice = { amount: number; currency: string; interval: string }
 
+/** Precio mensual de cada plan de paga (falta el que Stripe no tenga configurado). */
+export type PublicPrices = Partial<Record<PaidPlanId, PlanPrice>>
+
 export function formatPlanPrice(p: PlanPrice | null | undefined): string | null {
   if (!p) return null
   return new Intl.NumberFormat('es-MX', {

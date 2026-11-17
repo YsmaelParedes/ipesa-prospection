@@ -4,6 +4,7 @@ import { JsonLd } from '@/components/JsonLd'
 import { APP_NAME } from '@/lib/brand'
 import { CtaBand, Ic, PageHero, SectionHead } from '../_ui'
 import { PricingCards } from '../Pricing'
+import { getPublicPrices } from '@/lib/publicPrices'
 import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
@@ -33,7 +34,11 @@ const NEEDS = [
   { icon: Ic.contacts, title: 'Tu lista de clientes (opcional)', text: 'Si la tienes en Excel, la importas en un paso. Si no, empiezas desde cero.' },
 ]
 
-export default function ComoEmpezarPage() {
+// Los precios de Stripe van en el HTML: se regenera cada hora
+export const revalidate = 3600
+
+export default async function ComoEmpezarPage() {
+  const prices = await getPublicPrices()
   return (
     <>
       <JsonLd data={breadcrumbJsonLd('Cómo empezar', '/inicio/como-empezar')} />
@@ -60,7 +65,7 @@ export default function ComoEmpezarPage() {
       <section className={`${s.section} ${s.sectionAlt}`}>
         <div className={s.wrap}>
           <SectionHead title="Empieza gratis y cambia cuando quieras" sub="Pago mensual con tarjeta a través de Stripe. Sin plazos forzosos: cambias o cancelas desde tu CRM." />
-          <div style={{ marginTop: 44 }}><PricingCards /></div>
+          <div style={{ marginTop: 44 }}><PricingCards initial={prices} /></div>
         </div>
       </section>
 

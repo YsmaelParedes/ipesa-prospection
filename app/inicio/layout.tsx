@@ -9,7 +9,8 @@ import s from './inicio.module.css'
 /* Sitio de presentación (público): menú y pie compartidos por todas sus páginas. */
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className={s.lp}>
+    // data-public-site: "/" es esta portada sin sesión y el CRM con sesión; las estadísticas solo cuentan esta
+    <div className={s.lp} data-public-site="">
       <div className="brand-line" aria-hidden="true" />
       <a href="#contenido" className={s.skip}>Saltar al contenido</a>
       <SiteNav />

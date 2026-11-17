@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { BrandLogo } from '@/components/Brand'
 import { APP_NAME } from '@/lib/brand'
+import { EVENTS, trackAttrs } from '@/lib/analytics'
 import { NAV, type NavEntry } from './links'
 import s from './inicio.module.css'
 import { ChevronDown } from 'lucide-react'
@@ -115,7 +116,7 @@ export function SiteNav() {
           <Link href="/login" className={`${s.btn} ${s.btnGhost}`}>
             <span className={s.navFull}>Iniciar sesión</span><span className={s.navShort}>Entrar</span>
           </Link>
-          <Link href="/registro" className={`${s.btn} ${s.btnPrimary}`}>
+          <Link href="/registro" className={`${s.btn} ${s.btnPrimary}`} {...trackAttrs(EVENTS.signupClick, { donde: 'menu' })}>
             <span className={s.navFull}>Crear cuenta gratis</span><span className={s.navShort}>Crear cuenta</span>
           </Link>
           <button

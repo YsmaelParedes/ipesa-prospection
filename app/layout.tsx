@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Manrope, Outfit } from 'next/font/google'
 import { APP_NAME, APP_TAGLINE } from '@/lib/brand'
 import { SHARE_IMAGE, SITE_DESCRIPTION, SITE_URL } from '@/lib/site'
+import { Analytics } from '@/components/Analytics'
 import './globals.css'
 
 // Fuentes auto-hospedadas por Next (sin @import a Google Fonts que bloqueaba
@@ -52,7 +53,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={`${display.variable} ${body.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Analytics />
+      </body>
     </html>
   )
 }

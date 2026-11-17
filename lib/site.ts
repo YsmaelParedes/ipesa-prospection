@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
 import { APP_NAME, APP_TAGLINE } from './brand'
+import type { PublicPrices } from './billing'
+import { EMAILS } from './legal'
+import { PLANS } from './stores'
 
 /**
  * Datos del sitio público para buscadores (Google, redes al compartir un enlace).
@@ -65,8 +68,56 @@ export const SHARE_IMAGE = OG_IMAGE
 
 export const NO_INDEX: Metadata = { robots: { index: false, follow: false } }
 
+/**
+ * Los planes como ofertas (schema.org): Litro gratis y los de paga con su
+ * precio mensual de Stripe. Sin precios (Stripe falló) solo va Litro.
+ */
+function planOffers(prices: PublicPrices | null) {
+  const url = absoluteUrl('/inicio/precios')
+  const offers: object[] = [
+    { '@type': 'Offer', name: `Plan ${PLANS.litro.label}`, description: 'Gratis para siempre, sin tarjeta', price: 0, priceCurrency: 'MXN', url },
+  ]
+  for (const id of ['galon', 'cubeta'] as const) {
+    const p = prices?.[id]
+    if (!p) continue
+    const currency = p.currency.toUpperCase()
+    offers.push({
+      '@type': 'Offer', name: `Plan ${PLANS[id].label}`, price: p.amount, priceCurrency: currency, url,
+      // Cobro mensual por tienda, impuestos incluidos (así se anuncia en Precios)
+      priceSpecification: {
+        '@type': 'UnitPriceSpecification', price: p.amount, priceCurrency: currency,
+        billingDuration: 'P1M', unitCode: 'MON', valueAddedTaxIncluded: true,
+      },
+    })
+  }
+  return offers
+}
+
+/** El producto (SoftwareApplication) con sus planes; va en la portada y en Precios. */
+export function softwareAppJsonLd(prices: PublicPrices | null) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    '@id': `${SITE_URL}/#software`,
+    name: APP_NAME,
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web, Android, iOS',
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    inLanguage: 'es-MX',
+    publisher: { '@id': `${SITE_URL}/#organization` },
+    offers: planOffers(prices),
+    featureList: [
+      'Sistema Comercial: lista de llamadas del día, oportunidades y metas por vendedor',
+      'Contactos por zonas, con WhatsApp o teléfono fijo',
+      'Agenda y resumen diario en el celular',
+      'Bandeja de WhatsApp para todo el equipo, con cada chat ligado a su cliente (plan Cubeta)',
+    ],
+  }
+}
+
 /** Datos estructurados (JSON-LD) de la marca; van en la portada. */
-export function organizationJsonLd() {
+export function organizationJsonLd(prices: PublicPrices | null = null) {
   return [
     {
       '@context': 'https://schema.org',
@@ -76,6 +127,12 @@ export function organizationJsonLd() {
       url: SITE_URL,
       logo: `${SITE_URL}/icon-512.png`,
       description: SITE_DESCRIPTION,
+      email: EMAILS.hola,
+      areaServed: 'MX',
+      contactPoint: {
+        '@type': 'ContactPoint', contactType: 'customer support', email: EMAILS.soporte,
+        areaServed: 'MX', availableLanguage: 'es',
+      },
     },
     {
       '@context': 'https://schema.org',
@@ -87,24 +144,7 @@ export function organizationJsonLd() {
       inLanguage: 'es-MX',
       publisher: { '@id': `${SITE_URL}/#organization` },
     },
-    {
-      '@context': 'https://schema.org',
-      '@type': 'SoftwareApplication',
-      name: APP_NAME,
-      applicationCategory: 'BusinessApplication',
-      operatingSystem: 'Web, Android, iOS',
-      description: SITE_DESCRIPTION,
-      url: SITE_URL,
-      inLanguage: 'es-MX',
-      // Hay un plan gratis (Litro); los planes de paga se cobran al mes con tarjeta
-      offers: { '@type': 'Offer', price: '0', priceCurrency: 'MXN', description: 'Plan Litro gratis' },
-      featureList: [
-        'Sistema Comercial: lista de llamadas del día, oportunidades y metas por vendedor',
-        'Contactos por zonas, con WhatsApp o teléfono fijo',
-        'Agenda y resumen diario en el celular',
-        'Bandeja de WhatsApp para todo el equipo, con cada chat ligado a su cliente (plan Cubeta)',
-      ],
-    },
+    softwareAppJsonLd(prices),
     {
       // Video del hero: así Google puede mostrarlo en resultados de video
       '@context': 'https://schema.org',

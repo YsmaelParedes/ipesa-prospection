@@ -4,6 +4,8 @@ import { JsonLd } from '@/components/JsonLd'
 import Link from 'next/link'
 import { APP_NAME, APP_TAGLINE } from '@/lib/brand'
 import { PLANS } from '@/lib/stores'
+import { EVENTS, trackAttrs } from '@/lib/analytics'
+import { getPublicPrices } from '@/lib/publicPrices'
 import { CtaBand, Ic, MoreLink, SectionHead } from './_ui'
 import { DemoTabs } from './demos/DemoTabs'
 import { HeroVideo } from './demos/HeroVideo'
@@ -33,10 +35,14 @@ const STEPS = [
   { title: 'Invita a tu equipo', text: 'Manda a cada vendedor su enlace por WhatsApp o correo y a vender.' },
 ]
 
-export default function LandingPage() {
+// Los precios de Stripe van en el HTML (y en los datos estructurados): se regenera cada hora
+export const revalidate = 3600
+
+export default async function LandingPage() {
+  const prices = await getPublicPrices()
   return (
     <>
-      <JsonLd data={organizationJsonLd()} />
+      <JsonLd data={organizationJsonLd(prices)} />
       {/* ── Presentación ── */}
       <section className={s.hero}>
         <div className={`${s.wrap} ${s.heroGrid} ${s.heroStack}`}>
@@ -128,7 +134,7 @@ export default function LandingPage() {
       <section className={s.section}>
         <div className={s.wrap}>
           <SectionHead title="Empieza gratis, crece cuando quieras" sub="Pago mensual con tarjeta. Cambia o cancela cuando quieras desde tu CRM." />
-          <div style={{ marginTop: 44 }}><PricingCards /></div>
+          <div style={{ marginTop: 44 }}><PricingCards initial={prices} /></div>
           <div className={s.centerLink}><MoreLink href="/inicio/precios">Compara los planes</MoreLink></div>
         </div>
       </section>

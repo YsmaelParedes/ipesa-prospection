@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { EVENTS, track } from '@/lib/analytics'
 import type { ClientStore } from '@/lib/profile'
 import { invalidateSession } from '@/lib/profile'
 import { useCachedQuery } from '@/lib/useCachedQuery'
@@ -21,6 +22,8 @@ type Usage = { contacts: number; members: number }
 type Prices = { available: boolean; prices: Partial<Record<'galon' | 'cubeta', PlanPrice>> }
 
 const fmtCount = (n: number) => n.toLocaleString('es-MX')
+/** Plan que se fue a pagar a Stripe (para las estadísticas al volver). */
+const CHECKOUT_PLAN_KEY = 'matices:checkout-plan'
 
 /**
  * Configuración → Plan: plan actual con su uso, los tres planes y el cobro
@@ -42,6 +45,17 @@ export function PlanTab({ store }: { store: ClientStore }) {
     return () => timers.forEach(clearTimeout)
   }, [justPaid])
 
+  // Estadísticas: «Plan contratado» una sola vez al volver de Stripe (recargar no lo repite)
+  useEffect(() => {
+    if (!justPaid) return
+    try {
+      const plan = sessionStorage.getItem(CHECKOUT_PLAN_KEY)
+      if (!plan) return
+      sessionStorage.removeItem(CHECKOUT_PLAN_KEY)
+      track(EVENTS.planPurchased, { plan })
+    } catch {}
+  }, [justPaid])
+
   const sub = store.subscription
   const paying = !!sub && ['active', 'trialing', 'past_due'].includes(sub.status ?? '')
   const pastDue = sub?.status === 'past_due' || sub?.status === 'unpaid'
@@ -61,7 +75,11 @@ export function PlanTab({ store }: { store: ClientStore }) {
       setBusy('')
     }
   }
-  const checkout = (plan: 'galon' | 'cubeta') => go(plan, '/api/billing/checkout', { plan })
+  const checkout = (plan: 'galon' | 'cubeta') => {
+    track(EVENTS.checkoutStarted, { plan })
+    try { sessionStorage.setItem(CHECKOUT_PLAN_KEY, plan) } catch {}
+    return go(plan, '/api/billing/checkout', { plan })
+  }
   const portal = () => go('portal', '/api/billing/portal')
 
   const headline = readonly

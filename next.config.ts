@@ -75,6 +75,15 @@ const nextConfig: NextConfig = {
     ]
   },
 
+  // Estadísticas (Umami, ver lib/analytics.ts): el script se sirve desde
+  // matices.app para que los bloqueadores de anuncios no lo corten. Los
+  // envíos van a app/api/send/route.ts. UMAMI_SCRIPT_URL: otro servidor de Umami.
+  async rewrites() {
+    return [
+      { source: '/m.js', destination: process.env.UMAMI_SCRIPT_URL || 'https://cloud.umami.is/script.js' },
+    ]
+  },
+
   // Única fuente de verdad de las cabeceras (antes se duplicaban en
   // vercel.json y dos CSP distintas se aplicaban a la vez).
   async headers() {

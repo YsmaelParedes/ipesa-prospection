@@ -10,7 +10,8 @@
     "test:dashboard": "node --test tests/dashboard-queue-db.test.cjs tests/reserve-whatsapp-template-db.test.cjs tests/whatsapp-thread-state-db.test.cjs tests/keep-activities-db.test.cjs tests/inbox-search-db.test.cjs tests/reminders-contact-db.test.cjs tests/rename-catalog-db.test.cjs",
     "test:billing": "node --test tests/stripe-billing.test.cjs tests/stripe-billing-db.test.cjs",
     "test:retention": "node --test tests/store-retention-db.test.cjs",
-    "benchmark:api": "node scripts/benchmark-api.mjs"
+    "benchmark:api": "node scripts/benchmark-api.mjs",
+    "seo:indexnow": "node scripts/indexnow.mjs"
   },
   "dependencies": {
     "@icons-pack/react-simple-icons": "13.15.1",

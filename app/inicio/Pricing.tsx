@@ -5,29 +5,34 @@ import Link from 'next/link'
 import { formatPlanPrice, type PlanPrice } from '@/lib/billing'
 import { PLAN_COMPARE, PLAN_COPY } from '@/lib/planFeatures'
 import { PLANS, PUBLIC_PLANS } from '@/lib/stores'
+import { EVENTS, trackAttrs } from '@/lib/analytics'
+import type { PublicPrices } from '@/lib/billing'
 import { Ic } from './_ui'
 import { PlanIcon } from '@/components/PlanIcon'
 import s from './inicio.module.css'
 
-type Prices = Partial<Record<'galon' | 'cubeta', PlanPrice>>
-
-/** Precio mensual de Galón y Cubeta, leído de Stripe (null = aún no carga o no hay). */
-function usePrices(): Prices | null {
-  const [prices, setPrices] = useState<Prices | null>(null)
+/**
+ * Precio mensual de Galón y Cubeta (null = aún no carga o no hay). La página
+ * los trae de Stripe al generarse (`initial`, así Google los ve en el HTML);
+ * si no pudo, se piden aquí al abrirla.
+ */
+function usePrices(initial: PublicPrices | null): PublicPrices | null {
+  const [prices, setPrices] = useState<PublicPrices | null>(initial)
   useEffect(() => {
+    if (initial) return
     let alive = true
     fetch('/api/billing/prices')
       .then(r => r.json())
       .then(d => { if (alive) setPrices(d.prices ?? {}) })
       .catch(() => { if (alive) setPrices({}) })
     return () => { alive = false }
-  }, [])
+  }, [initial])
   return prices
 }
 
 /** Las tres tarjetas de planes del sitio (mismo estilo que la tarjeta de plan de antes). */
-export function PricingCards() {
-  const prices = usePrices()
+export function PricingCards({ initial = null }: { initial?: PublicPrices | null }) {
+  const prices = usePrices(initial)
   return (
     <div className={s.pricingGrid}>
       {PUBLIC_PLANS.map(id => {
@@ -51,7 +56,7 @@ export function PricingCards() {
             <ul className={s.planList}>
               {copy.features.map(f => <li key={f}><span className={s.bulletIcon}><Ic.check /></span>{f}</li>)}
             </ul>
-            <Link href="/registro" className={`${s.btn} ${copy.highlight ? s.btnPrimary : s.btnLight} ${s.priceBtn}`}>
+            <Link href="/registro" className={`${s.btn} ${copy.highlight ? s.btnPrimary : s.btnLight} ${s.priceBtn}`} {...trackAttrs(EVENTS.signupClick, { donde: `plan-${id}` })}>
               {id === 'litro' ? 'Crear cuenta gratis' : `Empezar con ${PLANS[id].label}`}
             </Link>
           </div>

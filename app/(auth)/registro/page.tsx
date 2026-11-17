@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { AuthAlert, AuthField, AuthHeader, AuthIcon, PasswordField, ResendConfirmation, SubmitButton } from '@/components/AuthUI'
 import { PLANS } from '@/lib/stores'
+import { EVENTS, track } from '@/lib/analytics'
 import { TURNSTILE_SITE_KEY, Turnstile, type TurnstileHandle } from '@/components/Turnstile'
 
 /**
@@ -37,6 +38,7 @@ export default function RegisterPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setError(data.error || 'No se pudo crear la cuenta.'); turnstile.current?.reset(); return }
+      track(EVENTS.accountCreated)
       if (data.needsConfirmation) setSentTo(email.trim().toLowerCase())
       else window.location.href = '/bienvenida'
     } catch {

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import Link from 'next/link'
+import { EVENTS, track } from '@/lib/analytics'
 import { CallDemo } from './CallDemo'
 import { ContactsDemo } from './ContactsDemo'
 import { TeamDemo } from './TeamDemo'
@@ -39,6 +40,15 @@ const DEMOS: Record<DemoKey, {
   },
 }
 const ORDER: DemoKey[] = ['call', 'contacts', 'team']
+
+/** Estadísticas: «Demo usada» la primera vez que alguien toca cada demo (por visita). */
+const DEMO_NAMES: Record<DemoKey, string> = { call: 'registrar-llamada', contacts: 'contactos', team: 'equipo' }
+const usedDemos = new Set<DemoKey>()
+function demoUsed(k: DemoKey) {
+  if (usedDemos.has(k)) return
+  usedDemos.add(k)
+  track(EVENTS.demoUsed, { demo: DEMO_NAMES[k] })
+}
 
 function Side({ k, link }: { k: DemoKey; link: boolean }) {
   const d = DEMOS[k]
@@ -79,7 +89,10 @@ export function DemoTabs({ bare = false }: { bare?: boolean }) {
         ))}
       </div>
       <div className={`${s.layout} ${bare ? s.single : ''}`}>
-        <div className={s.stage} role="tabpanel" id="demo-panel" aria-labelledby={`demo-tab-${active}`}>
+        <div
+          className={s.stage} role="tabpanel" id="demo-panel" aria-labelledby={`demo-tab-${active}`}
+          onPointerDownCapture={() => demoUsed(active)} onKeyDownCapture={() => demoUsed(active)}
+        >
           <Demo key={active} />
         </div>
         {!bare && <Side k={active} link />}
@@ -93,7 +106,7 @@ export function SingleDemo({ k }: { k: DemoKey }) {
   const { Demo } = DEMOS[k]
   return (
     <div className={s.layout}>
-      <div className={s.stage}><Demo /></div>
+      <div className={s.stage} onPointerDownCapture={() => demoUsed(k)} onKeyDownCapture={() => demoUsed(k)}><Demo /></div>
       <Side k={k} link={false} />
     </div>
   )

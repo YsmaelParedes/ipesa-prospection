@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { EVENTS, trackAttrs } from '@/lib/analytics'
 import s from './inicio.module.css'
 import {
   Users, Activity, Megaphone, FlaskConical, Bell, Check, ArrowRight, Plus, Store, ShieldCheck, Layers, KeyRound, UserPlus,
@@ -40,7 +41,7 @@ export function CtaBand({ title = 'Tu sucursal, organizada desde hoy', text = 'C
             <h2 className={s.h2}>{title}</h2>
             <p className={s.sub}>{text}</p>
             <div className={s.heroCtas}>
-              <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>Crear cuenta gratis <Ic.arrow className={s.btnArrow} /></Link>
+              <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`} {...trackAttrs(EVENTS.signupClick, { donde: 'banda-final' })}>Crear cuenta gratis <Ic.arrow className={s.btnArrow} /></Link>
               <Link href="/inicio/precios" className={`${s.btn} ${s.btnLight} ${s.btnLg}`}>Ver precios</Link>
             </div>
           </div>

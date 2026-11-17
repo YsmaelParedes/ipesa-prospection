@@ -3,6 +3,7 @@ import { breadcrumbJsonLd, pageMeta } from '@/lib/site'
 import { JsonLd } from '@/components/JsonLd'
 import Link from 'next/link'
 import { APP_NAME } from '@/lib/brand'
+import { EVENTS, trackAttrs } from '@/lib/analytics'
 import { CtaBand, Ic, PageHero } from '../_ui'
 import s from '../inicio.module.css'
 import { CheckCheck } from 'lucide-react'
@@ -28,7 +29,7 @@ export default function WhatsAppPage() {
         lead="Atiende el WhatsApp de tu tienda desde Matices: una sola bandeja para tu equipo, con cada chat ligado a su cliente, su historial y sus cotizaciones."
       >
         <div className={s.heroCtas}>
-          <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>Crear cuenta gratis <Ic.arrow className={s.btnArrow} /></Link>
+          <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`} {...trackAttrs(EVENTS.signupClick, { donde: 'whatsapp' })}>Crear cuenta gratis <Ic.arrow className={s.btnArrow} /></Link>
           <Link href="/inicio/precios" className={`${s.btn} ${s.btnLight} ${s.btnLg}`}>Ver el plan Cubeta</Link>
         </div>
       </PageHero>

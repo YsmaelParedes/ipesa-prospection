@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
-import { breadcrumbJsonLd, pageMeta } from '@/lib/site'
+import { breadcrumbJsonLd, faqJsonLd, pageMeta, softwareAppJsonLd } from '@/lib/site'
+import { getPublicPrices } from '@/lib/publicPrices'
 import { JsonLd } from '@/components/JsonLd'
 import { APP_NAME } from '@/lib/brand'
 import { PLANS } from '@/lib/stores'
@@ -10,7 +11,8 @@ import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
   title: `Precios del CRM para tiendas de pintura · ${APP_NAME}`,
-  description: 'Plan Litro gratis para empezar, Galón para vender en equipo y Cubeta para medir y dirigir a un equipo más grande. Pago mensual con tarjeta; cambia o cancela cuando quieras.',
+  // Hasta 160 caracteres: Google corta las descripciones más largas
+  description: 'Litro gratis para empezar, Galón para vender en equipo y Cubeta para dirigir un equipo más grande, con WhatsApp. Pago mensual con tarjeta, sin plazos forzosos.',
   path: '/inicio/precios',
 })
 
@@ -21,10 +23,14 @@ const NOTES = [
   { q: '¿Qué pasa si bajo de plan?', a: 'No se borra nada. Lo que pase del límite se conserva y lo sigues viendo; solo no puedes registrar más hasta volver a subir.' },
 ]
 
-export default function PreciosPage() {
+// Los precios de Stripe van en el HTML (y en los datos estructurados): se regenera cada hora
+export const revalidate = 3600
+
+export default async function PreciosPage() {
+  const prices = await getPublicPrices()
   return (
     <>
-      <JsonLd data={breadcrumbJsonLd('Precios', '/inicio/precios')} />
+      <JsonLd data={[breadcrumbJsonLd('Precios', '/inicio/precios'), softwareAppJsonLd(prices), faqJsonLd(NOTES)]} />
       <PageHero
         title={<>Empieza gratis, <span className={s.spectrumText}>crece cuando quieras</span></>}
         lead="Tres planes para cada etapa de tu tienda. Pago mensual con tarjeta, sin plazos forzosos."
@@ -32,7 +38,7 @@ export default function PreciosPage() {
 
       <section className={s.section}>
         <div className={s.wrap}>
-          <PricingCards />
+          <PricingCards initial={prices} />
           <p className={s.finePrint}>Precios por tienda, en pesos mexicanos (MXN) e impuestos incluidos. Si necesitas factura, escríbenos a <a href={`mailto:${EMAILS.facturacion}`}>{EMAILS.facturacion}</a>.</p>
         </div>
       </section>

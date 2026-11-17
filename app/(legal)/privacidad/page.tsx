@@ -89,6 +89,7 @@ const sections: LegalSection[] = [
           <li><strong>Stripe</strong>: cobro de los planes de paga (nombre de la tienda, correo del administrador y datos de la tarjeta, que tratamos solo a través de Stripe).</li>
           <li><strong>Meta Platforms</strong> (WhatsApp Business Platform): solo si tu tienda conecta su número, para enviar y recibir mensajes.</li>
           <li><strong>Servicios de notificaciones del navegador</strong> (por ejemplo, de Google, Apple o Mozilla): solo si activas los avisos en tu dispositivo.</li>
+          <li><strong>Umami</strong>: estadísticas de visitas a nuestro sitio, sin cookies y sin identificarte (ver «Cookies y tecnologías similares»).</li>
         </ul>
         <p>
           Algunos de estos proveedores pueden almacenar la información fuera de México. No vendemos ni rentamos tus
@@ -144,7 +145,15 @@ const sections: LegalSection[] = [
           Usamos únicamente cookies <strong>necesarias</strong> para mantener tu sesión iniciada y recordar la tienda
           activa, y el almacenamiento local de tu navegador para preferencias como los avisos que ya viste.
         </p>
-        <p>No usamos cookies de publicidad ni herramientas de rastreo de terceros. Puedes borrarlas desde tu navegador, pero sin ellas no podrás iniciar sesión.</p>
+        <p>
+          No usamos cookies de publicidad ni de rastreo. Para saber cuántas personas visitan nuestro sitio, de dónde
+          llegan y qué páginas les sirven usamos <strong>Umami</strong>, una herramienta de estadísticas que no usa
+          cookies ni te identifica: solo nos muestra totales, como visitas por página, país y tipo de dispositivo. Dentro
+          de la aplicación no registra las pantallas que usas; solo cuenta algunos pasos, como crear la cuenta o contratar
+          un plan, sin datos tuyos ni de tus clientes. Si tu navegador tiene activada la opción «No rastrear», no
+          registra nada.
+        </p>
+        <p>Puedes borrar las cookies desde tu navegador, pero sin ellas no podrás iniciar sesión.</p>
       </>
     ),
   },

@@ -36,6 +36,10 @@ const LIMIT_IP      = 600
 const LIMIT_GUEST   = 60
 const LIMIT_ACCESS  = 20
 const ACCESS_PATHS  = ['/api/auth/', '/api/invitations/', '/api/client-errors']
+// Estadísticas (Umami): su propio tope por IP, sin gastar el de la app. Los
+// envíos van sin cookies, así que de otro modo contarían como "sin sesión".
+const STATS_PATH    = '/api/send'
+const LIMIT_STATS   = 120
 
 // Webhooks/cron: los manda Meta o Vercel (pocas IPs, ráfagas legítimas) y
 // se autentican por firma/secreto, así que no pasan por el límite por IP.
@@ -93,7 +97,9 @@ export async function proxy(request: NextRequest) {
              ?? request.headers.get('x-real-ip')
              ?? 'unknown'
     const session = sessionKey(request)
-    const allowed = ACCESS_PATHS.some(p => pathname.startsWith(p))
+    const allowed = pathname === STATS_PATH
+      ? checkApiRateLimit(`stats:${ip}`, LIMIT_STATS)
+      : ACCESS_PATHS.some(p => pathname.startsWith(p))
       ? checkApiRateLimit(`access:${ip}`, LIMIT_ACCESS)
       : checkApiRateLimit(`ip:${ip}`, session ? LIMIT_IP : LIMIT_GUEST) && (!session || checkApiRateLimit(`s:${session}`, LIMIT_SESSION))
     if (!allowed) {
