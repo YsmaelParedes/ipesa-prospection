@@ -23,21 +23,11 @@ import { GRAPH_VERSION, graphFetch } from './whatsapp'
 import { externalFetch } from './serverTiming'
 import { getServerSupabase, invalidateStoreContextCache, type StoreContext } from './supabase-server'
 import { forgetStoreForPhone, getStoreWhatsAppRow } from './storeWhatsApp'
-import { WHATSAPP_OFFERED, planOf } from './stores'
+import { planOf } from './stores'
 import { META_ID, canRequestHistory, pickPhone, type SignupInput } from './whatsappSignupParse'
 
 export { parseSignupInput, canRequestHistory, type SignupInput } from './whatsappSignupParse'
 
-
-/**
- * ¿Esta tienda puede conectar WhatsApp sola? Con WHATSAPP_OFFERED, todas las
- * de un plan con WhatsApp; antes, solo las de prueba que estén en
- * WHATSAPP_SIGNUP_STORES (ids separados por coma).
- */
-export function whatsappSignupOpen(storeId: string): boolean {
-  if (WHATSAPP_OFFERED) return true
-  return (process.env.WHATSAPP_SIGNUP_STORES ?? '').split(',').map(s => s.trim()).includes(storeId)
-}
 
 /** Lo que la app de Meta necesita para abrir la ventana (todo es público). */
 export function signupConfig(): { appId: string; configId: string; version: string } | null {
@@ -112,7 +102,6 @@ async function unsubscribe(token: string, wabaId: string, storeId: string) {
 /** Conecta (o retoma) el número de la tienda. Devuelve el estado final. */
 export async function connectEmbedded(ctx: StoreContext, input: SignupInput) {
   if (!planOf(ctx.plan).whatsapp) throw new SignupError('WhatsApp está incluido en el plan Cubeta. Cambia de plan para conectarlo.', 402)
-  if (!whatsappSignupOpen(ctx.storeId)) throw new SignupError('Conectar WhatsApp estará disponible muy pronto.', 409)
   if (!hasEncryptionKey()) throw new SignupError('La conexión con Meta no está configurada todavía.', 503)
 
   const db = getServerSupabase()

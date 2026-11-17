@@ -31,21 +31,11 @@ export type StoreModules = Record<StoreModule, boolean>
  * Lo que la tienda puede usar es la combinación con su plan: effectiveModules().
  */
 /**
- * WhatsApp para tiendas nuevas: en desarrollo hasta que Meta apruebe el alta
- * en unos clics (Embedded Signup). Mientras sea false, ninguna tienda puede
- * pedirlo y el sitio y los planes lo muestran como "Próximamente". Las
- * tiendas que ya lo tienen encendido a mano (stores.modules.whatsapp, como
- * IPESA) siguen igual: esto no las toca.
+ * Cómo se marca WhatsApp cuando la tienda aún no lo tiene conectado: 'Por
+ * activar' si su plan lo incluye (Cubeta), o null si su plan no lo incluye.
+ * El administrador lo conecta él mismo en unos clics (Embedded Signup).
  */
-export const WHATSAPP_OFFERED = false
-
-/**
- * Cómo se marca WhatsApp cuando la tienda aún no lo tiene activo: 'Pronto'
- * mientras no se ofrece (salvo a quien ya puede conectarlo en unos clics),
- * 'Por activar' si su plan lo incluye, o null si su plan no lo incluye.
- */
-export function whatsappPendingTag(store: { whatsappSignup: boolean; planIncludesWhatsApp: boolean }): 'Pronto' | 'Por activar' | null {
-  if (!WHATSAPP_OFFERED && !store.whatsappSignup) return 'Pronto'
+export function whatsappPendingTag(store: { planIncludesWhatsApp: boolean }): 'Por activar' | null {
   return store.planIncludesWhatsApp ? 'Por activar' : null
 }
 

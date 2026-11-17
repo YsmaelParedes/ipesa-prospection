@@ -126,8 +126,7 @@ test('the Acumulado report has one row per seller, the store total and the compa
   assert.deepEqual(totals.at(-1), { 'Indicador': 'Cumplimiento %', 'Este periodo': 50, 'Periodo anterior': 26, 'Meta': 100 })
 })
 
-test('WhatsApp pendiente: Pronto mientras no se ofrece, salvo a quien puede conectarlo en unos clics', () => {
-  assert.equal(whatsappPendingTag({ whatsappSignup: false, planIncludesWhatsApp: true }), 'Pronto')
-  assert.equal(whatsappPendingTag({ whatsappSignup: true, planIncludesWhatsApp: true }), 'Por activar')
-  assert.equal(whatsappPendingTag({ whatsappSignup: true, planIncludesWhatsApp: false }), null)
+test('WhatsApp pendiente: «Por activar» si el plan lo incluye; si no, no hay etiqueta', () => {
+  assert.equal(whatsappPendingTag({ planIncludesWhatsApp: true }), 'Por activar')
+  assert.equal(whatsappPendingTag({ planIncludesWhatsApp: false }), null)
 })

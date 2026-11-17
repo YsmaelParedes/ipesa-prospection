@@ -330,9 +330,8 @@ Pantalla: ${pathname}`,
     : id === 'agenda' && dueCount > 0 ? { n: dueCount, cls: 'due' }
     : null
   const pendingSetup = (id: string) => id === 'whatsapp' && waOff
-  // WhatsApp en desarrollo: "Pronto". Cuando se ofrezca: en Cubeta "Por activar"; en Litro y Galón, el nombre del plan
-  // Sin el plan que lo incluye, el menú invita a Cubeta
-  const waTag = (store ? whatsappPendingTag(store) : 'Pronto') ?? 'Cubeta'
+  // En Cubeta, mientras no esté conectado: "Por activar". Sin el plan que lo incluye, el menú invita a Cubeta
+  const waTag = (store ? whatsappPendingTag(store) : null) ?? 'Cubeta'
 
   const navLink = (it: NavItem) => {
     const Ic = it.icon

@@ -3,7 +3,6 @@ import { breadcrumbJsonLd, faqJsonLd, pageMeta } from '@/lib/site'
 import { JsonLd } from '@/components/JsonLd'
 import { APP_NAME } from '@/lib/brand'
 import { PLANS } from '@/lib/stores'
-import { EMAILS } from '@/lib/legal'
 import { CtaBand, Ic, PageHero } from '../_ui'
 import s from '../inicio.module.css'
 
@@ -46,8 +45,8 @@ const GROUPS: { id: string; title: string; items: { q: string; a: string }[] }[]
   {
     id: 'whatsapp', title: 'WhatsApp',
     items: [
-      { q: '¿Matices tiene WhatsApp?', a: 'Muy pronto. Estamos terminando la conexión para que vincules el WhatsApp de tu tienda tú mismo, en unos clics. Estará en el plan Cubeta.' },
-      { q: '¿Cómo me entero cuando esté listo?', a: `Escríbenos a ${EMAILS.hola} y te avisamos. Si ya tienes cuenta, también lo verás en tu CRM.` },
+      { q: '¿Matices tiene WhatsApp?', a: 'Sí. En el plan Cubeta conectas el WhatsApp de tu tienda tú mismo, en unos clics desde Configuración, y todo tu equipo atiende los chats desde la misma bandeja.' },
+      { q: '¿Puedo seguir usando la app WhatsApp Business en mi celular?', a: 'Sí. Puedes conectar el número de tu app WhatsApp Business y seguir usándola en el celular al mismo tiempo. Al conectarlo se puede traer el historial reciente de tus chats.' },
       { q: '¿Meta cobra aparte?', a: 'WhatsApp Business Platform es de Meta y puede cobrar por los mensajes según sus tarifas vigentes.' },
     ],
   },

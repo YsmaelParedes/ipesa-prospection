@@ -3,27 +3,20 @@ import { breadcrumbJsonLd, pageMeta } from '@/lib/site'
 import { JsonLd } from '@/components/JsonLd'
 import Link from 'next/link'
 import { APP_NAME } from '@/lib/brand'
-import { EMAILS } from '@/lib/legal'
 import { CtaBand, Ic, PageHero } from '../_ui'
 import s from '../inicio.module.css'
 import { CheckCheck } from 'lucide-react'
 
-/*
- * WhatsApp está en desarrollo (ver WHATSAPP_OFFERED en lib/stores.ts):
- * esta página solo lo anuncia, sin demo ni forma de pedirlo.
- */
 export const metadata: Metadata = pageMeta({
-  title: `WhatsApp, próximamente · ${APP_NAME}`,
-  description: 'Muy pronto podrás atender el WhatsApp de tu tienda desde Matices, con todo tu equipo en la misma bandeja. Escríbenos y te avisamos cuando esté listo.',
+  title: `WhatsApp en tu CRM · ${APP_NAME}`,
+  description: 'Atiende el WhatsApp de tu tienda desde Matices, con todo tu equipo en la misma bandeja y cada chat ligado a su cliente. Lo conectas tú, en unos clics.',
   path: '/inicio/whatsapp',
 })
-
-const NOTIFY = `mailto:${EMAILS.hola}?subject=${encodeURIComponent('Avísenme cuando WhatsApp esté listo')}`
 
 const POINTS = [
   { icon: Ic.chat, tone: s.tWa, title: 'Una bandeja para todo el equipo', text: 'Los chats del número de tu tienda en el CRM, sin pasarse el celular.' },
   { icon: Ic.link, tone: s.tBrand, title: 'Cada chat con su cliente', text: 'Mientras respondes ves su historial, sus cotizaciones y su siguiente paso.' },
-  { icon: Ic.store, tone: s.tCyan, title: 'Lo conectas tú, en unos clics', text: 'Vinculas el número de tu tienda desde tu CRM, sin trámites técnicos.' },
+  { icon: Ic.store, tone: s.tCyan, title: 'Lo conectas tú, en unos clics', text: 'Vinculas el número de tu tienda desde Configuración, sin trámites técnicos. Si usas la app WhatsApp Business, puedes seguir usándola en tu celular.' },
 ]
 
 export default function WhatsAppPage() {
@@ -31,12 +24,12 @@ export default function WhatsAppPage() {
     <>
       <JsonLd data={breadcrumbJsonLd('WhatsApp', '/inicio/whatsapp')} />
       <PageHero
-        title={<><span className={s.waText}>WhatsApp</span> en tu CRM, <span className={s.spectrumText}>muy pronto</span></>}
-        lead="Estamos terminando la conexión para que vincules el WhatsApp de tu tienda tú mismo. Mientras, ordena tus ventas con el Sistema Comercial y tus Contactos."
+        title={<><span className={s.waText}>WhatsApp</span> en tu CRM, <span className={s.spectrumText}>con todo tu equipo</span></>}
+        lead="Atiende el WhatsApp de tu tienda desde Matices: una sola bandeja para tu equipo, con cada chat ligado a su cliente, su historial y sus cotizaciones."
       >
         <div className={s.heroCtas}>
-          <a href={NOTIFY} className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>Avísenme cuando esté listo <Ic.arrow className={s.btnArrow} /></a>
-          <Link href="/registro" className={`${s.btn} ${s.btnLight} ${s.btnLg}`}>Crear cuenta gratis</Link>
+          <Link href="/registro" className={`${s.btn} ${s.btnPrimary} ${s.btnLg}`}>Crear cuenta gratis <Ic.arrow className={s.btnArrow} /></Link>
+          <Link href="/inicio/precios" className={`${s.btn} ${s.btnLight} ${s.btnLg}`}>Ver el plan Cubeta</Link>
         </div>
       </PageHero>
 
@@ -65,7 +58,7 @@ export default function WhatsAppPage() {
             </div>
           </div>
           <div>
-            <h2 className={s.h2}>Lo que viene</h2>
+            <h2 className={s.h2}>Lo que te da</h2>
             <div className={s.pointList}>
               {POINTS.map(p => (
                 <div key={p.title} className={s.point}>
@@ -77,8 +70,8 @@ export default function WhatsAppPage() {
           </div>
         </div>
         <p className={s.finePrint}>
-          Estará incluido en el plan Cubeta. WhatsApp Business Platform es de Meta y está sujeto a sus
-          políticas; Meta puede cobrar por los mensajes según sus tarifas vigentes.
+          Incluido en el plan Cubeta. WhatsApp Business Platform es de Meta y está sujeto a sus políticas;
+          responderle a tus clientes no cuesta, y Meta puede cobrar por los mensajes que envías tú primero según sus tarifas vigentes.
         </p>
       </section>
 

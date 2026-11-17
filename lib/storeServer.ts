@@ -5,7 +5,6 @@ import { cookies } from 'next/headers'
 import type { User } from '@supabase/supabase-js'
 import { ACTIVE_STORE_COOKIE, STORE_COLUMNS, getServerSupabase, invalidateStoreContextCache, type StoreContext, type StoreRow } from './supabase-server'
 import { randomToken } from './crypto'
-import { whatsappSignupOpen } from './whatsappSignup'
 import {
   DEFAULT_CANALES, DEFAULT_MODULES, DEFAULT_PLAN, DEFAULT_SEGMENTS,
   effectiveModules, effectivePlan, normalizeModules, planOf, slugify, storeAccess,
@@ -60,7 +59,7 @@ export function publicStore(store: StoreRow) {
     /** El plan incluye la bandeja de WhatsApp (Cubeta); además hay que conectar el número */
     planIncludesWhatsApp: def.whatsapp,
     /** La tienda puede conectar su WhatsApp sola, en unos clics (Embedded Signup) */
-    whatsappSignup: def.whatsapp && whatsappSignupOpen(store.id),
+    whatsappSignup: def.whatsapp,
     /** Suscripción de Stripe: estado, próximo cobro y si se cancela al final del periodo */
     subscription: store.stripe_subscription_id ? {
       status: store.subscription_status,

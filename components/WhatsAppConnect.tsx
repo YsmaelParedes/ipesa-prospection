@@ -208,7 +208,7 @@ export function WhatsAppConnect() {
                 {phase === 'meta' ? 'Termina en la ventana de Meta…' : !setup || (!sdkReady && !unavailable && !error) ? 'Preparando…' : phase === 'error' ? 'Intentar otra vez' : 'Conectar con WhatsApp'}
               </button>
             )}
-            {unavailable && <p className="wa-connect-msg">Conectar WhatsApp estará disponible muy pronto.</p>}
+            {unavailable && <p className="wa-connect-msg">Por ahora no se puede conectar desde aquí. Escríbenos a soporte y lo resolvemos.</p>}
             <p className="wa-connect-note">Ten a la mano tu Facebook y el celular con el número. Responderle a tus clientes no cuesta; si les escribes tú primero con plantillas, Meta te cobra aparte. Te recomendamos hacerlo en computadora.</p>
           </div>
         </div>

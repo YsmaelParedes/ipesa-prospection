@@ -42,8 +42,7 @@ export const PLAN_COPY: Record<'litro' | 'galon' | 'cubeta', PlanCopy> = {
       'Reportes en Excel de actividad y ventas por vendedor',
       'Varios administradores para repartir el trabajo',
       'Te ayudamos a importar tu base y capacitamos a tu equipo',
-      // WhatsApp en desarrollo (WHATSAPP_OFFERED): se anuncia sin prometerlo
-      'Próximamente: WhatsApp',
+      'WhatsApp: los chats de tu tienda en el CRM, conectado por ti en unos clics',
     ],
   },
 }
@@ -62,7 +61,7 @@ export const PLAN_COMPARE: { label: string; values: Record<'litro' | 'galon' | '
   { label: 'Reportes en Excel por vendedor', values: { litro: false, galon: false, cubeta: true } },
   { label: 'Más de un administrador', values: { litro: false, galon: false, cubeta: true } },
   { label: 'Te ayudamos a importar tu base y capacitamos a tu equipo', values: { litro: false, galon: false, cubeta: true } },
-  { label: 'WhatsApp', values: { litro: false, galon: false, cubeta: 'Próximamente' } },
+  { label: 'WhatsApp: los chats de tu tienda en el CRM', values: { litro: false, galon: false, cubeta: true } },
 ]
 
 export const planName = (p: PlanId) => PLANS[p].label

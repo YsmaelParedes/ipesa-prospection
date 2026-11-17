@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireStore } from '@/lib/supabase-server'
 import { limitShared } from '@/lib/rateLimit'
 import { jsonError, readJson, serverError } from '@/lib/validation'
-import { SignupError, connectEmbedded, parseSignupInput, signupConfig, whatsappSignupOpen } from '@/lib/whatsappSignup'
+import { SignupError, connectEmbedded, parseSignupInput, signupConfig } from '@/lib/whatsappSignup'
 import { getStoreWhatsAppRow } from '@/lib/storeWhatsApp'
 import { planOf } from '@/lib/stores'
 
@@ -42,7 +42,7 @@ export async function GET() {
       ? { wabaId: row.waba_id, phoneNumberId: row.phone_number_id, coexistence: row.coexistence }
       : null
     return NextResponse.json({
-      open: whatsappSignupOpen(ctx.storeId) && planOf(ctx.plan).whatsapp,
+      open: planOf(ctx.plan).whatsapp,
       config: signupConfig(),
       pending,
     }, { headers: { 'Cache-Control': 'no-store' } })

@@ -36,6 +36,15 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.56.0',
+    date: '16 de noviembre, 2026',
+    title: 'WhatsApp ya es parte de Matices',
+    items: [
+      'En el plan Cubeta, un administrador conecta el WhatsApp de la tienda en Configuración › WhatsApp, en unos clics y sin ayuda técnica. Si usas la app WhatsApp Business, puedes seguir usándola en tu celular.',
+      'Cuando está conectado, todo el equipo atiende los chats desde WhatsApp en el menú, con cada conversación ligada a su cliente.',
+    ],
+  },
+  {
     version: '1.55.0',
     date: '15 de noviembre, 2026',
     title: 'Detalles que faltaban',

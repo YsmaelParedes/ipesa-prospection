@@ -24,7 +24,7 @@ export const PUBLIC_PAGES: { path: string; priority: number; changeFrequency: 'w
   { path: '/inicio/para-tu-tienda/distribuidores', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/inicio/funciones', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/inicio/precios', priority: 0.9, changeFrequency: 'monthly' },
-  { path: '/inicio/whatsapp', priority: 0.4, changeFrequency: 'monthly' },
+  { path: '/inicio/whatsapp', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/inicio/como-empezar', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/inicio/preguntas', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/registro', priority: 0.6, changeFrequency: 'yearly' },
@@ -102,6 +102,7 @@ export function organizationJsonLd() {
         'Sistema Comercial: lista de llamadas del día, oportunidades y metas por vendedor',
         'Contactos por zonas, con WhatsApp o teléfono fijo',
         'Agenda y resumen diario en el celular',
+        'Bandeja de WhatsApp para todo el equipo, con cada chat ligado a su cliente (plan Cubeta)',
       ],
     },
     {
