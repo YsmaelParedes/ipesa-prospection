@@ -337,7 +337,8 @@
 .navOpen .menuBtn span:nth-child(2) { opacity: 0; }
 .navOpen .menuBtn span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
 .menuBtn:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--brand-ring); }
-.mobileMenu { border-top: 1px solid var(--line); background: var(--card); box-shadow: 0 24px 40px -24px rgba(19, 19, 19, .3); animation: rise .2s ease both; }
+.mobileMenu { max-height: calc(100vh - 73px); max-height: calc(100dvh - 73px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; border-top: 1px solid var(--line); background: var(--card); box-shadow: 0 24px 40px -24px rgba(19, 19, 19, .3); animation: rise .2s ease both; }
+.mobileMenu[hidden] { display: none; }
 .mobileMenu > div { display: flex; flex-direction: column; padding-top: 10px; padding-bottom: 16px; }
 .mobileMenu a { padding: 13px 4px; border-bottom: 1px solid var(--line); font-size: 16px; font-weight: 700; color: var(--ink-2); }
 .mobileMenu a.navActive { color: var(--brand-strong); }

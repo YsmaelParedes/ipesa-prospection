@@ -34,6 +34,18 @@ export function SiteNav() {
   const entryActive = (e: NavEntry) => ('href' in e ? isActive(e.href) : e.groups.some(g => g.items.some(i => isActive(i.href))))
 
   useEffect(() => { setOpen(false); setMenu(null) }, [pathname])
+  // Con el menú de celular abierto la página de atrás no se mueve; el panel se desplaza solo.
+  // Si la pantalla crece (girar el celular) el menú de celular deja de existir: se cierra.
+  useEffect(() => {
+    if (!open) return
+    const wide = window.matchMedia('(min-width: 861px)')
+    const onWide = () => { if (wide.matches) setOpen(false) }
+    // Solo en <body>: si <html> también lleva overflow, el encabezado fijo deja de acompañar la pantalla
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    wide.addEventListener('change', onWide)
+    return () => { document.body.style.overflow = prev; wide.removeEventListener('change', onWide) }
+  }, [open])
   useEffect(() => {
     if (!open && !menu) return
     const onKey = (e: KeyboardEvent) => {
