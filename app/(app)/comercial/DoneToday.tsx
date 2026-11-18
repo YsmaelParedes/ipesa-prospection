@@ -5,6 +5,8 @@ import { apiFetch } from '@/lib/apiClient'
 import { KIND_LABELS, isEffective, resultLabel, type ActivityKind } from '@/lib/commercial'
 import { Ico, money } from './ui'
 import s from './comercial.module.css'
+import { DoneRowsSkeleton } from './Skeletons'
+import { SkText } from '@/components/Skeleton'
 
 export type Metric = 'calls' | 'effective' | 'quotes' | 'followups' | 'sales'
 
@@ -72,13 +74,13 @@ export function DoneToday({ today, uid, initial, onOpen, onClose }: {
           <div className={s.subTabs} role="group" aria-label="Medida">
             {METRICS.map(m => (
               <button key={m.key} type="button" className={`${s.subTab} ${s.press}`} aria-pressed={metric === m.key} onClick={() => setMetric(m.key)}>
-                {m.label} <small className={s.num}>{list ? list.filter(m.test).length : '—'}</small>
+                {m.label} <small className={s.num}>{list ? list.filter(m.test).length : <SkText w={16} inline />}</small>
               </button>
             ))}
           </div>
           <div className={`${s.elev} ${s.listCard}`}>
             {error ? <div className={s.emptyList} role="alert">{error}</div>
-              : !list ? <div className={s.emptyList}>Cargando…</div>
+              : !list ? <DoneRowsSkeleton />
               : shown.length === 0 ? <div className={s.emptyList}>Todavía no hay {current.label.toLowerCase()} hoy.</div>
               : shown.map(a => (
                 <button key={a.id} type="button" className={s.doneRow} disabled={!a.contact_id} onClick={() => { if (a.contact_id) onOpen(a.contact_id) }}>

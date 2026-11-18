@@ -19,6 +19,7 @@ import { CommercialTour } from './CommercialTour'
 import { commercialTour, type CommercialStep } from './tourSteps'
 import { Ico, bizName, useWide, whenPhrase, type TodayData } from './ui'
 import s from './comercial.module.css'
+import { AcumuladoSkeleton, ActividadSkeleton, CarteraSkeleton, HoySkeleton, OportunidadesSkeleton } from './Skeletons'
 
 const PATH = '/api/data/commercial'
 /** Prospectos nuevos por página y lo más que se pide de una vez (igual que el servidor). */
@@ -219,9 +220,12 @@ function ComercialContent() {
       {!data && loadError && !loading ? (
         <LoadFailed message={loadError} onRetry={() => { setLoading(true); load() }} />
       ) : loading || !data ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
-          <div style={{ width: 32, height: 32, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-        </div>
+        // La pestaña pedida (?tab=) con la forma que tendrá; las demás pestañas aparecen al cargar
+        tab === 'cartera' ? <CarteraSkeleton />
+          : tab === 'oportunidades' ? <OportunidadesSkeleton />
+          : tab === 'actividad' ? <ActividadSkeleton />
+          : tab === 'acumulado' ? <AcumuladoSkeleton />
+          : <HoySkeleton />
       ) : current === 'hoy' ? (
         <HoyView data={data} wide={wide} sub={sub} zone={zone} segment={segment} query={query} readonly={readonly} waModule={waModule} storeName={session?.store?.name} loadingMore={loadingMore}
           onSub={setSub} onZone={setZone} onSegment={setSegment} onQuery={setQuery} onClear={() => { setZone(''); setSegment(''); setQuery('') }}

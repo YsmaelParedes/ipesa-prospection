@@ -17,6 +17,8 @@ import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEve
 import { fmtAgo, fmtDue, greetingFor, isDueToday, isOverdue } from '@/lib/datetime'
 import { WhatsAppIcon } from '@/components/icons'
 import { LoadFailed } from '@/components/LoadFailed'
+import { SkText } from '@/components/Skeleton'
+import { DashboardSkeleton, TodayRowsSkeleton } from '@/components/skeletons/DashboardSkeleton'
 import { AlarmClock, Target, PartyPopper, Check, Phone, MessageCircle, Store, Mail, Pencil } from 'lucide-react'
 
 type Trend = { current: number; previous: number }
@@ -107,11 +109,7 @@ export default function DashboardPage() {
     if (r.ok) { setReminders(prev => prev?.filter(x => x.id !== id) ?? null); notifyDataChanged('reminder') }
   }
 
-  if (loading) return (
-    <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
-      <div style={{ width: 36, height: 36, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-    </div>
-  )
+  if (loading) return <DashboardSkeleton />
   if (!data && dashError) return <LoadFailed message={dashError} onRetry={() => { setLoading(true); loadDashboard(); loadReminders() }} />
 
 
@@ -163,11 +161,13 @@ export default function DashboardPage() {
             <span className="today-icon tone-amber"><AlarmClock size={19} /></span>
             <div>
               <h3>Para hoy</h3>
-              <p>{reminders === null ? 'Cargando…' : due.length ? `${due.length} recordatorio${due.length !== 1 ? 's' : ''}${overdueCount ? ` · ${overdueCount} vencido${overdueCount !== 1 ? 's' : ''}` : ''}` : 'Nada pendiente para hoy'}</p>
+              <p>{reminders === null ? <SkText w={150} /> : due.length ? `${due.length} recordatorio${due.length !== 1 ? 's' : ''}${overdueCount ? ` · ${overdueCount} vencido${overdueCount !== 1 ? 's' : ''}` : ''}` : 'Nada pendiente para hoy'}</p>
             </div>
             <Link href="/recordatorios" className="today-link">Agenda →</Link>
           </header>
-          {reminders !== null && due.length === 0 ? (
+          {reminders === null ? (
+            <TodayRowsSkeleton />
+          ) : due.length === 0 ? (
             <div className="today-empty">
               <span className="with-icon">Todo al día. <PartyPopper size={15} style={{ color: 'var(--brand)' }} /></span>
               {!readonly && <button className="link-btn" onClick={() => openQuickCreate({ kind: 'reminder' })}>Programar un recordatorio</button>}
@@ -248,7 +248,7 @@ export default function DashboardPage() {
             <div className="today-wa-stats">
               <div><strong className={wa.unreadConversations ? 'hot' : ''}>{wa.unreadConversations}</strong><span>sin leer</span></div>
               <div><strong>{wa.inboundToday}</strong><span>recibidos hoy</span></div>
-              {data?.isAdmin && <div><strong>{waUsage.data?.people24h ?? '—'}{waUsage.data?.dailyLimit != null && <small>/{waUsage.data.dailyLimit.toLocaleString('es-MX')}</small>}</strong><span>personas 24 h</span></div>}
+              {data?.isAdmin && <div><strong>{waUsage.loading ? <SkText w={28} inline /> : waUsage.data?.people24h ?? '—'}{waUsage.data?.dailyLimit != null && <small>/{waUsage.data.dailyLimit.toLocaleString('es-MX')}</small>}</strong><span>personas 24 h</span></div>}
             </div>
           </Link>
         )}

@@ -9,6 +9,7 @@ import { apiFetch } from '@/lib/apiClient'
 import { useEffect, useMemo, useState } from 'react'
 import type { WhatsAppTemplateDef } from '@/lib/whatsappTemplates'
 import { Select } from '@/components/Select'
+import { Loading, Sk, SkText } from '@/components/Skeleton'
 import { Check, Image, Reply, TriangleAlert } from 'lucide-react'
 
 const ImageIcon = () => <Image size={22} style={{ color: 'var(--muted-2)' }} aria-hidden="true" />
@@ -151,7 +152,7 @@ export function WhatsAppTemplatePicker({
       <div className="field">
         <label>Plantilla</label>
         {loadingTemplates ? (
-          <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Consultando plantillas aprobadas en Meta…</div>
+          <Loading label="Consultando plantillas aprobadas en Meta…"><Sk h={40} r={8} /></Loading>
         ) : templates.length === 0 ? (
           <div style={{ fontSize: 12.5, color: 'var(--danger)' }}>No hay plantillas aprobadas disponibles.</div>
         ) : (
@@ -202,7 +203,7 @@ export function WhatsAppTemplatePicker({
               <div>
                 <span style={labelStyle}>Imagen de encabezado *</span>
                 {checkingImage ? (
-                  <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Revisando…</div>
+                  <Loading label="Revisando…" style={{ fontSize: 12.5 }}><SkText w="70%" /></Loading>
                 ) : savedImageUrl && !replacingImage ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <span className="with-icon" style={{ fontSize: 12.5, color: 'var(--success)', fontWeight: 600 }}><Check size={14} strokeWidth={2.6} aria-hidden="true" /> Ya guardada, se reutiliza automáticamente</span>

@@ -10,7 +10,9 @@ import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEve
 import { MESES, QUICK_WHEN, isSameDay, pad, quickDate, toDbLocal, type QuickWhen } from '@/lib/datetime'
 import { addDays, type CommercialContact } from '@/lib/commercial'
 import { StatusChip } from '@/components/CommercialUI'
-import s from './agenda.module.css'
+import s from './agenda.module.css'
+import { AgendaListSkeleton } from './AgendaSkeleton'
+import { SkText } from '@/components/Skeleton'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { LoadFailed } from '@/components/LoadFailed'
 import { Plus, Check, Trash2, SquarePen, AlarmClock, ChevronRight, UserRound } from 'lucide-react'
@@ -295,7 +297,7 @@ export default function AgendaPage() {
         <div className={s.seg} role="tablist" aria-label="Recordatorios">
           {([{ key: 'pending', label: 'Pendientes', count: pendingCount }, { key: 'done', label: 'Completados', count: done.length }] as const).map(t => (
             <button key={t.key} role="tab" aria-selected={tab === t.key} className={s.press} onClick={() => setTab(t.key)}>
-              {t.label}{!loading && <span className={s.segN}>{t.count}</span>}
+              {t.label}{loading ? <SkText w={14} inline style={{ marginLeft: 5 }} /> : <span className={s.segN}>{t.count}</span>}
             </button>
           ))}
         </div>
@@ -315,9 +317,7 @@ export default function AgendaPage() {
       </div>
 
       {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
-          <div style={{ width: 28, height: 28, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-        </div>
+        <AgendaListSkeleton />
       ) : loadError && reminders.length === 0 && !commercial ? (
         <LoadFailed message={loadError} onRetry={() => { setLoading(true); load() }} />
       ) : tab === 'pending' ? (

@@ -4,7 +4,9 @@ import { useQueryEffect } from '@/lib/useCachedQuery'
 
 
 import { useCallback, useState } from 'react'
-import { Card, Ico, Note, Spinner, api, cx, send, useToast } from './ui'
+import { Card, Ico, Note, api, cx, send, useToast } from './ui'
+import { ChipsSkeleton } from './SettingsSkeleton'
+import { SkText } from '@/components/Skeleton'
 import s from './configuracion.module.css'
 import { PencilLine, X } from 'lucide-react'
 import { notifyDataChanged } from '@/lib/crmEvents'
@@ -134,7 +136,7 @@ export function CatalogsTab({ canEdit }: { canEdit: boolean }) {
           {CATALOGS.map(c => (
             <button key={c.type} type="button" role="tab" aria-selected={active === c.type}
               className={cx(s.catTab, active === c.type && s.catTabOn)} onClick={() => pick(c.type)}>
-              {c.title}<span className={s.catCount}>{lists ? lists[c.type].length : '…'}</span>
+              {c.title}<span className={s.catCount}>{lists ? lists[c.type].length : <SkText w={12} inline />}</span>
             </button>
           ))}
         </div>
@@ -153,7 +155,7 @@ export function CatalogsTab({ canEdit }: { canEdit: boolean }) {
           )}
           {error && <div className={s.error}>{error}</div>}
 
-          {!lists ? <Spinner /> : items.length === 0 ? (
+          {!lists ? <ChipsSkeleton /> : items.length === 0 ? (
             <div className={s.empty}>Aún no hay {cat.title.toLowerCase()}.</div>
           ) : (
             <ul className={s.chips}>

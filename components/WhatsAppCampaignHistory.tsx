@@ -17,6 +17,7 @@ import { Select } from '@/components/Select'
 import {
   FAILURE_KINDS, type CampaignBucket, type CampaignDetail, type CampaignRecipient, type CampaignSummary, type FailureKind,
 } from '@/lib/campaignKinds'
+import { CampaignDetailSkeleton, CampaignListSkeleton } from '@/components/skeletons/WhatsAppSkeleton'
 
 /** Contactos a los que se vuelve a mandar una plantilla (se preseleccionan en la pestaña Campañas). */
 export type CampaignRetry = { template: string; contactIds: string[]; label: string }
@@ -167,7 +168,7 @@ export function WhatsAppCampaignResults({ onRetry, onOpenChat }: {
       {error ? (
         <div className="wa-card wa-empty small"><WaIcon.alert size={20} />{error}</div>
       ) : !list ? (
-        <div className="wa-card wa-empty small"><span className="wa-spinner" /></div>
+        <CampaignListSkeleton />
       ) : list.length === 0 ? (
         <div className="wa-card wa-empty small"><WaIcon.chart size={26} /> No se han enviado campañas en este periodo.</div>
       ) : (
@@ -288,7 +289,7 @@ function CampaignDetailView({ id, onBack, onRetry, onOpenChat }: {
   )
 
   if (error) return <div className="wa-scroll">{back}<div className="wa-card wa-empty small"><WaIcon.alert size={20} />{error}</div></div>
-  if (!data) return <div className="wa-scroll">{back}<div className="wa-card wa-empty small"><span className="wa-spinner" /></div></div>
+  if (!data) return <div className="wa-scroll">{back}<CampaignDetailSkeleton /></div>
 
   const reached = data.read + data.delivered
   const chips: [Filter, string, number][] = [

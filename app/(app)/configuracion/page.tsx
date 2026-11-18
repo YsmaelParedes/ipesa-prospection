@@ -4,7 +4,8 @@ import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from '@/lib/profile'
 import { whatsappPendingTag, type StoreModule } from '@/lib/stores'
-import { Ico, SectionHead, Spinner, WhatsAppGlyph, cx } from './ui'
+import { Ico, SectionHead, WhatsAppGlyph, cx } from './ui'
+import { SettingsPageSkeleton } from './SettingsSkeleton'
 import { StoreTab } from './StoreTab'
 import { CatalogsTab } from './CatalogsTab'
 import { TeamTab } from './TeamTab'
@@ -38,7 +39,7 @@ const GROUPS = [{ id: 'cuenta', label: 'Tu cuenta' }, { id: 'tienda', label: 'Ti
 const ALIASES: Record<string, TabId> = { cuenta: 'perfil' }
 
 export default function ConfiguracionPage() {
-  return <Suspense fallback={<Spinner />}><Settings /></Suspense>
+  return <Suspense fallback={<SettingsPageSkeleton />}><Settings /></Suspense>
 }
 
 function Settings() {
@@ -69,7 +70,7 @@ function Settings() {
     }
   }, [tab, tabs.length])
 
-  if (!session || !store) return <Spinner />
+  if (!session || !store) return <SettingsPageSkeleton />
   const go = (id: TabId) => router.replace(`${pathname}?tab=${id}`, { scroll: false })
   const waHint = (t: Tab) => t.id === 'whatsapp' && !store.modules.whatsapp
     ? whatsappPendingTag(store)

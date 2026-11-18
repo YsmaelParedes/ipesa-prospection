@@ -13,6 +13,7 @@ import { WaIcon } from '@/components/WhatsAppUI'
 import { fmtPhone } from '@/lib/phone'
 import { csvStamp, downloadCsv } from '@/lib/csv'
 import { PERSON_STATES, PERSON_STATE_ORDER, type CampaignPerson, type PersonState } from '@/lib/campaignKinds'
+import { PeopleSkeleton } from '@/components/skeletons/WhatsAppSkeleton'
 
 type Filter = 'all' | PersonState
 
@@ -89,7 +90,7 @@ export function WhatsAppCampaignPeople({ onOpenChat }: { onOpenChat: (phone: str
   )
 
   if (error) return <>{head}<div className="wa-card wa-empty small"><WaIcon.alert size={20} />{error}</div></>
-  if (!people) return <>{head}<div className="wa-card wa-empty small"><span className="wa-spinner" /></div></>
+  if (!people) return <>{head}<PeopleSkeleton /></>
   if (people.length === 0) return <>{head}<div className="wa-card wa-empty small"><WaIcon.user size={26} /> Aún no le has enviado campañas a nadie.</div></>
 
   const exportList = () => downloadCsv(

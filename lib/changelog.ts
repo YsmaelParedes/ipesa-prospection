@@ -36,6 +36,15 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.57.0',
+    date: '17 de noviembre, 2026',
+    title: 'Pantallas de carga con la forma de tu información',
+    items: [
+      'Mientras carga, cada pantalla muestra en gris la forma de lo que va a aparecer: las mismas tarjetas, listas y tablas. Al llegar la información, nada cambia de lugar.',
+      'Si cierras sesión y vuelves a entrar en el mismo celular o computadora, tus avisos se activan solos. Ya no te vuelve a pedir activarlos.',
+    ],
+  },
+  {
     version: '1.56.0',
     date: '16 de noviembre, 2026',
     title: 'WhatsApp ya es parte de Matices',

@@ -8,6 +8,7 @@ import { WhatsAppCampaignResults } from '@/components/WhatsAppCampaignHistory'
 import { WaIcon } from '@/components/WhatsAppUI'
 import { WhatsAppOffer } from '@/components/WhatsAppOffer'
 import { useSession } from '@/lib/profile'
+import { InboxSkeleton } from '@/components/skeletons/WhatsAppSkeleton'
 
 type Tab = 'bandeja' | 'campanas' | 'resultados'
 
@@ -47,7 +48,7 @@ export default function WhatsAppPage() {
 
       {current === 'bandeja' && (
         // useSearchParams (chat abierto vía ?phone=) requiere un límite de Suspense
-        <Suspense fallback={<div className="wa-card wa-empty"><span className="wa-spinner" /></div>}>
+        <Suspense fallback={<InboxSkeleton />}>
           <WhatsAppInbox isAdmin={isAdmin} />
         </Suspense>
       )}

@@ -3,11 +3,14 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { queryCache, sessionScope, subscribeQueryStatus } from '@/lib/apiClient'
 import { useSession } from '@/lib/profile'
+import { usePathname } from 'next/navigation'
+import { RouteSkeleton } from '@/components/skeletons/RouteSkeleton'
 import { QueryError } from '@/lib/queryCache'
 
 /** Remount private views when their authorization scope changes. */
 export default function QueryBoundary({ children }: { children: ReactNode }) {
   const session = useSession()
+  const pathname = usePathname()
   const [failed, setFailed] = useState(false)
   const [expired, setExpired] = useState(false)
   const [denied, setDenied] = useState(false)
@@ -17,7 +20,7 @@ export default function QueryBoundary({ children }: { children: ReactNode }) {
     setExpired(queryCache.expired())
     setDenied(errors.some(error => error instanceof QueryError && error.status === 403))
   }), [])
-  if (!session) return <div role="status">Comprobando sesión…</div>
+  if (!session) return <RouteSkeleton pathname={pathname} />
   if (!session.store) return <p role="alert">Tu cuenta no tiene una tienda activa.</p>
   return <div key={sessionScope(session)} className="query-scope">
     {failed && !denied && <p role="status" className="alert alert-warning">No se pudieron actualizar algunos datos. Comprueba tu conexión; la información mostrada puede estar desactualizada.</p>}

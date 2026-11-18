@@ -9,6 +9,7 @@ import { Select } from '@/components/Select'
 import type { Opened } from './HoyView'
 import { bizName, fmtDay, localDay, money, type ListContact } from './ui'
 import s from './comercial.module.css'
+import { OportunidadesSkeleton } from './Skeletons'
 import { Check } from 'lucide-react'
 
 type Opportunity = ListContact & { owner_name: string | null; quote_amount: number; quoted_at: string | null; probability: number; days_idle: number | null }
@@ -56,7 +57,7 @@ export function OportunidadesView({ isAdmin, segments, onOpen }: { isAdmin: bool
   }, [data, segment])
 
   if (error) return <div className={`${s.elev} ${s.emptyList}`} role="alert">{error}</div>
-  if (!view) return <div className={`${s.elev} ${s.emptyList}`}>Cargando…</div>
+  if (!view) return <OportunidadesSkeleton filters={isAdmin || segments.length > 0} />
   const { totals } = view
 
   return (

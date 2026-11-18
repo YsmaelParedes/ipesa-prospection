@@ -11,6 +11,7 @@ import { openQuickCreate } from '@/lib/crmEvents'
 import { findContacts, type IndexContact } from '@/lib/searchIndex'
 import { fmtPhone } from '@/lib/phone'
 import { ChevronLeft, Search, X } from 'lucide-react'
+import { Loading, SkCircle, SkText, skRows, skWidth } from '@/components/Skeleton'
 
 const SearchIcon = () => <Search aria-hidden="true" />
 const BackIcon = () => <ChevronLeft aria-hidden="true" />
@@ -128,7 +129,18 @@ export default function GlobalSearch() {
       {!q.trim() ? (
         <div className="gsearch-hint">Busca clientes por nombre, teléfono o empresa.<span className="gsearch-kbd">Atajo: <kbd>/</kbd></span></div>
       ) : !ready ? (
-        <div className="gsearch-hint"><span className="wa-spinner sm" /> Buscando…</div>
+        <Loading label="Buscando…">
+          <div className="gsearch-section">Contactos</div>
+          {skRows(4, i => (
+            <div key={i} className="gsearch-item">
+              <SkCircle size={30} />
+              <span className="gsearch-main">
+                <strong><SkText w={skWidth(i, 0.6)} /></strong>
+                <small><SkText w={skWidth(i + 3, 0.45)} /></small>
+              </span>
+            </div>
+          ))}
+        </Loading>
       ) : (
         <>
           {items.length > 0 && items[0].type === 'create' && <div className="gsearch-hint">No hay contactos con “{q.trim()}”.</div>}

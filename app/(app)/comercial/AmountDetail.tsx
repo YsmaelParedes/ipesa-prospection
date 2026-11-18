@@ -7,6 +7,7 @@ import { useDataChanged } from '@/lib/crmEvents'
 import type { Period } from '@/lib/commercial'
 import { Ico, initials, useWide } from './ui'
 import s from './comercial.module.css'
+import { AmountRowsSkeleton } from './Skeletons'
 
 export type AmountKind = 'quoted' | 'sold'
 type Status = 'abierta' | 'ganada' | 'perdida'
@@ -139,7 +140,7 @@ export function AmountDetail({ kind, period, offset, title, onClose, onOpen }: {
   const body = error ? (
     <div className={s.emptyList} role="alert">{error}</div>
   ) : !data ? (
-    <div className={s.emptyList}>Cargando…</div>
+    <AmountRowsSkeleton />
   ) : list.length === 0 ? (
     <div className={s.emptyList}>{quoted ? 'No hubo cotizaciones en este periodo.' : 'No hubo ventas en este periodo.'}</div>
   ) : (

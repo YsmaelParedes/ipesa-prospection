@@ -14,6 +14,7 @@ import { RegisterForm, type Kind } from './RegisterForm'
 import { EmailButton } from './EmailButton'
 import { Ico, StatusChip, addressOf, bizName, fmtDay, initials, localDay, money, personName, whenPhrase, type ListContact } from './ui'
 import s from './comercial.module.css'
+import { ContactPaneSkeleton, HistorySkeleton } from './Skeletons'
 
 type Activity = {
   id: string; kind: ActivityKind; result: string | null; note: string | null
@@ -97,7 +98,7 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
   }
 
   if (!contact) {
-    const body = <div className="empty-state small">{error || 'Cargando…'}</div>
+    const body = error ? <div className="empty-state small">{error}</div> : <ContactPaneSkeleton />
     return variant === 'pane' ? <aside className={`${s.elev} ${s.pane}`}>{body}</aside> : <Overlay onClose={onClose}>{body}</Overlay>
   }
 
@@ -185,7 +186,7 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
 
       <div className={s.section}>
         <div className={s.sectionTitle}>Historial</div>
-        {history === null ? <div className={s.hMuted}>Cargando…</div> : history.length === 0 ? (
+        {history === null ? <HistorySkeleton /> : history.length === 0 ? (
           <div className={s.hMuted}>Todavía no hay actividades con este cliente.</div>
         ) : (
           <div className={s.history}>

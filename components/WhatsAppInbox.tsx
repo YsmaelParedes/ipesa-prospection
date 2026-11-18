@@ -27,6 +27,7 @@ import { ArrowDown, X } from 'lucide-react'
 import { useSession } from '@/lib/profile'
 import type { NoWhatsApp } from '@/lib/campaignKinds'
 import type { ConversationSummary, ThreadCommercial, ThreadContact, ThreadMessage, ThreadPayload } from '@/lib/whatsappThreadTypes'
+import { ConversationListSkeleton, CrmPanelSkeleton, PickListSkeleton, QuickRepliesSkeleton, ThreadSkeleton } from '@/components/skeletons/WhatsAppSkeleton'
 
 /* ══════════════════════════════════════════════════════════════════════════
    Tipos
@@ -222,7 +223,7 @@ export default function WhatsAppInbox({ isAdmin }: { isAdmin: boolean }) {
 
         <div className="wa-list">
           {loadingList ? (
-            <ListSkeleton />
+            <ConversationListSkeleton />
           ) : listError ? (
             <div className="wa-empty small"><WaIcon.alert size={22} /><div>{listError}</div><button className="btn btn-ghost" onClick={() => loadConversations()}>Reintentar</button></div>
           ) : conversations.length === 0 ? (
@@ -341,19 +342,6 @@ function ConversationRow({ c, active, onClick }: { c: Conversation; active: bool
         </span>
       </span>
     </button>
-  )
-}
-
-function ListSkeleton() {
-  return (
-    <div aria-hidden="true">
-      {Array.from({ length: 7 }).map((_, i) => (
-        <div className="wa-conv skeleton" key={i}>
-          <span className="sk sk-circle" />
-          <span className="wa-conv-main"><span className="sk sk-line" style={{ width: '55%' }} /><span className="sk sk-line" style={{ width: '80%', marginTop: 7 }} /></span>
-        </div>
-      ))}
-    </div>
   )
 }
 
@@ -499,7 +487,7 @@ function ChatView({
 
       <div className="wa-messages" ref={scrollRef} onScroll={onScroll}>
         {loading && !messages.length ? (
-          <div className="wa-thread-loading"><span className="wa-spinner" /></div>
+          <ThreadSkeleton />
         ) : messages.length === 0 ? (
           <div className="wa-empty small">
             <WaIcon.chat size={28} />
@@ -725,7 +713,7 @@ function Composer({ phone, windowOpen, isAdmin, firstName, onSend, onSendFile, o
             <div className="wa-quick" role="menu">
               <div className="wa-quick-head">Respuestas rápidas</div>
               {quick === null ? (
-                <div className="wa-quick-empty"><span className="wa-spinner sm" /></div>
+                <QuickRepliesSkeleton />
               ) : quick.length === 0 ? (
                 <div className="wa-quick-empty">Aún no hay respuestas rápidas.{isAdmin ? ' Créalas en Configuración → WhatsApp.' : ''}</div>
               ) : quick.map(q => (
@@ -784,7 +772,7 @@ function CrmPanel({ phone, thread, convo, onClose, onChanged, toast }: {
       </div>
 
       {!thread ? (
-        <div className="wa-thread-loading"><span className="wa-spinner" /></div>
+        <CrmPanelSkeleton />
       ) : contact ? (
         <>
           <section className="wa-panel-section wa-profile">
@@ -1088,7 +1076,7 @@ function NewConversationModal({ onClose, onPick }: { onClose: () => void; onPick
             </button>
           )}
           {loading ? (
-            <div className="wa-thread-loading"><span className="wa-spinner" /></div>
+            <PickListSkeleton />
           ) : filtered.length === 0 ? (
             <div className="wa-empty small">Sin contactos que coincidan.</div>
           ) : filtered.map(c => (

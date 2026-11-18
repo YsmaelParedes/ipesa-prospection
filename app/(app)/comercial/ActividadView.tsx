@@ -8,6 +8,7 @@ import { useDataChanged } from '@/lib/crmEvents'
 import { GOAL_KEYS, GOAL_LABELS, type DayCounts, type Goals } from '@/lib/commercial'
 import { Ico, initials, money, pct } from './ui'
 import s from './comercial.module.css'
+import { ActividadSkeleton } from './Skeletons'
 
 type Person = {
   user_id: string; name: string; role: string; goals: Goals; custom: boolean; owned: number
@@ -55,7 +56,7 @@ export function ActividadView({ reports }: { reports: boolean }) {
   useDataChanged(['commercial'], load)
 
   if (error) return <div className={`${s.elev} ${s.emptyList}`} role="alert">{error}</div>
-  if (!data) return <div className={`${s.elev} ${s.emptyList}`}>Cargando…</div>
+  if (!data) return <ActividadSkeleton />
   const maxResult = Math.max(1, ...data.byResult.map(r => r.count))
   const maxSegment = Math.max(1, ...data.bySegment.map(r => r.count))
 

@@ -6,6 +6,7 @@ import { AuthAlert, AuthHeader, AuthIcon, SubmitButton } from '@/components/Auth
 import { ROLE_LABELS } from '@/lib/stores'
 import { forgetPendingInvite, rememberPendingInvite } from '@/lib/pendingInvite'
 import { signOut } from '@/lib/signOut'
+import { Loading, Sk, SkText } from '@/components/Skeleton'
 
 type Info = {
   store: { name: string; logoUrl: string | null }
@@ -65,7 +66,25 @@ export default function InvitationPage({ params }: { params: Promise<{ token: st
       </>
     )
   }
-  if (!info) return <div className="auth-loading"><span className="auth-spinner dark" /></div>
+  if (!info) return (
+    // La misma forma que tendrá: título, la tienda que invita y el botón
+    <Loading label="Cargando la invitación…">
+      <div className="auth-head">
+        <div className="auth-bars" aria-hidden="true"><span /><span /><span /><span /></div>
+        <h1 className="auth-title"><SkText w="75%" /></h1>
+        <p className="auth-sub"><SkText w="90%" /></p>
+      </div>
+      <div className="invite-store">
+        <Sk w={46} h={46} r={8} />
+        <div style={{ flex: 1 }}>
+          <div className="invite-store-label"><SkText w={140} /></div>
+          <div className="invite-store-name"><SkText w="60%" /></div>
+          <div className="invite-store-role"><SkText w={100} /></div>
+        </div>
+      </div>
+      <Sk h={50} r={8} />
+    </Loading>
+  )
 
   const roleLabel = ROLE_LABELS[info.role].toLowerCase()
   const head = (

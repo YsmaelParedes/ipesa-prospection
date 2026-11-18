@@ -30,6 +30,9 @@ import { MessageText, StatusTicks, WindowBadge, fmtTime, mediaCaption } from '@/
 import { WhatsAppIcon } from '@/components/icons'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { LoadFailed } from '@/components/LoadFailed'
+import { Sk } from '@/components/Skeleton'
+import { ContactsPageSkeleton, ContactsTableSkeleton } from '@/components/skeletons/ContactsSkeleton'
+import { MiniThreadSkeleton } from '@/components/skeletons/WhatsAppSkeleton'
 import { X, Phone, Mail, Plus, Upload, Download, ChevronRight, Check, SquarePen, Trash2, Search, Send, TriangleAlert, UserRound } from 'lucide-react'
 
 /* ── Iconos (Lucide + logo de WhatsApp) ── */
@@ -74,7 +77,7 @@ type Facets = {
 
 export default function ContactosPage() {
   // useSearchParams (?id= ficha directa, ?q= búsqueda) requiere Suspense
-  return <Suspense fallback={null}><ContactosContent /></Suspense>
+  return <Suspense fallback={<ContactsPageSkeleton />}><ContactosContent /></Suspense>
 }
 
 function ContactosContent() {
@@ -305,7 +308,7 @@ function ContactosContent() {
           /* ── Cabecera normal ── */
           <>
             <h2>Contactos</h2>
-            {!loading && <span className="count">{filtersOn ? `${total.toLocaleString('es-MX')} de ${baseTotal.toLocaleString('es-MX')}` : baseTotal.toLocaleString('es-MX')}</span>}
+            {loading ? <Sk w={44} h={20} r={6} /> : <span className="count">{filtersOn ? `${total.toLocaleString('es-MX')} de ${baseTotal.toLocaleString('es-MX')}` : baseTotal.toLocaleString('es-MX')}</span>}
             <div className="section-actions">
               {canManage && <button className="btn btn-ghost" onClick={() => setShowImport(true)} title="Importar desde Excel o CSV"><Ico.upload /> <span className="hide-sm">Importar</span></button>}
               {isAdmin && <button className="btn btn-ghost" onClick={() => setShowExport(true)} disabled={!baseTotal} title="Exportar a Excel"><Ico.download /> <span className="hide-sm">Exportar</span></button>}
@@ -323,6 +326,8 @@ function ContactosContent() {
           {search && <button onClick={() => setSearch('')} aria-label="Limpiar búsqueda"><X size={15} /></button>}
         </label>
         <div className="filter-bar">
+          {/* Los filtros salen de los datos: mientras llegan, su lugar en gris */}
+          {!facets && loading && [96, 76, 70, 92].map((w, i) => <Sk key={i} w={w} h={32} r={6} />)}
           {segmentOptions.length > 0 && (
             <FilterDropdown value={segF} options={segmentOptions} onChange={setSegF}
               countFor={v => v === 'Todos' ? baseTotal : (facets?.segment[v] ?? 0)}
@@ -351,9 +356,7 @@ function ContactosContent() {
       </div>
 
       {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
-          <div style={{ width: 32, height: 32, border: '3px solid var(--line)', borderTopColor: 'var(--brand)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-        </div>
+        <ContactsTableSkeleton selectable={canManage} />
       ) : loadError && filtered.length === 0 ? (
         <LoadFailed message={loadError} onRetry={() => { setLoading(true); load('reset') }} />
       ) : filtered.length === 0 ? (
@@ -732,7 +735,7 @@ function ContactWhatsApp({ contact: c, readonly, onUpdated }: { contact: any; re
       </div>
       <div className="wa-mini">
         {data === null ? (
-          <div className="wa-thread-loading" style={{ padding: 18 }}><span className="wa-spinner sm" /></div>
+          <MiniThreadSkeleton />
         ) : data.messages.length === 0 ? (
           <div className="wa-muted-box" style={{ margin: 10 }}>Aún no hay conversación de WhatsApp con este contacto.</div>
         ) : (

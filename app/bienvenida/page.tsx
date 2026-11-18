@@ -13,6 +13,7 @@ import { Select, toOptions } from '@/components/Select'
 import { pendingInvite } from '@/lib/pendingInvite'
 import { signOut } from '@/lib/signOut'
 import s from './bienvenida.module.css'
+import { Loading, Sk, SkText } from '@/components/Skeleton'
 import { WhatsAppIcon } from '@/components/icons'
 import {
   LayoutDashboard, Users, Activity, MessageCircle, Clock, FlaskConical, Settings, Megaphone, Upload, Copy, ArrowLeft,
@@ -70,8 +71,45 @@ export default function WelcomePage() {
   return <Suspense fallback={<Loader />}><Wizard /></Suspense>
 }
 
+/** Mientras se comprueba la sesión: la misma página (encabezado, pasos y tarjeta), en gris. */
 function Loader() {
-  return <div className={s.loader}><span className="auth-spinner dark" /></div>
+  return (
+    <Loading label="Cargando…" className={s.page}>
+      <div className="brand-line" aria-hidden="true" />
+      <header className={s.top}>
+        <BrandLogo className={s.logo} />
+        <div className={s.topRight}><SkText w={180} inline /></div>
+      </header>
+      <div className={s.stepperWrap}>
+        <ol className={s.stepper}>
+          {STEPS.map((st, i) => (
+            <li key={st.title} className={cx(s.step, i === 0 && s.stepCurrent)}>
+              <span className={s.stepNum}>{i + 1}</span>
+              <span className={s.stepText}><strong>{st.title}</strong><small>{st.desc}</small></span>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <main className={s.main}>
+        <div className={s.layout}>
+          <section className={s.card}>
+            <div className={s.head}>
+              <span className={s.kicker}><SkText w={90} /></span>
+              <h1><SkText w="60%" /></h1>
+              <p><SkText w="90%" /><SkText w="55%" /></p>
+            </div>
+            {[0, 1, 2].map(i => (
+              <div key={i} style={{ marginBottom: 16 }}>
+                <span className={s.fieldLabel}><SkText w={110} /></span>
+                <Sk h={42} r={8} />
+              </div>
+            ))}
+          </section>
+          <aside className={s.aside}><Sk h={260} r={12} /></aside>
+        </div>
+      </main>
+    </Loading>
+  )
 }
 
 function Wizard() {

@@ -9,8 +9,9 @@ import { APP_NAME } from '@/lib/brand'
 import type { ClientStore } from '@/lib/profile'
 import { PLANS, ROLE_LABELS, type StoreRole } from '@/lib/stores'
 import { Select } from '@/components/Select'
-import { Card, Ico, Note, Spinner, WhatsAppGlyph, api, avatarTone, copyText, cx, fmtDate, initialsOf, send, useToast } from './ui'
+import { Card, Ico, Note, WhatsAppGlyph, api, avatarTone, copyText, cx, fmtDate, initialsOf, send, useToast } from './ui'
 import s from './configuracion.module.css'
+import { MembersSkeleton } from './SettingsSkeleton'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 
 type Member = {
@@ -207,7 +208,7 @@ export function TeamTab({ store }: { store: ClientStore }) {
         {(inviteOpen || newLink) && inviteForm}
         {!inviteOpen && !newLink && error && <div className={cx(s.error, s.padX)}>{error}</div>}
 
-        {!members ? <Spinner /> : (
+        {!members ? <MembersSkeleton /> : (
           <ul className={s.members}>
             {members.map(m => {
               const name = m.display_name || m.email

@@ -68,7 +68,73 @@ export async function enableDevicePush(notifyWhatsapp?: boolean): Promise<Notifi
   return permission
 }
 
-export async function disableDevicePush() {
+/* ── Reactivar los avisos al volver a entrar ──
+ * Al cerrar sesión se dan de baja los avisos de este dispositivo: en un equipo
+ * compartido, quien entre después no debe recibir los de la persona anterior.
+ * Aquí se anota quién los tenía activos para reactivarlos sin preguntar cuando
+ * ESA persona vuelva a entrar en este navegador (el permiso ya lo había dado).
+ * Otra persona que entre en el mismo equipo los activa ella misma.
+ */
+const RESUME_KEY = 'crm:push:resume'
+const RESUME_MAX_AGE_MS = 180 * 86_400_000
+type ResumeMap = Record<string, { notifyWhatsapp: boolean; at: number }>
+
+function readResume(): ResumeMap {
+  try {
+    const value = JSON.parse(window.localStorage.getItem(RESUME_KEY) || '{}')
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeResume(map: ResumeMap) {
+  try {
+    if (Object.keys(map).length) window.localStorage.setItem(RESUME_KEY, JSON.stringify(map))
+    else window.localStorage.removeItem(RESUME_KEY)
+  } catch {}
+}
+
+/** Al cerrar sesión: anota que esta persona tenía los avisos activos aquí (y si quería los de WhatsApp). */
+export async function rememberDevicePush(userId: string, endpoint: string) {
+  const res = await fetch(`/api/push/subscribe?endpoint=${encodeURIComponent(endpoint)}`).catch(() => null)
+  const d = res?.ok ? await res.json().catch(() => null) : null
+  if (!d?.subscribed) return
+  writeResume({ ...readResume(), [userId]: { notifyWhatsapp: d.notifyWhatsapp !== false, at: Date.now() } })
+}
+
+/** Ya no reactivarlos solos (los apagó a propósito). */
+export function forgetDevicePush(userId: string) {
+  const map = readResume()
+  if (!map[userId]) return
+  delete map[userId]
+  writeResume(map)
+}
+
+/**
+ * Al entrar: si esta persona tenía los avisos en este dispositivo y el navegador
+ * conserva el permiso, se vuelven a activar sin mostrarle la sugerencia.
+ */
+export async function resumeDevicePush(userId: string): Promise<boolean> {
+  const saved = readResume()[userId]
+  if (!saved) return false
+  if (Date.now() - saved.at > RESUME_MAX_AGE_MS || typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+    forgetDevicePush(userId)
+    return false
+  }
+  try {
+    const sub = (await currentSubscription()) ?? (await subscribeDevice())
+    await saveSubscription(sub, saved.notifyWhatsapp)
+    forgetDevicePush(userId)
+    notifyPushChanged()
+    return true
+  } catch {
+    return false  // se queda la sugerencia para activarlos con un toque
+  }
+}
+
+export async function disableDevicePush(userId?: string) {
+  if (userId) forgetDevicePush(userId)
   const sub = await currentSubscription()
   if (sub) {
     await fetch('/api/push/subscribe', {

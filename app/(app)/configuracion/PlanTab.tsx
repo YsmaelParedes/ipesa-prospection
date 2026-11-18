@@ -9,6 +9,7 @@ import { useCachedQuery } from '@/lib/useCachedQuery'
 import { formatPlanPrice, type PlanPrice } from '@/lib/billing'
 import { PLAN_COPY } from '@/lib/planFeatures'
 import { PlanIcon } from '@/components/PlanIcon'
+import { SkText } from '@/components/Skeleton'
 import { EMAILS } from '@/lib/legal'
 import { PLANS, PUBLIC_PLANS, STATUS_LABELS } from '@/lib/stores'
 import { Card, CardFoot, Ico, Note, Row, api, cx, fmtDate, send } from './ui'
@@ -137,7 +138,7 @@ export function PlanTab({ store }: { store: ClientStore }) {
               const pct = m.max && m.used !== undefined ? Math.min(100, (m.used / m.max) * 100) : 0
               return (
                 <div key={m.label} className={s.meter}>
-                  <div className={s.meterTop}><span>{m.label}</span><strong>{m.used === undefined ? '…' : `${fmtCount(m.used)} de ${m.max === null ? 'sin límite' : fmtCount(m.max)}`}</strong></div>
+                  <div className={s.meterTop}><span>{m.label}</span><strong>{m.used === undefined ? <SkText w={90} /> : `${fmtCount(m.used)} de ${m.max === null ? 'sin límite' : fmtCount(m.max)}`}</strong></div>
                   {m.max !== null && <div className={cx(s.meterBar, pct >= 100 ? s.meterFull : pct >= 80 && s.meterHigh)}><i style={{ width: `${pct}%` }} /></div>}
                 </div>
               )

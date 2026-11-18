@@ -8,6 +8,8 @@ import { apiFetch } from '@/lib/apiClient'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Select } from '@/components/Select'
+import { SkText } from '@/components/Skeleton'
+import { FormulaRowsSkeleton } from '@/components/skeletons/FormulasSkeleton'
 import { ChevronLeft, Search, TriangleAlert, X } from 'lucide-react'
 
 /* ══════════════════════════════════════════════════════════
@@ -76,6 +78,8 @@ export default function FormulasPage() {
   const [results, setResults]       = useState<FormulaColor[]>([])
   const [matchCount, setMatchCount] = useState(0)
   const [loading, setLoading]       = useState(false)
+  // Ya llegó la primera lista de colores (o no hay catálogos): antes, la lista va en gris
+  const [ready, setReady]           = useState(false)
   const [selected, setSelected]     = useState<FormulaColor | null>(null)
 
   const [volumeValue, setVolumeValue] = useState<string>('1')
@@ -91,8 +95,9 @@ export default function FormulasPage() {
       .then(d => {
         setCatalogs(d.catalogs || [])
         if (d.catalogs?.[0]) setCatalogId(current => current || d.catalogs[0].id)
+        else setReady(true)
       })
-      .catch(() => {})
+      .catch(() => setReady(true))
   }, [])
 
   const runSearch = useCallback((id: string, q: string) => {
@@ -107,7 +112,7 @@ export default function FormulasPage() {
         setMatchCount(d.matchCount ?? 0)
       })
       .catch(() => { /* Keep the last valid colors; the shared query status reports the failure. */ })
-      .finally(() => { if (req === reqRef.current) setLoading(false) })
+      .finally(() => { if (req === reqRef.current) { setLoading(false); setReady(true) } })
   }, [])
 
   /* Búsqueda con debounce */
@@ -126,13 +131,14 @@ export default function FormulasPage() {
   }, [volumeValue, volumeUnit])
 
   const activeCatalog = catalogs.find(c => c.id === catalogId)
+  const pending = !ready || (loading && results.length === 0)
 
   return (
     <>
       <div className="section-head">
         <h2>Fórmulas</h2>
         <span className="count">
-          {activeCatalog ? `${activeCatalog.productLine} · ${activeCatalog.fandeck} · ${activeCatalog.colorCount} colores` : ''}
+          {activeCatalog ? `${activeCatalog.productLine} · ${activeCatalog.fandeck} · ${activeCatalog.colorCount} colores` : !ready ? <SkText w={220} inline /> : ''}
         </span>
       </div>
 
@@ -169,7 +175,7 @@ export default function FormulasPage() {
           </div>
 
           <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-            {loading ? 'Buscando…' : query ? `${matchCount} resultado${matchCount !== 1 ? 's' : ''}` : `Primeros ${results.length} colores`}
+            {pending ? <SkText w={120} /> : loading ? 'Buscando…' : query ? `${matchCount} resultado${matchCount !== 1 ? 's' : ''}` : `Primeros ${results.length} colores`}
           </div>
 
           <div className="formulas-results" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -199,7 +205,8 @@ export default function FormulasPage() {
                 </button>
               )
             })}
-            {!loading && results.length === 0 && (
+            {pending && <FormulaRowsSkeleton />}
+            {!pending && !loading && results.length === 0 && (
               <div style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
                 Sin resultados para "{query}"
               </div>

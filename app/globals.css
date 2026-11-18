@@ -48,6 +48,10 @@
   --line: rgba(19, 19, 19, 0.08);
   --line-strong: rgba(19, 19, 19, 0.15);
 
+  /* Skeletons de carga */
+  --sk-base: var(--paper-2);
+  --sk-shine: #F8F8F9;
+
   --radius: 8px;
   --radius-sm: 6px;
   --radius-lg: 12px;
@@ -1256,7 +1260,6 @@ a { color: inherit; text-decoration: none; }
 .auth-submit:hover .auth-submit-arrow { transform: translateX(3px); }
 .auth-spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
 .auth-spinner.dark { width: 26px; height: 26px; border-color: var(--line-strong); border-top-color: var(--brand); }
-.auth-loading { display: grid; place-items: center; padding: 48px 0; }
 
 .auth-alert { display: flex; gap: 10px; align-items: flex-start; padding: 11px 13px; border-radius: 8px; font-size: 13.5px; line-height: 1.5; margin-bottom: 14px; }
 .auth-alert-icon { width: 17px; height: 17px; flex-shrink: 0; margin-top: 2px; }
@@ -1403,12 +1406,8 @@ a { color: inherit; text-decoration: none; }
 .wa-load-more { width: 100%; padding: 14px; font-size: 12.5px; font-weight: 700; color: var(--brand); }
 .wa-load-more:hover { background: var(--paper); }
 
-/* Skeleton */
+/* Skeleton de la bandeja (los estilos generales de .sk están en «Skeletons») */
 .wa-conv.skeleton { pointer-events: none; }
-.sk { display: block; background: linear-gradient(90deg, var(--paper) 25%, #EFE8DC 37%, var(--paper) 63%); background-size: 400% 100%; animation: sk 1.4s ease infinite; border-radius: 4px; }
-.sk-circle { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; }
-.sk-line { height: 11px; }
-@keyframes sk { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
 
 /* ── Chat ── */
 .wa-thread-card { position: relative; container: wa-thread / inline-size; }
@@ -1485,7 +1484,6 @@ a { color: inherit; text-decoration: none; }
   background: var(--ink); color: #fff; font-size: 12px; font-weight: 700; padding: 7px 14px; border-radius: 6px;
   box-shadow: var(--shadow-lg); animation: pop .18s ease;
 }
-.wa-thread-loading { flex: 1; display: grid; place-items: center; padding: 32px; }
 
 .wa-composer { border-top: 1px solid var(--line); padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; background: var(--card); flex-shrink: 0; }
 /* Archivo adjunto en el chat */
@@ -2505,3 +2503,19 @@ body.copy-guard img { -webkit-user-drag: none; }
 /* Iconos de librería (Lucide) dentro de texto o botones */
 .i-inline { width: 1.1em; height: 1.1em; vertical-align: -0.18em; flex-shrink: 0; }
 .with-icon { display: inline-flex; align-items: center; gap: 5px; }
+
+/* ── Skeletons: mientras carga, la misma forma que tendrá la información ──
+ * Van dentro de los mismos contenedores que el contenido real; .sk-text toma
+ * el tamaño de letra de su contenedor, así que mide lo mismo que el texto.
+ * La clase doble (.sk.sk) gana a reglas como «.wa-kpi span» del contenedor. */
+.sk.sk {
+  display: block; flex-shrink: 0; max-width: 100%; border-radius: 4px; padding: 0; border: 0;
+  background: linear-gradient(90deg, var(--sk-base) 25%, var(--sk-shine) 37%, var(--sk-base) 63%);
+  background-size: 400% 100%; animation: sk 1.4s ease infinite;
+}
+/* Alto de la letra y, arriba y abajo, lo que falta para el alto de línea (1lh) del contenedor */
+.sk.sk-text { font-size: inherit; height: 0.82em; margin: 0.34em 0; margin: max(0px, calc((1lh - 0.82em) / 2)) 0; }
+.sk.sk-inline { display: inline-block; vertical-align: middle; margin: 0; }
+.sk-busy { pointer-events: none; user-select: none; }
+@keyframes sk { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) { .sk.sk { animation: none; } }

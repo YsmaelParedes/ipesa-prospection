@@ -5,7 +5,8 @@ import { useCachedQuery, useQueryEffect } from '@/lib/useCachedQuery'
 
 import { useCallback, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Card, Ico, Note, Spinner, WhatsAppGlyph, api, cx, fmtDate, send, useToast } from './ui'
+import { Card, Ico, Note, WhatsAppGlyph, api, cx, fmtDate, send, useToast } from './ui'
+import { ItemsSkeleton, SettingRowsSkeleton } from './SettingsSkeleton'
 import { invalidateSession } from '@/lib/profile'
 import s from './configuracion.module.css'
 import { tierLabel } from '@/lib/whatsappSafety'
@@ -67,7 +68,7 @@ function ConnectionPanel() {
   }, [])
 
   if (error) return <Note kind="danger">{error}</Note>
-  if (!conn) return <Card title="Tu número"><Spinner /></Card>
+  if (!conn) return <Card title="Tu número"><SettingRowsSkeleton rows={2} /></Card>
 
   const disconnect = async () => {
     setDisconnecting(true)
@@ -238,7 +239,7 @@ function QuickRepliesPanel({ showToast }: { showToast: (m: string) => void }) {
   return (
     <Card title="Respuestas rápidas" description={<>Mensajes frecuentes que el equipo inserta en el chat con un clic. Usa <code>{'{nombre}'}</code> para el nombre del cliente.</>}
       actions={items && <span className={s.count}>{items.length}</span>}>
-      {!items ? <Spinner /> : (
+      {!items ? <ItemsSkeleton /> : (
         <ul className={s.list}>
           {items.length === 0 && <li className={s.empty}>Aún no hay respuestas. Ideas: «Horario», «Ubicación», «Formas de pago».</li>}
           {items.map(q => (

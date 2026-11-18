@@ -83,6 +83,11 @@ export function invalidateSession(broadcast = true) {
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(EVENT))
 }
 
+/** Quién tiene la sesión abierta ahora (sin pedirla de nuevo). */
+export function currentUserId(): string | null {
+  return sessionValue?.user.id ?? null
+}
+
 /** undefined = cargando · null = sin sesión */
 export function useSession(): Session | null | undefined {
   const [session, setSession] = useState<Session | null | undefined>(() => sessionValue)

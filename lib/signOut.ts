@@ -1,10 +1,12 @@
 import { broadcastContextChange, clearQueryCache } from './apiClient'
-import { invalidateSession } from './profile'
+import { currentUserId, invalidateSession } from './profile'
+import { rememberDevicePush } from './pushClient'
 
 /**
  * Cerrar sesión en el navegador. Antes da de baja las notificaciones push de
  * este dispositivo: en un equipo compartido, quien entre después no debe
  * recibir los avisos (nombres de clientes, mensajes) del usuario anterior.
+ * Se anota que esta persona los tenía, para reactivarlos cuando vuelva a entrar.
  */
 export async function signOut(redirectTo: string | null = '/login') {
   clearQueryCache()
@@ -18,6 +20,8 @@ export async function signOut(redirectTo: string | null = '/login') {
     const reg = await navigator.serviceWorker?.getRegistration()
     const sub = await reg?.pushManager.getSubscription()
     if (sub) {
+      const userId = currentUserId()
+      if (userId) await rememberDevicePush(userId, sub.endpoint).catch(() => {})
       await fetch('/api/push/subscribe', {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }),
       }).catch(() => {})

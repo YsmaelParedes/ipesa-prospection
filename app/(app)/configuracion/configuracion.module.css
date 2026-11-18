@@ -77,8 +77,6 @@
 .noteOk { background: var(--success-soft); color: #155C2D; border-color: #BDE7C9; }
 .error { margin-top: 8px; font-size: 12.5px; font-weight: 600; color: var(--danger); }
 .empty { margin: 12px 0; padding: 18px 14px; border-radius: 8px; background: var(--paper); text-align: center; font-size: 13px; color: var(--muted); }
-.spin { display: grid; place-items: center; padding: 28px 0; }
-.spin span { width: 22px; height: 22px; border: 2.5px solid var(--line-strong); border-top-color: var(--brand); border-radius: 50%; animation: spin .7s linear infinite; }
 
 /* ── Logo ── */
 .logoPreview {

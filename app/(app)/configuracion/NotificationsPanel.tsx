@@ -7,6 +7,8 @@ import { apiFetch } from '@/lib/apiClient'
 
 
 import { useState } from 'react'
+import { useSession } from '@/lib/profile'
+import { SkText } from '@/components/Skeleton'
 import { currentSubscription, disableDevicePush, enableDevicePush, pushSupport, testDevicePush } from '@/lib/pushClient'
 import { Card, Note, Row, cx } from './ui'
 import s from './configuracion.module.css'
@@ -22,6 +24,7 @@ const STATUS_LABEL: Record<Status, string> = {
  * se activa por separado.
  */
 export function NotificationsPanel() {
+  const userId = useSession()?.user.id
   const [status, setStatus]     = useState<Status>('loading')
   const [whatsapp, setWhatsapp] = useState(true)
   const [busy, setBusy]         = useState(false)
@@ -68,7 +71,7 @@ export function NotificationsPanel() {
   })
 
   const disable = () => run(async () => {
-    await disableDevicePush()
+    await disableDevicePush(userId)
     setStatus('off')
   })
 
@@ -101,7 +104,7 @@ export function NotificationsPanel() {
       <Card>
         <Row label="En este dispositivo" hint="Cada celular o computadora se activa por separado." align="center">
           <div className={s.controlLine}>
-            <span className={cx(s.badge, on ? s.bActive : status === 'blocked' ? s.bWarn : s.bMuted)}><i />{STATUS_LABEL[status]}</span>
+            <span className={cx(s.badge, on ? s.bActive : status === 'blocked' ? s.bWarn : s.bMuted)}><i />{status === 'loading' ? <SkText w={64} inline /> : STATUS_LABEL[status]}</span>
             <span className={s.grow} />
             {on && <button className="btn btn-ghost" onClick={() => run(test)} disabled={busy}>Enviar prueba</button>}
             <button className={on ? 'btn btn-ghost' : 'btn btn-primary'} onClick={on ? disable : enable} disabled={busy || status === 'loading'}>

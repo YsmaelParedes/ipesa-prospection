@@ -9,18 +9,13 @@ import { Select } from '@/components/Select'
 import { avatarColors } from './ContactPanel'
 import type { Opened } from './HoyView'
 import { Filters, StatusChip, bizName, initials, whenOf, type ListContact, type Member } from './ui'
+import { STAGES, type Stage } from './stages'
 import s from './comercial.module.css'
+import { CarteraRowsSkeleton } from './Skeletons'
+import { SkText } from '@/components/Skeleton'
 
-type Stage = 'nuevo' | 'contactado' | 'cotizacion' | 'cliente' | 'no_contesta' | 'depurar' | 'sin_fecha'
 type Data = { today: string; contacts: ListContact[]; total: number; offset: number; team: Member[]; counts: Record<Stage, number> }
 
-const STAGES: [Stage, string, string][] = [
-  ['nuevo', 'Prospectos', 'var(--c-cyan-ink)'],
-  ['contactado', 'Contactados', 'var(--c-teal-ink)'],
-  ['cotizacion', 'En cotización', 'var(--warning-fill)'],
-  ['cliente', 'Clientes', 'var(--success)'],
-  ['no_contesta', 'No contesta', 'var(--danger)'],
-]
 /** Lo que no sale en Hoy y conviene revisar: se ven solo si hay alguno. */
 const REVIEW: [Stage, string, string][] = [
   ['depurar', 'Número incorrecto', 'Corrige el teléfono y vuelven a tu lista de hoy'],
@@ -110,7 +105,7 @@ export function CarteraView({ uid, isAdmin, zones, segments, zone, segment, onZo
         {STAGES.map(([key, label, color]) => (
           <button key={key} type="button" className={`${s.fbox} ${s.press}`} aria-pressed={stage === key} onClick={() => setStage(st => st === key ? '' : key)}>
             <small>{label}</small>
-            <b className={s.num}>{data ? data.counts[key].toLocaleString('es-MX') : '—'}</b>
+            <b className={s.num}>{data ? data.counts[key].toLocaleString('es-MX') : <SkText w={48} />}</b>
             <i style={{ background: color }} />
           </button>
         ))}
@@ -134,7 +129,7 @@ export function CarteraView({ uid, isAdmin, zones, segments, zone, segment, onZo
 
       <div className={`${s.elev} ${s.listCard}`}>
         {error ? <div className={s.emptyList} role="alert">{error}</div>
-          : !data ? <div className={s.emptyList}>Cargando…</div>
+          : !data ? <CarteraRowsSkeleton />
           : data.contacts.length === 0 ? <div className={s.emptyList}>Nadie coincide con estos filtros.</div>
           : (
             <>

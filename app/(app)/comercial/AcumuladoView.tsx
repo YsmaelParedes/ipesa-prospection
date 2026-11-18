@@ -9,6 +9,8 @@ import { downloadSummaryWorkbook } from '@/lib/exportData'
 import { Ico, fmtDay, initials, money, pct } from './ui'
 import { AmountDetail, type AmountKind } from './AmountDetail'
 import s from './comercial.module.css'
+import { AcumuladoSkeleton } from './Skeletons'
+import { SkText } from '@/components/Skeleton'
 import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp } from 'lucide-react'
 
 type Person = {
@@ -108,7 +110,7 @@ export function AcumuladoView({ onOpen }: { onOpen: (contactId: string) => void 
       <div className={s.periodNav}>
         <button className={`${s.navBtn} ${s.press}`} onClick={() => setOffset(o => o + 1)}
           aria-label={PREV_LABEL[period]}><ChevronLeft size={18} strokeWidth={2.4} /></button>
-        <span className={s.periodLabel}>{data ? periodLabel(data) : '…'}</span>
+        <span className={s.periodLabel}>{data ? periodLabel(data) : <SkText w={130} style={{ margin: '0 auto' }} />}</span>
         <button className={`${s.navBtn} ${s.press}`} disabled={offset === 0} onClick={() => setOffset(o => Math.max(0, o - 1))}
           aria-label={NEXT_LABEL[period]}><ChevronRight size={18} strokeWidth={2.4} /></button>
       </div>
@@ -117,7 +119,7 @@ export function AcumuladoView({ onOpen }: { onOpen: (contactId: string) => void 
   )
 
   if (error) return <>{picker}<div className={`${s.elev} ${s.emptyList}`} role="alert">{error}</div></>
-  if (!data) return <>{picker}<div className={`${s.elev} ${s.emptyList}`}>Cargando…</div></>
+  if (!data) return <>{picker}<AcumuladoSkeleton /></>
 
   const week = data.period === 'week'
   const compare = data.period === 'day'

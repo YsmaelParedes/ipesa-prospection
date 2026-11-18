@@ -19,6 +19,7 @@ import { fmtPhone } from '@/lib/phone'
 import { MARKETING_RETRY_HOURS, tierLabel } from '@/lib/whatsappSafety'
 import { PERSON_STATES, PERSON_STATE_ORDER, campaignLabelFor, type PersonState } from '@/lib/campaignKinds'
 import type { AudienceContact } from '@/lib/campaignAudience'
+import { HealthSkeleton, RecipientPickSkeleton } from '@/components/skeletons/WhatsAppSkeleton'
 
 type Contact = AudienceContact
 
@@ -52,7 +53,7 @@ function loadHealth() {
 export function NumberHealthCard() {
   const [data, setData] = useState<Health | null | undefined>(undefined)
   useQueryEffect(() => { loadHealth().then(setData) }, [])
-  if (data === undefined) return <div className="wa-health"><span className="wa-spinner sm" /> Consultando el estado del número en Meta…</div>
+  if (data === undefined) return <HealthSkeleton />
   if (data && !data.config.connected) {
     return (
       <div className="wa-health">
@@ -283,7 +284,7 @@ export function WhatsAppCampaigns({ preset, onPresetApplied, onViewResults }: {
           </div>
           <div className="wa-list">
             {loading ? (
-              <div className="wa-thread-loading"><span className="wa-spinner" /></div>
+              <RecipientPickSkeleton />
             ) : filtered.length === 0 ? (
               <div className="wa-empty small">Sin contactos con celular que coincidan.</div>
             ) : filtered.map(c => {

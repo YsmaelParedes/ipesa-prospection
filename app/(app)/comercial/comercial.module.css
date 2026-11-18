@@ -362,3 +362,10 @@
 .mailG { background: #FDE8E7; color: #B3261E; }
 .mailO { background: #E3EEFA; color: #0F5AA8; }
 .mailApp { background: var(--paper-2); color: var(--ink-2); }
+
+/* Skeleton de Hoy: lista con ficha en computadora (como useWide, 1100 px) y tarjetas en celular */
+.skWide { display: none; }
+@media (min-width: 1100px) {
+  .skWide { display: block; }
+  .skNarrow { display: none; }
+}

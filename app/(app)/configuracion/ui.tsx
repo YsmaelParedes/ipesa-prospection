@@ -109,10 +109,6 @@ export function Note({ kind = 'plain', children }: { kind?: 'plain' | 'info' | '
   return <div className={cx(s.note, cls)} role={kind === 'danger' ? 'alert' : undefined}><I /><div>{children}</div></div>
 }
 
-export function Spinner() {
-  return <div className={s.spin} role="status" aria-label="Cargando"><span /></div>
-}
-
 /** Aviso flotante breve (usa .toast-fixed del sistema de diseño). */
 export function useToast() {
   const [msg, setMsg] = useState('')

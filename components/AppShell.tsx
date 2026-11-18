@@ -22,12 +22,14 @@ import { ROLE_LABELS, STATUS_LABELS, whatsappPendingTag, type StoreModule } from
 import { reminderSubject, reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
 import { fmtDue, isDueToday, isOverdue } from '@/lib/datetime'
-import { enableDevicePush, pushSupport, testDevicePush } from '@/lib/pushClient'
+import { enableDevicePush, pushSupport, resumeDevicePush, testDevicePush } from '@/lib/pushClient'
 import { CopyGuard } from '@/components/CopyGuard'
 import { WhatsAppIcon } from '@/components/icons'
+import { Sk, SkCircle, SkText } from '@/components/Skeleton'
+import { RouteSkeleton } from '@/components/skeletons/RouteSkeleton'
 import {
   House, Users, Activity, CalendarCheck, Settings, Bell, Menu, Plus, CircleHelp, LogOut, Check, ArrowUp,
-  Sparkles, X, Wrench, FlaskConical, Store, ChevronsUpDown, Lock, BellOff,
+  Sparkles, X, Wrench, FlaskConical, Store, ChevronsUpDown, Lock, BellOff, Search,
 } from 'lucide-react'
 
 /** Estado de los avisos push en este dispositivo. */
@@ -182,6 +184,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   }, [waUnread, pathname])
 
   /* Service Worker (avisos push) — los ajustes viven en Configuración → Mi cuenta */
+  const userId = session?.user.id
   const checkPush = useCallback(() => {
     const reg = swRegRef.current
     if (!reg) return
@@ -194,7 +197,9 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     }
     navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(reg => {
       swRegRef.current = reg
-      reg.pushManager.getSubscription().then(sub => {
+      reg.pushManager.getSubscription().then(async sub => {
+        // Volvió a entrar quien los tenía activos aquí (al salir se dieron de baja): se reactivan solos
+        if (!sub && userId && await resumeDevicePush(userId)) { setPushState('on'); return }
         setPushState(pushStateOf(sub))
         if (!sub) return
         // Re-guardar la suscripción para garantizar que quede ligada al usuario actual
@@ -207,7 +212,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     }).catch(err => console.warn('[SW]', err))
     window.addEventListener('crm:push-changed', checkPush)
     return () => window.removeEventListener('crm:push-changed', checkPush)
-  }, [checkPush])
+  }, [checkPush, userId])
 
   /* Sugerir activar los avisos en este dispositivo (cada uno se activa por separado;
      en iPhone, primero hay que instalar la app) */
@@ -640,7 +645,79 @@ Pantalla: ${pathname}`,
 }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  return <SessionScope><AppShellContent>{children}</AppShellContent></SessionScope>
+  return <SessionScope fallback={<AppFrameSkeleton />}><AppShellContent>{children}</AppShellContent></SessionScope>
+}
+
+/**
+ * La app mientras se comprueba la sesión: el mismo menú y la misma barra de
+ * arriba (con lo fijo ya visible) y, en el centro, el skeleton de la sección
+ * a la que se entró. Antes era una pantalla en blanco con «Comprobando sesión…».
+ */
+function AppFrameSkeleton() {
+  const pathname = usePathname()
+  const title    = TITLE_MAP[pathname] ?? { t: APP_NAME, s: '' }
+  const fill     = FILL_ROUTES.some(r => pathname.startsWith(r))
+  const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
+  return (
+    <div className="app">
+      <div className="brand-line" aria-hidden="true" />
+      <aside className="sidebar">
+        <div className="brand">
+          <BrandLogo />
+          <div className="store-switch"><div className="store-current"><Icon.store className="store-switch-icon" /><SkText w={120} /></div></div>
+        </div>
+        <nav className="nav" aria-label="Menú principal">
+          {NAV_ITEMS.map(it => (
+            <Link key={it.id} href={it.href} className={`nav-item ${isActive(it.href) ? 'active' : ''}`} aria-current={isActive(it.href) ? 'page' : undefined}>
+              <it.icon className="nav-icon" /><span>{it.label}</span>
+            </Link>
+          ))}
+        </nav>
+        <nav className="nav nav-bottom" aria-label="Ajustes">
+          <Link href="/configuracion" className={`nav-item ${isActive('/configuracion') ? 'active' : ''}`}>
+            <Icon.settings className="nav-icon" /><span>Configuración</span>
+          </Link>
+          <a className="nav-item" href={`mailto:${EMAILS.soporte}`}><Icon.help className="nav-icon" /><span>Ayuda</span></a>
+        </nav>
+        <div className="user-card" aria-hidden="true">
+          <div className="avatar-ring"><SkCircle size={34} /></div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="user-name"><SkText w="70%" /></div>
+            <div className="user-role"><SkText w="40%" /></div>
+          </div>
+        </div>
+        <div className="version-btn" aria-hidden="true"><Icon.sparkles style={{ width: 12, height: 12 }} /> Novedades · v{CURRENT_VERSION}</div>
+      </aside>
+
+      <main className={`main ${fill ? 'main--fill' : ''}`}>
+        <div className="topbar">
+          <span className="menu-btn" aria-hidden="true"><Icon.menu /></span>
+          <div className="topbar-brand-mini"><BrandLogo /></div>
+          <div className="topbar-title-block">
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 0 }}>
+              <h1 className="topbar-title">{title.t}</h1>
+              <div className="topbar-sub">{title.s}</div>
+            </div>
+          </div>
+          <div className="topbar-actions" aria-hidden="true">
+            <div className="gsearch"><div className="gsearch-input"><Search /><input placeholder="Buscar cliente…" disabled tabIndex={-1} /></div></div>
+            <span className="btn-icon gsearch-mobile-btn"><Search /></span>
+            <Sk w={92} h={34} r={6} className="hide-sm" />
+            <span className="btn-icon"><Icon.bell style={{ width: 16, height: 16, color: 'var(--ink-2)' }} /></span>
+          </div>
+        </div>
+        <div className="content"><RouteSkeleton pathname={pathname} /></div>
+      </main>
+
+      <nav className="bottom-nav" aria-label="Navegación principal">
+        {NAV_ITEMS.filter(it => it.mobile).map(it => (
+          <Link key={it.id} href={it.href} className={isActive(it.href) ? 'active' : ''} aria-current={isActive(it.href) ? 'page' : undefined}>
+            <it.icon /><span>{it.short ?? it.label}</span>
+          </Link>
+        ))}
+      </nav>
+    </div>
+  )
 }
 
 /** Plan Litro: solo entra el administrador. Los vendedores ven esto en lugar de la app. */
