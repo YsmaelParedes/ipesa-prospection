@@ -85,7 +85,7 @@ export function PricingCards({ initial = null }: { initial?: PriceTable | null }
               <Link href={href} className={`${s.btn} ${copy.highlight ? s.btnPrimary : s.btnLight} ${s.priceBtn}`} {...trackAttrs(EVENTS.signupClick, { donde: `plan-${id}` })}>
                 {paid ? `Probar ${TRIAL_DAYS} días gratis` : 'Crear cuenta gratis'}
               </Link>
-              {paid && <small className={s.priceTrial}>Sin tarjeta. Después eliges si activas {PLANS[id].label}.</small>}
+              <small className={s.priceTrial}>{paid ? `Sin tarjeta. Después eliges si activas ${PLANS[id].label}.` : `Incluye ${TRIAL_DAYS} días de Cubeta para probar.`}</small>
             </div>
           )
         })}

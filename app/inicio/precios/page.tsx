@@ -35,7 +35,7 @@ export default async function PreciosPage() {
       <JsonLd data={[breadcrumbJsonLd('Precios', '/inicio/precios'), softwareAppJsonLd(prices), faqJsonLd(NOTES)]} />
       <PageHero
         title={<>Empieza gratis, <span className={s.spectrumText}>crece cuando quieras</span></>}
-        lead="Tres planes para cada etapa de tu tienda. Pago mensual con tarjeta, sin plazos forzosos."
+        lead="Tres planes para cada etapa de tu tienda. Prueba Cubeta 14 días gratis; después, pago mensual o anual con tarjeta, sin plazos forzosos."
       />
 
       <section className={s.section}>
