@@ -37,7 +37,7 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '1.58.0',
-    date: '17 de noviembre, 2026',
+    date: '18 de noviembre, 2026',
     title: 'Cotizaciones',
     items: [
       'Nueva sección Cotizaciones en el menú. Agrega productos, cantidades y precios, y a un lado ves la cotización tal como la recibirá tu cliente. Se guarda sola mientras escribes.',
