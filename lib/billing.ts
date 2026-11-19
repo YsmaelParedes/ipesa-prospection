@@ -92,8 +92,8 @@ export type PublicPrices = Partial<Record<PaidPlanId, PlanPrice>>
 /** Mensual y anual de cada plan (el anual puede faltar si aún no se crea en Stripe). */
 export type PriceTable = { monthly: PublicPrices; annual: PublicPrices }
 
-/** Lo que equivale al mes un precio anual (para «$749 al mes, pagando el año»). */
-export const monthlyEquivalent = (p: PlanPrice): PlanPrice => ({ ...p, amount: Math.round((p.amount / 12) * 100) / 100, interval: 'month' })
+/** Lo que equivale al mes un precio anual, en pesos enteros (el monto exacto va en «Pagas $8,990 al año»). */
+export const monthlyEquivalent = (p: PlanPrice): PlanPrice => ({ ...p, amount: Math.round(p.amount / 12), interval: 'month' })
 
 /** Meses que se ahorran pagando el año en lugar de 12 mensualidades (redondeado). */
 export function monthsSaved(monthly: PlanPrice | undefined, annual: PlanPrice | undefined): number {

@@ -141,7 +141,7 @@ test('anual: 2 meses gratis y lo que equivale al mes', () => {
   assert.equal(monthsSaved(m, a), 2)
   assert.equal(monthsSaved({ ...m, amount: 1799 }, { ...a, amount: 17990 }), 2)
   assert.equal(monthsSaved(m, undefined), 0)
-  assert.deepEqual(monthlyEquivalent(a), { amount: 749.17, currency: 'mxn', interval: 'month' })
+  assert.deepEqual(monthlyEquivalent(a), { amount: 749, currency: 'mxn', interval: 'month' })
 })
 
 test('prueba de Cubeta: 14 días y después Litro, sin cobro', () => {
