@@ -10,11 +10,14 @@ import { FormulasPageSkeleton } from './FormulasSkeleton'
 import { ComercialPageSkeleton } from '@/app/(app)/comercial/Skeletons'
 import { AgendaPageSkeleton } from '@/app/(app)/recordatorios/AgendaSkeleton'
 import { SettingsPageSkeleton } from '@/app/(app)/configuracion/SettingsSkeleton'
+import { QuoteEditorSkeleton, QuotesPageSkeleton } from '@/app/(app)/cotizaciones/Skeletons'
 
 export function RouteSkeleton({ pathname }: { pathname: string }) {
   const is = (base: string) => pathname === base || pathname.startsWith(`${base}/`)
   if (is('/contactos')) return <ContactsPageSkeleton />
   if (is('/comercial')) return <ComercialPageSkeleton />
+  if (pathname.startsWith('/cotizaciones/')) return <QuoteEditorSkeleton />
+  if (is('/cotizaciones')) return <QuotesPageSkeleton />
   if (is('/recordatorios')) return <AgendaPageSkeleton />
   if (is('/whatsapp')) return <WhatsAppPageSkeleton />
   if (is('/configuracion')) return <SettingsPageSkeleton />

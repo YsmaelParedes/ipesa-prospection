@@ -55,6 +55,7 @@ export const PLAN_COMPARE: { label: string; values: Record<'litro' | 'galon' | '
   { label: 'Oportunidades y Actividad diaria', values: { litro: false, galon: true, cubeta: true } },
   { label: 'Metas diarias', values: { litro: false, galon: 'Una para el equipo', cubeta: 'Propias por vendedor' } },
   { label: 'Agenda y avisos en el celular', values: { litro: true, galon: true, cubeta: true } },
+  { label: 'Cotizaciones en PDF por WhatsApp y correo', values: { litro: true, galon: true, cubeta: true } },
   { label: 'Importar desde Excel', values: { litro: true, galon: true, cubeta: true } },
   { label: 'Acumulado: día, semana y mes por vendedor', values: { litro: false, galon: false, cubeta: true } },
   { label: 'A qué clientes cotizó y vendió cada vendedor', values: { litro: false, galon: false, cubeta: true } },

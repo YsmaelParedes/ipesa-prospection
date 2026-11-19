@@ -125,6 +125,11 @@
 .noticeWarn { background: var(--warning-soft); color: var(--warning); }
 .section { margin-top: 14px; padding-top: 14px; box-shadow: 0 -1px 0 var(--line); }
 .sectionTitle { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
+.sectionHead { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.sectionHead .sectionTitle { margin: 0; }
+.sectionHead :global(.link-btn) { font-size: 12.5px; }
+.hLink { color: inherit; text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 2px; }
+.hLink:hover { text-decoration-color: currentColor; }
 .kv { display: grid; grid-template-columns: 90px 1fr; gap: 6px 10px; font-size: 12.5px; }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; overflow-wrap: anywhere; }

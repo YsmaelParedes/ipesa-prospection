@@ -8,6 +8,7 @@ import { Ico, SectionHead, WhatsAppGlyph, cx } from './ui'
 import { SettingsPageSkeleton } from './SettingsSkeleton'
 import { StoreTab } from './StoreTab'
 import { CatalogsTab } from './CatalogsTab'
+import { QuotesTab } from './QuotesTab'
 import { TeamTab } from './TeamTab'
 import { WhatsAppTab } from './WhatsAppTab'
 import { WhatsAppOffer } from '@/components/WhatsAppOffer'
@@ -16,7 +17,7 @@ import { ProfileTab, SecurityTab } from './AccountTab'
 import { NotificationsPanel } from './NotificationsPanel'
 import s from './configuracion.module.css'
 
-type TabId = 'perfil' | 'avisos' | 'seguridad' | 'tienda' | 'equipo' | 'catalogos' | 'whatsapp' | 'plan'
+type TabId = 'perfil' | 'avisos' | 'seguridad' | 'tienda' | 'equipo' | 'catalogos' | 'cotizaciones' | 'whatsapp' | 'plan'
 type Tab = {
   id: TabId; label: string; description: string; group: 'cuenta' | 'tienda'
   icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>; admin?: boolean; module?: StoreModule
@@ -30,6 +31,7 @@ const TABS: Tab[] = [
   { id: 'tienda',    group: 'tienda', label: 'General',      icon: Ico.store, admin: true, description: 'Los datos de tu tienda. Tu equipo ve el nombre y el logo en el menú.' },
   { id: 'equipo',    group: 'tienda', label: 'Equipo',       icon: Ico.users, admin: true, description: 'Quién tiene acceso a esta tienda y con qué rol.' },
   { id: 'catalogos', group: 'tienda', label: 'Catálogos',    icon: Ico.tag,   description: 'Las opciones con las que tu equipo clasifica a sus contactos.' },
+  { id: 'cotizaciones', group: 'tienda', label: 'Cotizaciones', icon: Ico.quote, admin: true, description: 'Lo que lleva de inicio cada cotización: validez, IVA, condiciones y datos fiscales.' },
   // Sin WhatsApp activo se muestra igual (a los administradores), para ofrecerlo
   { id: 'whatsapp',  group: 'tienda', label: 'WhatsApp',     icon: WhatsAppGlyph, admin: true, description: 'El número de tu tienda y las respuestas rápidas del equipo.' },
   { id: 'plan',      group: 'tienda', label: 'Plan y pagos', icon: Ico.card,  admin: true, description: 'Tu plan, lo que usas de él y tu suscripción.' },
@@ -107,6 +109,7 @@ function Settings() {
         {tab === 'seguridad' && <SecurityTab />}
         {tab === 'tienda'    && <StoreTab store={store} />}
         {tab === 'catalogos' && <CatalogsTab canEdit={isAdmin} />}
+        {tab === 'cotizaciones' && <QuotesTab readonly={store.access === 'readonly'} />}
         {tab === 'equipo'    && <TeamTab store={store} />}
         {tab === 'whatsapp'  && (store.modules.whatsapp ? <WhatsAppTab /> : <WhatsAppOffer />)}
         {tab === 'plan'      && <PlanTab store={store} />}

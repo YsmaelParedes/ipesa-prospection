@@ -1,0 +1,27 @@
+/* Página pública de una cotización (la abre el cliente con su enlace) */
+.wrap { min-height: 100vh; background: var(--bg); }
+
+.bar { position: sticky; top: 0; z-index: 10; background: var(--card); border-bottom: 1px solid var(--line); }
+.barInner { max-width: 848px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+.brand { min-width: 0; flex: 1; }
+.brand strong { display: block; font-size: 15px; font-weight: 800; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand span { display: block; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.download { flex-shrink: 0; }
+.download svg, .contactActions svg { width: 15px; height: 15px; }
+
+.main { max-width: 848px; margin: 0 auto; padding: 20px 16px 48px; }
+.notice { margin: 0 0 14px; padding: 11px 14px; border-radius: var(--radius); background: var(--warning-soft); color: var(--warning); font-size: 13.5px; font-weight: 600; line-height: 1.5; }
+.ok { background: var(--success-soft); color: var(--success); }
+.paper { border-radius: var(--radius); overflow: hidden; background: #fff; box-shadow: 0 0 0 1px rgba(19, 19, 19, .06), 0 16px 36px -18px rgba(19, 19, 19, .3); }
+
+.contact { margin-top: 18px; padding: 16px; border-radius: var(--radius); background: var(--card); box-shadow: 0 0 0 1px rgba(19, 19, 19, .06); }
+.contact p { margin: 0 0 12px; font-size: 14px; color: var(--ink-2); }
+.contactActions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+@media (max-width: 480px) {
+  .main { padding: 12px 0 40px; }
+  .paper { border-radius: 0; box-shadow: none; }
+  .notice { margin: 0 16px 12px; }
+  .contact { margin: 16px 16px 0; }
+  .contactActions :global(.btn) { flex: 1; }
+}

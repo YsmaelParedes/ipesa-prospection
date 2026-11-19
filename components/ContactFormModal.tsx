@@ -27,15 +27,16 @@ export function phoneDigits(raw: string): string {
  * Alta de contacto (la usan Contactos, el botón "+ Nuevo", el buscador y el
  * sistema comercial). Avisa si el teléfono ya es de otro contacto antes de guardar.
  */
-export default function ContactFormModal({ initialName = '', initialPhone = '', onClose, onSaved }: {
+export default function ContactFormModal({ initialName = '', initialPhone = '', initialEmail = '', onClose, onSaved }: {
   initialName?: string
   initialPhone?: string
+  initialEmail?: string
   onClose: () => void
   onSaved: (c: ContactLite) => void
 }) {
   const { segments, canales, zones } = useCatalogs()
   const [form, setForm] = useState({
-    name: initialName, phone: phoneDigits(initialPhone), email: '', company: '',
+    name: initialName, phone: phoneDigits(initialPhone), email: initialEmail, company: '',
     segment: '', acquisition_channel: '', zone: '', address: '', postal_code: '',
   })
   const [moreOpen, setMoreOpen] = useState(false)

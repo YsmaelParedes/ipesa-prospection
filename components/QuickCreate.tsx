@@ -8,13 +8,14 @@ import {
   notifyDataChanged, openQuickCreate, useQuickCreateRequests,
   type DataKind, type QuickCreateRequest,
 } from '@/lib/crmEvents'
-import { Check, ChevronDown, Clock, Plus, UserPlus } from 'lucide-react'
+import { Check, ChevronDown, Clock, FileText, Plus, UserPlus } from 'lucide-react'
 
 const Ico = {
   plus:     () => <Plus aria-hidden="true" />,
   chevron:  () => <ChevronDown aria-hidden="true" />,
   contact:  () => <UserPlus aria-hidden="true" />,
   reminder: () => <Clock aria-hidden="true" />,
+  quote:    () => <FileText aria-hidden="true" />,
   check:    () => <Check aria-hidden="true" />,
 }
 
@@ -22,6 +23,8 @@ const ITEMS: { kind: QuickCreateRequest['kind']; label: string; hint: string; ic
   { kind: 'contact',  label: 'Contacto',     hint: 'Un cliente nuevo en tu base',  icon: Ico.contact,  tone: 'cyan' },
   { kind: 'reminder', label: 'Recordatorio', hint: 'Una llamada, visita o tarea',  icon: Ico.reminder, tone: 'amber' },
 ]
+/** La cotización se arma en su propia pantalla (editor con vista previa). */
+const QUOTE_ITEM = { href: '/cotizaciones/nueva', label: 'Cotización', hint: 'Productos y precios para un cliente', icon: Ico.quote, tone: 'magenta' }
 
 function QuickItems({ onPick }: { onPick: () => void }) {
   return (
@@ -32,6 +35,10 @@ function QuickItems({ onPick }: { onPick: () => void }) {
           <span className="qc-text"><strong>{it.label}</strong><small>{it.hint}</small></span>
         </button>
       ))}
+      <Link href={QUOTE_ITEM.href} role="menuitem" className="qc-item" onClick={onPick}>
+        <span className={`qc-icon tone-${QUOTE_ITEM.tone}`}><QUOTE_ITEM.icon /></span>
+        <span className="qc-text"><strong>{QUOTE_ITEM.label}</strong><small>{QUOTE_ITEM.hint}</small></span>
+      </Link>
     </>
   )
 }

@@ -56,6 +56,13 @@ const nextConfig: NextConfig = {
   // Librerías solo de servidor — no intentar incluirlas en el bundle del cliente
   serverExternalPackages: ['web-push'],
 
+  // El PDF de las cotizaciones (lib/quotePdf.tsx) lee la fuente del disco:
+  // se incluye en las funciones que lo generan
+  outputFileTracingIncludes: {
+    '/api/data/quotes/**': ['./node_modules/@fontsource/manrope/files/manrope-latin-{400,600,700}-normal.woff'],
+    '/api/public/quotes/**': ['./node_modules/@fontsource/manrope/files/manrope-latin-{400,600,700}-normal.woff'],
+  },
+
   // Tree-shake Supabase — importa solo los módulos usados
   experimental: {
     optimizePackageImports: ['@supabase/supabase-js', '@supabase/ssr'],

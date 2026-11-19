@@ -29,7 +29,7 @@ import { Sk, SkCircle, SkText } from '@/components/Skeleton'
 import { RouteSkeleton } from '@/components/skeletons/RouteSkeleton'
 import {
   House, Users, Activity, CalendarCheck, Settings, Bell, Menu, Plus, CircleHelp, LogOut, Check, ArrowUp,
-  Sparkles, X, Wrench, FlaskConical, Store, ChevronsUpDown, Lock, BellOff, Search,
+  Sparkles, X, Wrench, FlaskConical, Store, ChevronsUpDown, Lock, BellOff, Search, FileText,
 } from 'lucide-react'
 
 /** Estado de los avisos push en este dispositivo. */
@@ -47,7 +47,7 @@ const Icon = {
   home: House, contacts: Users, commercial: Activity, calendar: CalendarCheck, settings: Settings,
   bell: Bell, menu: Menu, plus: Plus, help: CircleHelp, logout: LogOut, check: Check, arrowUp: ArrowUp,
   sparkles: Sparkles, close: X, wrench: Wrench, flask: FlaskConical, store: Store, chevrons: ChevronsUpDown,
-  lock: Lock, bellOff: BellOff, whatsapp: WhatsAppIcon,
+  lock: Lock, bellOff: BellOff, whatsapp: WhatsAppIcon, quote: FileText,
 }
 
 function initials(name: string) {
@@ -61,6 +61,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'whatsapp',  href: '/whatsapp',      label: 'WhatsApp',  icon: Icon.whatsapp, mobile: true, module: 'whatsapp' },
   { id: 'contactos', href: '/contactos',     label: 'Contactos', icon: Icon.contacts, mobile: true },
   { id: 'comercial', href: '/comercial',     label: 'Sistema Comercial', short: 'Comercial', icon: Icon.commercial, mobile: true },
+  // En el celular va en el menú (abajo ya no caben más)
+  { id: 'cotizaciones', href: '/cotizaciones', label: 'Cotizaciones', icon: Icon.quote, mobile: false },
   { id: 'agenda',    href: '/recordatorios', label: 'Agenda',    icon: Icon.calendar, mobile: true },
 ]
 const TOOL_ITEMS: NavItem[] = [
@@ -72,10 +74,15 @@ const TITLE_MAP: Record<string, { t: string; s: string }> = {
   '/whatsapp':       { t: 'WhatsApp',      s: 'Conversaciones con tus clientes'    },
   '/contactos':      { t: 'Contactos',     s: 'Tu base de clientes'                },
   '/comercial':      { t: 'Sistema Comercial', s: 'Hoy, oportunidades y equipo'     },
+  '/cotizaciones':   { t: 'Cotizaciones',  s: 'Arma, envía y da seguimiento'      },
   '/recordatorios':  { t: 'Agenda',        s: 'Recordatorios y seguimientos'       },
   '/formulas':       { t: 'Fórmulas',      s: 'Igualación de colores'              },
   '/configuracion':  { t: 'Configuración', s: 'Tu tienda, equipo e integraciones'  },
 }
+
+/** Título de la barra superior (el editor de una cotización usa el de Cotizaciones). */
+const titleFor = (pathname: string) =>
+  TITLE_MAP[pathname] ?? (pathname.startsWith('/cotizaciones/') ? TITLE_MAP['/cotizaciones'] : undefined) ?? { t: APP_NAME, s: '' }
 
 // Páginas tipo "app" que ocupan exactamente el alto de la pantalla
 const FILL_ROUTES = ['/whatsapp']
@@ -302,7 +309,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const currentTitle = TITLE_MAP[pathname] ?? { t: APP_NAME, s: '' }
+  const currentTitle = titleFor(pathname)
   const isActive     = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   const fill         = FILL_ROUTES.some(r => pathname.startsWith(r))
   // Menú según los módulos activos de la tienda (mientras carga, todo visible).
@@ -655,7 +662,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
  */
 function AppFrameSkeleton() {
   const pathname = usePathname()
-  const title    = TITLE_MAP[pathname] ?? { t: APP_NAME, s: '' }
+  const title    = titleFor(pathname)
   const fill     = FILL_ROUTES.some(r => pathname.startsWith(r))
   const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   return (

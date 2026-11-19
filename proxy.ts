@@ -16,7 +16,8 @@ import { SESSION_COOKIE_OPTIONS } from '@/lib/sessionCookie'
 
 // Páginas que no requieren sesión
 const PUBLIC_PATHS    = ['/inicio', '/login', '/registro', '/recuperar', '/restablecer', '/terminos', '/privacidad', '/robots.txt', '/sitemap.xml', '/og']  // /og: imagen al compartir un enlace
-const PUBLIC_PREFIXES = ['/invitacion/', '/auth/', '/inicio/']  // /inicio/*: páginas del sitio de presentación
+// /inicio/*: páginas del sitio de presentación · /cotizacion/*: la cotización que recibe un cliente (por su enlace)
+const PUBLIC_PREFIXES = ['/invitacion/', '/auth/', '/inicio/', '/cotizacion/']
 // Con sesión no tiene sentido verlas: se manda al panel
 const GUEST_ONLY      = ['/login', '/registro', '/recuperar']
 

@@ -9,7 +9,7 @@ import { WhatsAppIcon } from '@/components/icons'
 import {
   Store, LayoutGrid, MapPin, Tag, Activity, Users, UserPlus, CreditCard, User, Image as ImageIcon, Upload, Download,
   Trash2, Plus, Check, Copy, Link as LinkIcon, Info, TriangleAlert, Lock, Megaphone, FlaskConical, Zap, Send, LogOut,
-  Mail, Bell, Shield,
+  Mail, Bell, Shield, FileText,
 } from 'lucide-react'
 
 /* Piezas compartidas por las secciones de Configuración */
@@ -33,7 +33,7 @@ export const Ico = {
   store: Store, grid: LayoutGrid, pin: MapPin, tag: Tag, channel: Activity, users: Users, userPlus: UserPlus,
   card: CreditCard, user: User, image: ImageIcon, upload: Upload, download: Download, trash: Trash2, plus: Plus,
   check: Check, copy: Copy, link: LinkIcon, info: Info, alert: TriangleAlert, lock: Lock, megaphone: Megaphone,
-  flask: FlaskConical, bolt: Zap, send: Send, logout: LogOut, mail: Mail, bell: Bell, shield: Shield,
+  flask: FlaskConical, bolt: Zap, send: Send, logout: LogOut, mail: Mail, bell: Bell, shield: Shield, quote: FileText,
 }
 export function WhatsAppGlyph(p: IconProps) {
   return <WhatsAppIcon className={p.className} style={p.style} />

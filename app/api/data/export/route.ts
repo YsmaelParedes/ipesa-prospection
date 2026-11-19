@@ -20,6 +20,7 @@ const PARTS = {
   activities: { table: 'commercial_activities', columns: 'id, contact_id, contact_name, kind, result, note, quote_amount, sale_amount, next_action, next_action_at, created_at, user_id', order: 'created_at' },
   reminders:  { table: 'reminders',       columns: 'id, lead_id, lead_name, nota, reminder_date, type, completado, completado_at, user_id', order: 'reminder_date' },
   catalogs:   { table: 'app_config',      columns: 'id, type, label', order: 'type' },
+  quotes:     { table: 'quotes',          columns: 'id, folio, contact_id, client_name, client_phone, client_email, items, discount_kind, discount_value, tax_rate, subtotal, discount, tax, total, notes, issued_on, valid_until, status, sent_at, sent_via, viewed_at, decided_at, created_at, created_by', order: 'folio' },
 } as const
 type Part = keyof typeof PARTS
 
@@ -35,7 +36,7 @@ async function GETImpl(req: NextRequest) {
   const { table, columns, order } = PARTS[part]
   try {
     const db = getServerSupabase()
-    const needsNames = part === 'contacts' || part === 'activities' || part === 'reminders'
+    const needsNames = part === 'contacts' || part === 'activities' || part === 'reminders' || part === 'quotes'
     const [{ data, error }, names] = await Promise.all([
       db.from(table).select(columns).eq('store_id', ctx.storeId)
         .order(order, { ascending: true }).order('id', { ascending: true })
@@ -49,6 +50,10 @@ async function GETImpl(req: NextRequest) {
       if (part === 'contacts') {
         const { owner_id, ...rest } = r
         return { ...rest, owner_name: owner_id ? names.get(owner_id) ?? 'Otro usuario' : '' }
+      }
+      if (part === 'quotes') {
+        const { created_by, ...rest } = r
+        return { ...rest, user_name: created_by ? names.get(created_by) ?? 'Otro usuario' : '' }
       }
       const { user_id, ...rest } = r
       return { ...rest, user_name: user_id ? names.get(user_id) ?? 'Otro usuario' : '' }

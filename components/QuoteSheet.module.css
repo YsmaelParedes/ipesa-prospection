@@ -1,0 +1,90 @@
+/* Hoja de cotización: mismas medidas que el PDF (lib/quotePdf.tsx), en puntos
+   de una hoja carta (612 × 792 pt) que escalan con el ancho disponible. */
+
+.frame { container: quote / inline-size; width: 100%; }
+
+.page {
+  --pt: calc(100cqw / 612);
+  --ink: #131313; --ink2: #2D2D2C; --muted: #6B6B6A; --faint: #8F8F8E; --line: #E4E4E7; --band: #F3F4F6;
+  position: relative;
+  display: flex; flex-direction: column;
+  min-height: calc(792 * var(--pt));
+  padding: 0 calc(44 * var(--pt)) calc(24 * var(--pt));
+  background: #fff; color: var(--ink2);
+  font-family: var(--font-body);
+  font-size: calc(9.5 * var(--pt)); line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.page p { margin: 0; }
+
+/* ── Encabezado: logo y banda «Cotización» ── */
+.top { display: flex; align-items: stretch; height: calc(64 * var(--pt)); margin: 0 calc(-44 * var(--pt)) calc(26 * var(--pt)); }
+.topLeft { flex: 1; display: flex; align-items: center; padding-left: calc(44 * var(--pt)); min-width: 0; }
+.logo { display: block; max-height: calc(40 * var(--pt)); max-width: calc(150 * var(--pt)); object-fit: contain; object-position: left center; }
+.band { width: 42%; background: var(--band); display: flex; flex-direction: column; justify-content: center; align-items: flex-end; padding-right: calc(44 * var(--pt)); }
+.title { font-size: calc(15 * var(--pt)); font-weight: 600; color: var(--ink); line-height: 1.2; }
+.draft { font-size: calc(8 * var(--pt)); color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-top: calc(2 * var(--pt)); }
+
+/* ── Tienda y cliente ── */
+.parties { display: flex; margin-bottom: calc(22 * var(--pt)); }
+.storeCol { flex: 1; padding-right: calc(18 * var(--pt)); min-width: 0; }
+.clientCol { width: 42%; border-left: 1px solid var(--line); padding-left: calc(18 * var(--pt)); min-width: 0; }
+.storeName { font-size: calc(15 * var(--pt)); font-weight: 700; color: var(--ink); line-height: 1.25; margin: 0 0 calc(6 * var(--pt)); letter-spacing: 0; font-family: inherit; }
+.label { font-size: calc(11 * var(--pt)); color: var(--faint); margin-bottom: calc(6 * var(--pt)) !important; }
+.clientName { font-size: calc(10 * var(--pt)); font-weight: 700; color: var(--ink); margin-bottom: calc(2 * var(--pt)) !important; }
+.placeholder { color: var(--faint); font-weight: 500; }
+
+/* ── Folio y fechas ── */
+.meta { margin: 0 0 calc(22 * var(--pt)); }
+.meta div { display: flex; gap: calc(4 * var(--pt)); margin-bottom: 1px; }
+.meta dt { font-weight: 700; color: var(--ink); }
+.meta dd { margin: 0; }
+
+/* ── Productos ── */
+.th, .tr { display: flex; align-items: center; border-bottom: 1px solid var(--line); }
+.th { padding: calc(8 * var(--pt)) 0; font-size: calc(9 * var(--pt)); font-weight: 700; color: var(--ink); }
+.tr { padding: calc(9 * var(--pt)) 0; }
+.cDesc { flex: 1; min-width: 0; padding: 0 calc(10 * var(--pt)) 0 calc(8 * var(--pt)); }
+.cQty { width: calc(76 * var(--pt)); flex-shrink: 0; }
+.cPrice { width: calc(92 * var(--pt)); flex-shrink: 0; text-align: right; }
+.tr .cPrice { color: var(--muted); }
+.cSub { width: calc(92 * var(--pt)); flex-shrink: 0; text-align: right; padding-right: calc(8 * var(--pt)); }
+.x { display: none; }
+.emptyRow { padding: calc(18 * var(--pt)) calc(8 * var(--pt)); border-bottom: 1px solid var(--line); color: var(--faint); }
+
+/* ── Totales ── */
+.totals { align-self: flex-end; width: 44%; margin-top: calc(26 * var(--pt)); }
+.totals div { display: flex; justify-content: space-between; gap: 12px; margin-bottom: calc(5 * var(--pt)); }
+.totals .total { border-top: 1px solid var(--line); padding-top: calc(8 * var(--pt)); margin: calc(3 * var(--pt)) 0 0; font-size: calc(13 * var(--pt)); font-weight: 700; color: var(--ink); }
+.noTax { margin-top: calc(4 * var(--pt)) !important; font-size: calc(8 * var(--pt)); color: var(--faint); text-align: right; }
+
+.notes { margin-top: calc(30 * var(--pt)); padding-top: calc(12 * var(--pt)); border-top: 1px solid var(--line); }
+.notes h3 { margin: 0 0 calc(3 * var(--pt)); font: inherit; font-weight: 700; color: var(--ink); }
+.notes p { color: var(--muted); white-space: pre-wrap; }
+
+.foot { margin-top: auto; padding-top: calc(28 * var(--pt)); font-size: calc(8 * var(--pt)); color: var(--faint); }
+
+/* ── Angosto (celular): una columna con letra legible ── */
+@container quote (max-width: 520px) {
+  .page { --pt: 1.22px; min-height: 0; padding: 0 16px 18px; }
+  .top { margin: 0 -16px 18px; height: 58px; }
+  .topLeft { padding-left: 16px; }
+  .logo { max-height: 36px; max-width: 128px; }
+  .band { width: auto; padding: 0 16px 0 20px; }
+  .parties { flex-direction: column; gap: 14px; margin-bottom: 16px; }
+  .storeCol { padding-right: 0; }
+  .clientCol { width: auto; border-left: 0; border-top: 1px solid var(--line); padding: 12px 0 0; }
+  .meta { margin-bottom: 16px; }
+  .th { display: none; }
+  .tr { display: grid; grid-template-columns: auto auto 1fr; column-gap: 4px; row-gap: 2px; padding: 10px 0; border-top: 0; }
+  .tr:first-of-type { border-top: 1px solid var(--line); }
+  .cDesc { grid-column: 1 / -1; padding: 0; color: var(--ink); font-weight: 600; }
+  .cQty, .cPrice, .cSub { width: auto; padding: 0; text-align: left; color: var(--muted); }
+  .cSub { text-align: right; color: var(--ink2); font-weight: 600; }
+  .x { display: inline; }
+  .emptyRow { padding: 14px 0; border-top: 1px solid var(--line); }
+  .totals { width: 100%; margin-top: 18px; }
+  .notes { margin-top: 22px; }
+  .foot { padding-top: 22px; }
+}

@@ -29,6 +29,7 @@ import type { ChosenContact } from '@/lib/campaignAudience'
 import { MessageText, StatusTicks, WindowBadge, fmtTime, mediaCaption } from '@/components/WhatsAppUI'
 import { WhatsAppIcon } from '@/components/icons'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { ClientQuotesList, newQuoteHref, useClientQuotes } from '@/components/ClientQuotes'
 import { LoadFailed } from '@/components/LoadFailed'
 import { Sk } from '@/components/Skeleton'
 import { ContactsPageSkeleton, ContactsTableSkeleton } from '@/components/skeletons/ContactsSkeleton'
@@ -512,6 +513,7 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
   })
   const [saveError, setSaveError] = useState('')
   const phone = normalizePhone(c.phone)
+  const quotes = useClientQuotes(c.id)
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('.modal')) onClose() }
@@ -654,6 +656,14 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
                   <div className="kv"><div className="k">Próxima acción</div><div className="v" style={{ fontSize: 13 }}>{c.next_action_at ? `${c.next_action || 'Dar seguimiento'} · ${fmtDay(c.next_action_at)}` : '—'}</div></div>
                   {c.last_note && <div className="kv" style={{ gridColumn: '1 / -1' }}><div className="k">Última nota</div><div className="v" style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{c.last_note}</div></div>}
                 </div>
+              </div>
+
+              <div className="detail-section">
+                <div className="detail-section-head">
+                  <h4>Cotizaciones</h4>
+                  {!readonly && <Link href={newQuoteHref(c.id)} className="link-btn">Cotizar →</Link>}
+                </div>
+                <ClientQuotesList quotes={quotes} />
               </div>
 
               {waModule && phone.length === 10 && <ContactWhatsApp contact={c} readonly={readonly} onUpdated={onUpdated} />}

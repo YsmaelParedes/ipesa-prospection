@@ -67,7 +67,7 @@ export function ConfirmDialog({
         return
       }
       if (e.key !== 'Tab' || !cardRef.current) return
-      const items = Array.from(cardRef.current.querySelectorAll<HTMLElement>('button:not(:disabled)'))
+      const items = Array.from(cardRef.current.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled)'))
       if (!items.length) return
       const first = items[0], last = items[items.length - 1]
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }

@@ -38,6 +38,8 @@ export const EVENTS = {
   checkoutStarted: 'Pago iniciado',
   /** Volvió de Stripe con el pago hecho · plan */
   planPurchased: 'Plan contratado',
+  /** Se mandó una cotización · via (whatsapp, correo, chat, compartir, enlace, en_persona) */
+  quoteSent: 'Cotización enviada',
 } as const
 
 export type EventName = typeof EVENTS[keyof typeof EVENTS]

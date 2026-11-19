@@ -15,6 +15,8 @@ import { EmailButton } from './EmailButton'
 import { Ico, StatusChip, addressOf, bizName, fmtDay, initials, localDay, money, personName, whenPhrase, type ListContact } from './ui'
 import s from './comercial.module.css'
 import { ContactPaneSkeleton, HistorySkeleton } from './Skeletons'
+import { ClientQuotesList, newQuoteHref, useClientQuotes } from '@/components/ClientQuotes'
+import { FileText } from 'lucide-react'
 
 type Activity = {
   id: string; kind: ActivityKind; result: string | null; note: string | null
@@ -60,6 +62,7 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
   const [formKind, setFormKind] = useState<Kind | undefined>(kind)
   const isAdmin = !!useSession()?.isAdmin
   const contact = detail?.contact ?? initial ?? null
+  const quotes = useClientQuotes(contactId)
 
   const load = useCallback(async () => {
     try {
@@ -111,6 +114,8 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
   const ownerLabel = !contact.owner_id ? 'Sin asignar' : mine ? 'Tuyo' : contact.owner_name ? `De ${contact.owner_name}` : null
   // Cerrar el seguimiento: su responsable o un administrador (el servidor también lo revisa)
   const canClose = isAdmin || !contact.owner_id || mine
+  // «Cotización enviada» del historial lleva a su cotización
+  const quoteOf = new Map((quotes ?? []).filter(q => q.activity_id).map(q => [q.activity_id as string, q.id]))
 
   const content = (
     <>
@@ -160,6 +165,9 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
           className={`${s.act} ${s.actMail} ${s.press}`} onOpen={() => { if (!readonly) setFormKind('correo') }}>
           <Ico.mail /> Correo
         </EmailButton>
+        {!readonly && (
+          <Link href={newQuoteHref(contact.id)} className={`${s.act} ${s.actMore} ${s.press}`} aria-label="Hacer una cotización" title="Cotizar"><FileText size={16} aria-hidden="true" /></Link>
+        )}
         <Link href={`/contactos?id=${contact.id}`} className={`${s.act} ${s.actMore} ${s.press}`} aria-label="Ver en Contactos" title="Ver en Contactos"><Ico.user /></Link>
       </div>
 
@@ -185,6 +193,14 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
       )}
 
       <div className={s.section}>
+        <div className={s.sectionHead}>
+          <div className={s.sectionTitle}>Cotizaciones</div>
+          {!readonly && <Link href={newQuoteHref(contact.id)} className="link-btn">Cotizar</Link>}
+        </div>
+        <ClientQuotesList quotes={quotes} />
+      </div>
+
+      <div className={s.section}>
         <div className={s.sectionTitle}>Historial</div>
         {history === null ? <HistorySkeleton /> : history.length === 0 ? (
           <div className={s.hMuted}>Todavía no hay actividades con este cliente.</div>
@@ -194,7 +210,9 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
               <div key={a.id} className={s.hItem}>
                 <span className={s.num}>{fmtDay(localDay(a.created_at))}</span>
                 <div>
-                  <b>{KIND_LABELS[a.kind] ?? a.kind}{a.result ? ` · ${resultLabel(a.result)}` : ''}</b>
+                  {quoteOf.get(a.id)
+                    ? <Link href={`/cotizaciones/${quoteOf.get(a.id)}`} className={s.hLink}><b>{KIND_LABELS[a.kind] ?? a.kind}{a.result ? ` · ${resultLabel(a.result)}` : ''}</b></Link>
+                    : <b>{KIND_LABELS[a.kind] ?? a.kind}{a.result ? ` · ${resultLabel(a.result)}` : ''}</b>}
                   {a.quote_amount ? ` · ${money(a.quote_amount)}` : ''}{a.sale_amount ? ` · vendió ${money(a.sale_amount)}` : ''}
                   {(a.user_name || a.note) && <div className={s.hMuted}>{[a.user_name, a.note && `«${a.note}»`].filter(Boolean).join(' · ')}</div>}
                 </div>

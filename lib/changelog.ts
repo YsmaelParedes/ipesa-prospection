@@ -36,6 +36,20 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.58.0',
+    date: '17 de noviembre, 2026',
+    title: 'Cotizaciones',
+    items: [
+      'Nueva sección Cotizaciones en el menú. Agrega productos, cantidades y precios, y a un lado ves la cotización tal como la recibirá tu cliente. Se guarda sola mientras escribes.',
+      'Al escribir un producto te sugiere los que ya cotizó tu tienda, con su último precio. Suma descuento e IVA (16 % u 8 %) y calcula el total.',
+      'Envíala por WhatsApp con un enlace donde tu cliente la ve y descarga en PDF, o por correo con el PDF adjunto. Las respuestas del correo te llegan a ti. También puedes descargar el PDF.',
+      'Al enviarla, el cliente pasa a Cotización en el Sistema Comercial y te recordamos confirmarla en 2 días. Al marcarla aceptada puedes registrar la venta.',
+      'Ves cuándo abrió tu cliente la cotización, y en la lista, cuánto cotizaste y cuánto te aceptaron en el mes.',
+      'Haz una cotización desde la ficha del cliente o desde «+ Nuevo». En Configuración › Cotizaciones defines la validez, el IVA, las condiciones y tus datos fiscales.',
+      { text: 'Si tu cliente te escribió en las últimas 24 horas, puedes mandarle el PDF desde el WhatsApp de la tienda.', module: 'whatsapp' },
+    ],
+  },
+  {
     version: '1.57.0',
     date: '17 de noviembre, 2026',
     title: 'Pantallas de carga con la forma de tu información',

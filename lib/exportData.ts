@@ -2,12 +2,13 @@
  * Exportar la información de la tienda a Excel (solo navegador).
  *  · contactRows: renglones de contactos con su estado comercial.
  *  · downloadStoreWorkbook: un solo archivo con Contactos, Historial comercial,
- *    Agenda y Catálogos, pedido por partes a /api/data/export.
+ *    Agenda, Cotizaciones y Catálogos, pedido por partes a /api/data/export.
  *  · downloadSummaryWorkbook: el periodo que se ve en Acumulado, por vendedor.
  */
 import { normalizePhone } from './phone'
 import { dayInZone } from './datetime'
 import { GOAL_KEYS, GOAL_LABELS, KIND_LABELS, resultLabel, statusInfo, type ActivityKind, type DayCounts, type Goals } from './commercial'
+import { STATUS_INFO, displayStatus, fmtMoney, fmtQty, isFilled, type QuoteItem, type QuoteStatus } from './quotes'
 
 type Row = Record<string, any>
 type Sheet = { name: string; rows: Row[] }
@@ -113,9 +114,11 @@ export async function downloadStoreWorkbook(slug: string, onStep?: (label: strin
   onStep?.('Contactos'); const contacts = await fetchPart('contacts')
   onStep?.('Historial comercial'); const activities = await fetchPart('activities')
   onStep?.('Agenda'); const reminders = await fetchPart('reminders')
+  onStep?.('Cotizaciones'); const quotes = await fetchPart('quotes')
   onStep?.('Catálogos'); const catalogs = await fetchPart('catalogs')
 
   const contactName = new Map(contacts.map(c => [c.id, c.company?.trim() || c.name]))
+  const today = dayInZone(new Date().toISOString(), timezone)
   await writeWorkbook(`${slug}-informacion-${new Date().toLocaleDateString('en-CA')}.xlsx`, [
     { name: 'Contactos', rows: contactRows(contacts, timezone) },
     { name: 'Historial comercial', rows: activities.map(a => ({
@@ -140,7 +143,26 @@ export async function downloadStoreWorkbook(slug: string, onStep?: (label: strin
       'Hecho el':      dateTime(r.completado_at),
       'Responsable':   r.user_name || '',
     })) },
+    { name: 'Cotizaciones', rows: quotes.map(q => ({
+      'Folio':        q.folio,
+      'Fecha':        q.issued_on || '',
+      'Válida hasta': q.valid_until || '',
+      'Cliente':      q.client_name || '',
+      'Teléfono':     q.client_phone || '',
+      'Correo':       q.client_email || '',
+      'Productos':    ((q.items ?? []) as QuoteItem[]).filter(isFilled)
+        .map(i => [fmtQty(i.quantity), i.unit, i.description, `a ${fmtMoney(i.price)}`].filter(Boolean).join(' ')).join(' | '),
+      'Subtotal':     amount(q.subtotal),
+      'Descuento':    amount(q.discount),
+      'IVA':          amount(q.tax),
+      'Total':        amount(q.total),
+      'Estado':       STATUS_INFO[displayStatus(q.status as QuoteStatus, q.valid_until, today)]?.label ?? q.status,
+      'Enviada':      dateTime(q.sent_at),
+      'Vista por el cliente': dateTime(q.viewed_at),
+      'Hizo':         q.user_name || '',
+      'Condiciones':  q.notes || '',
+    })) },
     { name: 'Catálogos', rows: catalogs.map(c => ({ 'Tipo': c.type === 'segment' ? 'Segmento' : 'Canal', 'Valor': c.label })) },
   ])
-  return { contacts: contacts.length, activities: activities.length, reminders: reminders.length }
+  return { contacts: contacts.length, activities: activities.length, reminders: reminders.length, quotes: quotes.length }
 }
