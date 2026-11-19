@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import {
-  ArrowLeft, Check, CheckCircle2, CircleAlert, Copy, Download, Eye, Lock, MoreHorizontal, Plus, RotateCcw, Send, Trash2, UserPlus, X, XCircle,
+  ArrowLeft, Check, CheckCircle2, ChevronDown, CircleAlert, Copy, Download, Eye, Lock, MoreHorizontal, Plus, RotateCcw, Send, Trash2, UserPlus, X, XCircle,
 } from 'lucide-react'
 import { apiFetch } from '@/lib/apiClient'
 import { useSession } from '@/lib/profile'
@@ -353,7 +353,6 @@ export default function QuoteEditorPage() {
                   onChange={next => change(d => ({ ...d, items: d.items.map(x => (x.key === it.key ? { ...x, ...next } : x)) }))}
                   onRemove={() => change(d => ({ ...d, items: d.items.filter(x => x.key !== it.key) }))} />
               ))}
-              <datalist id="quote-units">{UNIT_SUGGESTIONS.map(u => <option key={u} value={u} />)}</datalist>
               {!locked && (
                 <button className={`btn btn-ghost ${s.addItem} ${s.press}`} onClick={() => change(d => ({ ...d, items: [...d.items, blankItem()] }))}
                   disabled={draft.items.length >= 100}><Plus aria-hidden="true" /> Agregar producto</button>
@@ -590,8 +589,7 @@ function ItemRow({ item, index, locked, canRemove, onChange, onRemove }: {
       </div>
       <input className={`${s.qty} ${s.num}`} inputMode="decimal" value={item.quantity} disabled={locked} placeholder="Cant." aria-label={`Cantidad del producto ${n}`}
         title="Cantidad" onChange={e => onChange({ quantity: e.target.value.replace(/[^\d.]/g, '') })} />
-      <input className={s.unit} list="quote-units" value={item.unit} maxLength={20} disabled={locked} placeholder="Unidad" aria-label={`Unidad del producto ${n}`}
-        title="Unidad" onChange={e => onChange({ unit: e.target.value })} />
+      <UnitInput value={item.unit} disabled={locked} label={`Unidad del producto ${n}`} onChange={unit => onChange({ unit })} />
       <span className={`${s.price} ${s.money}`}>
         <input className={s.num} inputMode="decimal" value={item.price} disabled={locked} placeholder="Precio" aria-label={`Precio unitario del producto ${n}, sin IVA`}
           title="Precio unitario sin IVA" onChange={e => onChange({ price: e.target.value.replace(/[^\d.]/g, '') })} />
@@ -601,5 +599,49 @@ function ItemRow({ item, index, locked, canRemove, onChange, onRemove }: {
         ? <button type="button" className={s.remove} onClick={onRemove} aria-label={`Quitar el producto ${n}`}><Trash2 aria-hidden="true" /></button>
         : null}
     </div>
+  )
+}
+
+const plain = (t: string) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
+
+/**
+ * Unidad: se elige de la lista (pza, L, galón…) o se escribe otra. Lista propia
+ * en lugar de la del navegador, que no se ve igual en cada uno.
+ */
+function UnitInput({ value, disabled, label, onChange }: {
+  value: string; disabled: boolean; label: string; onChange: (unit: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(-1)
+  const q = plain(value)
+  // Con una unidad ya elegida se ven todas (para cambiarla); al escribir, las que coinciden
+  const options = UNIT_SUGGESTIONS.filter(u => !q || UNIT_SUGGESTIONS.some(x => plain(x) === q) || plain(u).includes(q))
+  const show = open && !disabled && options.length > 0
+  const pick = (u: string) => { onChange(u); setOpen(false); setActive(-1) }
+
+  return (
+    <span className={`${s.unit} ${s.unitWrap}`}>
+      <input value={value} maxLength={20} disabled={disabled} placeholder="Unidad" aria-label={label} title="Unidad"
+        role="combobox" aria-expanded={show} aria-autocomplete="list" autoComplete="off"
+        onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 120)}
+        onChange={e => { onChange(e.target.value); setOpen(true); setActive(-1) }}
+        onKeyDown={e => {
+          if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setActive(a => Math.min(options.length - 1, a + 1)) }
+          else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(a => Math.max(-1, a - 1)) }
+          else if (e.key === 'Enter' && show && active >= 0) { e.preventDefault(); pick(options[active]) }
+          else if (e.key === 'Escape') setOpen(false)
+        }} />
+      {!disabled && <ChevronDown aria-hidden="true" />}
+      {show && (
+        <div className={s.suggest} role="listbox" aria-label="Unidades">
+          {options.map((u, i) => (
+            <button key={u} type="button" role="option" aria-selected={i === active || plain(u) === q}
+              onMouseDown={e => { e.preventDefault(); pick(u) }}>
+              <span>{u}</span>{plain(u) === q && <Check aria-hidden="true" className={s.unitCheck} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
   )
 }

@@ -123,6 +123,13 @@
 .item input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-ring); }
 .item input:disabled { background: var(--paper); color: var(--ink-3); }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
+/* Unidad: lista propia (no la del navegador) */
+.unitWrap { position: relative; display: block; min-width: 0; }
+.unitWrap > svg { position: absolute; right: 9px; top: 50%; translate: 0 -50%; width: 14px; height: 14px; color: var(--muted); pointer-events: none; }
+.item .unitWrap input { padding-right: 28px; }
+.unitWrap .suggest { right: auto; min-width: 100%; width: max-content; }
+.unitWrap .suggest button { min-width: 132px; }
+.unitCheck { width: 14px; height: 14px; color: var(--brand-strong); flex-shrink: 0; }
 /* Precio con «$» dentro del campo */
 .money { position: relative; display: block; min-width: 0; }
 .money::before { content: '$'; position: absolute; left: 10px; top: 50%; translate: 0 -50%; font-size: 13.5px; color: var(--muted); pointer-events: none; }
