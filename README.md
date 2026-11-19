@@ -211,7 +211,7 @@ la pantalla de inicio (iOS 16.4+).
 
 | Aviso | Quién lo dispara |
 |---|---|
-| A la hora de cada recordatorio (solo a quien lo creó) | Worker de Cloudflare `matices-avisos` (`workers/avisos`), cada minuto → `/api/cron/reminders` con su llave (en la base solo su SHA-256, tabla `cron_keys`) |
+| A la hora de cada recordatorio (solo a quien lo creó) | Worker de Cloudflare `matices-avisos` (`workers/avisos`): cada minuto pregunta a Supabase `reminders_due()` y solo si ya toca alguno llama a `/api/cron/reminders` con su llave (en la base solo su SHA-256, tabla `cron_keys`). Así Vercel no corre cada minuto para nada |
 | Resumen de la agenda a las 8:00 (cada quien lo suyo) | Cron diario de Vercel → `/api/cron/agenda` (con `CRON_SECRET`) |
 | Mensaje nuevo de WhatsApp (todo el equipo de la tienda) | El webhook, al guardar el mensaje |
 

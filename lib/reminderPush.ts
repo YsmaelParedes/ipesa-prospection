@@ -9,9 +9,11 @@ import { DEFAULT_TZ, naiveIso, zonedIso } from './datetime'
  * Avisos push personales de la Agenda (cada uno va solo a los dispositivos de
  * su dueño; los de WhatsApp, en cambio, son para todo el equipo de la tienda):
  *  · A la hora de cada recordatorio: un Worker de Cloudflare (workers/avisos)
- *    llama cada minuto a /api/cron/reminders. El reloj vive fuera de la base:
- *    cada vuelta es una lectura sobre un índice parcial y solo se escribe
- *    cuando de verdad toca avisar (pg_cron agotaba el Disk IO de Supabase).
+ *    pregunta cada minuto a public.reminders_due() y, solo si ya toca alguno,
+ *    llama a /api/cron/reminders. El reloj vive fuera de la base: cada vuelta
+ *    es una lectura sobre un índice parcial y solo se escribe cuando de verdad
+ *    toca avisar (pg_cron agotaba el Disk IO de Supabase). reminders_due usa
+ *    el mismo criterio que sendDueReminders: si cambia uno, cambia el otro.
  *  · Resumen de la mañana: el cron diario de Vercel llama a /api/cron/agenda.
  *    Junta los recordatorios de cada persona y sus seguimientos del sistema
  *    comercial (contacts.next_action_at de los clientes a su cargo), igual que

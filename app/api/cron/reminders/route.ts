@@ -6,9 +6,10 @@ import { reportError } from '@/lib/errorReport'
 export const dynamic = 'force-dynamic'
 
 /**
- * Avisos a la hora de cada recordatorio. Lo llama cada minuto el Worker de
- * Cloudflare de workers/avisos con su llave (tabla cron_keys). También acepta
- * CRON_SECRET para probarlo a mano.
+ * Avisos a la hora de cada recordatorio. Lo llama el Worker de Cloudflare de
+ * workers/avisos con su llave (tabla cron_keys), solo en los minutos en que
+ * public.reminders_due() dice que ya toca alguno (así Vercel no corre cada
+ * minuto para nada). También acepta CRON_SECRET para probarlo a mano.
  */
 export async function GET(req: NextRequest) {
   if (!(await authorizeCron(req, { allowKeys: true }))) {

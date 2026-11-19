@@ -9,6 +9,10 @@ workers_dev = false
 
 [vars]
 TARGET_URL = "https://www.matices.app/api/cron/reminders"
+# Antes de llamar a la app pregunta aquí si ya toca algún recordatorio
+# (public.reminders_due). La llave publicable es pública: sola no basta.
+SUPABASE_URL = "https://tlpyuuyqbatrgfrycsjs.supabase.co"
+SUPABASE_KEY = "sb_publishable_1rAyxAdk5KtNhjxChDANIA_yEQEL7SI"
 
 [triggers]
 crons = ["* * * * *"]
