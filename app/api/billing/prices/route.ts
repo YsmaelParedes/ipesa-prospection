@@ -1,20 +1,18 @@
 import { NextResponse } from 'next/server'
-import { getPlanPrices, stripeConfigured } from '@/lib/stripe'
-import type { PlanPrice } from '@/lib/billing'
+import { getPriceTable, stripeConfigured } from '@/lib/stripe'
 
 /**
- * GET /api/billing/prices — precio mensual de Galón y Cubeta, leído de
- * Stripe (público: lo usan la página de precios y Configuración → Plan).
- * Sin Stripe configurado o si Stripe falla, responde sin precios y la
- * pantalla muestra "Disponible pronto".
+ * GET /api/billing/prices — precio de Galón y Cubeta leído de Stripe, mensual
+ * (`prices`) y anual (`annual`). Público: lo usan la página de precios y
+ * Configuración → Plan. Sin Stripe configurado o si Stripe falla, responde
+ * sin precios y la pantalla muestra "Disponible pronto".
  */
 export async function GET() {
-  const empty = { available: false, prices: {} as Record<string, PlanPrice> }
+  const empty = { available: false, prices: {}, annual: {} }
   if (!stripeConfigured()) return NextResponse.json(empty)
   try {
-    const list = await getPlanPrices()
-    const prices = Object.fromEntries(list.map(p => [p.plan, p.price]))
-    return NextResponse.json({ available: list.length > 0, prices }, {
+    const { monthly, annual } = await getPriceTable()
+    return NextResponse.json({ available: Object.keys(monthly).length > 0, prices: monthly, annual }, {
       headers: { 'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=3600' },
     })
   } catch (error) {

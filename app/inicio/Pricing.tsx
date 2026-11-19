@@ -2,67 +2,95 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { formatPlanPrice, type PlanPrice } from '@/lib/billing'
+import { fmtMoney, monthlyEquivalent, monthsSaved, formatPlanPrice, type PlanInterval, type PriceTable } from '@/lib/billing'
 import { PLAN_COMPARE, PLAN_COPY } from '@/lib/planFeatures'
-import { PLANS, PUBLIC_PLANS } from '@/lib/stores'
+import { PLANS, PUBLIC_PLANS, TRIAL_DAYS } from '@/lib/stores'
 import { EVENTS, trackAttrs } from '@/lib/analytics'
-import type { PublicPrices } from '@/lib/billing'
 import { Ic } from './_ui'
 import { PlanIcon } from '@/components/PlanIcon'
 import s from './inicio.module.css'
 
 /**
- * Precio mensual de Galón y Cubeta (null = aún no carga o no hay). La página
+ * Precios de Galón y Cubeta, mensual y anual (null = aún no carga). La página
  * los trae de Stripe al generarse (`initial`, así Google los ve en el HTML);
  * si no pudo, se piden aquí al abrirla.
  */
-function usePrices(initial: PublicPrices | null): PublicPrices | null {
-  const [prices, setPrices] = useState<PublicPrices | null>(initial)
+function usePrices(initial: PriceTable | null): PriceTable | null {
+  const [table, setTable] = useState<PriceTable | null>(initial)
   useEffect(() => {
     if (initial) return
     let alive = true
     fetch('/api/billing/prices')
       .then(r => r.json())
-      .then(d => { if (alive) setPrices(d.prices ?? {}) })
-      .catch(() => { if (alive) setPrices({}) })
+      .then(d => { if (alive) setTable({ monthly: d.prices ?? {}, annual: d.annual ?? {} }) })
+      .catch(() => { if (alive) setTable({ monthly: {}, annual: {} }) })
     return () => { alive = false }
   }, [initial])
-  return prices
+  return table
 }
 
-/** Las tres tarjetas de planes del sitio (mismo estilo que la tarjeta de plan de antes). */
-export function PricingCards({ initial = null }: { initial?: PublicPrices | null }) {
-  const prices = usePrices(initial)
+/**
+ * Las tres tarjetas de planes del sitio. Con precios anuales en Stripe aparece
+ * el selector Mensual / Anual. Los botones de Galón y Cubeta llevan el plan al
+ * registro: la tienda empieza su prueba y al final lo encuentra listo para activar.
+ */
+export function PricingCards({ initial = null }: { initial?: PriceTable | null }) {
+  const table = usePrices(initial)
+  const [period, setPeriod] = useState<PlanInterval>('month')
+  const hasAnnual = !!table && PUBLIC_PLANS.some(id => id !== 'litro' && table.annual[id])
+  const saved = table ? monthsSaved(table.monthly.galon, table.annual.galon) : 0
+  const yearly = period === 'year' && hasAnnual
+
   return (
-    <div className={s.pricingGrid}>
-      {PUBLIC_PLANS.map(id => {
-        const copy = PLAN_COPY[id]
-        const price = id === 'litro' ? null : prices?.[id]
-        return (
-          <div key={id} className={`${s.planCard} ${s.priceCard} ${copy.highlight ? s.priceCardHi : ''}`}>
-            {copy.highlight && <span className={s.priceFlag}>El más elegido</span>}
-            <div className={s.planTop}>
-              <PlanIcon plan={id} className={s.priceIcon} />
-              <h3 className={s.priceName}>{PLANS[id].label}</h3>
-              <p className={s.priceTagline}>{copy.tagline}</p>
-              <div className={s.priceAmount}>
-                <strong>
-                  {id === 'litro' ? 'Gratis' : price ? formatPlanPrice(price) : prices === null ? <span className={s.priceLoading}>…</span> : 'Muy pronto'}
-                </strong>
-                <small>{id === 'litro' ? 'para siempre' : price ? '/ mes' : ''}</small>
+    <>
+      {hasAnnual && (
+        <div className={s.billingToggle} role="group" aria-label="Forma de pago">
+          <button type="button" aria-pressed={!yearly} onClick={() => setPeriod('month')}>Mensual</button>
+          <button type="button" aria-pressed={yearly} onClick={() => setPeriod('year')}>
+            Anual{saved > 0 && <span className={s.billingSave}>{saved} meses gratis</span>}
+          </button>
+        </div>
+      )}
+      <div className={s.pricingGrid}>
+        {PUBLIC_PLANS.map(id => {
+          const copy = PLAN_COPY[id]
+          const monthly = id === 'litro' ? undefined : table?.monthly[id]
+          const annual = id === 'litro' ? undefined : table?.annual[id]
+          const shown = yearly && annual ? monthlyEquivalent(annual) : monthly
+          const paid = id !== 'litro'
+          const href = paid ? `/registro?plan=${id}${yearly ? '&periodo=anual' : ''}` : '/registro'
+          return (
+            <div key={id} className={`${s.planCard} ${s.priceCard} ${copy.highlight ? s.priceCardHi : ''}`}>
+              {copy.highlight && <span className={s.priceFlag}>Recomendado</span>}
+              <div className={s.planTop}>
+                <PlanIcon plan={id} className={s.priceIcon} />
+                <h3 className={s.priceName}>{PLANS[id].label}</h3>
+                <p className={s.priceTagline}>{copy.tagline}</p>
+                <div className={s.priceAmount}>
+                  <strong>
+                    {!paid ? 'Gratis' : shown ? formatPlanPrice(shown) : table === null ? <span className={s.priceLoading}>…</span> : 'Muy pronto'}
+                  </strong>
+                  <small>{!paid ? 'para siempre' : shown ? '/ mes' : ''}</small>
+                </div>
+                <small className={s.priceSub}>
+                  {!paid ? 'Sin tarjeta.'
+                    : yearly && annual ? `Pagas ${fmtMoney(annual.amount, annual.currency)} al año. Impuestos incluidos, con factura.`
+                    : 'Por tienda, impuestos incluidos. Con factura.'}
+                </small>
+                {copy.pitch && <p className={s.pricePitch}>{copy.pitch}</p>}
               </div>
-              <small className={s.priceSub}>{id === 'litro' ? 'Sin tarjeta.' : 'Por tienda, impuestos incluidos.'}</small>
+              <ul className={s.planList}>
+                {copy.features.map(f => <li key={f}><span className={s.bulletIcon}><Ic.check /></span>{f}</li>)}
+              </ul>
+              <Link href={href} className={`${s.btn} ${copy.highlight ? s.btnPrimary : s.btnLight} ${s.priceBtn}`} {...trackAttrs(EVENTS.signupClick, { donde: `plan-${id}` })}>
+                {paid ? `Probar ${TRIAL_DAYS} días gratis` : 'Crear cuenta gratis'}
+              </Link>
+              {paid && <small className={s.priceTrial}>Sin tarjeta. Después eliges si activas {PLANS[id].label}.</small>}
             </div>
-            <ul className={s.planList}>
-              {copy.features.map(f => <li key={f}><span className={s.bulletIcon}><Ic.check /></span>{f}</li>)}
-            </ul>
-            <Link href="/registro" className={`${s.btn} ${copy.highlight ? s.btnPrimary : s.btnLight} ${s.priceBtn}`} {...trackAttrs(EVENTS.signupClick, { donde: `plan-${id}` })}>
-              {id === 'litro' ? 'Crear cuenta gratis' : `Empezar con ${PLANS[id].label}`}
-            </Link>
-          </div>
-        )
-      })}
-    </div>
+          )
+        })}
+      </div>
+    </>
   )
 }
 

@@ -6,12 +6,13 @@ import { EVENTS, track } from '@/lib/analytics'
 import type { ClientStore } from '@/lib/profile'
 import { invalidateSession } from '@/lib/profile'
 import { useCachedQuery } from '@/lib/useCachedQuery'
-import { formatPlanPrice, type PlanPrice } from '@/lib/billing'
+import { fmtMoney, formatPlanPrice, monthlyEquivalent, monthsSaved, type PlanInterval, type PlanPrice } from '@/lib/billing'
 import { PLAN_COPY } from '@/lib/planFeatures'
+import { clearPlanIntent, readPlanIntent, type PlanIntent } from '@/lib/planIntent'
 import { PlanIcon } from '@/components/PlanIcon'
 import { SkText } from '@/components/Skeleton'
 import { EMAILS } from '@/lib/legal'
-import { PLANS, PUBLIC_PLANS, STATUS_LABELS } from '@/lib/stores'
+import { PLANS, PUBLIC_PLANS, STATUS_LABELS, type PaidPlanId } from '@/lib/stores'
 import { Card, CardFoot, Ico, Note, Row, api, cx, fmtDate, send } from './ui'
 import s from './configuracion.module.css'
 
@@ -20,16 +21,27 @@ export const STATUS_BADGE: Record<string, string> = {
 }
 
 type Usage = { contacts: number; members: number }
-type Prices = { available: boolean; prices: Partial<Record<'galon' | 'cubeta', PlanPrice>> }
+type PriceMap = Partial<Record<PaidPlanId, PlanPrice>>
+type Prices = { available: boolean; prices: PriceMap; annual?: PriceMap }
 
 const fmtCount = (n: number) => n.toLocaleString('es-MX')
 /** Plan que se fue a pagar a Stripe (para las estadísticas al volver). */
 const CHECKOUT_PLAN_KEY = 'matices:checkout-plan'
+/** Al volver de Stripe el webhook puede tardar: se revisa la sesión varias veces durante un minuto. */
+const PAID_CHECKS = [2000, 5000, 10_000, 20_000, 35_000, 60_000]
+
+/** El plan elegido: el de la dirección (?elegir=galon&periodo=anual) o el que se eligió en la página de precios. */
+function intentFrom(params: URLSearchParams): PlanIntent | null {
+  const plan = params.get('elegir')
+  if (plan === 'galon' || plan === 'cubeta') return { plan, interval: params.get('periodo') === 'anual' ? 'year' : 'month' }
+  return readPlanIntent()
+}
 
 /**
  * Configuración → Plan: plan actual con su uso, los tres planes y el cobro
- * con Stripe (Checkout para suscribirse, portal para cambiar, cancelar,
- * tarjeta y facturas). Los administradores pagan o cambian de plan.
+ * con Stripe (Checkout para suscribirse, mensual o anual; portal para cambiar,
+ * cancelar, tarjeta y facturas). Los administradores pagan o cambian de plan.
+ * En la prueba de Cubeta de una tienda nueva, los planes de pago se activan desde aquí.
  */
 export function PlanTab({ store }: { store: ClientStore }) {
   const params = useSearchParams()
@@ -38,11 +50,24 @@ export function PlanTab({ store }: { store: ClientStore }) {
   const { data: priceData } = useCachedQuery<Prices>('/api/billing/prices')
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
+  const [intent, setIntent] = useState<PlanIntent | null>(null)
+  const [period, setPeriod] = useState<PlanInterval>('month')
+
+  const sub = store.subscription
+  const paying = !!sub && ['active', 'trialing', 'past_due'].includes(sub.status ?? '')
+
+  // El plan que eligió antes de registrarse (o el de la dirección) queda marcado
+  useEffect(() => {
+    if (paying) { clearPlanIntent(); return }
+    const chosen = intentFrom(new URLSearchParams(params.toString()))
+    setIntent(chosen)
+    if (chosen) setPeriod(chosen.interval)
+  }, [params, paying])
 
   // Al volver de Stripe el webhook puede tardar unos segundos: se revisa la sesión
   useEffect(() => {
     if (!justPaid) return
-    const timers = [2000, 5000, 10000].map(ms => setTimeout(() => invalidateSession(), ms))
+    const timers = PAID_CHECKS.map(ms => setTimeout(() => invalidateSession(), ms))
     return () => timers.forEach(clearTimeout)
   }, [justPaid])
 
@@ -57,13 +82,18 @@ export function PlanTab({ store }: { store: ClientStore }) {
     } catch {}
   }, [justPaid])
 
-  const sub = store.subscription
-  const paying = !!sub && ['active', 'trialing', 'past_due'].includes(sub.status ?? '')
-  const pastDue = sub?.status === 'past_due' || sub?.status === 'unpaid'
+  // past_due: aún conserva el plan (días de gracia). unpaid: Stripe dejó de intentar y ya está en Litro.
+  const pastDue = sub?.status === 'past_due'
+  const unpaid = sub?.status === 'unpaid'
   const readonly = store.access === 'readonly'
-  const courtesy = store.plan === 'interno' || (!paying && store.plan !== 'litro')
-  const prices = priceData?.prices ?? {}
+  const trialEnd = store.trialEndsAt
+  const courtesy = store.plan === 'interno' || (!paying && !trialEnd && store.plan !== 'litro')
+  const monthly = priceData?.prices ?? {}
+  const annual = priceData?.annual ?? {}
   const canPay = !!priceData?.available
+  const hasAnnual = PUBLIC_PLANS.some(id => id !== 'litro' && annual[id])
+  const yearly = period === 'year' && hasAnnual
+  const saved = monthsSaved(monthly.galon, annual.galon)
 
   const go = async (key: string, path: string, body?: unknown) => {
     setBusy(key)
@@ -76,19 +106,21 @@ export function PlanTab({ store }: { store: ClientStore }) {
       setBusy('')
     }
   }
-  const checkout = (plan: 'galon' | 'cubeta') => {
+  const checkout = (plan: PaidPlanId) => {
     track(EVENTS.checkoutStarted, { plan })
     try { sessionStorage.setItem(CHECKOUT_PLAN_KEY, plan) } catch {}
-    return go(plan, '/api/billing/checkout', { plan })
+    return go(plan, '/api/billing/checkout', { plan, interval: yearly ? 'year' : 'month' })
   }
   const portal = () => go('portal', '/api/billing/portal')
 
   const headline = readonly
     ? `Tu tienda está ${STATUS_LABELS[store.status].toLowerCase()}`
+    : trialEnd ? 'Prueba de Cubeta'
     : store.plan === 'litro' ? 'Litro · gratis' : `Plan ${store.planLabel}`
 
   const nextLine = paying
     ? sub?.cancelAtPeriodEnd ? `Termina el ${fmtDate(sub.currentPeriodEnd)}` : fmtDate(sub?.currentPeriodEnd)
+    : trialEnd ? `Gratis hasta el ${fmtDate(trialEnd)}`
     : store.plan === 'litro' ? 'Sin cobro' : store.paidUntil ? `Cortesía hasta ${fmtDate(store.paidUntil)}` : 'Cortesía sin vencimiento'
 
   const meters = [
@@ -98,13 +130,25 @@ export function PlanTab({ store }: { store: ClientStore }) {
 
   return (
     <>
-      {justPaid && !paying && <Note kind="info">Recibimos tu pago. Estamos confirmándolo con Stripe: tu plan se activa en unos segundos.</Note>}
+      {justPaid && !paying && <Note kind="info">Recibimos tu pago. Estamos confirmándolo con Stripe: tu plan se activa en unos segundos. Si no cambia en un minuto, recarga la página.</Note>}
       {justPaid && paying && <Note kind="ok">¡Listo! Tu plan {store.planLabel} está activo.</Note>}
       {pastDue && (
         <Note kind="danger">
           Hay un pago pendiente de tu suscripción. Actualiza tu tarjeta en «Administrar suscripción».
           Conservas el plan de pago durante tres días desde el primer aviso de cobro fallido;
           después tu tienda usa Litro hasta que se confirme el pago (no se borra nada).
+        </Note>
+      )}
+      {unpaid && (
+        <Note kind="danger">
+          No se pudo cobrar tu suscripción y tu tienda pasó al plan Litro (no se borró nada).
+          Actualiza tu tarjeta en «Administrar suscripción» para recuperar tu plan.
+        </Note>
+      )}
+      {trialEnd && !readonly && (
+        <Note kind="info">
+          Estás probando todo el plan Cubeta gratis hasta el {fmtDate(trialEnd)}. Después tu tienda pasa a Litro, gratis, sin borrar nada.
+          {intent ? ` Elegiste ${PLANS[intent.plan].label}: actívalo abajo cuando quieras.` : ' Si quieres seguir con tu equipo y todo lo que usas, activa tu plan aquí.'}
         </Note>
       )}
       {paying && sub?.cancelAtPeriodEnd && !pastDue && (
@@ -125,8 +169,8 @@ export function PlanTab({ store }: { store: ClientStore }) {
             <small>Tu plan</small>
             <strong>{headline}</strong>
           </div>
-          <span className={cx(s.badge, pastDue ? s.bDanger : readonly ? STATUS_BADGE[store.status] : s.bActive)}>
-            <i />{pastDue ? 'Pago pendiente' : readonly ? STATUS_LABELS[store.status] : paying ? 'Suscripción activa' : courtesy ? 'Cortesía' : 'Activo'}
+          <span className={cx(s.badge, pastDue || unpaid ? s.bDanger : readonly ? STATUS_BADGE[store.status] : trialEnd ? s.bTrial : s.bActive)}>
+            <i />{pastDue || unpaid ? 'Pago pendiente' : readonly ? STATUS_LABELS[store.status] : paying ? 'Suscripción activa' : trialEnd ? 'Prueba gratis' : courtesy ? 'Cortesía' : 'Activo'}
           </span>
         </div>
         <Row label={paying ? 'Próximo cobro' : 'Pago'} align="center">
@@ -154,7 +198,7 @@ export function PlanTab({ store }: { store: ClientStore }) {
         )}
       </Card>
 
-      {store.plan === 'cubeta' && !readonly && (
+      {store.plan === 'cubeta' && !readonly && !trialEnd && (
         <Note kind="info">
           Tu plan incluye ayuda para importar tu base y capacitar a tu equipo. Escríbenos a{' '}
           <a href={`mailto:${EMAILS.soporte}`} className="auth-link strong">{EMAILS.soporte}</a> y lo agendamos.
@@ -165,40 +209,55 @@ export function PlanTab({ store }: { store: ClientStore }) {
         <Card title="Plan de cortesía" description="Tu tienda tiene todas las funciones sin cobro. Si necesitas cambiar algo, escríbenos.">
           <div className={s.cardBody}>
             <ul className={s.features}>
-              {PLAN_COPY.cubeta.features.slice(1).map(f => <li key={f}><Ico.check />{f}</li>)}
+              {[...PLAN_COPY.galon.features.slice(2), ...PLAN_COPY.cubeta.features.slice(2)].map(f => <li key={f}><Ico.check />{f}</li>)}
               <li><Ico.check />Hasta {store.maxUsers} usuarios con roles</li>
             </ul>
           </div>
         </Card>
       ) : (
-        <Card title="Planes" description="Pago mensual con tarjeta a través de Stripe. Cambia o cancela cuando quieras.">
+        <Card title="Planes" description="Pago con tarjeta a través de Stripe, mensual o anual. Cambia o cancela cuando quieras."
+          actions={hasAnnual && !paying ? (
+            <div className={s.seg} role="group" aria-label="Forma de pago">
+              <button type="button" className={cx(!yearly && s.segOn)} aria-pressed={!yearly} onClick={() => setPeriod('month')}>Mensual</button>
+              <button type="button" className={cx(yearly && s.segOn)} aria-pressed={yearly} onClick={() => setPeriod('year')}>
+                Anual{saved > 0 ? ` · ${saved} meses gratis` : ''}
+              </button>
+            </div>
+          ) : undefined}>
           <div className={s.cardBody}>
             <div className={s.plans}>
               {PUBLIC_PLANS.map(id => {
                 const copy = PLAN_COPY[id]
-                const current = store.plan === id && !readonly
-                const price = id === 'litro' ? null : prices[id]
+                // En la prueba nada es «tu plan actual»: Galón y Cubeta se activan desde aquí
+                const current = store.plan === id && !readonly && !trialEnd
+                const chosen = !current && intent?.plan === id
+                const m = id === 'litro' ? undefined : monthly[id]
+                const a = id === 'litro' ? undefined : annual[id]
+                const shown = yearly && a ? monthlyEquivalent(a) : m
                 let action: React.ReactNode
                 if (current) action = <button className="btn btn-ghost" disabled>Tu plan actual</button>
                 else if (readonly) action = null
                 else if (id === 'litro') action = paying ? <button className="btn btn-ghost" disabled={!!busy} onClick={portal}>{busy === 'portal' ? 'Abriendo…' : 'Cancelar suscripción'}</button> : null
                 else if (paying) action = <button className="btn btn-dark" disabled={!!busy} onClick={portal}>{busy === 'portal' ? 'Abriendo…' : `Cambiar a ${PLANS[id].label}`}</button>
                 else action = (
-                  <button className={copy.highlight ? 'btn btn-primary' : 'btn btn-dark'} disabled={!!busy || !canPay} onClick={() => checkout(id)}>
-                    {!canPay ? 'Disponible pronto' : busy === id ? 'Abriendo pago…' : `Cambiar a ${PLANS[id].label}`}
+                  <button className={copy.highlight || chosen ? 'btn btn-primary' : 'btn btn-dark'} disabled={!!busy || !canPay} onClick={() => checkout(id)}>
+                    {!canPay ? 'Disponible pronto' : busy === id ? 'Abriendo pago…' : `${trialEnd ? 'Activar' : 'Cambiar a'} ${PLANS[id].label}${yearly && a ? ' anual' : ''}`}
                   </button>
                 )
                 return (
-                  <div key={id} className={cx(s.planOption, current && s.planOptionOn, copy.highlight && !current && s.planOptionHi)}>
-                    {current ? <span className={cx(s.planFlag, s.planFlagOn)}>Tu plan</span> : copy.highlight && <span className={s.planFlag}>Recomendado</span>}
+                  <div key={id} className={cx(s.planOption, current && s.planOptionOn, (chosen || (copy.highlight && !current && !intent)) && s.planOptionHi)}>
+                    {current ? <span className={cx(s.planFlag, s.planFlagOn)}>Tu plan</span>
+                      : chosen ? <span className={s.planFlag}>Elegiste este plan</span>
+                      : copy.highlight && !intent && <span className={s.planFlag}>Recomendado</span>}
                     <PlanIcon plan={id} className={s.planIcon} />
                     <div className={s.planName}>{PLANS[id].label}</div>
                     <div className={s.planPrice}>
                       {id === 'litro'
                         ? <><strong>Gratis</strong><small>para siempre</small></>
-                        : price ? <><strong>{formatPlanPrice(price)}</strong><small>al mes</small></>
+                        : shown ? <><strong>{formatPlanPrice(shown)}</strong><small>al mes</small></>
                         : <><strong className={s.planPriceSoon}>—</strong><small>{priceData ? 'precio pronto' : 'cargando…'}</small></>}
                     </div>
+                    {yearly && a && <p className={s.planYear}>Pagas {fmtMoney(a.amount, a.currency)} al año</p>}
                     <p className={s.planTagline}>{copy.tagline}</p>
                     <ul className={s.planFeatures}>
                       {copy.features.map(f => <li key={f}><Ico.check />{f}</li>)}
@@ -208,7 +267,10 @@ export function PlanTab({ store }: { store: ClientStore }) {
                 )
               })}
             </div>
-            <p className={s.hint}>Precios por tienda, impuestos incluidos. Si bajas de plan no se borra nada: lo que pase del límite se conserva y sigues pudiendo consultarlo.</p>
+            <p className={s.hint}>
+              Precios por tienda, impuestos incluidos. Si bajas de plan no se borra nada: lo que pase del límite se conserva y sigues pudiendo consultarlo.
+              {' '}¿Necesitas factura? Escríbenos a <a href={`mailto:${EMAILS.facturacion}`} className="auth-link strong">{EMAILS.facturacion}</a> con tus datos fiscales.
+            </p>
           </div>
         </Card>
       )}

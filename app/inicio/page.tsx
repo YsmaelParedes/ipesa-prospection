@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { APP_NAME, APP_TAGLINE } from '@/lib/brand'
 import { PLANS } from '@/lib/stores'
 import { EVENTS, trackAttrs } from '@/lib/analytics'
-import { getPublicPrices } from '@/lib/publicPrices'
+import { getPublicPriceTable } from '@/lib/publicPrices'
 import { CtaBand, Ic, MoreLink, SectionHead } from './_ui'
 import { DemoTabs } from './demos/DemoTabs'
 import { HeroVideo } from './demos/HeroVideo'
@@ -30,7 +30,7 @@ const FEATURES = [
 ]
 
 const STEPS = [
-  { title: 'Crea tu cuenta gratis', text: 'En un minuto y sin tarjeta. Empiezas en el plan Litro.' },
+  { title: 'Crea tu cuenta gratis', text: 'En un minuto y sin tarjeta. Empiezas con 14 días de Cubeta gratis.' },
   { title: 'Configura tu sucursal', text: 'Nombre, logo y catálogos. El asistente te guía paso a paso.' },
   { title: 'Invita a tu equipo', text: 'Manda a cada vendedor su enlace por WhatsApp o correo y a vender.' },
 ]
@@ -39,7 +39,8 @@ const STEPS = [
 export const revalidate = 3600
 
 export default async function LandingPage() {
-  const prices = await getPublicPrices()
+  const priceTable = await getPublicPriceTable()
+  const prices = priceTable?.monthly ?? null
   return (
     <>
       <JsonLd data={organizationJsonLd(prices)} />
@@ -133,8 +134,8 @@ export default async function LandingPage() {
       {/* ── Precios ── */}
       <section className={s.section}>
         <div className={s.wrap}>
-          <SectionHead title="Empieza gratis, crece cuando quieras" sub="Pago mensual con tarjeta. Cambia o cancela cuando quieras desde tu CRM." />
-          <div style={{ marginTop: 44 }}><PricingCards initial={prices} /></div>
+          <SectionHead title="Empieza gratis, crece cuando quieras" sub="Prueba Cubeta 14 días sin tarjeta. Después, pago mensual o anual con factura; cambia o cancela desde tu CRM." />
+          <div style={{ marginTop: 44 }}><PricingCards initial={priceTable} /></div>
           <div className={s.centerLink}><MoreLink href="/inicio/precios">Compara los planes</MoreLink></div>
         </div>
       </section>

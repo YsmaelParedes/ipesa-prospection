@@ -7,7 +7,7 @@ import { ACTIVE_STORE_COOKIE, STORE_COLUMNS, getServerSupabase, invalidateStoreC
 import { randomToken } from './crypto'
 import {
   DEFAULT_CANALES, DEFAULT_MODULES, DEFAULT_PLAN, DEFAULT_SEGMENTS,
-  effectiveModules, effectivePlan, normalizeModules, planOf, slugify, storeAccess,
+  activeTrialEnd, effectiveModules, effectivePlan, newStoreTrial, normalizeModules, planOf, slugify, storeAccess,
 } from './stores'
 import type { Schema } from './validation'
 import { DEFAULT_TZ } from './datetime'
@@ -69,6 +69,8 @@ export function publicStore(store: StoreRow) {
     /** Tiene cliente en Stripe (puede abrir el portal: facturas, tarjeta) */
     billingPortal: !!store.stripe_customer_id,
     paidUntil: store.paid_until,
+    /** Prueba de Cubeta en curso: el día en que termina (null si no hay o ya terminó) */
+    trialEndsAt: activeTrialEnd(store),
     access: storeAccess(store),
     modules: effectiveModules(store),
     onboardingCompleted: !!store.onboarding_completed_at,
@@ -98,7 +100,8 @@ export async function setActiveStoreCookie(storeId: string) {
 }
 
 /**
- * Crea una tienda en el plan Litro (gratis) con sus catálogos iniciales y el
+ * Crea una tienda (la primera de cada persona, con la prueba de Cubeta; las
+ * demás, en Litro) con sus catálogos iniciales y el
  * registro de WhatsApp (sin conectar). Quien la crea queda como su primer
  * administrador; si no se puede darlo de alta, la tienda se deshace. El slug se
  * desambigua si ya existe.
@@ -106,6 +109,10 @@ export async function setActiveStoreCookie(storeId: string) {
 export async function createStore(createdBy: string, profile: Record<string, unknown>): Promise<StoreRow> {
   const db = getServerSupabase()
   const base = slugify(String(profile.name)) || 'tienda'
+  // La prueba de Cubeta es para la primera tienda de cada persona (abrir más no da más pruebas)
+  const { count: opened, error: countError } = await db.from('stores').select('id', { count: 'exact', head: true }).eq('created_by', createdBy)
+  if (countError) throw countError
+  const plan = opened ? { plan: DEFAULT_PLAN } : newStoreTrial()
   let store: StoreRow | null = null
   for (let attempt = 0; attempt < 6 && !store; attempt++) {
     const slug = attempt === 0 ? base : `${base}-${randomToken(3).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 4) || attempt}`
@@ -113,7 +120,7 @@ export async function createStore(createdBy: string, profile: Record<string, unk
       ...profile,
       slug: slug.length >= 3 ? slug : `${slug}-tienda`,
       status: 'active',
-      plan: DEFAULT_PLAN,
+      ...plan,
       modules: DEFAULT_MODULES,
       created_by: createdBy,
     }).select(STORE_COLUMNS).single()

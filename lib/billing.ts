@@ -9,17 +9,30 @@
  */
 import { PAID_SUBSCRIPTION_STATUSES, type PaidPlanId } from './stores'
 
+/** Cada cuánto se cobra: mensual o anual (el anual cuesta 10 meses: 2 gratis). */
+export type PlanInterval = 'month' | 'year'
+export const isPlanInterval = (v: unknown): v is PlanInterval => v === 'month' || v === 'year'
+
 export const PRICE_LOOKUP: Record<PaidPlanId, string> = {
   galon: 'galon_mensual',
   cubeta: 'cubeta_mensual',
 }
+export const PRICE_LOOKUP_ANNUAL: Record<PaidPlanId, string> = {
+  galon: 'galon_anual',
+  cubeta: 'cubeta_anual',
+}
+export const lookupKeyFor = (plan: PaidPlanId, interval: PlanInterval) =>
+  (interval === 'year' ? PRICE_LOOKUP_ANNUAL : PRICE_LOOKUP)[plan]
+export const ALL_LOOKUP_KEYS = [...Object.values(PRICE_LOOKUP), ...Object.values(PRICE_LOOKUP_ANNUAL)]
 
 export const isPaidPlanId = (v: unknown): v is PaidPlanId => v === 'galon' || v === 'cubeta'
 
-/** Plan de un precio de Stripe por su lookup key (null si no es de Matices). */
+/** Plan de un precio de Stripe por su lookup key, mensual o anual (null si no es de Matices). */
 export function planFromLookupKey(key: string | null | undefined): PaidPlanId | null {
   if (!key) return null
-  for (const [plan, lookup] of Object.entries(PRICE_LOOKUP)) if (lookup === key) return plan as PaidPlanId
+  for (const map of [PRICE_LOOKUP, PRICE_LOOKUP_ANNUAL]) {
+    for (const [plan, lookup] of Object.entries(map)) if (lookup === key) return plan as PaidPlanId
+  }
   return null
 }
 
@@ -76,6 +89,17 @@ export type PlanPrice = { amount: number; currency: string; interval: string }
 
 /** Precio mensual de cada plan de paga (falta el que Stripe no tenga configurado). */
 export type PublicPrices = Partial<Record<PaidPlanId, PlanPrice>>
+/** Mensual y anual de cada plan (el anual puede faltar si aún no se crea en Stripe). */
+export type PriceTable = { monthly: PublicPrices; annual: PublicPrices }
+
+/** Lo que equivale al mes un precio anual (para «$749 al mes, pagando el año»). */
+export const monthlyEquivalent = (p: PlanPrice): PlanPrice => ({ ...p, amount: Math.round((p.amount / 12) * 100) / 100, interval: 'month' })
+
+/** Meses que se ahorran pagando el año en lugar de 12 mensualidades (redondeado). */
+export function monthsSaved(monthly: PlanPrice | undefined, annual: PlanPrice | undefined): number {
+  if (!monthly || !annual || monthly.amount <= 0) return 0
+  return Math.max(0, Math.round((monthly.amount * 12 - annual.amount) / monthly.amount))
+}
 
 export function formatPlanPrice(p: PlanPrice | null | undefined): string | null {
   if (!p) return null

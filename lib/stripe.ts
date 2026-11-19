@@ -5,7 +5,7 @@
  * Sin STRIPE_SECRET_KEY el cobro queda "Disponible pronto" y nada se rompe.
  */
 import Stripe from 'stripe'
-import { PRICE_LOOKUP, planFromLookupKey, type PlanPrice } from './billing'
+import { ALL_LOOKUP_KEYS, lookupKeyFor, planFromLookupKey, type PlanInterval, type PlanPrice, type PriceTable } from './billing'
 import type { PaidPlanId } from './stores'
 import { getServerSupabase } from './supabase-server'
 
@@ -23,26 +23,41 @@ export function getStripe(): Stripe {
 }
 
 // ── Precios (leídos de Stripe por lookup key, con caché en memoria) ─────────
-type PriceInfo = { id: string; plan: PaidPlanId; price: PlanPrice }
+type PriceInfo = { id: string; plan: PaidPlanId; interval: PlanInterval; price: PlanPrice }
 let priceCache: { at: number; list: PriceInfo[] } | null = null
 const PRICE_TTL = 10 * 60 * 1000
 
+/**
+ * Los precios de Galón y Cubeta, mensuales y anuales. Un precio solo cuenta si
+ * su lookup key corresponde a su periodo (galon_anual cada año, galon_mensual
+ * cada mes): así un error en el panel no cobra un año al precio de un mes.
+ */
 export async function getPlanPrices(): Promise<PriceInfo[]> {
   if (priceCache && Date.now() - priceCache.at < PRICE_TTL) return priceCache.list
-  const res = await getStripe().prices.list({ lookup_keys: Object.values(PRICE_LOOKUP), active: true, limit: 10 })
+  const res = await getStripe().prices.list({ lookup_keys: ALL_LOOKUP_KEYS, active: true, limit: 20 })
   const list: PriceInfo[] = []
   for (const p of res.data) {
     const plan = planFromLookupKey(p.lookup_key)
-    if (!plan || p.unit_amount === null || p.recurring?.interval !== 'month' || p.recurring.interval_count !== 1) continue
+    const raw: string | undefined = p.recurring?.interval
+    const interval: PlanInterval | null = raw === 'month' ? 'month' : raw === 'year' ? 'year' : null
+    if (!plan || !interval || p.unit_amount === null || p.recurring?.interval_count !== 1) continue
+    if (p.lookup_key !== lookupKeyFor(plan, interval)) continue
     await rememberPricePlan(p.id, plan)
-    list.push({ id: p.id, plan, price: { amount: p.unit_amount / 100, currency: p.currency, interval: p.recurring?.interval ?? 'month' } })
+    list.push({ id: p.id, plan, interval, price: { amount: p.unit_amount / 100, currency: p.currency, interval } })
   }
   priceCache = { at: Date.now(), list }
   return list
 }
 
-export async function priceIdFor(plan: PaidPlanId): Promise<string | null> {
-  return (await getPlanPrices()).find(p => p.plan === plan)?.id ?? null
+export async function priceIdFor(plan: PaidPlanId, interval: PlanInterval = 'month'): Promise<string | null> {
+  return (await getPlanPrices()).find(p => p.plan === plan && p.interval === interval)?.id ?? null
+}
+
+/** Tabla para el sitio y Configuración → Plan: mensual y anual de cada plan. */
+export async function getPriceTable(): Promise<PriceTable> {
+  const list = await getPlanPrices()
+  const pick = (interval: PlanInterval) => Object.fromEntries(list.filter(p => p.interval === interval).map(p => [p.plan, p.price]))
+  return { monthly: pick('month'), annual: pick('year') }
 }
 
 /** Immutable history: moving a lookup key must not change an old price's plan. */

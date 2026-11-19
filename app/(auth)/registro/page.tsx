@@ -1,20 +1,30 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { AuthAlert, AuthField, AuthHeader, AuthIcon, PasswordField, ResendConfirmation, SubmitButton } from '@/components/AuthUI'
-import { PLANS } from '@/lib/stores'
+import { PLANS, TRIAL_DAYS } from '@/lib/stores'
+import { savePlanIntent, type PlanIntent } from '@/lib/planIntent'
 import { EVENTS, track } from '@/lib/analytics'
 import { TURNSTILE_SITE_KEY, Turnstile, type TurnstileHandle } from '@/components/Turnstile'
 
 /**
  * Registro abierto: la cuenta nace sin tienda; al confirmar el correo,
- * /bienvenida crea la tienda en el plan Litro (gratis) y su administrador decide
- * después si cambia a Galón o Cubeta.
+ * /bienvenida crea la tienda con la prueba de Cubeta (14 días, sin tarjeta) y
+ * su administrador decide después qué plan activa. Si viene de un plan de la
+ * página de precios (?plan=galon), se recuerda para ofrecerlo al terminar.
  */
-const LITRO = PLANS.litro
-
 export default function RegisterPage() {
+  const [intent, setIntent] = useState<PlanIntent | null>(null)
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search)
+    const plan = sp.get('plan')
+    if (plan !== 'galon' && plan !== 'cubeta') return
+    const chosen: PlanIntent = { plan, interval: sp.get('periodo') === 'anual' ? 'year' : 'month' }
+    savePlanIntent(chosen)
+    setIntent(chosen)
+  }, [])
+
   const [name, setName]         = useState('')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -68,7 +78,9 @@ export default function RegisterPage() {
   return (
     <>
       <AuthHeader title="Crea la cuenta de tu tienda"
-        subtitle={<>Empieza gratis con el plan Litro: {LITRO.maxContacts} contactos y tu cola de llamadas, sin tarjeta. Cambia de plan cuando quieras.</>} />
+        subtitle={intent
+          ? <>Elegiste {PLANS[intent.plan].label}. Empieza con {TRIAL_DAYS} días de Cubeta gratis, sin tarjeta; al configurar tu tienda lo dejamos listo para activar.</>
+          : <>Empieza con {TRIAL_DAYS} días de Cubeta gratis, sin tarjeta. Después eliges tu plan o sigues en Litro, gratis.</>} />
       {error && <AuthAlert>{error}</AuthAlert>}
       <form onSubmit={submit} className="auth-form">
         <AuthField label="Tu nombre" icon={AuthIcon.user} value={name} onChange={e => setName(e.target.value)}

@@ -323,6 +323,9 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const hasStoreMenu = !!session && session.stores.length > 1
   // Stripe no pudo cobrar: los administradores ven el aviso para actualizar la tarjeta
   const paymentIssue = !!session?.isAdmin && !!store?.subscription && (store.subscription.status === 'past_due' || store.subscription.status === 'unpaid')
+  // Prueba de Cubeta de una tienda nueva: el administrador ve cuántos días le quedan
+  const trialDaysLeft = session?.isAdmin && store?.trialEndsAt && !readonly
+    ? Math.max(1, Math.ceil((new Date(store.trialEndsAt).getTime() - Date.now()) / 86_400_000)) : null
   const showFab      = !readonly && pathname in FAB_ROUTES
   const helpMailto   = `mailto:${EMAILS.soporte}?subject=${encodeURIComponent(`Ayuda · ${store?.name ?? APP_NAME}`)}&body=${encodeURIComponent(
     `Hola, necesito ayuda con:
@@ -542,6 +545,17 @@ Pantalla: ${pathname}`,
               Actualiza tu tarjeta para no perderlo; si el cobro no pasa, tu tienda vuelve al plan Litro.
             </span>
             <Link href="/configuracion?tab=plan" className="plan-banner-cta">Actualizar tarjeta</Link>
+          </div>
+        )}
+        {trialDaysLeft && store?.trialEndsAt && !pathname.startsWith('/configuracion') && (
+          <div className="plan-banner trial" role="status">
+            <Icon.sparkles style={{ width: 16, height: 16, flexShrink: 0 }} />
+            <span>
+              <strong>Estás probando Cubeta gratis.</strong>{' '}
+              {trialDaysLeft === 1 ? 'Te queda 1 día' : `Te quedan ${trialDaysLeft} días`} (hasta el {new Date(store.trialEndsAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}).
+              Después eliges tu plan o sigues en Litro, sin perder nada.
+            </span>
+            <Link href="/configuracion?tab=plan" className="plan-banner-cta">Elegir plan</Link>
           </div>
         )}
 

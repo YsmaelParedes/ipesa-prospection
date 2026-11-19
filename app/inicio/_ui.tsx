@@ -31,7 +31,7 @@ export function PageHero({ title, lead, children }: { title: React.ReactNode; le
 }
 
 /** Cierre con llamado a la acción, igual en todas las páginas. */
-export function CtaBand({ title = 'Tu sucursal, organizada desde hoy', text = 'Crea tu cuenta gratis con el plan Litro y cambia de plan cuando tu tienda lo necesite.' }: { title?: string; text?: string }) {
+export function CtaBand({ title = 'Tu sucursal, organizada desde hoy', text = 'Crea tu cuenta gratis: 14 días de Cubeta sin tarjeta y después eliges el plan que tu tienda necesite.' }: { title?: string; text?: string }) {
   return (
     <section className={s.ctaSection}>
       <div className={s.wrap}>

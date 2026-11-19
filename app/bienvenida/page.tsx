@@ -7,7 +7,8 @@ import { AuthAlert, AuthField, AuthIcon } from '@/components/AuthUI'
 import { BrandLogo } from '@/components/Brand'
 import { APP_NAME } from '@/lib/brand'
 import { invalidateSession, useSession, type ClientStore } from '@/lib/profile'
-import { DEFAULT_MODULES, ROLE_LABELS, planOf, type StoreModule, type StoreModules } from '@/lib/stores'
+import { DEFAULT_MODULES, PLANS, ROLE_LABELS, planOf, type StoreModule, type StoreModules } from '@/lib/stores'
+import { planTabHref, readPlanIntent, type PlanIntent } from '@/lib/planIntent'
 import { MX_STATES } from '@/lib/mexico'
 import { Select, toOptions } from '@/components/Select'
 import { pendingInvite } from '@/lib/pendingInvite'
@@ -537,17 +538,24 @@ function TeamStep({ store, canInviteAdmins, invites, locked, onInvite, onBack, o
   )
 }
 
+/** «2 de diciembre» (fin de la prueba, en la hora de este dispositivo). */
+const fmtTrialDay = (iso: string) => new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })
+
 /* ── Listo ──────────────────────────────────────────────────────────────── */
 function DoneStep({ store, modules, invites }: { store: ClientStore; modules: StoreModules; invites: number }) {
   const free = store.plan === 'litro'
+  const trialEnd = store.trialEndsAt
+  // El plan que eligió en la página de precios (solo si está en su prueba)
+  const [intent, setIntent] = useState<PlanIntent | null>(null)
+  useEffect(() => { if (trialEnd) setIntent(readPlanIntent()) }, [trialEnd])
 
   const next = [
     modules.whatsapp
       ? { href: '/configuracion?tab=whatsapp', icon: WhatsAppGlyph, tone: s.nextWa, title: 'Conecta tu WhatsApp', text: 'Usa el número de tu tienda para atender a tus clientes desde el CRM.' }
       : { href: '/comercial', icon: Ic.leads, tone: s.nextBrand, title: 'Haz tu primera llamada', text: 'Anota el resultado y la próxima fecha de cada cliente.' },
     { href: '/contactos', icon: Ic.contacts, tone: s.nextCyan, title: 'Agrega tus clientes', text: 'Captúralos uno por uno o importa tu lista de Excel.' },
-    free
-      ? { href: '/configuracion?tab=plan', icon: Ic.settings, tone: s.nextMagenta, title: 'Conoce los planes', text: 'Galón y Cubeta quitan los límites y suman a tu equipo.' }
+    free || trialEnd
+      ? { href: planTabHref(intent), icon: Ic.settings, tone: s.nextMagenta, title: intent ? `Activa ${PLANS[intent.plan].label}` : 'Conoce los planes', text: trialEnd ? 'Elige tu plan cuando quieras; tu prueba sigue igual.' : 'Galón y Cubeta quitan los límites y suman a tu equipo.' }
       : { href: '/configuracion?tab=catalogos', icon: Ic.settings, tone: s.nextMagenta, title: 'Ajusta tus catálogos', text: 'Segmentos y canales con los que trabaja tu tienda.' },
   ]
 
@@ -556,8 +564,10 @@ function DoneStep({ store, modules, invites }: { store: ClientStore; modules: St
       <div className={s.doneBadge} aria-hidden="true"><span><AuthIcon.check /></span></div>
       <h1>¡{store.name} está lista!</h1>
       <p className={s.doneSub}>
-        {free
-          ? <>Estás en el plan Litro, gratis: hasta {store.limits.contacts} contactos. Cuando lo necesites, cambia de plan en Configuración → Plan.</>
+        {trialEnd
+          ? <>Tienes todo el plan Cubeta gratis hasta el {fmtTrialDay(trialEnd)}, sin tarjeta. Después eliges tu plan o sigues en Litro, gratis, sin perder nada.</>
+          : free
+          ? <>Estás en el plan Litro, gratis: hasta {store.limits.contacts?.toLocaleString('es-MX')} contactos. Cuando lo necesites, cambia de plan en Configuración → Plan.</>
           : <>Tu plan {store.planLabel} está activo.</>}
         {invites > 0 && <> Cuando tu equipo acepte su invitación lo verás en Configuración.</>}
       </p>

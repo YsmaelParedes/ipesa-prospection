@@ -4,6 +4,7 @@ import { getServerSupabase, type StoreContext } from './supabase-server'
 import { getStripe, priceIdFor } from './stripe'
 import { assertStripeStoreLock, withStripeStoreLock } from './stripeBillingState'
 import type { PaidPlanId } from './stores'
+import type { PlanInterval } from './billing'
 
 export class CheckoutConflict extends Error {}
 
@@ -16,7 +17,7 @@ type Attempt = {
 const terminal = (status: string) => status === 'canceled' || status === 'incomplete_expired'
 
 /** Persisted attempts survive timeouts, lost responses and server restarts. */
-export async function openStripeCheckout(ctx: StoreContext, plan: PaidPlanId, origin: string): Promise<string> {
+export async function openStripeCheckout(ctx: StoreContext, plan: PaidPlanId, origin: string, interval: PlanInterval = 'month'): Promise<string> {
   return withStripeStoreLock(ctx.storeId, async token => {
     const db = getServerSupabase()
     const stripe = getStripe()
@@ -112,7 +113,8 @@ export async function openStripeCheckout(ctx: StoreContext, plan: PaidPlanId, or
           throw new CheckoutConflict('Tu pago ya fue recibido. Espera a que se actualice tu plan.')
         }
       } else if (session.status === 'open') {
-        if (session.metadata?.plan === plan && session.url) {
+        // Mismo plan y mismo periodo: se reusa el enlace (los de antes no guardaban periodo: mensual)
+        if (session.metadata?.plan === plan && (session.metadata?.interval ?? 'month') === interval && session.url) {
           await assertStripeStoreLock(ctx.storeId, token)
           return session.url
         }
@@ -138,15 +140,15 @@ export async function openStripeCheckout(ctx: StoreContext, plan: PaidPlanId, or
     // check and the session listing. Recheck after all payable links are closed.
     await ensureNoSubscription()
 
-    const price = await priceIdFor(plan)
-    if (!price) throw new Error('Este plan aún no tiene precio configurado')
+    const price = await priceIdFor(plan, interval)
+    if (!price) throw new CheckoutConflict(interval === 'year' ? 'El pago anual aún no está disponible. Elige el pago mensual.' : 'Este plan aún no tiene precio configurado')
     const id = randomUUID()
     const params: Stripe.Checkout.SessionCreateParams = {
       ui_mode: 'hosted_page', mode: 'subscription', customer,
       customer_update: { address: 'auto' }, client_reference_id: ctx.storeId,
       line_items: [{ price, quantity: 1 }],
-      subscription_data: { metadata: { store_id: ctx.storeId, plan } },
-      metadata: { store_id: ctx.storeId, plan, checkout_attempt: id },
+      subscription_data: { metadata: { store_id: ctx.storeId, plan, interval } },
+      metadata: { store_id: ctx.storeId, plan, interval, checkout_attempt: id },
       billing_address_collection: 'auto', phone_number_collection: { enabled: false },
       automatic_tax: { enabled: true }, allow_promotion_codes: false,
       payment_method_collection: 'always', submit_type: 'auto',

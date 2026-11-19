@@ -17,7 +17,7 @@ const GROUPS: { id: string; title: string; items: { q: string; a: string }[] }[]
   {
     id: 'empezar', title: 'Empezar',
     items: [
-      { q: '¿Cómo empiezo?', a: 'Crea tu cuenta gratis con tu correo, confirma el enlace que te llega y el asistente te ayuda a configurar tu tienda. Empiezas en el plan Litro y cambias de plan cuando quieras.' },
+      { q: '¿Cómo empiezo?', a: 'Crea tu cuenta gratis con tu correo, confirma el enlace que te llega y el asistente te ayuda a configurar tu tienda. Empiezas con 14 días de Cubeta gratis y después eliges tu plan o sigues en Litro, gratis.' },
       { q: '¿Necesito saber de computación?', a: 'No. Se usa desde el navegador, como cualquier página, y te ayudamos a configurar tu tienda y los accesos de tu equipo.' },
       { q: '¿Puedo pasar mis clientes de Excel?', a: 'Sí. Importas tu lista de Excel en un paso y la app te ayuda a relacionar cada columna.' },
       { q: '¿Funciona en el celular?', a: 'Sí. Funciona en cualquier navegador y puedes agregarla a la pantalla de inicio de tu celular para usarla como app y recibir avisos.' },
@@ -26,8 +26,8 @@ const GROUPS: { id: string; title: string; items: { q: string; a: string }[] }[]
   {
     id: 'plan', title: 'Plan y pagos',
     items: [
-      { q: '¿Cuánto cuesta?', a: `El plan Litro es gratis (${PLANS.litro.maxContacts} contactos). Galón y Cubeta se pagan cada mes; consulta los precios en la página de Precios.` },
-      { q: '¿Cómo se paga?', a: 'Con tarjeta de crédito o débito, cada mes, a través de Stripe. Nosotros nunca vemos los datos de tu tarjeta. Si un cobro no pasa, Stripe lo reintenta; si al final no se cobra, tu tienda vuelve al plan Litro sin borrar nada.' },
+      { q: '¿Cuánto cuesta?', a: `El plan Litro es gratis (${PLANS.litro.maxContacts?.toLocaleString('es-MX')} clientes). Galón y Cubeta se pagan cada mes o cada año, con 2 meses gratis; consulta los precios en la página de Precios.` },
+      { q: '¿Cómo se paga?', a: 'Con tarjeta de crédito o débito, cada mes o cada año, a través de Stripe. Si necesitas factura, escríbenos a facturacion@matices.app. Nosotros nunca vemos los datos de tu tarjeta. Si un cobro no pasa, Stripe lo reintenta; si al final no se cobra, tu tienda vuelve al plan Litro sin borrar nada.' },
       { q: '¿Puedo cancelar?', a: 'Cuando quieras, desde Configuración → Plan. Conservas tu plan hasta el final del mes pagado y después pasas a Litro.' },
       { q: '¿Cuántas personas pueden usarlo?', a: `Litro es para una sola persona, el administrador. Galón incluye hasta ${PLANS.galon.maxUsers} usuarios y Cubeta hasta ${PLANS.cubeta.maxUsers}, con administradores. Cada quien con su propio acceso.` },
       { q: '¿Qué tiene Cubeta que no tenga Galón?', a: `Hasta ${PLANS.cubeta.maxUsers} usuarios y varios administradores; metas propias para cada vendedor (en Galón todo el equipo usa la misma); Acumulado, para ver el día, la semana y el mes de cada vendedor contra el periodo anterior y a qué clientes cotizó y vendió; reportes en Excel, y te ayudamos a importar tu base y a capacitar a tu equipo.` },

@@ -1,8 +1,8 @@
 require('./register-typescript.cjs')
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
-const { PLANS, DEFAULT_MODULES, effectivePlan, effectiveModules, normalizeModules, storeAccess, planOf, whatsappPendingTag } = require('../lib/stores.ts')
-const { planFromLookupKey, subscriptionSnapshot, subscriptionGivesPlan, formatPlanPrice } = require('../lib/billing.ts')
+const { PLANS, DEFAULT_MODULES, TRIAL_DAYS, effectivePlan, effectiveModules, newStoreTrial, activeTrialEnd, normalizeModules, storeAccess, planOf, whatsappPendingTag } = require('../lib/stores.ts')
+const { planFromLookupKey, lookupKeyFor, monthsSaved, monthlyEquivalent, subscriptionSnapshot, subscriptionGivesPlan, formatPlanPrice } = require('../lib/billing.ts')
 const { parsePlanLimitError, remainingSlots, planLimitMessage } = require('../lib/planLimits.ts')
 
 const DAY = 86_400_000
@@ -10,7 +10,7 @@ const NOW = Date.parse('2026-10-18T12:00:00Z')
 
 test('the plans match what was agreed', () => {
   assert.deepEqual([PLANS.litro.maxUsers, PLANS.galon.maxUsers, PLANS.cubeta.maxUsers], [1, 3, 10])
-  assert.equal(PLANS.litro.maxContacts, 50)
+  assert.equal(PLANS.litro.maxContacts, 200)
   assert.equal(PLANS.galon.whatsapp, false)
   assert.equal(PLANS.cubeta.whatsapp, true)
   assert.deepEqual([PLANS.litro.reports, PLANS.galon.reports, PLANS.cubeta.reports, PLANS.interno.reports], [false, false, true, true])
@@ -54,7 +54,11 @@ test('only suspended or cancelled stores are read-only', () => {
 test('Stripe prices and subscriptions map to plans', () => {
   assert.equal(planFromLookupKey('galon_mensual'), 'galon')
   assert.equal(planFromLookupKey('cubeta_mensual'), 'cubeta')
+  assert.equal(planFromLookupKey('galon_anual'), 'galon')
+  assert.equal(planFromLookupKey('cubeta_anual'), 'cubeta')
   assert.equal(planFromLookupKey('otro'), null)
+  assert.equal(lookupKeyFor('galon', 'year'), 'galon_anual')
+  assert.equal(lookupKeyFor('cubeta', 'month'), 'cubeta_mensual')
   const snap = subscriptionSnapshot({
     id: 'sub_1', status: 'active', customer: { id: 'cus_1' }, cancel_at_period_end: true,
     metadata: { store_id: 'abc' },
@@ -129,4 +133,31 @@ test('the Acumulado report has one row per seller, the store total and the compa
 test('WhatsApp pendiente: «Por activar» si el plan lo incluye; si no, no hay etiqueta', () => {
   assert.equal(whatsappPendingTag({ planIncludesWhatsApp: true }), 'Por activar')
   assert.equal(whatsappPendingTag({ planIncludesWhatsApp: false }), null)
+})
+
+test('anual: 2 meses gratis y lo que equivale al mes', () => {
+  const m = { amount: 899, currency: 'mxn', interval: 'month' }
+  const a = { amount: 8990, currency: 'mxn', interval: 'year' }
+  assert.equal(monthsSaved(m, a), 2)
+  assert.equal(monthsSaved({ ...m, amount: 1799 }, { ...a, amount: 17990 }), 2)
+  assert.equal(monthsSaved(m, undefined), 0)
+  assert.deepEqual(monthlyEquivalent(a), { amount: 749.17, currency: 'mxn', interval: 'month' })
+})
+
+test('prueba de Cubeta: 14 días y después Litro, sin cobro', () => {
+  const t = newStoreTrial(NOW)
+  assert.equal(TRIAL_DAYS, 14)
+  assert.equal(t.plan, 'cubeta')
+  assert.equal(Date.parse(t.trial_ends_at) - NOW, 14 * DAY)
+  const store = { ...t, stripe_subscription_id: null }
+  // Durante la prueba es Cubeta; al llegar trial_ends_at, Litro (los días de gracia ya están descontados)
+  assert.equal(effectivePlan(store, NOW + 13 * DAY), 'cubeta')
+  assert.equal(effectivePlan(store, NOW + 14 * DAY - 1000), 'cubeta')
+  assert.equal(effectivePlan(store, NOW + 14 * DAY), 'litro')
+  assert.equal(activeTrialEnd(store, NOW + DAY), t.trial_ends_at)
+  assert.equal(activeTrialEnd(store, NOW + 15 * DAY), null)
+  // Si ya paga con Stripe, no hay prueba que mostrar
+  assert.equal(activeTrialEnd({ ...store, stripe_subscription_id: 'sub_1' }, NOW + DAY), null)
+  // Una tienda que nunca tuvo prueba
+  assert.equal(activeTrialEnd({ plan: 'litro', paid_until: null, trial_ends_at: null }, NOW), null)
 })

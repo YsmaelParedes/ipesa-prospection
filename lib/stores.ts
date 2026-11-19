@@ -9,6 +9,33 @@ export const PAYMENT_GRACE_DAYS = 3
 const DAY = 24 * 60 * 60 * 1000
 
 /**
+ * Prueba gratis de una tienda nueva: Cubeta por estos días, sin tarjeta. Se
+ * guarda como una cortesía que vence (plan cubeta + paid_until) y en
+ * trial_ends_at, el día en que termina para quien la ve. paid_until queda los
+ * días de gracia antes, así baja a Litro justo en trial_ends_at.
+ */
+export const TRIAL_DAYS = 14
+export const TRIAL_PLAN = 'cubeta' as const
+
+export function newStoreTrial(now = Date.now()) {
+  const ends = now + TRIAL_DAYS * DAY
+  return {
+    plan: TRIAL_PLAN,
+    trial_ends_at: new Date(ends).toISOString(),
+    paid_until: new Date(ends - PAYMENT_GRACE_DAYS * DAY).toISOString(),
+  }
+}
+
+/** Fin de la prueba si sigue corriendo (sin suscripción de Stripe que la reemplace); si no, null. */
+export function activeTrialEnd(
+  s: { plan: string; paid_until: string | null; trial_ends_at: string | null; stripe_subscription_id?: string | null },
+  now = Date.now(),
+): string | null {
+  if (s.plan !== TRIAL_PLAN || !s.trial_ends_at || !s.paid_until || s.stripe_subscription_id) return null
+  return new Date(s.trial_ends_at).getTime() > now ? s.trial_ends_at : null
+}
+
+/**
  * pending / trial: estados de antes de los planes con Stripe (ya no se usan;
  * la base los acepta por compatibilidad). Solo suspended y cancelled dejan a
  * la tienda en solo lectura.
@@ -82,7 +109,7 @@ export const PLAN_FEATURE_REQUIRED: Record<PlanFeature, string> = {
 }
 
 export const PLANS: Record<PlanId, PlanDef> = {
-  litro:   { label: 'Litro',   maxUsers: 1,  allowAdmins: false, maxContacts: 50,   whatsapp: false, paid: false, salesTeam: false, sellerGoals: false, reports: false },
+  litro:   { label: 'Litro',   maxUsers: 1,  allowAdmins: false, maxContacts: 200,  whatsapp: false, paid: false, salesTeam: false, sellerGoals: false, reports: false },
   galon:   { label: 'Galón',   maxUsers: 3,  allowAdmins: false, maxContacts: null, whatsapp: false, paid: true,  salesTeam: true,  sellerGoals: false, reports: false },
   cubeta:  { label: 'Cubeta',  maxUsers: 10, allowAdmins: true,  maxContacts: null, whatsapp: true,  paid: true,  salesTeam: true,  sellerGoals: true,  reports: true },
   interno: { label: 'Interno', maxUsers: 50, allowAdmins: true,  maxContacts: null, whatsapp: true,  paid: false, salesTeam: true,  sellerGoals: true,  reports: true },

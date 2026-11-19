@@ -36,6 +36,17 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.59.0',
+    date: '18 de noviembre, 2026',
+    title: 'Planes más claros y pago anual',
+    items: [
+      'El plan Litro ahora incluye 200 clientes (antes 50).',
+      'En Configuración › Plan puedes pagar Galón o Cubeta por año, con 2 meses gratis.',
+      'Las tiendas nuevas empiezan con 14 días de Cubeta gratis, sin tarjeta. Al terminar eligen su plan o siguen en Litro sin perder nada.',
+      '¿Necesitas factura de tu plan? Escríbenos a facturacion@matices.app con tus datos fiscales.',
+    ],
+  },
+  {
     version: '1.58.0',
     date: '18 de noviembre, 2026',
     title: 'Cotizaciones',

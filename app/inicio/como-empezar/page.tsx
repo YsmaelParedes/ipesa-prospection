@@ -4,7 +4,7 @@ import { JsonLd } from '@/components/JsonLd'
 import { APP_NAME } from '@/lib/brand'
 import { CtaBand, Ic, PageHero, SectionHead } from '../_ui'
 import { PricingCards } from '../Pricing'
-import { getPublicPrices } from '@/lib/publicPrices'
+import { getPublicPriceTable } from '@/lib/publicPrices'
 import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
@@ -14,7 +14,7 @@ export const metadata: Metadata = pageMeta({
 })
 
 const STEPS = [
-  { title: 'Crea tu cuenta gratis', text: 'Con tu correo, en un minuto y sin tarjeta. Empiezas en el plan Litro.' },
+  { title: 'Crea tu cuenta gratis', text: 'Con tu correo, en un minuto y sin tarjeta. Empiezas con 14 días de Cubeta gratis.' },
   { title: 'Configura tu tienda', text: 'Nombre, logo y catálogos con ayuda del asistente. Puedes importar tu lista de clientes de Excel.' },
   { title: 'Elige tu plan e invita a tu equipo', text: 'Cuando lo necesites, cambia a Galón o Cubeta y manda a cada vendedor su enlace por WhatsApp o correo.' },
 ]
@@ -38,7 +38,8 @@ const NEEDS = [
 export const revalidate = 3600
 
 export default async function ComoEmpezarPage() {
-  const prices = await getPublicPrices()
+  const priceTable = await getPublicPriceTable()
+  const prices = priceTable?.monthly ?? null
   return (
     <>
       <JsonLd data={breadcrumbJsonLd('Cómo empezar', '/inicio/como-empezar')} />
@@ -64,8 +65,8 @@ export default async function ComoEmpezarPage() {
 
       <section className={`${s.section} ${s.sectionAlt}`}>
         <div className={s.wrap}>
-          <SectionHead title="Empieza gratis y cambia cuando quieras" sub="Pago mensual con tarjeta a través de Stripe. Sin plazos forzosos: cambias o cancelas desde tu CRM." />
-          <div style={{ marginTop: 44 }}><PricingCards initial={prices} /></div>
+          <SectionHead title="Empieza gratis y cambia cuando quieras" sub="Prueba Cubeta 14 días sin tarjeta. Después, pago mensual o anual con tarjeta a través de Stripe, con factura. Sin plazos forzosos." />
+          <div style={{ marginTop: 44 }}><PricingCards initial={priceTable} /></div>
         </div>
       </section>
 
