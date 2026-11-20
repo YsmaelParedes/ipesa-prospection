@@ -8,7 +8,7 @@ import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
   title: `Preguntas frecuentes sobre el CRM · ${APP_NAME}`,
-  description: 'Cómo empezar, cómo se paga, cuántos usuarios incluye, cómo se protege tu información y cuándo llega WhatsApp a Matices.',
+  description: 'Cómo empezar, cómo se paga, cuántos usuarios incluye, cómo funcionan las cotizaciones, cómo se protege tu información y cómo funciona WhatsApp en Matices.',
   path: '/inicio/preguntas',
 })
 
@@ -32,6 +32,14 @@ const GROUPS: { id: string; title: string; items: { q: string; a: string }[] }[]
       { q: '¿Cuántas personas pueden usarlo?', a: `Litro es para una sola persona, el administrador. Galón incluye hasta ${PLANS.galon.maxUsers} usuarios y Cubeta hasta ${PLANS.cubeta.maxUsers}, con administradores. Cada quien con su propio acceso.` },
       { q: '¿Qué tiene Cubeta que no tenga Galón?', a: `Hasta ${PLANS.cubeta.maxUsers} usuarios y varios administradores; metas propias para cada vendedor (en Galón todo el equipo usa la misma); Acumulado, para ver el día, la semana y el mes de cada vendedor contra el periodo anterior y a qué clientes cotizó y vendió; reportes en Excel, y te ayudamos a importar tu base y a capacitar a tu equipo.` },
       { q: 'Tengo varias sucursales, ¿cómo funciona?', a: 'Cada cuenta es una sucursal, con su propio plan, equipo y datos. Si tienes otra, escríbenos y la damos de alta aparte.' },
+    ],
+  },
+  {
+    id: 'cotizaciones', title: 'Cotizaciones',
+    items: [
+      { q: '¿Puedo hacer cotizaciones en Matices?', a: 'Sí, en todos los planes, también en Litro. Armas la cotización con tus productos y precios y la mandas en PDF por WhatsApp o correo. En Litro la hoja lleva al pie «Hecha con Matices».' },
+      { q: '¿La cotización es una factura?', a: 'No. Es la propuesta de precios para tu cliente, con tus datos y tus condiciones de venta; no es un comprobante fiscal (CFDI).' },
+      { q: '¿Puedo poner mi logo y mis condiciones?', a: 'Sí. En Configuración → Cotizaciones pones tu razón social, RFC, condiciones de venta, los días que vale cada cotización y el IVA. El logo es el de tu tienda.' },
     ],
   },
   {

@@ -36,6 +36,15 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.60.0',
+    date: '19 de noviembre, 2026',
+    title: 'Cotizaciones en el sitio',
+    items: [
+      'El sitio de Matices tiene una página de Cotizaciones con una demostración: armas una cotización y ves la hoja al momento, como la recibe tu cliente.',
+      'Cotizaciones también aparece en el menú Producto, en Funciones, en la portada y en Preguntas frecuentes.',
+    ],
+  },
+  {
     version: '1.59.0',
     date: '18 de noviembre, 2026',
     title: 'Planes más claros y pago anual',

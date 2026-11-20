@@ -2,10 +2,10 @@
 
 import { useRef, useState } from 'react'
 import Link from 'next/link'
-import { EVENTS, track } from '@/lib/analytics'
 import { CallDemo } from './CallDemo'
 import { ContactsDemo } from './ContactsDemo'
 import { TeamDemo } from './TeamDemo'
+import { demoUsed } from './shared'
 import s from './demos.module.css'
 import { ChartColumn, Phone, Users } from 'lucide-react'
 
@@ -40,15 +40,6 @@ const DEMOS: Record<DemoKey, {
   },
 }
 const ORDER: DemoKey[] = ['call', 'contacts', 'team']
-
-/** Estadísticas: «Demo usada» la primera vez que alguien toca cada demo (por visita). */
-const DEMO_NAMES: Record<DemoKey, string> = { call: 'registrar-llamada', contacts: 'contactos', team: 'equipo' }
-const usedDemos = new Set<DemoKey>()
-function demoUsed(k: DemoKey) {
-  if (usedDemos.has(k)) return
-  usedDemos.add(k)
-  track(EVENTS.demoUsed, { demo: DEMO_NAMES[k] })
-}
 
 function Side({ k, link }: { k: DemoKey; link: boolean }) {
   const d = DEMOS[k]

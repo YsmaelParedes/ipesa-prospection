@@ -5,18 +5,19 @@ import { APP_NAME } from '@/lib/brand'
 import { PLANS } from '@/lib/stores'
 import { Bullets, CtaBand, Ic, MoreLink, PageHero } from '../_ui'
 import { SingleDemo } from '../demos/DemoTabs'
+import { QuoteListMock } from '../cotizaciones/mocks'
 import s from '../inicio.module.css'
 
 export const metadata: Metadata = pageMeta({
   title: `Funciones del CRM para tiendas de pintura · ${APP_NAME}`,
-  description: 'Contactos por zonas, Sistema Comercial con metas por vendedor, agenda del día, equipo con permisos y avisos en el celular.',
+  description: 'Contactos por zonas, Sistema Comercial con metas por vendedor, cotizaciones en PDF por WhatsApp, agenda del día, equipo con permisos y avisos en el celular.',
   path: '/inicio/funciones',
 })
 
 const MAX_USERS = PLANS.galon.maxUsers
 
 const JUMPS = [
-  ['#contactos', 'Contactos'], ['#comercial', 'Sistema Comercial'], ['#agenda', 'Agenda'],
+  ['#contactos', 'Contactos'], ['#comercial', 'Sistema Comercial'], ['#cotizaciones', 'Cotizaciones'], ['#agenda', 'Agenda'],
   ['#equipo', 'Equipo y permisos'], ['#avisos', 'Avisos'],
 ]
 
@@ -72,8 +73,21 @@ export default function FuncionesPage() {
         </div>
       </section>
 
+      {/* Cotizaciones */}
+      <section id="cotizaciones" className={s.section}>
+        <div className={`${s.wrap} ${s.split}`}>
+          <div>
+            <h2 className={s.h2}>Cotizaciones en PDF, listas para WhatsApp</h2>
+            <p className={s.sub}>Arma la cotización con tus productos y tu último precio, con tu logo, descuento e IVA. Mándala por WhatsApp o correo y queda en Oportunidades para darle seguimiento.</p>
+            <Bullets items={['Mira la hoja tal como la recibirá tu cliente', 'Sabes cuándo la abrió', 'Aceptada, Rechazada o Vencida, a la vista', 'En todos los planes, también en Litro']} />
+            <MoreLink href="/inicio/cotizaciones">Conoce Cotizaciones</MoreLink>
+          </div>
+          <QuoteListMock />
+        </div>
+      </section>
+
       {/* Agenda */}
-      <section id="agenda" className={s.section}>
+      <section id="agenda" className={`${s.section} ${s.sectionAlt}`}>
         <div className={`${s.wrap} ${s.split} ${s.splitRev}`}>
           <div>
             <h2 className={s.h2}>Lo que toca hoy, al abrir la app</h2>
@@ -98,7 +112,7 @@ export default function FuncionesPage() {
       </section>
 
       {/* Equipo y permisos */}
-      <section id="equipo" className={`${s.section} ${s.sectionAlt}`}>
+      <section id="equipo" className={s.section}>
         <div className={`${s.wrap} ${s.split}`}>
           <div>
             <h2 className={s.h2}>Tu equipo vende. Tu base se queda en tu tienda.</h2>
@@ -129,7 +143,7 @@ export default function FuncionesPage() {
       </section>
 
       {/* Avisos */}
-      <section id="avisos" className={s.section}>
+      <section id="avisos" className={`${s.section} ${s.sectionAlt}`}>
         <div className={`${s.wrap} ${s.split} ${s.splitRev}`}>
           <div>
             <h2 className={s.h2}>Te avisa a la hora, aunque la app esté cerrada</h2>

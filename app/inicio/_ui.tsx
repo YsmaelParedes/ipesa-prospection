@@ -3,7 +3,7 @@ import { EVENTS, trackAttrs } from '@/lib/analytics'
 import s from './inicio.module.css'
 import {
   Users, Activity, Megaphone, FlaskConical, Bell, Check, ArrowRight, Plus, Store, ShieldCheck, Layers, KeyRound, UserPlus,
-  Link as LinkIcon, LayoutDashboard, MessageCircle, Calendar, Lock, Phone, Search, Download, EyeOff,
+  Link as LinkIcon, LayoutDashboard, MessageCircle, Calendar, Lock, Phone, Search, Download, EyeOff, FileText, Percent,
 } from 'lucide-react'
 
 /* Piezas compartidas del sitio de presentación (sin estado: sirven en páginas de servidor). */
@@ -13,7 +13,7 @@ export const Ic = {
   contacts: Users, leads: Activity, megaphone: Megaphone, flask: FlaskConical, bell: Bell, check: Check, arrow: ArrowRight,
   plus: Plus, store: Store, shield: ShieldCheck, layers: Layers, key: KeyRound, users: UserPlus, link: LinkIcon,
   grid: LayoutDashboard, chat: MessageCircle, calendar: Calendar, lock: Lock, phone: Phone, search: Search,
-  download: Download, eyeOff: EyeOff,
+  download: Download, eyeOff: EyeOff, quote: FileText, percent: Percent,
 }
 
 /** Encabezado de las páginas interiores: etiqueta, título y bajada, con el remolino de color de fondo. */

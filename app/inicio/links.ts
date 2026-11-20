@@ -17,7 +17,8 @@ const PRODUCT: MenuGroup[] = [
     title: 'Ventas',
     items: [
       { href: '/inicio/sistema-comercial', label: 'Sistema Comercial', desc: 'A quién llamar hoy, cada llamada en 3 toques', icon: Ic.grid, tone: s.tBrand },
-      { href: '/inicio/sistema-comercial#oportunidades', label: 'Oportunidades', desc: 'Cada cotización abierta, con su monto', icon: Ic.leads, tone: s.tMagenta },
+      { href: '/inicio/cotizaciones', label: 'Cotizaciones', desc: 'En PDF por WhatsApp y correo', icon: Ic.quote, tone: s.tMagenta },
+      { href: '/inicio/sistema-comercial#oportunidades', label: 'Oportunidades', desc: 'Cada cotización abierta, con su monto', icon: Ic.leads, tone: s.tCyan },
       { href: '/inicio/sistema-comercial#equipo', label: 'Equipo y metas', desc: 'Cada vendedor contra su meta del día', icon: Ic.users, tone: s.tAmber },
     ],
   },
@@ -58,7 +59,7 @@ export const NAV: NavEntry[] = [
 
 /** Pie de página: los mismos grupos, más ayuda. */
 export const FOOTER_GROUPS: { title: string; links: { href: string; label: string }[] }[] = [
-  { title: 'Producto', links: [{ href: '/inicio/sistema-comercial', label: 'Sistema Comercial' }, { href: '/inicio/contactos', label: 'Contactos' }, { href: '/inicio/whatsapp', label: 'WhatsApp' }, { href: '/inicio/funciones', label: 'Funciones' }] },
+  { title: 'Producto', links: [{ href: '/inicio/sistema-comercial', label: 'Sistema Comercial' }, { href: '/inicio/cotizaciones', label: 'Cotizaciones' }, { href: '/inicio/contactos', label: 'Contactos' }, { href: '/inicio/whatsapp', label: 'WhatsApp' }, { href: '/inicio/funciones', label: 'Funciones' }] },
   { title: 'Para tu tienda', links: STORES[0].items.map(i => ({ href: i.href, label: i.label })) },
   { title: 'Empieza', links: [{ href: '/inicio/precios', label: 'Precios' }, { href: '/inicio/como-empezar', label: 'Cómo empezar' }, { href: '/inicio/preguntas', label: 'Preguntas' }, { href: '/registro', label: 'Crear cuenta gratis' }, { href: '/login', label: 'Iniciar sesión' }] },
 ]

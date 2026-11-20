@@ -23,6 +23,7 @@ export const metadata: Metadata = pageMeta({
 
 const FEATURES = [
   { icon: Ic.grid,      tone: s.tBrand,   title: 'Sistema Comercial', text: 'Hoy, Oportunidades y Equipo: a quién llamar, cotizaciones abiertas y metas por vendedor.', href: '/inicio/sistema-comercial' },
+  { icon: Ic.quote,     tone: s.tMagenta, title: 'Cotizaciones', text: 'Arma la cotización, mírala como la verá tu cliente y mándala en PDF por WhatsApp o correo.', href: '/inicio/cotizaciones' },
   { icon: Ic.contacts,  tone: s.tCyan,    title: 'Contactos', text: 'Tu base por zonas, con WhatsApp o fijo, importada desde Excel y lista para visitar.', href: '/inicio/contactos' },
   { icon: Ic.bell,      tone: s.tTeal,    title: 'Agenda y avisos', text: 'Cada recordatorio a su hora y el resumen de la mañana en tu celular, aunque la app esté cerrada.', href: '/inicio/funciones#agenda' },
   { icon: Ic.users,     tone: s.tAmber,   title: 'Tu equipo y tu base, protegidos', text: 'Administradores y vendedores, cada quien con su usuario. Exportar y borrar, solo administradores.', href: '/inicio/funciones#equipo' },

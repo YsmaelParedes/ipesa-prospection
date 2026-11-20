@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { EVENTS, track } from '@/lib/analytics'
 import s from './demos.module.css'
 
 /* Piezas comunes de las demos: aviso breve, iniciales y formato de dinero. */
@@ -23,4 +24,14 @@ export function useToast() {
   }, [])
   const node = <div className={`${s.toast} ${on ? s.toastOn : ''}`} role="status" aria-live="polite">{text}</div>
   return { show, node }
+}
+
+/** Estadísticas: «Demo usada» la primera vez que alguien toca cada demo (por visita). */
+const DEMO_NAMES = { call: 'registrar-llamada', contacts: 'contactos', team: 'equipo', quote: 'cotizaciones' } as const
+export type TrackedDemo = keyof typeof DEMO_NAMES
+const usedDemos = new Set<TrackedDemo>()
+export function demoUsed(k: TrackedDemo) {
+  if (usedDemos.has(k)) return
+  usedDemos.add(k)
+  track(EVENTS.demoUsed, { demo: DEMO_NAMES[k] })
 }

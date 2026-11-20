@@ -20,6 +20,7 @@ export const SITE_DESCRIPTION =
 export const PUBLIC_PAGES: { path: string; priority: number; changeFrequency: 'weekly' | 'monthly' | 'yearly' }[] = [
   { path: '/', priority: 1, changeFrequency: 'weekly' },
   { path: '/inicio/sistema-comercial', priority: 0.9, changeFrequency: 'monthly' },
+  { path: '/inicio/cotizaciones', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/inicio/contactos', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/inicio/para-tu-tienda', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/inicio/para-tu-tienda/tiendas-de-pintura', priority: 0.8, changeFrequency: 'monthly' },
