@@ -22,6 +22,11 @@
 
 .layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, .6fr); gap: 24px; align-items: start; }
 .single { grid-template-columns: minmax(0, 1fr); max-width: 760px; margin: 0 auto; }
+.layoutWide { grid-template-columns: minmax(0, 1fr); max-width: none; gap: 14px; }
+.wideNote { display: flex; align-items: baseline; justify-content: space-between; gap: 8px 24px; flex-wrap: wrap; }
+.wideNote p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.6; text-wrap: pretty; }
+.wideNote strong { color: var(--ink); }
+.wideNote .sideLink { margin-top: 0; flex-shrink: 0; }
 @media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
 
 .stage {

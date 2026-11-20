@@ -4,18 +4,21 @@ import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { CallDemo } from './CallDemo'
 import { ContactsDemo } from './ContactsDemo'
+import { QuoteDemo } from './QuoteDemo'
 import { TeamDemo } from './TeamDemo'
 import { demoUsed } from './shared'
 import s from './demos.module.css'
-import { ChartColumn, Phone, Users } from 'lucide-react'
+import { ChartColumn, FileText, Phone, Users } from 'lucide-react'
 
 /** Las demos del sitio. En la portada van en pestañas; cada página de producto muestra la suya. */
-export type DemoKey = 'call' | 'contacts' | 'team'
+export type DemoKey = 'call' | 'quote' | 'contacts' | 'team'
 
 
 const DEMOS: Record<DemoKey, {
   tab: string; icon: React.ReactNode; title: string; text: string; steps: string[]; tryIt: string; href: string; more: string
   Demo: () => React.ReactElement
+  /** A todo lo ancho: la explicación va abajo, en un renglón (la cotización necesita espacio para la hoja). */
+  wide?: boolean
 }> = {
   call: {
     tab: 'Registrar una llamada', icon: <Phone aria-hidden="true" />,
@@ -23,6 +26,13 @@ const DEMOS: Record<DemoKey, {
     steps: ['Toca a un cliente de tu lista.', 'Elige cómo te fue.', 'Acepta la fecha que te sugerimos y guarda.'],
     tryIt: 'Pruébalo: registra una «Cotización» y mira cómo avanza tu meta.', href: '/inicio/sistema-comercial', more: 'Conoce el Sistema Comercial',
     Demo: CallDemo,
+  },
+  quote: {
+    tab: 'Cotizaciones', icon: <FileText aria-hidden="true" />,
+    title: 'Cotizaciones', text: 'Arma la cotización y mírala al momento, tal como la recibirá tu cliente.',
+    steps: ['Cambia una cantidad o un precio.', 'Agrega un producto con tu último precio.', 'Envíala por WhatsApp.'],
+    tryIt: 'Pruébalo: agrega un producto y mira cómo cambia el total.', href: '/inicio/cotizaciones', more: 'Conoce Cotizaciones',
+    Demo: QuoteDemo, wide: true,
   },
   contacts: {
     tab: 'Contactos', icon: <Users aria-hidden="true" />,
@@ -39,7 +49,7 @@ const DEMOS: Record<DemoKey, {
     Demo: TeamDemo,
   },
 }
-const ORDER: DemoKey[] = ['call', 'contacts', 'team']
+const ORDER: DemoKey[] = ['call', 'quote', 'contacts', 'team']
 
 function Side({ k, link }: { k: DemoKey; link: boolean }) {
   const d = DEMOS[k]
@@ -54,6 +64,17 @@ function Side({ k, link }: { k: DemoKey; link: boolean }) {
   )
 }
 
+/** La explicación de una demo ancha: una línea abajo, con su enlace. */
+function WideNote({ k }: { k: DemoKey }) {
+  const d = DEMOS[k]
+  return (
+    <div className={s.wideNote}>
+      <p><strong>{d.title}.</strong> {d.text} {d.tryIt}</p>
+      <Link href={d.href} className={s.sideLink}>{d.more} →</Link>
+    </div>
+  )
+}
+
 /** Portada: las demos en pestañas (flechas para cambiar de pestaña). `bare`: sin la explicación de al lado. */
 export function DemoTabs({ bare = false }: { bare?: boolean }) {
   const [active, setActive] = useState<DemoKey>('call')
@@ -65,7 +86,7 @@ export function DemoTabs({ bare = false }: { bare?: boolean }) {
     setActive(next)
     refs.current[next]?.focus()
   }
-  const { Demo } = DEMOS[active]
+  const { Demo, wide } = DEMOS[active]
   return (
     <div>
       <div className={s.tabs} role="tablist" aria-label="Demos de Matices" onKeyDown={onKey}>
@@ -79,14 +100,14 @@ export function DemoTabs({ bare = false }: { bare?: boolean }) {
           </button>
         ))}
       </div>
-      <div className={`${s.layout} ${bare ? s.single : ''}`}>
+      <div className={`${s.layout} ${bare ? s.single : ''} ${wide ? s.layoutWide : ''}`}>
         <div
           className={s.stage} role="tabpanel" id="demo-panel" aria-labelledby={`demo-tab-${active}`}
           onPointerDownCapture={() => demoUsed(active)} onKeyDownCapture={() => demoUsed(active)}
         >
           <Demo key={active} />
         </div>
-        {!bare && <Side k={active} link />}
+        {!bare && (wide ? <WideNote k={active} /> : <Side k={active} link />)}
       </div>
     </div>
   )

@@ -42,7 +42,7 @@ export function QuoteDemoStage() {
   )
 }
 
-function QuoteDemo() {
+export function QuoteDemo() {
   const today = useToday()
   const [client, setClient] = useState(SAMPLE_CLIENT.name)
   const [rows, setRows] = useState<Row[]>(START_ROWS)
