@@ -16,3 +16,8 @@ SUPABASE_KEY = "sb_publishable_1rAyxAdk5KtNhjxChDANIA_yEQEL7SI"
 
 [triggers]
 crons = ["* * * * *"]
+
+# Registros del Worker en Cloudflare (Workers Logs): cada vuelta y los errores
+# al preguntar reminders_due quedan a la vista para revisarlos.
+[observability]
+enabled = true
