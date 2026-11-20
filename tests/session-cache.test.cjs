@@ -24,14 +24,20 @@ function setup({ now = 1_000_000 } = {}) {
       },
     },
   }
+  const memberships = async () => {
+    state.memberCalls++
+    await new Promise(r => setImmediate(r))
+    return { data: [{ store_id: 'store-1', role: 'admin', created_at: '2026-01-01', stores: { id: 'store-1', plan: state.plan, status: 'active', paid_until: null, modules: {}, timezone: 'America/Mexico_City' } }], error: null }
+  }
+  // store_members: las membresías de la persona o, en Litro, los administradores (para saber quién es el principal)
   const membershipQuery = {
-    select() { return this }, eq() { return this },
-    order: async () => {
-      state.memberCalls++
-      await new Promise(r => setImmediate(r))
-      return { data: [{ store_id: 'store-1', role: 'admin', created_at: '2026-01-01', stores: { id: 'store-1', plan: state.plan, status: 'active', paid_until: null, modules: {}, timezone: 'America/Mexico_City' } }], error: null }
+    select(cols) { this.cols = cols; return this }, eq() { return this },
+    order() {
+      const p = this.cols.includes('stores!inner') ? memberships() : Promise.resolve({ data: [{ user_id: 'user-token-a' }], error: null })
+      return Object.assign(p, { order: () => p })
     },
   }
+  const storesQuery = { select() { return this }, eq() { return this }, maybeSingle: async () => ({ data: { created_by: 'user-token-a' }, error: null }) }
   const source = fs.readFileSync(path.join(__dirname, '../lib/supabase-server.ts'), 'utf8')
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText
   const module = { exports: {} }
@@ -39,7 +45,7 @@ function setup({ now = 1_000_000 } = {}) {
     'node:crypto': require('node:crypto'),
     './serverTiming': { databaseFetch: fetch, measure: (_, fn) => fn() },
     '@supabase/ssr': { createServerClient: () => client },
-    '@supabase/supabase-js': { createClient: () => ({ from: () => membershipQuery }) },
+    '@supabase/supabase-js': { createClient: () => ({ from: table => (table === 'stores' ? storesQuery : membershipQuery) }) },
     'next/headers': { cookies: async () => ({ getAll: () => [], set() {}, get: () => state.cookie }) },
     './sessionCookie': { SESSION_COOKIE_OPTIONS: {} },
     './stores': stores,
@@ -130,10 +136,15 @@ test('membresías: 10 s en caché, compartidas entre peticiones simultáneas y b
 test('requireStore({ feature }): 403 PLAN_FEATURE si el plan no la incluye', async () => {
   const { api, state } = setup()
   assert.equal((await api.requireStore({ feature: 'reports' })).storeId, 'store-1')
+  assert.equal((await api.requireStore({ feature: 'salesTeam' })).storeId, 'store-1')
   api.invalidateStoreContextCache()
-  state.plan = 'galon'
+  // Litro (el administrador principal sí entra, pero sin lo del equipo)
+  state.plan = 'litro'
   const res = await api.requireStore({ feature: 'reports' })
   assert.equal(res.status, 403)
   assert.deepEqual(await res.json(), { error: 'Acumulado y los reportes en Excel vienen en el plan Cubeta.', code: 'PLAN_FEATURE' })
-  assert.equal((await api.requireStore({ feature: 'salesTeam' })).storeId, 'store-1')
+  const team = await api.requireStore({ feature: 'salesTeam' })
+  assert.equal(team.status, 403)
+  assert.match((await team.json()).error, /plan Cubeta/)
+  assert.equal((await api.requireStore()).storeId, 'store-1')
 })

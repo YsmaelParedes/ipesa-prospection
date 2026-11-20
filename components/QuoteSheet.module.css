@@ -63,7 +63,13 @@
 .notes h3 { margin: 0 0 calc(3 * var(--pt)); font: inherit; font-weight: 700; color: var(--ink); }
 .notes p { color: var(--muted); white-space: pre-wrap; }
 
-.foot { margin-top: auto; padding-top: calc(28 * var(--pt)); font-size: calc(8 * var(--pt)); color: var(--faint); }
+.foot { margin-top: auto; padding-top: calc(28 * var(--pt)); display: flex; flex-direction: column; align-items: center; gap: calc(4 * var(--pt)); text-align: center; }
+.brand { display: inline-flex; font-size: calc(13 * var(--pt)); color: var(--ink); text-decoration: none; }
+.brand :global(.brand-wordmark) { letter-spacing: -0.02em; }
+.brand :global(.brand-wordmark img) { height: 1.3em; }
+.brandLine { font-size: calc(8.5 * var(--pt)); color: #4A4A49; }
+.brandLine a { font-weight: 700; color: #C2071E; text-decoration: none; }
+.brandLine a:hover { text-decoration: underline; }
 
 /* ── Angosto (celular): una columna con letra legible ── */
 @container quote (max-width: 520px) {

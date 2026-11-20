@@ -41,18 +41,18 @@ const fakeSub = status => ({ id: 'sub_dummy', status, customer: 'cus_dummy', met
 test('sync re-reads Stripe after acquiring the store lock and uses historical prices, not stale metadata', async () => {
   const steps = []; let reads = 0; let applied
   const db = { from: () => query({ data: { id: STORE, stripe_customer_id: 'cus_dummy' }, error: null }),
-    rpc: async (_, args) => { steps.push('apply'); applied = args; return { data: { plan: 'litro', prev_plan: 'galon' }, error: null } } }
+    rpc: async (_, args) => { steps.push('apply'); applied = args; return { data: { plan: 'litro', prev_plan: 'cubeta' }, error: null } } }
   let invalidated = 0
   const { syncSubscription } = load('lib/stripeSync.ts', {
     './supabase-server': { getServerSupabase: () => db, invalidateStoreContextCache: () => { invalidated++ } },
-    './stripe': { getStripe: () => ({ subscriptions: { retrieve: async () => { steps.push('read'); return fakeSub(++reads === 1 ? 'active' : 'canceled') } } }), planForPrice: async () => 'galon' },
+    './stripe': { getStripe: () => ({ subscriptions: { retrieve: async () => { steps.push('read'); return fakeSub(++reads === 1 ? 'active' : 'canceled') } } }), planForPrice: async () => 'cubeta' },
     './stripeBillingState': { withStripeStoreLock: async (_, work) => { steps.push('lock'); return work('token') } },
     './billing': billing, './stores': stores, './brand': { APP_NAME: 'Test' },
   })
   await syncSubscription('sub_dummy')
   assert.deepEqual(steps, ['read', 'lock', 'read', 'apply'])
   assert.equal(applied.p_status, 'canceled')
-  assert.equal(applied.p_plan, 'galon')
+  assert.equal(applied.p_plan, 'cubeta')
   assert.equal(applied.p_lock, 'token')
   assert.equal(invalidated, 1, 'el plan nuevo se ve al momento en esta instancia')
 })
@@ -78,11 +78,13 @@ test('price mapping survives removal of the lookup key and rejects conflicting r
     select: () => ({ eq: (_, id) => query({ data: history.has(id) ? { plan: history.get(id) } : null, error: null }) }),
   }) }
   const api = load('lib/stripe.ts', { stripe: class {}, './billing': billing, './supabase-server': { getServerSupabase: () => db } })
-  assert.equal(await api.planForPrice({ id: 'price_old', lookup_key: 'galon_mensual' }), 'galon')
-  assert.equal(await api.planForPrice({ id: 'price_old', lookup_key: null }), 'galon')
-  assert.equal(await api.planForPrice({ id: 'price_new', lookup_key: 'galon_mensual' }), 'galon')
-  await assert.rejects(api.rememberPricePlan('price_old', 'cubeta'), /otro plan/)
+  assert.equal(await api.planForPrice({ id: 'price_old', lookup_key: 'cubeta_mensual' }), 'cubeta')
+  assert.equal(await api.planForPrice({ id: 'price_old', lookup_key: null }), 'cubeta')
+  assert.equal(await api.planForPrice({ id: 'price_new', lookup_key: 'cubeta_anual' }), 'cubeta')
+  await assert.rejects(api.rememberPricePlan('price_old', 'litro'), /otro plan/)
   assert.equal(await api.planForPrice({ id: 'price_unknown', lookup_key: null }), null)
+  // Los precios archivados de Galón ya no son de ningún plan
+  assert.equal(await api.planForPrice({ id: 'price_galon', lookup_key: 'galon_mensual' }), null)
 })
 
 function webhookHarness({ claim = { status: 'claimed', token: 'token' }, claimError = null, failSync = false, completed = true } = {}) {
@@ -174,7 +176,7 @@ function checkoutHarness() {
   }
   const { openStripeCheckout } = load('lib/stripeCheckout.ts', {
     './supabase-server': { getServerSupabase: () => db },
-    './stripe': { getStripe: () => stripe, priceIdFor: async plan => `price_${plan}` },
+    './stripe': { getStripe: () => stripe, priceIdFor: async (plan, interval = 'month') => (interval === 'year' ? `price_${plan}_anual` : `price_${plan}`) },
     './stripeBillingState': {
       assertStripeStoreLock: async () => {},
       withStripeStoreLock: async (_, work) => {
@@ -183,7 +185,7 @@ function checkoutHarness() {
       },
     },
   })
-  return { state, sessions, requests, run: (plan = 'galon') => openStripeCheckout({ storeId: STORE }, plan, 'https://app.test'),
+  return { state, sessions, requests, run: (interval = 'month') => openStripeCheckout({ storeId: STORE }, 'cubeta', 'https://app.test', interval),
     loseNextResponse: () => { loseResponse = true }, setSubscriptions: values => { subscriptions = values },
     onList: fn => { onList = fn } }
 }
@@ -226,13 +228,14 @@ test('an expired uncreated attempt is replaced, but an unresolved unexpired atte
   assert.notEqual(h.state.checkout_attempt, STORE)
   assert.equal(h.requests.length, 1)
 })
-test('changing plan expires the old payment link before creating another', async () => {
+test('changing the billing period expires the old payment link before creating another', async () => {
   const h = checkoutHarness()
-  await h.run('galon')
-  await h.run('cubeta')
+  await h.run('month')
+  await h.run('year')
   assert.equal(h.sessions.get('cs_1').status, 'expired')
   assert.equal(h.sessions.get('cs_2').status, 'open')
-  assert.equal(h.requests[1].params.line_items[0].price, 'price_cubeta')
+  assert.equal(h.requests[0].params.line_items[0].price, 'price_cubeta')
+  assert.equal(h.requests[1].params.line_items[0].price, 'price_cubeta_anual')
   assert.notEqual(h.requests[0].key, h.requests[1].key)
 })
 test('an existing active, unpaid, paused or incomplete subscription blocks a new Checkout', async () => {

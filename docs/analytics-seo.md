@@ -46,10 +46,12 @@ El ID del sitio (`84f8fcbb-…`) está en `lib/analytics.ts`. No es secreto: va 
 
 | Evento | Cuándo | Datos |
 |---|---|---|
-| `Crear cuenta` | Clic en «Crear cuenta gratis» | `donde`: hero, menu, banda-final, whatsapp, plan-litro, plan-galon, plan-cubeta |
+| `Crear cuenta` | Clic en «Crear cuenta gratis» | `donde`: hero, menu, banda-final, whatsapp, plan-litro, plan-cubeta |
 | `Demo usada` | Primera vez que alguien toca una demo | `demo`: registrar-llamada, contactos, equipo |
 | `Cuenta creada` | El registro funcionó | — |
-| `Pago iniciado` | Clic en pagar Galón o Cubeta (Configuración → Plan) | `plan` |
+| `Pago iniciado` | Clic en pagar Cubeta (Configuración → Plan o el aviso de un candado) | `plan`, `periodo` (mensual, anual), `desde` (plan, aviso-equipo, aviso-whatsapp…) |
+| `Candado visto` | Alguien en Litro ve una función de Cubeta (una vez por pantalla) | `funcion`: equipo, whatsapp, actividad, acumulado, contactos |
+| `Candado clic` | Abre el aviso «Cambiar a Cubeta» desde un candado | `funcion` |
 | `Plan contratado` | Vuelve de Stripe con el pago hecho (una vez) | `plan` |
 
 **Embudo sugerido en Umami** (Reports → Funnel): visita a `/inicio/precios` → `Crear cuenta` → visita a `/registro` → `Cuenta creada`.

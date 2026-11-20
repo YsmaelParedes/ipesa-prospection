@@ -54,7 +54,7 @@ export function publicStore(store: StoreRow) {
     allowAdmins: def.allowAdmins,
     /** Límites del plan (null = sin límite) */
     limits: { contacts: def.maxContacts },
-    /** Reparto de contactos, metas y control diario del sistema comercial (Galón, Cubeta) */
+    /** Reparto de contactos, metas y control diario del sistema comercial (Cubeta) */
     salesTeam: def.salesTeam,
     /** El plan incluye la bandeja de WhatsApp (Cubeta); además hay que conectar el número */
     planIncludesWhatsApp: def.whatsapp,
@@ -71,6 +71,10 @@ export function publicStore(store: StoreRow) {
     paidUntil: store.paid_until,
     /** Prueba de Cubeta en curso: el día en que termina (null si no hay o ya terminó) */
     trialEndsAt: activeTrialEnd(store),
+    /** Prueba de Cubeta que terminó en los últimos 30 días y la tienda quedó en Litro (para avisarlo una vez) */
+    trialEndedAt: plan === 'litro' && store.trial_ends_at
+      && Date.now() - Date.parse(store.trial_ends_at) >= 0 && Date.now() - Date.parse(store.trial_ends_at) < 30 * 86_400_000
+      ? store.trial_ends_at : null,
     access: storeAccess(store),
     modules: effectiveModules(store),
     onboardingCompleted: !!store.onboarding_completed_at,

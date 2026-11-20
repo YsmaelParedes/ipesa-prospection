@@ -123,7 +123,7 @@ export function suggestNext(result: CallResult, today: string) {
 
 /**
  * Qué va a pasar al guardar, en palabras del vendedor. `opportunities`: la
- * tienda tiene la pestaña Oportunidades (Galón y Cubeta; Litro no).
+ * tienda tiene la pestaña Oportunidades (hoy todos los planes).
  */
 export function outcomeText(result: CallResult, { opportunities = true }: { opportunities?: boolean } = {}): string {
   switch (result) {

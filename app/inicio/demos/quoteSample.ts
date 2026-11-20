@@ -12,7 +12,6 @@ export const SAMPLE_STORE: QuoteStore = {
   logoUrl: null,
   rfc: '',
   legalName: '',
-  branded: false,
 }
 
 export const SAMPLE_CLIENT = { name: 'Carlos Ríos', phone: '222 318 4470' }

@@ -15,6 +15,8 @@ import { AcumuladoView } from './AcumuladoView'
 import { ContactPanel } from './ContactPanel'
 import { GuideButton, useGuide } from '@/components/GuideModal'
 import { LoadFailed } from '@/components/LoadFailed'
+import { LockedPanel } from '@/components/LockedPanel'
+import { Lock } from 'lucide-react'
 import { CommercialTour } from './CommercialTour'
 import { commercialTour, type CommercialStep } from './tourSteps'
 import { Ico, bizName, useWide, whenPhrase, type TodayData } from './ui'
@@ -151,12 +153,14 @@ function ComercialContent() {
   const salesTeam = !!data?.salesTeam
   const reports = !!data?.reports
   const isAdmin = !!data?.isAdmin
-  const TABS: { key: Tab; label: string; count?: number }[] = [
+  // Oportunidades viene en todos los planes. En Litro, Actividad diaria y
+  // Acumulado se ven con candado: al abrirlos ofrecen Cubeta.
+  const TABS: { key: Tab; label: string; count?: number; locked?: boolean }[] = [
     { key: 'hoy', label: 'Hoy', count: data?.dueTotal },
     { key: 'cartera', label: 'Cartera' },
-    ...(salesTeam ? [{ key: 'oportunidades' as Tab, label: 'Oportunidades' }] : []),
-    ...(salesTeam && isAdmin ? [{ key: 'actividad' as Tab, label: 'Actividad diaria' }] : []),
-    ...(reports && isAdmin ? [{ key: 'acumulado' as Tab, label: 'Acumulado' }] : []),
+    { key: 'oportunidades', label: 'Oportunidades' },
+    ...(isAdmin ? [{ key: 'actividad' as Tab, label: 'Actividad diaria', locked: !salesTeam }] : []),
+    ...(isAdmin ? [{ key: 'acumulado' as Tab, label: 'Acumulado', locked: !reports }] : []),
   ]
   const current: Tab = TABS.some(t => t.key === tab) ? tab : 'hoy'
   // Recorrido: solo la primera vez (no si se llegó directo a una ficha). Clave
@@ -204,6 +208,7 @@ function ComercialContent() {
             {TABS.map(t => (
               <button key={t.key} role="tab" aria-selected={current === t.key} className={`${s.tab} ${s.press}`} onClick={() => setTab(t.key)} data-tour={`tab-${t.key}`}>
                 {t.label}{t.count ? <span className={`${s.tabCount} ${s.num}`}>{t.count}</span> : null}
+                {t.locked && <Lock size={13} strokeWidth={2.4} role="img" aria-label="Con candado" />}
               </button>
             ))}
           </div>
@@ -236,9 +241,9 @@ function ComercialContent() {
       ) : current === 'oportunidades' ? (
         <OportunidadesView isAdmin={isAdmin} segments={data.segments ?? []} onOpen={setOverlay} />
       ) : current === 'acumulado' ? (
-        <AcumuladoView onOpen={id => setOverlay({ id })} />
+        reports ? <AcumuladoView onOpen={id => setOverlay({ id })} /> : <LockedPanel feature="acumulado" />
       ) : (
-        <ActividadView reports={reports} />
+        salesTeam ? <ActividadView reports={reports} /> : <LockedPanel feature="actividad" />
       )}
 
       {overlay && data && (

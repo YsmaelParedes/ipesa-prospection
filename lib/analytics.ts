@@ -34,12 +34,16 @@ export const EVENTS = {
   demoUsed: 'Demo usada',
   /** El registro funcionó (antes de confirmar el correo, si hace falta) */
   accountCreated: 'Cuenta creada',
-  /** Clic en pagar un plan en Configuración → Plan · plan */
+  /** Clic en pagar Cubeta · plan, periodo (mensual, anual), desde (plan, aviso) */
   checkoutStarted: 'Pago iniciado',
   /** Volvió de Stripe con el pago hecho · plan */
   planPurchased: 'Plan contratado',
   /** Se mandó una cotización · via (whatsapp, correo, chat, compartir, enlace, en_persona) */
   quoteSent: 'Cotización enviada',
+  /** Alguien en Litro vio una función con candado · funcion (equipo, whatsapp, actividad, acumulado, contactos) */
+  lockSeen: 'Candado visto',
+  /** Abrió el aviso «Cambiar a Cubeta» desde un candado · funcion */
+  lockClick: 'Candado clic',
 } as const
 
 export type EventName = typeof EVENTS[keyof typeof EVENTS]

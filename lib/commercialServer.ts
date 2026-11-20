@@ -23,7 +23,7 @@ export function activityClient(
 export const liveContactIds = (rows: { contact_id: string | null }[]): string[] =>
   Array.from(new Set(rows.map(r => r.contact_id).filter((id): id is string => !!id)))
 
-/** Reparto, metas y control diario: Galón, Cubeta e Interno (Litro solo tiene la cola). */
+/** Reparto, metas y control diario: Cubeta e Interno (Litro trabaja solo). */
 export const hasSalesTeam = (ctx: StoreContext) => planOf(ctx.plan).salesTeam
 /** Acumulado y reportes en Excel: Cubeta e Interno. */
 export const hasReports = (ctx: StoreContext) => planOf(ctx.plan).reports

@@ -17,6 +17,7 @@ import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEve
 import { fmtAgo, fmtDue, greetingFor, isDueToday, isOverdue } from '@/lib/datetime'
 import { WhatsAppIcon } from '@/components/icons'
 import { LoadFailed } from '@/components/LoadFailed'
+import { LitroHints, TrialEndedDialog } from '@/components/LitroHome'
 import { SkText } from '@/components/Skeleton'
 import { DashboardSkeleton, TodayRowsSkeleton } from '@/components/skeletons/DashboardSkeleton'
 import { AlarmClock, Target, PartyPopper, Check, Phone, MessageCircle, Store, Mail, Pencil } from 'lucide-react'
@@ -148,6 +149,10 @@ export default function DashboardPage() {
           <p>{now.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}{session?.store ? ` · ${session.store.name}` : ''}</p>
         </div>
       </div>
+
+      {/* Litro: chats de WhatsApp que esperan y equipo en espera (ofrecen Cubeta); al terminar la prueba, una sola vez, qué cambió */}
+      <LitroHints />
+      <TrialEndedDialog />
 
       {/* Tienda nueva: guía de arranque para quien la administra */}
       {session?.isAdmin && session.store && (m.totalContacts ?? 0) === 0 && (

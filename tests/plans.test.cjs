@@ -8,22 +8,29 @@ const { parsePlanLimitError, remainingSlots, planLimitMessage } = require('../li
 const DAY = 86_400_000
 const NOW = Date.parse('2026-10-18T12:00:00Z')
 
-test('the plans match what was agreed', () => {
-  assert.deepEqual([PLANS.litro.maxUsers, PLANS.galon.maxUsers, PLANS.cubeta.maxUsers], [1, 3, 10])
+test('the plans match what was agreed: Litro free, Cubeta paid, no Galón', () => {
+  const { PUBLIC_PLANS, PAID_PLAN } = require('../lib/stores.ts')
+  assert.deepEqual([...PUBLIC_PLANS], ['litro', 'cubeta'])
+  assert.equal(PAID_PLAN, 'cubeta')
+  assert.equal('galon' in PLANS, false)
+  assert.deepEqual([PLANS.litro.maxUsers, PLANS.cubeta.maxUsers], [1, 10])
   assert.equal(PLANS.litro.maxContacts, 200)
-  assert.equal(PLANS.galon.whatsapp, false)
+  assert.equal(PLANS.litro.whatsapp, false)
   assert.equal(PLANS.cubeta.whatsapp, true)
-  assert.deepEqual([PLANS.litro.reports, PLANS.galon.reports, PLANS.cubeta.reports, PLANS.interno.reports], [false, false, true, true])
-  // Metas propias por vendedor: solo Cubeta e Interno; en Galón todo el equipo usa la de la tienda
-  assert.deepEqual([PLANS.litro.sellerGoals, PLANS.galon.sellerGoals, PLANS.cubeta.sellerGoals, PLANS.interno.sellerGoals], [false, false, true, true])
+  // Lo que conecta con el equipo es de Cubeta (Oportunidades viene en los dos y no depende del plan)
+  assert.deepEqual([PLANS.litro.salesTeam, PLANS.cubeta.salesTeam, PLANS.interno.salesTeam], [false, true, true])
+  assert.deepEqual([PLANS.litro.reports, PLANS.cubeta.reports, PLANS.interno.reports], [false, true, true])
+  assert.deepEqual([PLANS.litro.sellerGoals, PLANS.cubeta.sellerGoals, PLANS.interno.sellerGoals], [false, true, true])
   assert.equal(planOf('profesional').label, 'Litro', 'unknown plans fall back to Litro')
+  assert.equal(planOf('galon').label, 'Litro', 'the old Galón plan no longer exists')
 })
 
 test('a manual paid plan drops to Litro only after the grace days', () => {
   const at = days => new Date(NOW - days * DAY).toISOString()
   assert.equal(effectivePlan({ plan: 'cubeta', paid_until: at(2) }, NOW), 'cubeta')
   assert.equal(effectivePlan({ plan: 'cubeta', paid_until: at(4) }, NOW), 'litro')
-  assert.equal(effectivePlan({ plan: 'galon', paid_until: null }, NOW), 'galon', 'Stripe and no-expiry courtesies never lapse')
+  assert.equal(effectivePlan({ plan: 'cubeta', paid_until: null }, NOW), 'cubeta', 'Stripe and no-expiry courtesies never lapse')
+  assert.equal(effectivePlan({ plan: 'galon', paid_until: null }, NOW), 'litro', 'an unknown plan counts as Litro')
   assert.equal(effectivePlan({ plan: 'interno', paid_until: at(400) }, NOW), 'interno')
 })
 
@@ -36,13 +43,13 @@ test('new stores get neither campaigns nor formulas', () => {
   assert.deepEqual(effectiveModules({ plan: 'cubeta', paid_until: null, modules: { whatsapp: true } }, NOW),
     { whatsapp: true, campaigns: false, formulas: false })
   // Campañas solo encima de WhatsApp
-  assert.equal(effectiveModules({ plan: 'galon', paid_until: null, modules: ipesa }, NOW).campaigns, false)
+  assert.equal(effectiveModules({ plan: 'litro', paid_until: null, modules: ipesa }, NOW).campaigns, false)
 })
 
 test('WhatsApp needs the Cubeta plan and the advisor switch', () => {
   const on = { whatsapp: true, campaigns: true, formulas: true }
   assert.equal(effectiveModules({ plan: 'cubeta', paid_until: null, modules: on }, NOW).whatsapp, true)
-  assert.equal(effectiveModules({ plan: 'galon', paid_until: null, modules: on }, NOW).whatsapp, false)
+  assert.equal(effectiveModules({ plan: 'litro', paid_until: null, modules: on }, NOW).whatsapp, false)
   assert.equal(effectiveModules({ plan: 'cubeta', paid_until: null, modules: { ...on, whatsapp: false } }, NOW).whatsapp, false)
 })
 
@@ -52,12 +59,13 @@ test('only suspended or cancelled stores are read-only', () => {
 })
 
 test('Stripe prices and subscriptions map to plans', () => {
-  assert.equal(planFromLookupKey('galon_mensual'), 'galon')
   assert.equal(planFromLookupKey('cubeta_mensual'), 'cubeta')
-  assert.equal(planFromLookupKey('galon_anual'), 'galon')
   assert.equal(planFromLookupKey('cubeta_anual'), 'cubeta')
+  // Los precios de Galón quedaron archivados: ya no son de ningún plan
+  assert.equal(planFromLookupKey('galon_mensual'), null)
+  assert.equal(planFromLookupKey('galon_anual'), null)
   assert.equal(planFromLookupKey('otro'), null)
-  assert.equal(lookupKeyFor('galon', 'year'), 'galon_anual')
+  assert.equal(lookupKeyFor('cubeta', 'year'), 'cubeta_anual')
   assert.equal(lookupKeyFor('cubeta', 'month'), 'cubeta_mensual')
   const snap = subscriptionSnapshot({
     id: 'sub_1', status: 'active', customer: { id: 'cus_1' }, cancel_at_period_end: true,
@@ -71,7 +79,7 @@ test('Stripe prices and subscriptions map to plans', () => {
   // Cancelar desde el portal (API actual): cancel_at con la fecha de término
   const ending = subscriptionSnapshot({
     id: 'sub_2', status: 'active', customer: 'cus_2', cancel_at_period_end: false, cancel_at: 1_790_000_000,
-    items: { data: [{ current_period_end: 1_790_000_000, price: { lookup_key: 'galon_mensual' } }] },
+    items: { data: [{ current_period_end: 1_790_000_000, price: { lookup_key: 'cubeta_anual' } }] },
   })
   assert.equal(ending.cancelAtPeriodEnd, true)
   assert.equal(ending.periodEnd, new Date(1_790_000_000 * 1000).toISOString())
@@ -84,6 +92,7 @@ test('the database limit error becomes a clear message', () => {
   assert.deepEqual(parsePlanLimitError({ code: 'P0001', message: 'PLAN_LIMIT:contacts:50' }), { kind: 'contacts', limit: 50 })
   assert.equal(parsePlanLimitError({ code: '23505', message: 'duplicate key' }), null)
   assert.match(planLimitMessage('contacts', 50), /50 contactos del plan Litro/)
+  assert.match(planLimitMessage('contacts', 200), /Cambia a Cubeta/)
   assert.equal(remainingSlots(50, 48), 2)
   assert.equal(remainingSlots(50, 60), 0)
   assert.equal(remainingSlots(null, 999), null)
@@ -101,7 +110,7 @@ test('avisos push: en Litro solo el administrador principal; con plan de equipo,
   // Si quien abrió la tienda ya no es administrador activo, el más antiguo
   assert.deepEqual(audienceUsers({ ...litro, created_by: 'gone' }, members, NOW), ['a-old'])
   assert.deepEqual(audienceUsers(litro, [{ user_id: 'seller', role: 'employee' }], NOW), [])
-  assert.deepEqual(audienceUsers({ plan: 'galon', paid_until: null, created_by: 'creator' }, members, NOW), ['a-old', 'creator', 'seller'])
+  assert.deepEqual(audienceUsers({ plan: 'cubeta', paid_until: null, created_by: 'creator' }, members, NOW), ['a-old', 'creator', 'seller'])
   // Cortesía vencida cuenta como Litro: el equipo deja de recibir avisos
   const expired = { plan: 'cubeta', paid_until: new Date(NOW - 10 * DAY).toISOString(), created_by: 'creator' }
   assert.deepEqual(audienceUsers(expired, members, NOW), ['creator'])

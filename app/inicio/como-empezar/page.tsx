@@ -16,7 +16,7 @@ export const metadata: Metadata = pageMeta({
 const STEPS = [
   { title: 'Crea tu cuenta gratis', text: 'Con tu correo, en un minuto y sin tarjeta. Empiezas con 14 días de Cubeta gratis.' },
   { title: 'Configura tu tienda', text: 'Nombre, logo y catálogos con ayuda del asistente. Puedes importar tu lista de clientes de Excel.' },
-  { title: 'Elige tu plan e invita a tu equipo', text: 'Cuando lo necesites, cambia a Galón o Cubeta y manda a cada vendedor su enlace por WhatsApp o correo.' },
+  { title: 'Elige tu plan e invita a tu equipo', text: 'Cuando lo necesites, cambia a Cubeta y manda a cada vendedor su enlace por WhatsApp o correo.' },
 ]
 
 const SECURITY = [

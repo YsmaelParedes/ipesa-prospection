@@ -5,10 +5,10 @@
  * el otro). En un espacio angosto (celular) se acomoda en una columna.
  */
 import {
-  computeTotals, fmtLongDate, fmtMoney, fmtQty, folioLabel, isFilled, lineTotal, storeAddressLines,
+  QUOTE_BRAND, computeTotals, fmtLongDate, fmtMoney, fmtQty, folioLabel, isFilled, lineTotal, storeAddressLines,
   type QuoteDoc, type QuoteStore,
 } from '@/lib/quotes'
-import { APP_NAME } from '@/lib/brand'
+import { BrandLogo } from '@/components/Brand'
 import s from './QuoteSheet.module.css'
 
 export function QuoteSheet({ doc, store, className }: { doc: QuoteDoc; store: QuoteStore; className?: string }) {
@@ -89,7 +89,11 @@ export function QuoteSheet({ doc, store, className }: { doc: QuoteDoc; store: Qu
           </section>
         )}
 
-        {store.branded && <footer className={s.foot}>Hecha con {APP_NAME} · matices.app</footer>}
+        {/* Pie de Matices en los dos planes, igual que en el PDF */}
+        <footer className={s.foot}>
+          <a href={QUOTE_BRAND.url} target="_blank" rel="noopener" className={s.brand}><BrandLogo /></a>
+          <p className={s.brandLine}>{QUOTE_BRAND.lead}<a href={QUOTE_BRAND.url} target="_blank" rel="noopener">{QUOTE_BRAND.name}</a></p>
+        </footer>
       </article>
     </div>
   )

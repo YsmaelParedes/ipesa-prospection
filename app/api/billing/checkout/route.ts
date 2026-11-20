@@ -8,7 +8,7 @@ import { clientIp, rateLimit } from '@/lib/rateLimit'
 import { jsonError, readJson, serverError } from '@/lib/validation'
 
 /**
- * POST /api/billing/checkout { plan: 'galon' | 'cubeta', interval?: 'month' | 'year' } — administradores.
+ * POST /api/billing/checkout { plan: 'cubeta', interval?: 'month' | 'year' } — administradores.
  * Abre el pago de Stripe (Checkout en modo suscripción) y devuelve su URL.
  * El plan de la tienda NO cambia aquí: lo cambia el webhook cuando Stripe
  * confirma la suscripción. Si ya paga una suscripción, el cambio de plan se

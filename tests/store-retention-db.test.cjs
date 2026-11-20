@@ -36,6 +36,9 @@ before(async () => {
     create table public.platform_admins (user_id uuid primary key);
   `)
   await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261021120000_store_retention.sql'), 'utf8'))
+  // Dos planes (1.61.0): la versión vigente de store_retention_protected
+  const dosPlanes = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261120033000_dos_planes.sql'), 'utf8')
+  await db.exec(dosPlanes.match(/create or replace function public\.store_retention_protected[\s\S]*?\$\$;/)[0])
   await db.exec('grant select, insert, update, delete on all tables in schema public to service_role;')
 })
 after(async () => { await db?.close() })
@@ -82,7 +85,7 @@ test('any recent use keeps it: sign-in, contact, activity, WhatsApp or opening t
 test('paying, courtesy, internal and excluded stores are never deleted', async () => {
   const cases = [
     "subscription_status = 'active'", "subscription_status = 'past_due'", "subscription_status = 'trialing'",
-    "plan = 'galon'", "plan = 'cubeta', paid_until = now() + interval '1 month'", "plan = 'interno'", 'retention_hold = true',
+    "plan = 'cubeta'", "plan = 'cubeta', paid_until = now() + interval '1 month'", "plan = 'interno'", 'retention_hold = true',
   ]
   for (const set of cases) {
     await db.query("update public.stores set plan = 'litro', paid_until = null, subscription_status = null, retention_hold = false where id = $1", [STORE])
@@ -91,8 +94,8 @@ test('paying, courtesy, internal and excluded stores are never deleted', async (
     assert.equal((await status(STORE)).protected, true, set)
     assert.equal((await del(STORE)).reason, 'protected', set)
   }
-  // Galón a mano vencido (más los 3 días de gracia) ya es Litro: sí se puede eliminar
-  await db.query("update public.stores set retention_hold = false, plan = 'galon', paid_until = now() - interval '10 days' where id = $1", [STORE])
+  // Cubeta a mano vencida (más los 3 días de gracia) ya es Litro: sí se puede eliminar
+  await db.query("update public.stores set retention_hold = false, plan = 'cubeta', paid_until = now() - interval '10 days' where id = $1", [STORE])
   assert.equal((await status(STORE)).protected, false)
 })
 

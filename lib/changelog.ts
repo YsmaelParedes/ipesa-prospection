@@ -36,6 +36,18 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.61.0',
+    date: '20 de noviembre, 2026',
+    title: 'Ahora hay dos planes: Litro y Cubeta',
+    items: [
+      'Litro, gratis, es para trabajar tú solo. Cubeta es para tu tienda con su equipo y su WhatsApp. El plan Galón ya no se ofrece.',
+      'Oportunidades ya viene en Litro: ves cada cotización abierta y cuánto vale.',
+      'En Litro, lo que es de Cubeta se ve con candado (tu equipo, WhatsApp, Actividad diaria y Acumulado). Al tocarlo puedes cambiar a Cubeta ahí mismo, pagando por mes o por año.',
+      'Cuando termina tu prueba de Cubeta te decimos qué sigue gratis y qué queda con candado, sin borrar nada. También te avisamos por correo unos días antes.',
+      'Tus cotizaciones llevan al pie la marca de Matices, en el PDF y en el enlace que recibe tu cliente.',
+    ],
+  },
+  {
     version: '1.60.0',
     date: '19 de noviembre, 2026',
     title: 'Cotizaciones en el sitio',

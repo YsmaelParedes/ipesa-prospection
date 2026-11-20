@@ -14,14 +14,14 @@ El webhook sigue requiriendo payloads **snapshot** y una versión compatible con
 
 ## Precios históricos
 
-`stripe_price_plans` conserva una asociación inmutable entre `price_id` y `galon`/`cubeta`. Los precios mensuales actuales se registran al consultar `/api/billing/prices` o iniciar Checkout. Las suscripciones también registran sus precios cuando todavía conservan un lookup key reconocido.
+`stripe_price_plans` conserva una asociación inmutable entre `price_id` y `cubeta` (desde 1.61.0 es el único plan de paga; las filas de Galón se borraron y sus precios se archivaron en Stripe). Los precios mensuales actuales se registran al consultar `/api/billing/prices` o iniciar Checkout. Las suscripciones también registran sus precios cuando todavía conservan un lookup key reconocido.
 
 Antes de transferir un lookup key, comprobar que el precio anterior ya esté en esa tabla. Si una clave se transfirió **antes** de instalar esta corrección, recuperar el ID del precio anterior desde Stripe y registrar explícitamente el plan verificado:
 
 ```sql
 -- Sustituir el ID y confirmar el plan en Stripe antes de ejecutar.
 insert into public.stripe_price_plans(price_id, plan)
-values ('price_ID_VERIFICADO', 'galon')
+values ('price_ID_VERIFICADO', 'cubeta')
 on conflict (price_id) do nothing;
 ```
 

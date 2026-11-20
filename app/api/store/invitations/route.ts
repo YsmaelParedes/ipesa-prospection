@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     const { maxUsers, label } = planOf(ctx.plan)
     if (activeSeats >= maxUsers) {
       return jsonError(maxUsers === 1
-        ? `El plan ${label} incluye solo al administrador. Cambia a Galón o Cubeta para invitar a tu equipo.`
+        ? `El plan ${label} incluye solo al administrador. Cambia a Cubeta para invitar a tu equipo.`
         : `Tu plan ${label} permite hasta ${maxUsers} usuarios. Cambia de plan para sumar más.`, 403)
     }
 

@@ -480,7 +480,7 @@ function TeamStep({ store, canInviteAdmins, invites, locked, onInvite, onBack, o
       {locked ? (
         <AuthAlert kind="info">
           {locked === 'plan'
-            ? <>El plan {store.planLabel} incluye solo al administrador. Para invitar a tu equipo cambia a Galón o Cubeta desde Configuración → Plan.</>
+            ? <>El plan {store.planLabel} incluye solo al administrador. Para invitar a tu equipo cambia a Cubeta desde Configuración → Plan.</>
             : <>Tu tienda está en solo lectura: por ahora no puedes invitar a tu equipo.</>}
         </AuthAlert>
       ) : (<>
@@ -555,7 +555,7 @@ function DoneStep({ store, modules, invites }: { store: ClientStore; modules: St
       : { href: '/comercial', icon: Ic.leads, tone: s.nextBrand, title: 'Haz tu primera llamada', text: 'Anota el resultado y la próxima fecha de cada cliente.' },
     { href: '/contactos', icon: Ic.contacts, tone: s.nextCyan, title: 'Agrega tus clientes', text: 'Captúralos uno por uno o importa tu lista de Excel.' },
     free || trialEnd
-      ? { href: planTabHref(intent), icon: Ic.settings, tone: s.nextMagenta, title: intent ? `Activa ${PLANS[intent.plan].label}` : 'Conoce los planes', text: trialEnd ? 'Elige tu plan cuando quieras; tu prueba sigue igual.' : 'Galón y Cubeta quitan los límites y suman a tu equipo.' }
+      ? { href: planTabHref(intent), icon: Ic.settings, tone: s.nextMagenta, title: intent ? `Activa ${PLANS[intent.plan].label}` : 'Conoce Cubeta', text: trialEnd ? 'Actívalo cuando quieras; tu prueba sigue igual.' : 'Cubeta quita los límites y suma a tu equipo y tu WhatsApp.' }
       : { href: '/configuracion?tab=catalogos', icon: Ic.settings, tone: s.nextMagenta, title: 'Ajusta tus catálogos', text: 'Segmentos y canales con los que trabaja tu tienda.' },
   ]
 

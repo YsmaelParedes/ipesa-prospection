@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getPriceTable, stripeConfigured } from '@/lib/stripe'
 
 /**
- * GET /api/billing/prices — precio de Galón y Cubeta leído de Stripe, mensual
+ * GET /api/billing/prices — precio de Cubeta leído de Stripe, mensual
  * (`prices`) y anual (`annual`). Público: lo usan la página de precios y
  * Configuración → Plan. Sin Stripe configurado o si Stripe falla, responde
  * sin precios y la pantalla muestra "Disponible pronto".

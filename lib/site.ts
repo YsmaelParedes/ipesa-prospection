@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { APP_NAME, APP_TAGLINE } from './brand'
 import type { PublicPrices } from './billing'
 import { EMAILS } from './legal'
-import { PLANS } from './stores'
+import { PAID_PLAN, PLANS } from './stores'
 
 /**
  * Datos del sitio público para buscadores (Google, redes al compartir un enlace).
@@ -78,7 +78,7 @@ function planOffers(prices: PublicPrices | null) {
   const offers: object[] = [
     { '@type': 'Offer', name: `Plan ${PLANS.litro.label}`, description: 'Gratis para siempre, sin tarjeta', price: 0, priceCurrency: 'MXN', url },
   ]
-  for (const id of ['galon', 'cubeta'] as const) {
+  for (const id of [PAID_PLAN] as const) {
     const p = prices?.[id]
     if (!p) continue
     const currency = p.currency.toUpperCase()

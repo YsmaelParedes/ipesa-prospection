@@ -14,7 +14,7 @@ export const metadata: Metadata = pageMeta({
   path: '/inicio/funciones',
 })
 
-const MAX_USERS = PLANS.galon.maxUsers
+const MAX_USERS = PLANS.cubeta.maxUsers
 
 const JUMPS = [
   ['#contactos', 'Contactos'], ['#comercial', 'Sistema Comercial'], ['#cotizaciones', 'Cotizaciones'], ['#agenda', 'Agenda'],

@@ -3,16 +3,17 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { EVENTS, track } from '@/lib/analytics'
+import { CHECKOUT_PLAN_KEY, startCheckout } from '@/lib/checkout'
 import type { ClientStore } from '@/lib/profile'
 import { invalidateSession } from '@/lib/profile'
 import { useCachedQuery } from '@/lib/useCachedQuery'
 import { fmtMoney, formatPlanPrice, monthlyEquivalent, monthsSaved, type PlanInterval, type PlanPrice } from '@/lib/billing'
-import { PLAN_COPY } from '@/lib/planFeatures'
+import { PLAN_COPY, featureKey, type FeatureLine } from '@/lib/planFeatures'
 import { clearPlanIntent, readPlanIntent, type PlanIntent } from '@/lib/planIntent'
 import { PlanIcon } from '@/components/PlanIcon'
 import { SkText } from '@/components/Skeleton'
 import { EMAILS } from '@/lib/legal'
-import { PLANS, PUBLIC_PLANS, STATUS_LABELS, type PaidPlanId } from '@/lib/stores'
+import { PAID_PLAN, PLANS, PUBLIC_PLANS, STATUS_LABELS, type PaidPlanId } from '@/lib/stores'
 import { Card, CardFoot, Ico, Note, Row, api, cx, fmtDate, send } from './ui'
 import s from './configuracion.module.css'
 
@@ -25,23 +26,23 @@ type PriceMap = Partial<Record<PaidPlanId, PlanPrice>>
 type Prices = { available: boolean; prices: PriceMap; annual?: PriceMap }
 
 const fmtCount = (n: number) => n.toLocaleString('es-MX')
-/** Plan que se fue a pagar a Stripe (para las estadísticas al volver). */
-const CHECKOUT_PLAN_KEY = 'matices:checkout-plan'
+const Feature = ({ f }: { f: FeatureLine }) => <li><Ico.check /><span>{f.name && <strong>{f.name}</strong>}{f.text}</span></li>
 /** Al volver de Stripe el webhook puede tardar: se revisa la sesión varias veces durante un minuto. */
 const PAID_CHECKS = [2000, 5000, 10_000, 20_000, 35_000, 60_000]
 
-/** El plan elegido: el de la dirección (?elegir=galon&periodo=anual) o el que se eligió en la página de precios. */
+/** El plan elegido: el de la dirección (?elegir=cubeta&periodo=anual) o el que se eligió en la página de precios. */
 function intentFrom(params: URLSearchParams): PlanIntent | null {
   const plan = params.get('elegir')
-  if (plan === 'galon' || plan === 'cubeta') return { plan, interval: params.get('periodo') === 'anual' ? 'year' : 'month' }
+  // «galon» queda de enlaces de cuando había tres planes
+  if (plan === 'galon' || plan === 'cubeta') return { plan: PAID_PLAN, interval: params.get('periodo') === 'anual' ? 'year' : 'month' }
   return readPlanIntent()
 }
 
 /**
- * Configuración → Plan: plan actual con su uso, los tres planes y el cobro
+ * Configuración → Plan: plan actual con su uso, los dos planes y el cobro
  * con Stripe (Checkout para suscribirse, mensual o anual; portal para cambiar,
  * cancelar, tarjeta y facturas). Los administradores pagan o cambian de plan.
- * En la prueba de Cubeta de una tienda nueva, los planes de pago se activan desde aquí.
+ * En la prueba de Cubeta de una tienda nueva, Cubeta se activa desde aquí.
  */
 export function PlanTab({ store }: { store: ClientStore }) {
   const params = useSearchParams()
@@ -93,7 +94,7 @@ export function PlanTab({ store }: { store: ClientStore }) {
   const canPay = !!priceData?.available
   const hasAnnual = PUBLIC_PLANS.some(id => id !== 'litro' && annual[id])
   const yearly = period === 'year' && hasAnnual
-  const saved = monthsSaved(monthly.galon, annual.galon)
+  const saved = monthsSaved(monthly[PAID_PLAN], annual[PAID_PLAN])
 
   const go = async (key: string, path: string, body?: unknown) => {
     setBusy(key)
@@ -106,10 +107,15 @@ export function PlanTab({ store }: { store: ClientStore }) {
       setBusy('')
     }
   }
-  const checkout = (plan: PaidPlanId) => {
-    track(EVENTS.checkoutStarted, { plan })
-    try { sessionStorage.setItem(CHECKOUT_PLAN_KEY, plan) } catch {}
-    return go(plan, '/api/billing/checkout', { plan, interval: yearly ? 'year' : 'month' })
+  const checkout = async (plan: PaidPlanId) => {
+    setBusy(plan)
+    setError('')
+    try {
+      await startCheckout(yearly ? 'year' : 'month', 'plan')
+    } catch (e) {
+      setError((e as Error).message)
+      setBusy('')
+    }
   }
   const portal = () => go('portal', '/api/billing/portal')
 
@@ -209,7 +215,7 @@ export function PlanTab({ store }: { store: ClientStore }) {
         <Card title="Plan de cortesía" description="Tu tienda tiene todas las funciones sin cobro. Si necesitas cambiar algo, escríbenos.">
           <div className={s.cardBody}>
             <ul className={s.features}>
-              {[...PLAN_COPY.galon.features.slice(2), ...PLAN_COPY.cubeta.features.slice(2)].map(f => <li key={f}><Ico.check />{f}</li>)}
+              {PLAN_COPY.cubeta.features.slice(1).map(f => <Feature key={featureKey(f)} f={f} />)}
               <li><Ico.check />Hasta {store.maxUsers} usuarios con roles</li>
             </ul>
           </div>
@@ -228,7 +234,7 @@ export function PlanTab({ store }: { store: ClientStore }) {
             <div className={s.plans}>
               {PUBLIC_PLANS.map(id => {
                 const copy = PLAN_COPY[id]
-                // En la prueba nada es «tu plan actual»: Galón y Cubeta se activan desde aquí
+                // En la prueba nada es «tu plan actual»: Cubeta se activa desde aquí
                 const current = store.plan === id && !readonly && !trialEnd
                 const chosen = !current && intent?.plan === id
                 const m = id === 'litro' ? undefined : monthly[id]
@@ -260,7 +266,7 @@ export function PlanTab({ store }: { store: ClientStore }) {
                     {yearly && a && <p className={s.planYear}>Pagas {fmtMoney(a.amount, a.currency)} al año</p>}
                     <p className={s.planTagline}>{copy.tagline}</p>
                     <ul className={s.planFeatures}>
-                      {copy.features.map(f => <li key={f}><Ico.check />{f}</li>)}
+                      {copy.features.map(f => <Feature key={featureKey(f)} f={f} />)}
                     </ul>
                     {action && <div className={s.planAction}>{action}</div>}
                   </div>

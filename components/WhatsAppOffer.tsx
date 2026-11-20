@@ -1,6 +1,6 @@
 'use client'
 
-import Link from '@/components/CachedLink'
+import { useLockSeen, useUpgradeDialog } from '@/components/UpgradeDialog'
 import { Avatar } from '@/components/CrmUI'
 import { WaIcon } from '@/components/WhatsAppUI'
 import { useSession } from '@/lib/profile'
@@ -28,14 +28,16 @@ const SAMPLE = [
 /**
  * WhatsApp en una tienda que aún no lo tiene conectado. Viene en el plan
  * Cubeta: el administrador conecta su número él mismo en unos clics
- * (WhatsAppConnect). En Litro y Galón se ofrece cambiar de plan; quien no es
- * administrador espera a que alguien lo conecte.
+ * (WhatsAppConnect). En Litro se ofrece Cubeta (el botón abre el aviso con el
+ * pago); quien no es administrador espera a que alguien lo conecte.
  */
 export function WhatsAppOffer() {
   const session = useSession()
+  const upgrade = useUpgradeDialog()
   const store = session?.store
   const canRequest = !!session?.isAdmin
   const inPlan = !!store?.planIncludesWhatsApp
+  useLockSeen(canRequest && store && !inPlan ? 'whatsapp' : null)
 
   // Alta en unos clics: el administrador conecta el número él mismo
   if (store?.whatsappSignup && inPlan && canRequest) return <WhatsAppConnect />
@@ -99,10 +101,11 @@ export function WhatsAppOffer() {
         </ol>
 
         <div className="wa-offer-foot">
-          <Link href="/configuracion?tab=plan" className="btn btn-primary wa-offer-btn"><WaIcon.whatsapp size={17} /> Cambiar a Cubeta</Link>
+          <button type="button" className="btn btn-primary wa-offer-btn" onClick={() => upgrade.open('whatsapp')}><WaIcon.whatsapp size={17} /> Cambiar a Cubeta</button>
           <span className="wa-offer-note">Responderle a tus clientes no cuesta; si les escribes tú primero con plantillas, Meta cobra aparte.</span>
         </div>
       </section>
+      {upgrade.dialog}
     </div>
   )
 }

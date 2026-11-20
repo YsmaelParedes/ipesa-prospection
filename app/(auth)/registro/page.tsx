@@ -12,15 +12,16 @@ import { TURNSTILE_SITE_KEY, Turnstile, type TurnstileHandle } from '@/component
  * Registro abierto: la cuenta nace sin tienda; al confirmar el correo,
  * /bienvenida crea la tienda con la prueba de Cubeta (14 días, sin tarjeta) y
  * su administrador decide después qué plan activa. Si viene de un plan de la
- * página de precios (?plan=galon), se recuerda para ofrecerlo al terminar.
+ * página de precios (?plan=cubeta), se recuerda para ofrecerlo al terminar.
  */
 export default function RegisterPage() {
   const [intent, setIntent] = useState<PlanIntent | null>(null)
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search)
     const plan = sp.get('plan')
+    // «galon» queda de enlaces de cuando había tres planes: hoy el de paga es Cubeta
     if (plan !== 'galon' && plan !== 'cubeta') return
-    const chosen: PlanIntent = { plan, interval: sp.get('periodo') === 'anual' ? 'year' : 'month' }
+    const chosen: PlanIntent = { plan: 'cubeta', interval: sp.get('periodo') === 'anual' ? 'year' : 'month' }
     savePlanIntent(chosen)
     setIntent(chosen)
   }, [])

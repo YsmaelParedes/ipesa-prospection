@@ -26,11 +26,11 @@ const GROUPS: { id: string; title: string; items: { q: string; a: string }[] }[]
   {
     id: 'plan', title: 'Plan y pagos',
     items: [
-      { q: '¿Cuánto cuesta?', a: `El plan Litro es gratis (${PLANS.litro.maxContacts?.toLocaleString('es-MX')} clientes). Galón y Cubeta se pagan cada mes o cada año, con 2 meses gratis; consulta los precios en la página de Precios.` },
+      { q: '¿Cuánto cuesta?', a: `El plan Litro es gratis (${PLANS.litro.maxContacts?.toLocaleString('es-MX')} clientes). Cubeta, el plan para tu tienda con su equipo y su WhatsApp, se paga cada mes o cada año, con 2 meses gratis; consulta el precio en la página de Precios.` },
       { q: '¿Cómo se paga?', a: 'Con tarjeta de crédito o débito, cada mes o cada año, a través de Stripe. Si necesitas factura, escríbenos a facturacion@matices.app. Nosotros nunca vemos los datos de tu tarjeta. Si un cobro no pasa, Stripe lo reintenta; si al final no se cobra, tu tienda vuelve al plan Litro sin borrar nada.' },
       { q: '¿Puedo cancelar?', a: 'Cuando quieras, desde Configuración → Plan. Conservas tu plan hasta el final del mes pagado y después pasas a Litro.' },
-      { q: '¿Cuántas personas pueden usarlo?', a: `Litro es para una sola persona, el administrador. Galón incluye hasta ${PLANS.galon.maxUsers} usuarios y Cubeta hasta ${PLANS.cubeta.maxUsers}, con administradores. Cada quien con su propio acceso.` },
-      { q: '¿Qué tiene Cubeta que no tenga Galón?', a: `Hasta ${PLANS.cubeta.maxUsers} usuarios y varios administradores; metas propias para cada vendedor (en Galón todo el equipo usa la misma); Acumulado, para ver el día, la semana y el mes de cada vendedor contra el periodo anterior y a qué clientes cotizó y vendió; reportes en Excel, y te ayudamos a importar tu base y a capacitar a tu equipo.` },
+      { q: '¿Cuántas personas pueden usarlo?', a: `Litro es para una sola persona, el administrador. Cubeta incluye hasta ${PLANS.cubeta.maxUsers} usuarios, con administradores. Cada quien con su propio acceso.` },
+      { q: '¿Qué tiene Cubeta que no tenga Litro?', a: `Tu equipo (hasta ${PLANS.cubeta.maxUsers} usuarios y varios administradores) con reparto de clientes y permisos; el WhatsApp de tu tienda dentro del CRM; Actividad diaria y metas para el equipo y para cada vendedor; Acumulado, para ver el día, la semana y el mes de cada vendedor contra el periodo anterior y a qué clientes cotizó y vendió; reportes en Excel; clientes sin límite, y te ayudamos a importar tu base y a capacitar a tu equipo.` },
       { q: 'Tengo varias sucursales, ¿cómo funciona?', a: 'Cada cuenta es una sucursal, con su propio plan, equipo y datos. Si tienes otra, escríbenos y la damos de alta aparte.' },
     ],
   },

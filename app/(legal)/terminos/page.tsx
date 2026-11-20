@@ -59,20 +59,20 @@ const sections: LegalSection[] = [
         <p>
           Cualquier tienda puede crear su cuenta. Toda tienda empieza en el plan <strong>Litro</strong>, gratuito, con
           límites de uso ({PLANS.litro.maxContacts} contactos y solo el usuario
-          del administrador). Los planes <strong>Galón</strong> y <strong>Cubeta</strong> son de
-          paga y su precio vigente se muestra en el sitio y antes de pagar.
+          del administrador). El plan <strong>Cubeta</strong> es de paga y su precio vigente se muestra en el
+          sitio y antes de pagar.
         </p>
         <p>
-          Los planes de paga son una suscripción mensual que se cobra automáticamente con tarjeta, por adelantado, a
+          Cubeta es una suscripción mensual o anual que se cobra automáticamente con tarjeta, por adelantado, a
           través de Stripe, nuestro procesador de pagos; no vemos ni guardamos los datos de tu tarjeta. Al cambiar de
-          plan, Stripe ajusta el cobro de forma proporcional. Si un cobro no pasa, Stripe lo reintenta durante unos días;
+          forma de pago, Stripe ajusta el cobro de forma proporcional. Si un cobro no pasa, Stripe lo reintenta durante unos días;
           si finalmente no se cobra, la suscripción se cancela y la tienda pasa al plan Litro.
         </p>
         <p>
           Al bajar de plan no se borra información: lo que pase de los límites del nuevo plan se conserva y se puede
           consultar, pero no se pueden registrar más contactos o cotizaciones hasta quedar dentro del límite o subir de
-          plan. Si el nuevo plan incluye menos usuarios, los accesos más recientes se desactivan y un administrador puede elegir
-          a quién reactivar. La bandeja de WhatsApp es parte del plan Cubeta.
+          plan. En Litro solo entra el administrador: el resto del equipo queda en espera, sin perder su información, y
+          vuelve a entrar al activar Cubeta. La bandeja de WhatsApp es parte del plan Cubeta.
         </p>
         <p>
           Los precios incluyen los impuestos que se indiquen al pagar. Si necesitas factura fiscal (CFDI), pídela
@@ -208,7 +208,7 @@ export default function TermsPage() {
       kicker="Términos de uso"
       title="Reglas claras para trabajar juntos"
       summary={[
-        'Empiezas gratis en el plan Litro; Galón y Cubeta se pagan cada mes con tarjeta a través de Stripe.',
+        'Empiezas gratis en el plan Litro; Cubeta se paga cada mes o cada año con tarjeta a través de Stripe.',
         'La información de tu tienda es tuya y ninguna otra tienda puede verla.',
         'Contacta solo a clientes que aceptaron recibir tus mensajes.',
         'Puedes cancelar cuando quieras: pasas al plan Litro sin perder tu información.',

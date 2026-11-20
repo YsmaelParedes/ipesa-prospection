@@ -2,6 +2,8 @@
 
 Fuente única de lo que falta para cobrar con Stripe en Matices (planes Galón y Cubeta).
 
+> Desde 1.61.0 solo se vende **Cubeta** (mensual y anual). Lo que aquí dice de Galón es historia: sus precios están archivados en Stripe.
+
 ## Values to Replace
 
 No queda ningún valor de ejemplo en el código. Los parámetros `sample_only` ya tienen valores reales:

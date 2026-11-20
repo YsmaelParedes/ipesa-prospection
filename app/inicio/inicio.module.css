@@ -491,9 +491,9 @@ a.feature:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--brand-ring)
 }
 
 /* ════════════════════════════════════════════════════════════════════════
-   Precios: tres planes (misma tarjeta de plan del sitio) y comparativa
+   Precios: dos planes (misma tarjeta de plan del sitio) y comparativa
    ════════════════════════════════════════════════════════════════════════ */
-.pricingGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
+.pricingGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: stretch; max-width: 880px; margin: 0 auto; }
 .priceCard { display: flex; flex-direction: column; box-shadow: var(--shadow); }
 .priceCard::before { opacity: .35; }
 .priceCardHi { border-color: rgba(229, 10, 38, .35); box-shadow: var(--shadow-lg), 0 24px 48px -28px rgba(229, 10, 38, .55); }
@@ -516,7 +516,10 @@ a.feature:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--brand-ring)
 .billingSave { padding: 2px 8px; border-radius: 999px; background: var(--c-lime-soft); color: var(--c-lime-ink); font-size: 11.5px; font-weight: 800; }
 .billingToggle button[aria-pressed='true'] .billingSave { background: rgba(255, 255, 255, .16); color: #fff; }
 .priceCard .planList { flex: 1; }
-.priceCard .planList li { align-items: flex-start; font-size: 14.5px; line-height: 1.45; }
+.priceCard .planList li { align-items: flex-start; font-size: 14.5px; line-height: 1.45; font-weight: 500; }
+.priceCard .planList li > span:last-child { padding-top: 2px; }
+.priceCard .planList strong { font-weight: 800; color: var(--ink); }
+.planListMinor { color: var(--muted) !important; }
 .priceBtn { width: 100%; justify-content: center; margin-top: 24px; }
 .compareWrap { position: relative; max-width: 880px; margin: 44px auto 0; overflow-x: auto; border-radius: 20px; background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
 .compare { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 14.5px; }
@@ -532,8 +535,8 @@ a.feature:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--brand-ring)
 .priceNote { padding: 22px 24px; border-radius: 18px; background: var(--card); border: 1px solid var(--line); }
 .priceNote h3 { margin: 0 0 6px; font-family: var(--font-display); font-size: 17px; letter-spacing: -0.01em; }
 .priceNote p { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--muted); }
-@media (max-width: 1080px) {
-  .pricingGrid { grid-template-columns: minmax(0, 1fr); max-width: 520px; margin: 0 auto; gap: 28px; }
+@media (max-width: 760px) {
+  .pricingGrid { grid-template-columns: minmax(0, 1fr); max-width: 520px; gap: 28px; }
 }
 @media (max-width: 680px) {
   .priceNotes { grid-template-columns: minmax(0, 1fr); }

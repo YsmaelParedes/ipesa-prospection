@@ -39,7 +39,7 @@ export function commercialTour({ isAdmin, salesTeam, reports, readonly, waModule
         <ul>
           <li><b>Hoy:</b> tu lista de trabajo del día.</li>
           <li><b>Cartera:</b> toda tu base, por etapa.</li>
-          {salesTeam && <li><b>Oportunidades:</b> las cotizaciones abiertas.</li>}
+          <li><b>Oportunidades:</b> las cotizaciones abiertas.</li>
           {team && <li><b>{summary ? 'Actividad diaria y Acumulado' : 'Actividad diaria'}:</b> cómo va el equipo (solo administradores).</li>}
         </ul>
       ),
@@ -109,7 +109,7 @@ export function commercialTour({ isAdmin, salesTeam, reports, readonly, waModule
           <tbody>
             <tr><td>Sin contacto</td><td>Vuelve mañana. Si no contesta 3 veces seguidas, baja al final de la lista.</td></tr>
             <tr><td>Contactado</td><td>Pasa a Contactado. Vuelve en 3 días.</td></tr>
-            <tr><td>Cotización</td><td>Anotas el monto. Pasa a Cotización{salesTeam ? ' y a Oportunidades' : ''}. Vuelve en 2 días.</td></tr>
+            <tr><td>Cotización</td><td>Anotas el monto. Pasa a Cotización y a Oportunidades. Vuelve en 2 días.</td></tr>
             <tr><td>Venta</td><td>Anotas el monto. Pasa a Cliente. Te recordamos ofrecer recompra en 30 días.</td></tr>
             <tr><td>No interesado</td><td>Sale de tu lista. Vuelve en 90 días.</td></tr>
             <tr><td>Núm. incorrecto</td><td>Sale de la lista para corregir el número.</td></tr>

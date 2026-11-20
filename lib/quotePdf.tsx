@@ -4,10 +4,10 @@
  * cliente): si cambias el diseño de uno, cambia el otro.
  */
 import path from 'node:path'
-import { Document, Font, Image, Page, StyleSheet, Text, View, renderToBuffer } from '@react-pdf/renderer'
+import { Document, Font, Image, Link, Page, Rect, StyleSheet, Svg, Text, View, renderToBuffer } from '@react-pdf/renderer'
 import { APP_NAME } from './brand'
 import {
-  computeTotals, fmtLongDate, fmtMoney, fmtQty, folioLabel, isFilled, lineTotal, storeAddressLines,
+  QUOTE_BRAND, computeTotals, fmtLongDate, fmtMoney, fmtQty, folioLabel, isFilled, lineTotal, storeAddressLines,
   type QuoteDoc, type QuoteStore,
 } from './quotes'
 
@@ -27,7 +27,7 @@ function registerFonts() {
 const C = { ink: '#131313', ink2: '#2D2D2C', muted: '#6B6B6A', faint: '#8F8F8E', line: '#E4E4E7', band: '#F3F4F6' }
 
 const st = StyleSheet.create({
-  page: { fontFamily: 'Manrope', fontSize: 9.5, color: C.ink2, paddingTop: 0, paddingBottom: 56, paddingHorizontal: 44, lineHeight: 1.45 },
+  page: { fontFamily: 'Manrope', fontSize: 9.5, color: C.ink2, paddingTop: 0, paddingBottom: 78, paddingHorizontal: 44, lineHeight: 1.45 },
   top: { flexDirection: 'row', alignItems: 'stretch', marginHorizontal: -44, height: 64, marginBottom: 26 },
   topLeft: { flex: 1, justifyContent: 'center', paddingLeft: 44 },
   logo: { maxHeight: 40, maxWidth: 150, objectFit: 'contain', objectPosition: 'left' },
@@ -58,7 +58,12 @@ const st = StyleSheet.create({
   notes: { marginTop: 30, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.line },
   notesTitle: { fontWeight: 700, color: C.ink, marginBottom: 3 },
   notesText: { color: C.muted },
-  foot: { position: 'absolute', bottom: 24, left: 44, right: 44, flexDirection: 'row', justifyContent: 'space-between', fontSize: 8, color: C.faint },
+  // Pie de Matices, centrado en cada página (como el de otros sistemas de punto de venta)
+  foot: { position: 'absolute', bottom: 22, left: 44, right: 44, alignItems: 'center' },
+  brand: { flexDirection: 'row', alignItems: 'center', textDecoration: 'none', color: C.ink },
+  brandName: { fontSize: 13, fontWeight: 700, color: C.ink, marginLeft: 5, letterSpacing: -0.3 },
+  brandLine: { marginTop: 4, fontSize: 8.5, color: '#4A4A49' },
+  brandLink: { fontWeight: 700, color: '#C2071E', textDecoration: 'none' },
 })
 
 type Logo = { data: Buffer; format: 'png' | 'jpg' }
@@ -152,8 +157,18 @@ function QuotePdf({ doc, store, logo }: { doc: QuoteDoc; store: QuoteStore; logo
         ) : null}
 
         <View style={st.foot} fixed>
-          <Text>{store.branded ? `Hecha con ${APP_NAME} · matices.app` : ' '}</Text>
-          <Text render={({ pageNumber, totalPages }) => (totalPages > 1 ? `Página ${pageNumber} de ${totalPages}` : '')} />
+          <Link src={QUOTE_BRAND.url} style={st.brand}>
+            <Svg width={17} height={17} viewBox="0 0 64 64">
+              <Rect x={6} y={10} width={40} height={12} rx={6} fill="#E2E415" />
+              <Rect x={14} y={21} width={44} height={12} rx={6} fill="#00BBD9" />
+              <Rect x={4} y={32} width={46} height={12} rx={6} fill="#E51585" />
+              <Rect x={16} y={43} width={42} height={12} rx={6} fill="#FD0B2B" />
+            </Svg>
+            <Text style={st.brandName}>{APP_NAME}</Text>
+          </Link>
+          <Text style={st.brandLine}>
+            {QUOTE_BRAND.lead}<Link src={QUOTE_BRAND.url} style={st.brandLink}>{QUOTE_BRAND.name}</Link>
+          </Text>
         </View>
       </Page>
     </Document>

@@ -3,15 +3,15 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { fmtMoney, monthlyEquivalent, monthsSaved, formatPlanPrice, type PlanInterval, type PriceTable } from '@/lib/billing'
-import { PLAN_COMPARE, PLAN_COPY } from '@/lib/planFeatures'
-import { PLANS, PUBLIC_PLANS, TRIAL_DAYS } from '@/lib/stores'
+import { PLAN_COMPARE, PLAN_COPY, featureKey } from '@/lib/planFeatures'
+import { PAID_PLAN, PLANS, PUBLIC_PLANS, TRIAL_DAYS } from '@/lib/stores'
 import { EVENTS, trackAttrs } from '@/lib/analytics'
 import { Ic } from './_ui'
 import { PlanIcon } from '@/components/PlanIcon'
 import s from './inicio.module.css'
 
 /**
- * Precios de Galón y Cubeta, mensual y anual (null = aún no carga). La página
+ * Precios de Cubeta, mensual y anual (null = aún no carga). La página
  * los trae de Stripe al generarse (`initial`, así Google los ve en el HTML);
  * si no pudo, se piden aquí al abrirla.
  */
@@ -30,15 +30,16 @@ function usePrices(initial: PriceTable | null): PriceTable | null {
 }
 
 /**
- * Las tres tarjetas de planes del sitio. Con precios anuales en Stripe aparece
- * el selector Mensual / Anual. Los botones de Galón y Cubeta llevan el plan al
- * registro: la tienda empieza su prueba y al final lo encuentra listo para activar.
+ * Las dos tarjetas de planes del sitio: Litro gratis y Cubeta. Con precios
+ * anuales en Stripe aparece el selector Mensual / Anual. El botón de Cubeta
+ * lleva el plan al registro: la tienda empieza su prueba y al final lo
+ * encuentra listo para activar.
  */
 export function PricingCards({ initial = null }: { initial?: PriceTable | null }) {
   const table = usePrices(initial)
   const [period, setPeriod] = useState<PlanInterval>('month')
   const hasAnnual = !!table && PUBLIC_PLANS.some(id => id !== 'litro' && table.annual[id])
-  const saved = table ? monthsSaved(table.monthly.galon, table.annual.galon) : 0
+  const saved = table ? monthsSaved(table.monthly[PAID_PLAN], table.annual[PAID_PLAN]) : 0
   const yearly = period === 'year' && hasAnnual
 
   return (
@@ -80,7 +81,12 @@ export function PricingCards({ initial = null }: { initial?: PriceTable | null }
                 {copy.pitch && <p className={s.pricePitch}>{copy.pitch}</p>}
               </div>
               <ul className={s.planList}>
-                {copy.features.map(f => <li key={f}><span className={s.bulletIcon}><Ic.check /></span>{f}</li>)}
+                {copy.features.map(f => (
+                  <li key={featureKey(f)} className={f.name ? undefined : s.planListMinor}>
+                    <span className={s.bulletIcon}><Ic.check /></span>
+                    <span>{f.name && <strong>{f.name}</strong>}{f.text}</span>
+                  </li>
+                ))}
               </ul>
               <Link href={href} className={`${s.btn} ${copy.highlight ? s.btnPrimary : s.btnLight} ${s.priceBtn}`} {...trackAttrs(EVENTS.signupClick, { donde: `plan-${id}` })}>
                 {paid ? `Probar ${TRIAL_DAYS} días gratis` : 'Crear cuenta gratis'}
@@ -94,7 +100,7 @@ export function PricingCards({ initial = null }: { initial?: PriceTable | null }
   )
 }
 
-/** Tabla comparativa de los tres planes. */
+/** Tabla comparativa de los dos planes. */
 export function PricingCompare() {
   return (
     <div className={s.compareWrap}>

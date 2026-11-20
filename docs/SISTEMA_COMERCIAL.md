@@ -7,7 +7,7 @@ La versión 1 "no se entendía": se rehízo desde el Excel *Sistema Comercial IP
 - **3 pantallas** (`app/(app)/comercial`):
   - **Hoy** (`GET /api/data/commercial`): mis seguimientos vencidos y de hoy, prospectos sin dueño con teléfono (de a 30, por zona o búsqueda) y "Para visita" (sin teléfono). Computadora: lista + ficha con el registro siempre visible; celular: tarjetas con Llamar / WhatsApp / Visita. Arriba, el avance del día contra la meta.
   - **Oportunidades** (`GET /api/data/commercial/opportunities`): cotizaciones abiertas, la más vieja primero, con cotizado y esperado (monto × 75 %). Ganada/Perdida abren el registro con Venta/No interesado.
-  - **Equipo** (`GET/PATCH /api/data/commercial/control`, dueño/admin, Galón/Cubeta/Interno): cada vendedor contra su meta del día y del mes (días hábiles lunes a sábado), totales, resultados del día y actividad por segmento del mes; editar metas de la tienda o por persona.
+  - **Equipo** (`GET/PATCH /api/data/commercial/control`, dueño/admin, Cubeta/Interno): cada vendedor contra su meta del día y del mes (días hábiles lunes a sábado), totales, resultados del día y actividad por segmento del mes; editar metas de la tienda o por persona.
 - **Un solo avance:** Prospecto (`nuevo`) → Contactado (50 %) → Cotización (75 %) → Cliente, más No interesado (vuelve a 90 días) y Número incorrecto (`depurar`). `interes` ya no se usa (se muestra como Contactado).
 - **Registro en 3 pasos** (`RegisterForm.tsx`): tipo (Llamada, WhatsApp, Visita) → 6 resultados (Sin contacto, Contactado, Cotización + monto, Venta + monto, No interesado, Número incorrecto) → nota y fecha sugerida. 3 "Sin contacto" seguidos = etiqueta "No contesta" y al final.
 - **Dueños:** las zonas no se reparten (decisión del dueño). Todos ven los prospectos sin dueño; quien registra la primera actividad se queda con él (`p_claim` siempre verdadero en `log_commercial_activity`). El dueño reasigna desde la ficha.
@@ -21,7 +21,7 @@ Estado: **implementado el 20 de octubre de 2026 (versión 4.0.0) sin la geolocal
 
 **Qué quedó distinto al plan original:**
 - **Sin distancia ni coordenadas:** la cola ordena a los nuevos por antigüedad y se filtra por colonia. La geolocalización sigue descrita abajo por si se retoma.
-- **Cola del dueño:** con reparto (Galón, Cubeta, Interno) ve sus propios contactos; los que no tienen responsable están en "Sin asignar". En Litro (sin reparto) su cola incluye también los sin asignar. Puede ver la cola de cualquier vendedor, pero solo el responsable registra; al registrar en uno sin asignar, se queda con él.
+- **Cola del dueño:** con reparto (Cubeta, Interno) ve sus propios contactos; los que no tienen responsable están en "Sin asignar". En Litro (sin reparto) su cola incluye también los sin asignar. Puede ver la cola de cualquier vendedor, pero solo el responsable registra; al registrar en uno sin asignar, se queda con él.
 - **Contacto nuevo:** quien lo da de alta a mano queda como responsable; los importados quedan sin asignar. Mientras nadie lo trabaje, sale en Hoy → Nuevos (o Para visita si no tiene teléfono) de quien lo dio de alta, arriba en «Tuyos · aún sin trabajar» (desde 1.49.1; antes solo se veía en Cartera).
 - **"No interesado":** se le pone fecha a 90 días ("Volver a ofrecer") en vez de una columna aparte para ocultarlo.
 - **Ya cambiados:** Inicio (llamadas para hoy, cotizaciones y ventas del mes, resultados), Agenda (muestra las llamadas de hoy y vencidas), ficha de Contactos y de WhatsApp (estado comercial), buscador, exportación ("Historial comercial") y panel `/admin` (actividades en lugar de leads).
@@ -48,7 +48,7 @@ El sistema vive **sobre Contactos**, sin una segunda base. Se prueba primero en 
 | Excel | Solo la estructura; no se importan sus datos. |
 | Reparto | Cada vendedor trabaja **sus propios** contactos (responsable por contacto). Contactos sigue compartido para consulta. |
 | Distancia | Geolocalizar cada dirección una vez con OpenStreetMap (gratis). Distancia en línea recta a la tienda. |
-| Planes | **Galón y Cubeta:** completo. **Litro:** versión básica (cola, registro de llamada, próxima fecha y notas). Sin reparto, metas, control diario, tablero ni distancia. |
+| Planes | **Cubeta e Interno:** completo. **Litro:** para trabajar solo (cola, registro de llamada, próxima fecha, notas y Oportunidades); Actividad diaria y Acumulado se ven con candado. Sin reparto, metas, control diario, tablero ni distancia. |
 | Leads | Se quita la sección. Las tablas `leads` y `lead_activities` quedan como archivo de solo lectura; no se borran. |
 
 ## Datos (todo con `store_id` y llaves compuestas por tienda, como las actuales)
@@ -127,7 +127,7 @@ Hoy, en IPESA, 209 de 575 contactos tienen dirección. Vienen en dos formatos: e
   5. guardar: pasa solo al siguiente contacto.
 - Solo el responsable registra llamadas de su contacto.
 
-## Reparto (solo dueño o administrador; Galón y Cubeta)
+## Reparto (solo dueño o administrador; Cubeta)
 - **"Sin asignar":** solo la ve el dueño.
 - **Asignación en bloque:** filtrando por colonia, segmento o distancia.
 - **En partes iguales:** el sistema turna los contactos entre los vendedores.
@@ -152,7 +152,7 @@ Hoy, en IPESA, 209 de 575 contactos tienen dirección. Vienen en dos formatos: e
   - Si una tienda importa miles de contactos, tarda horas.
   - Plan B: distancia aproximada por código postal.
 
-## Control diario y tablero (Galón y Cubeta)
+## Control diario y tablero (Cubeta)
 - **Avance contra la meta, por persona y por día:** llamadas, contactos efectivos, cotizaciones, seguimientos y ventas.
 - **Montos:** cotizado y vendido, del día y del mes.
 - **Desglose por segmento y por resultado.**
@@ -163,7 +163,7 @@ Hoy, en IPESA, 209 de 575 contactos tienen dirección. Vienen en dos formatos: e
   - Tiene: la cola, el registro de llamada y la próxima fecha.
   - Tope: 50 contactos.
   - El tope de "10 cotizaciones" desaparece. Se cambia en `plan_quota()` de la base y en `PLANS` de `lib/stores.ts`.
-- **Galón y Cubeta:** todo, incluido el reparto, el control diario, las metas, el tablero y la distancia.
+- **Cubeta:** todo, incluido el reparto, el control diario, las metas, el tablero y la distancia.
 - **Textos que se actualizan:** `lib/planFeatures.ts` (`PLAN_COPY` y `PLAN_COMPARE`), Configuración → Plan y la portada.
 
 ## Etapas

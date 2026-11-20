@@ -1,0 +1,114 @@
+/* Candados de Litro: aviso «Cambiar a Cubeta», pantallas de muestra y avisos de Inicio.
+   Radios 8/6/12 px y sin píldoras, como el resto del CRM. */
+
+/* ── Aviso ── */
+.backdrop {
+  position: fixed; inset: 0; z-index: 90;
+  display: grid; place-items: center; padding: 16px;
+  background: rgba(19, 19, 19, 0.42);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+}
+.card {
+  position: relative; width: 100%; max-width: 540px; max-height: calc(100dvh - 32px);
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--card); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+}
+.card::before { content: ""; display: block; height: 3px; background: var(--spectrum); flex-shrink: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .card { animation: upgradeIn 150ms ease-out both; }
+}
+@keyframes upgradeIn { from { opacity: 0; scale: 0.97; } to { opacity: 1; scale: 1; } }
+.head { display: flex; align-items: center; gap: 12px; padding: 16px 16px 14px 24px; border-bottom: 1px solid var(--line); }
+.headIcon { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; border-radius: var(--radius); background: var(--brand-softer); color: var(--brand); }
+.title { margin: 0; font-family: var(--font-display); font-size: 19px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; color: var(--ink); }
+.close { margin-left: auto; width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; border-radius: var(--radius-sm); color: var(--muted); }
+.close:hover:not(:disabled) { background: var(--paper); color: var(--ink); }
+.body { padding: 18px 24px 20px; overflow-y: auto; }
+.text { margin: 0 0 6px; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+.also { margin: 0 0 18px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.periods { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 8px; }
+.periods legend { padding: 0; margin-bottom: 8px; font-size: 12.5px; font-weight: 700; color: var(--ink-3); }
+.period {
+  display: flex; align-items: center; gap: 12px; padding: 13px 14px; cursor: pointer;
+  border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--card);
+  transition: border-color .14s, background .14s;
+}
+.period:has(input:checked) { border-color: rgba(229, 10, 38, .45); background: var(--brand-softer); }
+.period input { width: 18px; height: 18px; margin: 0; accent-color: var(--brand); flex-shrink: 0; }
+.periodName { flex: 1; display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); }
+.periodPrice { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.periodPrice strong { font-family: var(--font-display); font-size: 19px; color: var(--ink); letter-spacing: -0.02em; }
+.save { padding: 2px 6px; border-radius: 4px; background: var(--c-lime-soft); color: var(--c-lime-ink); font-size: 11.5px; font-weight: 800; }
+.soft { color: var(--muted-2); }
+.note { margin: 12px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.ask { margin: 0; padding: 12px 14px; border-radius: var(--radius); background: var(--paper); color: var(--ink-2); font-size: 13.5px; }
+.error { margin: 12px 0 0; font-size: 12.5px; font-weight: 600; color: var(--danger); }
+.foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; padding: 14px 24px; border-top: 1px solid var(--line); background: var(--paper); }
+.footNote { margin-right: auto; font-size: 12px; color: var(--muted); }
+@media (max-width: 480px) {
+  .body, .foot { padding-left: 16px; padding-right: 16px; }
+  .head { padding-left: 16px; }
+  .foot :global(.btn) { flex: 1; }
+  .footNote { flex-basis: 100%; }
+}
+
+/* ── Pantalla de muestra (Actividad diaria y Acumulado en Litro) ── */
+.locked {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; padding: 28px;
+  border-radius: var(--radius-lg); background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+.tag { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 4px; background: var(--brand-softer); color: var(--brand-strong); font-size: 12px; font-weight: 700; }
+.lockedTitle { margin: 14px 0 18px; font-family: var(--font-display); font-size: 24px; line-height: 1.15; letter-spacing: -0.025em; color: var(--ink); }
+.benefits { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.benefits li { display: flex; gap: 12px; }
+.benefits strong { display: block; font-size: 14px; color: var(--ink); }
+.benefits span span { color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+.benefitIcon { width: 32px; height: 32px; flex-shrink: 0; display: grid; place-items: center; border-radius: var(--radius-sm); }
+.cta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
+.ctaNote { font-size: 12.5px; color: var(--muted); }
+.preview { align-self: start; padding: 14px; border-radius: var(--radius); background: var(--paper); border: 1px solid var(--line); }
+.previewHead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; font-weight: 700; color: var(--ink); }
+.previewHead small { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.previewTable { width: 100%; border-collapse: collapse; font-size: 12.5px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; font-variant-numeric: tabular-nums; }
+.previewTable th { padding: 8px 10px; text-align: right; font-weight: 700; color: var(--muted); background: var(--paper); }
+.previewTable th:first-child, .previewTable td:first-child { text-align: left; }
+.previewTable td { padding: 9px 10px; text-align: right; border-top: 1px solid var(--line); color: var(--ink-2); }
+.previewTable td:first-child { font-weight: 600; }
+.up { color: var(--success); font-weight: 700; }
+.down { color: var(--danger); font-weight: 700; }
+.previewNote { margin: 10px 2px 0; font-size: 12px; color: var(--muted); }
+.lockedFoot { margin: 14px 2px 0; font-size: 12.5px; color: var(--muted); }
+@media (max-width: 860px) {
+  .locked { grid-template-columns: minmax(0, 1fr); padding: 20px 16px; }
+}
+
+/* ── Avisos de Inicio (tienda en Litro) ── */
+.hints { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 18px; }
+.hint { display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: var(--radius-lg); background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
+.hintHead { display: flex; align-items: center; gap: 12px; }
+.hintIcon { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; border-radius: var(--radius); }
+.hintWa { background: var(--success-soft); color: var(--success); }
+.hintTeam { background: var(--c-magenta-soft); color: var(--c-magenta-ink); }
+.hintTitle { margin: 0; font-family: var(--font-display); font-size: 18px; line-height: 1.25; letter-spacing: -0.02em; color: var(--ink); }
+.hintText { margin: 0; color: var(--ink-3); font-size: 13.5px; line-height: 1.55; }
+.hintFoot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: auto; }
+.hintFoot small { font-size: 12.5px; color: var(--muted); }
+.people { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-3); }
+
+/* ── Al terminar la prueba (una sola vez) ── */
+.endCard { max-width: 680px; }
+.endGrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.endCol { padding: 16px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--paper); }
+.endCol h3 { margin: 0 0 10px; font-size: 13px; font-weight: 800; }
+.endCol ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
+.endCol li { display: flex; gap: 10px; }
+.endCol li svg { flex-shrink: 0; margin-top: 2px; }
+.endFree h3 { color: var(--success); }
+.endFree li svg { color: var(--success); }
+.endLocked { background: var(--brand-softer); border-color: rgba(229, 10, 38, .18); }
+.endLocked h3 { color: var(--brand-strong); }
+.endLocked li svg { color: var(--brand-strong); }
+.endLead { margin: 0 0 16px; font-size: 14px; color: var(--ink-3); }
+@media (max-width: 600px) {
+  .endGrid { grid-template-columns: minmax(0, 1fr); }
+}

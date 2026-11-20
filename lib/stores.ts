@@ -86,14 +86,16 @@ export const ROLE_LABELS: Record<StoreRole, string> = {
  *  · whatsapp: incluye la bandeja de WhatsApp (las campañas son un extra aparte).
  *  · paid: se cobra con Stripe.
  *  · reports: Acumulado y reportes en Excel por vendedor.
+ * Dos planes a la venta: Litro (gratis, para trabajar solo) y Cubeta (de
+ * paga, con equipo y WhatsApp). Oportunidades viene en los dos.
  * Interno = la tienda propia (IPESA): cortesía con todo, se asigna a mano en la base.
  */
-export type PlanId = 'litro' | 'galon' | 'cubeta' | 'interno'
+export type PlanId = 'litro' | 'cubeta' | 'interno'
 export type PlanDef = {
   label: string; maxUsers: number; allowAdmins: boolean
   maxContacts: number | null
   whatsapp: boolean; paid: boolean
-  /** Sistema comercial en equipo: Oportunidades, reparto, Actividad diaria y una meta para todo el equipo. */
+  /** Sistema comercial en equipo: reparto, Actividad diaria y la meta del equipo. */
   salesTeam: boolean
   /** Metas propias para cada vendedor (si no, todos usan la meta de la tienda). */
   sellerGoals: boolean
@@ -103,20 +105,21 @@ export type PlanDef = {
 export type PlanFeature = 'salesTeam' | 'sellerGoals' | 'reports'
 /** Lo que se le dice a quien intenta usarlas sin tenerlas en su plan. */
 export const PLAN_FEATURE_REQUIRED: Record<PlanFeature, string> = {
-  salesTeam: 'Oportunidades, Actividad diaria y las metas del equipo vienen en los planes Galón y Cubeta.',
+  salesTeam: 'El reparto de clientes, Actividad diaria y las metas del equipo vienen en el plan Cubeta.',
   sellerGoals: 'Las metas propias para cada vendedor vienen en el plan Cubeta.',
   reports: 'Acumulado y los reportes en Excel vienen en el plan Cubeta.',
 }
 
 export const PLANS: Record<PlanId, PlanDef> = {
   litro:   { label: 'Litro',   maxUsers: 1,  allowAdmins: false, maxContacts: 200,  whatsapp: false, paid: false, salesTeam: false, sellerGoals: false, reports: false },
-  galon:   { label: 'Galón',   maxUsers: 3,  allowAdmins: false, maxContacts: null, whatsapp: false, paid: true,  salesTeam: true,  sellerGoals: false, reports: false },
   cubeta:  { label: 'Cubeta',  maxUsers: 10, allowAdmins: true,  maxContacts: null, whatsapp: true,  paid: true,  salesTeam: true,  sellerGoals: true,  reports: true },
   interno: { label: 'Interno', maxUsers: 50, allowAdmins: true,  maxContacts: null, whatsapp: true,  paid: false, salesTeam: true,  sellerGoals: true,  reports: true },
 }
 /** Planes que se venden (en orden), sin la cortesía interna. */
-export const PUBLIC_PLANS = ['litro', 'galon', 'cubeta'] as const satisfies readonly PlanId[]
-export type PaidPlanId = 'galon' | 'cubeta'
+export const PUBLIC_PLANS = ['litro', 'cubeta'] as const satisfies readonly PlanId[]
+/** El único plan de paga. */
+export const PAID_PLAN = 'cubeta' as const
+export type PaidPlanId = typeof PAID_PLAN
 export const DEFAULT_PLAN: PlanId = 'litro'
 export const isPlanId = (v: unknown): v is PlanId => typeof v === 'string' && Object.hasOwn(PLANS, v)
 export const planOf = (plan: string) => PLANS[isPlanId(plan) ? plan : DEFAULT_PLAN]
@@ -132,7 +135,7 @@ type PlanFields = { plan: string; paid_until: string | null }
  */
 export function effectivePlan(s: PlanFields, now = Date.now()): PlanId {
   const plan = isPlanId(s.plan) ? s.plan : DEFAULT_PLAN
-  if ((plan === 'galon' || plan === 'cubeta') && s.paid_until
+  if (plan === PAID_PLAN && s.paid_until
       && new Date(s.paid_until).getTime() + PAYMENT_GRACE_DAYS * DAY <= now) return 'litro'
   return plan
 }

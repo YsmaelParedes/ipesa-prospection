@@ -2,7 +2,7 @@ import type { PriceTable } from './billing'
 import { getPriceTable, stripeConfigured } from './stripe'
 
 /**
- * Precios de Galón y Cubeta (mensual y anual) para el HTML del sitio público
+ * Precios de Cubeta (mensual y anual) para el HTML del sitio público
  * (solo servidor): así Google y quien comparte el enlace los ven sin esperar
  * al navegador, y el mensual va en los datos estructurados. Lee lo mismo que
  * /api/billing/prices. Las páginas que lo usan se regeneran cada hora

@@ -1,6 +1,5 @@
 'use client'
 
-import Link from '@/components/CachedLink'
 import { useQueryEffect } from '@/lib/useCachedQuery'
 
 
@@ -13,6 +12,7 @@ import { Card, Ico, Note, WhatsAppGlyph, api, avatarTone, copyText, cx, fmtDate,
 import s from './configuracion.module.css'
 import { MembersSkeleton } from './SettingsSkeleton'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { useUpgradeDialog } from '@/components/UpgradeDialog'
 
 type Member = {
   user_id: string; email: string; display_name: string; role: StoreRole; status: 'active' | 'disabled' | string
@@ -52,6 +52,7 @@ export function TeamTab({ store }: { store: ClientStore }) {
   const [actionError, setActionError] = useState('')
   const [actionBusy, setActionBusy] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const upgrade = useUpgradeDialog()
   const linkRef = useRef<HTMLDivElement>(null)
 
   // Un enlace nuevo (también desde "Invitaciones pendientes") siempre queda a la vista
@@ -190,15 +191,21 @@ export function TeamTab({ store }: { store: ClientStore }) {
     <>
       {store.maxUsers <= 1 && (
         <Note kind="info">
-          El plan {store.planLabel} incluye solo al administrador. Para sumar a tu equipo cambia a Galón (hasta {PLANS.galon.maxUsers} usuarios) o Cubeta (hasta {PLANS.cubeta.maxUsers}, con administradores).{' '}
-          <Link href="/configuracion?tab=plan" className="auth-link strong">Ver planes</Link>
+          El plan {store.planLabel} es para trabajar tú solo. Con Cubeta invitas hasta {PLANS.cubeta.maxUsers} personas, con administradores, y repartes tus clientes entre tus vendedores.
         </Note>
       )}
 
       <Card
         title="Miembros"
         description={`${activeSeats} de ${store.maxUsers} usuarios del plan ${store.planLabel}`}
-        actions={store.maxUsers > 1 && !inviteOpen && !newLink && (
+        actions={store.maxUsers <= 1 ? (
+          // Litro: el botón está, pero abre el aviso para cambiar a Cubeta
+          store.access !== 'readonly' && (
+            <button type="button" className="btn btn-primary" onClick={() => upgrade.open('equipo')}>
+              <Ico.userPlus style={{ width: 15, height: 15 }} />Invitar
+            </button>
+          )
+        ) : !inviteOpen && !newLink && (
           <button type="button" className="btn btn-primary" onClick={() => setInviteOpen(true)} disabled={full} title={full ? 'Ya usas todos los lugares de tu plan' : undefined}>
             <Ico.userPlus style={{ width: 15, height: 15 }} />Invitar
           </button>
@@ -311,6 +318,7 @@ export function TeamTab({ store }: { store: ClientStore }) {
         )
       })()}
       {toast}
+      {upgrade.dialog}
     </>
   )
 }

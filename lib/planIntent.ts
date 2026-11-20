@@ -20,8 +20,9 @@ export function readPlanIntent(): PlanIntent | null {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? 'null')
     if (!raw || Date.now() - Number(raw.at) > TTL) return null
+    // «galon» quedó de cuando había tres planes: hoy el de paga es Cubeta
     if (raw.plan !== 'galon' && raw.plan !== 'cubeta') return null
-    return { plan: raw.plan, interval: raw.interval === 'year' ? 'year' : 'month' }
+    return { plan: 'cubeta', interval: raw.interval === 'year' ? 'year' : 'month' }
   } catch {
     return null
   }

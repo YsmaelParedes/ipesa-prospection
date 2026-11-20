@@ -6,6 +6,18 @@
  * calculan en centavos para que la hoja, el PDF y la base den lo mismo.
  */
 
+import { APP_NAME } from './brand'
+
+/**
+ * Pie de toda cotización, en los dos planes (hoja, página del cliente y PDF):
+ * la marca de Matices con un enlace que Umami cuenta aparte (utm_source=cotizacion).
+ */
+export const QUOTE_BRAND = {
+  lead: 'Haz crecer tu negocio con ',
+  name: `${APP_NAME} CRM`,
+  url: 'https://www.matices.app/?utm_source=cotizacion',
+} as const
+
 export const QUOTE_STATUSES = ['draft', 'sent', 'accepted', 'rejected'] as const
 export type QuoteStatus = typeof QUOTE_STATUSES[number]
 /** Lo que se ve: «Vencida» no se guarda, sale de la fecha de validez. */
@@ -186,8 +198,6 @@ export type QuoteStore = {
   logoUrl: string | null
   rfc: string
   legalName: string
-  /** Plan Litro: pie «Hecha con Matices». */
-  branded: boolean
 }
 
 /** La cotización tal como la dibujan la hoja y el PDF. */

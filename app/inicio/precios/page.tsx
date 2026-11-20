@@ -12,7 +12,7 @@ import s from '../inicio.module.css'
 export const metadata: Metadata = pageMeta({
   title: `Precios del CRM para tiendas de pintura · ${APP_NAME}`,
   // Hasta 160 caracteres: Google corta las descripciones más largas
-  description: 'Prueba Cubeta 14 días gratis, sin tarjeta. Litro gratis, Galón para vender en equipo y Cubeta con WhatsApp. Pago mensual o anual, con factura.',
+  description: 'Prueba Cubeta 14 días gratis, sin tarjeta. Litro gratis para trabajar solo y Cubeta para tu tienda con su equipo y su WhatsApp. Pago mensual o anual, con factura.',
   path: '/inicio/precios',
 })
 
@@ -35,7 +35,7 @@ export default async function PreciosPage() {
       <JsonLd data={[breadcrumbJsonLd('Precios', '/inicio/precios'), softwareAppJsonLd(prices), faqJsonLd(NOTES)]} />
       <PageHero
         title={<>Empieza gratis, <span className={s.spectrumText}>crece cuando quieras</span></>}
-        lead="Tres planes para cada etapa de tu tienda. Prueba Cubeta 14 días gratis; después, pago mensual o anual con tarjeta, sin plazos forzosos."
+        lead="Dos planes: Litro, gratis para trabajar tú solo, y Cubeta, para tu tienda con su equipo y su WhatsApp. Prueba Cubeta 14 días gratis; después, pago mensual o anual con tarjeta, sin plazos forzosos."
       />
 
       <section className={s.section}>

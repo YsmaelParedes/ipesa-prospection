@@ -4,7 +4,6 @@ import type { PlanId } from '@/lib/stores'
 
 const PAINT = {
   litro: { main: '#00BBD9', dark: '#007E99', light: '#70E6EE' },
-  galon: { main: '#E51585', dark: '#A30960', light: '#FF80BF' },
   cubeta: { main: '#FD0B2B', dark: '#B80020', light: '#FF7586' },
 }
 

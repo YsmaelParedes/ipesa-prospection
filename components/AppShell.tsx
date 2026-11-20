@@ -106,6 +106,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const [whatsNewOpen,  setWhatsNewOpen]  = useState(false)
   const [noticeVisible, setNoticeVisible] = useState(false)
   const [waUnread,      setWaUnread]      = useState(0)
+  // Litro con número conectado: los chats siguen llegando, pero se ven con candado
+  const [waLocked,      setWaLocked]      = useState(false)
   const [pushState,     setPushState]     = useState<'unsupported' | 'ios-install' | 'blocked' | 'off' | 'on'>('unsupported')
   const [pushPrompt,    setPushPrompt]    = useState(false)
   const [pushBusy,      setPushBusy]      = useState(false)
@@ -177,7 +179,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const loadWaUnread = useCallback(() => {
     apiFetch('/api/whatsapp/unread')
       .then(r => (r.ok ? r.json() : null))
-      .then(d => { if (d && typeof d.unread === 'number') setWaUnread(d.unread) })
+      .then(d => { if (d && typeof d.unread === 'number') { setWaUnread(d.unread); setWaLocked(!!d.locked) } })
       .catch(() => {})
   }, [])
   useQueryEffect(() => { loadWaUnread() }, [loadWaUnread])
@@ -341,12 +343,12 @@ Pantalla: ${pathname}`,
   // Lo que toca hoy (vencidos + hoy): contador de la campana y de Agenda
   const dueCount = reminders.filter(r => isDueToday(r.fecha_recordatorio, now)).length
   const badgeFor = (id: string): { n: number; cls: string } | null =>
-    id === 'whatsapp' && waUnread > 0 ? { n: waUnread, cls: 'wa' }
+    id === 'whatsapp' && waUnread > 0 ? { n: waUnread, cls: waLocked ? 'lock' : 'wa' }
     : id === 'agenda' && dueCount > 0 ? { n: dueCount, cls: 'due' }
     : null
   const pendingSetup = (id: string) => id === 'whatsapp' && waOff
-  // En Cubeta, mientras no esté conectado: "Por activar". Sin el plan que lo incluye, el menú invita a Cubeta
-  const waTag = (store ? whatsappPendingTag(store) : null) ?? 'Cubeta'
+  // En Cubeta, mientras no esté conectado: "Por activar". Sin el plan que lo incluye (Litro), un candado
+  const waTag = store ? whatsappPendingTag(store) : null
 
   const navLink = (it: NavItem) => {
     const Ic = it.icon
@@ -356,7 +358,9 @@ Pantalla: ${pathname}`,
         <Ic className="nav-icon" />
         <span>{it.label}</span>
         {badge && <span className={`nav-count ${badge.cls}`}>{badge.n > 99 ? '99+' : badge.n}</span>}
-        {pendingSetup(it.id) && <span className="nav-count off">{waTag}</span>}
+        {pendingSetup(it.id) && (waTag
+          ? <span className="nav-count off">{waTag}</span>
+          : <Lock className="nav-lock" role="img" aria-label="Con candado, viene en Cubeta" />)}
       </Link>
     )
   }
@@ -604,7 +608,7 @@ Pantalla: ${pathname}`,
               <Ic />
               <span>{it.short ?? it.label}</span>
               {badge && <span className={`bn-badge ${badge.cls}`}>{badge.n > 99 ? '99+' : badge.n}</span>}
-              {pendingSetup(it.id) && <span className="bn-badge off" title="Por activar"><span className="sr-only">Por activar</span></span>}
+              {pendingSetup(it.id) && !badge && <span className="bn-badge off" title={waTag ?? 'Viene en Cubeta'}><span className="sr-only">{waTag ?? 'Viene en Cubeta'}</span></span>}
             </Link>
           )
         })}
@@ -747,9 +751,9 @@ function LitroNotice({ storeName }: { storeName: string }) {
     <div className="plan-locked" role="status">
       <h2>Tu tienda está en el plan Litro</h2>
       <p>
-        El plan Litro de {storeName} incluye solo al administrador. Tu información sigue guardada: en cuanto el administrador
-        cambie a Galón o Cubeta podrás volver a entrar.
+        {storeName} pasó al plan gratis, que solo incluye al administrador. Tus contactos y pendientes siguen guardados.
       </p>
+      <p><strong>Pídele a tu administrador que active Cubeta</strong> para volver a entrar.</p>
       <button className="btn btn-ghost" onClick={() => { invalidateSession(); window.location.reload() }}>Volver a revisar</button>
     </div>
   )

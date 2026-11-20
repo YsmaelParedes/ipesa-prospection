@@ -10,7 +10,7 @@ export type LimitKind = 'contacts'
 const NOUN: Record<LimitKind, string> = { contacts: 'contactos' }
 
 export function planLimitMessage(kind: LimitKind, limit: number): string {
-  return `Llegaste a los ${limit} ${NOUN[kind]} del plan Litro. Cambia a Galón para registrar sin límite.`
+  return `Llegaste a los ${limit} ${NOUN[kind]} del plan Litro. Cambia a Cubeta para registrar sin límite.`
 }
 
 /** Si el error de la base es el límite del plan, devuelve tipo y límite. */

@@ -4,7 +4,6 @@
  */
 import { STORE_COLUMNS, getServerSupabase, getUserNameMap, type StoreContext, type StoreRow } from './supabase-server'
 import { storeLogoUrl } from './storeServer'
-import { effectivePlan } from './stores'
 import { todayISO } from './commercial'
 import { fmtPhone } from './phone'
 import { parseFields, type Schema } from './validation'
@@ -62,14 +61,13 @@ export async function getQuoteSettings(storeId: string): Promise<QuoteSettings> 
   return parseQuoteSettings(data?.quote_settings)
 }
 
-/** Encabezado de la hoja: datos de la tienda, RFC y si lleva el pie de Matices. */
+/** Encabezado de la hoja: datos de la tienda y su RFC. */
 export function quoteStoreOf(store: StoreRow, settings: QuoteSettings): QuoteStore {
   return {
     name: store.name, phone: store.phone, email: store.email,
     address: store.address, city: store.city, state: store.state,
     logoUrl: storeLogoUrl(store.logo_path),
     rfc: settings.rfc, legalName: settings.legalName,
-    branded: effectivePlan(store) === 'litro',
   }
 }
 

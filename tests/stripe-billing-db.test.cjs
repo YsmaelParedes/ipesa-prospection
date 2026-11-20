@@ -7,7 +7,7 @@ const { PGlite } = require('@electric-sql/pglite')
 // Real PostgreSQL in memory. No Supabase URL, credentials or external service.
 const STORE = '11111111-1111-4111-8111-111111111111'
 const OTHER = '22222222-2222-4222-8222-222222222222'
-const PLANS = { litro: { maxUsers: 1, allowAdmins: false }, galon: { maxUsers: 3, allowAdmins: false }, cubeta: { maxUsers: 5, allowAdmins: true } }
+const PLANS = { litro: { maxUsers: 1, allowAdmins: false }, cubeta: { maxUsers: 5, allowAdmins: true } }
 let db
 const scalar = async (sql, args = []) => Object.values((await db.query(sql, args)).rows[0])[0]
 const claim = () => scalar('select public.claim_stripe_store($1)', [STORE])
@@ -42,6 +42,12 @@ before(async () => {
   }
   const migration = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261019232657_stripe_billing_reliability.sql'), 'utf8')
   await db.exec(migration)
+  // Dos planes (1.61.0): Galón ya no existe; las funciones y la regla de precios vigentes
+  const dosPlanes = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261120033000_dos_planes.sql'), 'utf8')
+  for (const name of ['store_effective_plan', 'apply_stripe_subscription']) {
+    await db.exec(dosPlanes.match(new RegExp(`create or replace function public\\.${name}\\([\\s\\S]*?\\$\\$;`))[0])
+  }
+  await db.exec(dosPlanes.match(/delete from public\.stripe_price_plans[\s\S]*?check \(plan = 'cubeta'\);/)[0])
 })
 after(async () => { await db?.close() })
 beforeEach(async () => {
@@ -122,7 +128,8 @@ test('unknown plans and mismatched customers fail without modifying the store', 
   const token = await claim()
   await assert.rejects(apply(token, 'active', null), /Plan de Stripe desconocido/)
   await apply(token)
-  await assert.rejects(apply(token, 'active', 'galon', 'cus_other'), /no corresponde/)
+  await assert.rejects(apply(token, 'active', 'galon'), /Plan de Stripe desconocido/, 'Galón ya no existe')
+  await assert.rejects(apply(token, 'active', 'cubeta', 'cus_other'), /no corresponde/)
   assert.equal(await scalar('select plan from public.stores where id=$1', [STORE]), 'cubeta')
 })
 
@@ -161,8 +168,10 @@ test('billing functions and tables are inaccessible to browser roles', async () 
 })
 
 test('historical price mappings are immutable to the service role', async () => {
-  await db.query("insert into public.stripe_price_plans values ('price_old','galon') on conflict (price_id) do nothing")
   await db.query("insert into public.stripe_price_plans values ('price_old','cubeta') on conflict (price_id) do nothing")
-  assert.equal(await scalar("select plan from public.stripe_price_plans where price_id='price_old'"), 'galon')
-  await assert.rejects(db.query("update public.stripe_price_plans set plan='cubeta' where price_id='price_old'"), /permission denied/)
+  await db.query("insert into public.stripe_price_plans values ('price_old','cubeta') on conflict (price_id) do nothing")
+  assert.equal(await scalar("select plan from public.stripe_price_plans where price_id='price_old'"), 'cubeta')
+  await assert.rejects(db.query("update public.stripe_price_plans set plan='litro' where price_id='price_old'"), /permission denied/)
+  // Solo Cubeta tiene precios en Stripe
+  await assert.rejects(db.query("insert into public.stripe_price_plans values ('price_galon','galon')"), /check constraint/)
 })

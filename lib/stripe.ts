@@ -28,9 +28,9 @@ let priceCache: { at: number; list: PriceInfo[] } | null = null
 const PRICE_TTL = 10 * 60 * 1000
 
 /**
- * Los precios de Galón y Cubeta, mensuales y anuales. Un precio solo cuenta si
- * su lookup key corresponde a su periodo (galon_anual cada año, galon_mensual
- * cada mes): así un error en el panel no cobra un año al precio de un mes.
+ * Los precios de Cubeta, mensual y anual. Un precio solo cuenta si su lookup
+ * key corresponde a su periodo (cubeta_anual cada año, cubeta_mensual cada
+ * mes): así un error en el panel no cobra un año al precio de un mes.
  */
 export async function getPlanPrices(): Promise<PriceInfo[]> {
   if (priceCache && Date.now() - priceCache.at < PRICE_TTL) return priceCache.list

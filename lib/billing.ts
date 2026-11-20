@@ -7,25 +7,23 @@
  * monto se cambia allá (transfiriendo el lookup key a un precio nuevo) sin
  * publicar código.
  */
-import { PAID_SUBSCRIPTION_STATUSES, type PaidPlanId } from './stores'
+import { PAID_PLAN, PAID_SUBSCRIPTION_STATUSES, type PaidPlanId } from './stores'
 
 /** Cada cuánto se cobra: mensual o anual (el anual cuesta 10 meses: 2 gratis). */
 export type PlanInterval = 'month' | 'year'
 export const isPlanInterval = (v: unknown): v is PlanInterval => v === 'month' || v === 'year'
 
 export const PRICE_LOOKUP: Record<PaidPlanId, string> = {
-  galon: 'galon_mensual',
   cubeta: 'cubeta_mensual',
 }
 export const PRICE_LOOKUP_ANNUAL: Record<PaidPlanId, string> = {
-  galon: 'galon_anual',
   cubeta: 'cubeta_anual',
 }
 export const lookupKeyFor = (plan: PaidPlanId, interval: PlanInterval) =>
   (interval === 'year' ? PRICE_LOOKUP_ANNUAL : PRICE_LOOKUP)[plan]
 export const ALL_LOOKUP_KEYS = [...Object.values(PRICE_LOOKUP), ...Object.values(PRICE_LOOKUP_ANNUAL)]
 
-export const isPaidPlanId = (v: unknown): v is PaidPlanId => v === 'galon' || v === 'cubeta'
+export const isPaidPlanId = (v: unknown): v is PaidPlanId => v === PAID_PLAN
 
 /** Plan de un precio de Stripe por su lookup key, mensual o anual (null si no es de Matices). */
 export function planFromLookupKey(key: string | null | undefined): PaidPlanId | null {
