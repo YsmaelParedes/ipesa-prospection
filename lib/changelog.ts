@@ -36,6 +36,15 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.62.0',
+    date: '20 de noviembre, 2026',
+    title: 'Fórmulas de Vintek con el abanico INFINITE 2000',
+    module: 'formulas',
+    items: [
+      'En Fórmulas hay un catálogo nuevo: Vintek con los 2,232 colores del abanico INFINITE 2000, cada uno con su muestra de color. Cámbiate de catálogo con las pestañas de arriba.',
+    ],
+  },
+  {
     version: '1.61.0',
     date: '20 de noviembre, 2026',
     title: 'Ahora hay dos planes: Litro y Cubeta',

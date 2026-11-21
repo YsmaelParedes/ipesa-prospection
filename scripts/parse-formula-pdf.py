@@ -6,7 +6,8 @@ catálogo JSON listo para /formulas, con la muestra de color de cada fila.
 A diferencia de parse-formula-catalog.mjs (que parte de un .md convertido),
 este script lee el PDF directamente, así que no hay corrupción de decimales
 por conversión. Pensado para PDFs con este formato de fila (la línea de producto puede venir
-partida en dos renglones, como "Vinipesa" / "Matte"):
+partida en dos renglones, como "Vinipesa" / "Matte"; el código puede ir pegado
+al nombre con una diagonal, como "AB238-1/Remember Romance"):
 
   Vintek 001-5 Enchantress Eve 5 INFINITE 1000 KX 34.75 2Y 43 13Y 36.25
                                                B  3.5   14   1Y 18.5
@@ -103,8 +104,10 @@ def main():
     split_lines = len(words) > 1
     skip_lines = {first_word, " ".join(words[1:])} if split_lines else set()
     prefix = "" if split_lines else rf"{re.escape(product_line)} "
+    # El código y el nombre vienen separados por un espacio ("001-5 Enchantress
+    # Eve") o unidos por una diagonal ("AB238-1/Remember Romance", INFINITE 2000).
     color_re = re.compile(
-        rf"^{prefix}(?P<code>\S+) (?P<name>.+?) (?P<base>\d+) {fandeck_re} (?P<rest>.+)$"
+        rf"^{prefix}(?P<code>[^\s/]+)[ /](?P<name>.+?) (?P<base>\d+) {fandeck_re} (?P<rest>.+)$"
     )
 
     colors = []

@@ -16,5 +16,11 @@
     "productLine": "Vintek",
     "fandeck": "INFINITE 1000",
     "file": "vintek-infinite-1000.json"
+  },
+  {
+    "id": "vintek-infinite-2000",
+    "productLine": "Vintek",
+    "fandeck": "INFINITE 2000",
+    "file": "vintek-infinite-2000.json"
   }
 ]
