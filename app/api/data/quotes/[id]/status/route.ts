@@ -7,8 +7,9 @@ import { getQuote, quoteToClient, storeToday, type QuoteRow } from '@/lib/quotes
 type Ctx = { params: Promise<{ id: string }> }
 
 /**
- * POST /api/data/quotes/[id]/status — { status: accepted | rejected | sent, registerSale? }
- * Aceptada puede registrar la venta en el sistema comercial; «sent» la reabre.
+ * POST /api/data/quotes/[id]/status — { status: accepted | rejected | sent, registerSale?, registerLost? }
+ * Aceptada puede registrar la venta en el sistema comercial; Rechazada, «No
+ * interesado» (así sale de Oportunidades); «sent» la reabre.
  */
 export async function POST(req: NextRequest, { params }: Ctx) {
   const ctx = await requireStore({ write: true })
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
     if (!q) return jsonError('Cotización no encontrada', 404)
     const { data, error } = await getServerSupabase().rpc('decide_quote', {
       p_store: ctx.storeId, p_actor: ctx.uid, p_quote: q.id, p_status: status,
-      p_sale: status === 'accepted' && body.registerSale === true, p_kind: activityKindFor(q.sent_via), p_today: storeToday(ctx),
+      p_sale: (status === 'accepted' && body.registerSale === true) || (status === 'rejected' && body.registerLost === true), p_kind: activityKindFor(q.sent_via), p_today: storeToday(ctx),
     })
     if (error) {
       const known = rpcUserError(error)

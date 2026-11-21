@@ -23,6 +23,8 @@ type Data = {
   partial: boolean; prevFrom: string; prevEnd: string
   totals: DayCounts; prev: DayCounts; goals: Goals
   compliance: number; prevCompliance: number; people: Person[]
+  /** Lo cotizado del periodo según cómo terminó (open = «Por cerrar»). */
+  quotedOutcome?: { open: number; won: number; lost: number }
 }
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
@@ -49,15 +51,16 @@ function periodLabel(d: Data): string {
 }
 
 /** Contra los mismos días del periodo anterior: ▲ sube, ▼ baja. */
-function Delta({ now, before, isMoney }: { now: number; before: number; isMoney?: boolean }) {
+function Delta({ now, before, isMoney, label }: { now: number; before: number; isMoney?: boolean; label?: string }) {
   const diff = now - before
   const was = isMoney ? money(before) : before.toLocaleString('es-MX')
-  if (!now && !before) return <span className={s.delta}>Sin actividad</span>
-  if (diff === 0) return <span className={s.delta} title={`Antes: ${was}`}>Igual que antes</span>
+  const lead = label ? `${label}: ` : ''
+  if (!now && !before) return <span className={s.delta}>{lead}Sin actividad</span>
+  if (diff === 0) return <span className={s.delta} title={`Antes: ${was}`}>{lead}Igual que antes</span>
   const size = before > 0 ? `${Math.round(Math.abs(diff) / before * 100)} %` : isMoney ? money(Math.abs(diff)) : Math.abs(diff).toLocaleString('es-MX')
   return (
     <span className={`${s.delta} ${diff > 0 ? s.up : s.down}`} title={`Antes: ${was}`}>
-      {diff > 0 ? <TrendingUp className="i-inline" strokeWidth={2.6} /> : <TrendingDown className="i-inline" strokeWidth={2.6} />} {size}
+      {lead}{diff > 0 ? <TrendingUp className="i-inline" strokeWidth={2.6} /> : <TrendingDown className="i-inline" strokeWidth={2.6} />} {size}
     </span>
   )
 }
@@ -132,10 +135,15 @@ export function AcumuladoView({ onOpen }: { onOpen: (contactId: string) => void 
     : data.startedDays === 0
     ? `${week ? 'Meta de la semana completa' : 'Meta del mes completo'}: ${data.fullDays} días hábiles`
     : `Meta de ${data.goalDays === 1 ? '1 día hábil' : `${data.goalDays} días hábiles`}`
-  const kpis: { label: string; value: string; now: number; before: number; isMoney?: boolean; detail?: AmountKind }[] = [
+  // Lo cotizado que ya se vendió o se perdió sale de «Por cerrar»; la flecha compara el total cotizado
+  const qo = data.quotedOutcome ?? { open: data.totals.quoted, won: 0, lost: 0 }
+  const kpis: { label: string; value: string; now: number; before: number; isMoney?: boolean; detail?: AmountKind; deltaLabel?: string; sub?: string }[] = [
     { label: 'Llamadas', value: data.totals.calls.toLocaleString('es-MX'), now: data.totals.calls, before: data.prev.calls },
     { label: 'Contactos efectivos', value: data.totals.effective.toLocaleString('es-MX'), now: data.totals.effective, before: data.prev.effective },
-    { label: 'Cotizado', value: money(data.totals.quoted), now: data.totals.quoted, before: data.prev.quoted, isMoney: true, detail: 'quoted' },
+    {
+      label: 'Cotizado por cerrar', value: money(qo.open), now: data.totals.quoted, before: data.prev.quoted, isMoney: true, detail: 'quoted',
+      deltaLabel: 'Cotizado', sub: `De ${money(data.totals.quoted)} cotizado: ${money(qo.won)} vendido · ${money(qo.lost)} perdido`,
+    },
     { label: 'Vendido', value: money(data.totals.sold), now: data.totals.sold, before: data.prev.sold, isMoney: true, detail: 'sold' },
   ]
 
@@ -149,7 +157,8 @@ export function AcumuladoView({ onOpen }: { onOpen: (contactId: string) => void 
             onClick={() => setDetail(d => d === k.detail ? null : k.detail!)}>
             <small>{k.label}</small>
             <b className={s.num}>{k.value}</b>
-            <Delta now={k.now} before={k.before} isMoney={k.isMoney} />
+            {k.sub && <span className={s.kpiSub}>{k.sub}</span>}
+            <Delta now={k.now} before={k.before} isMoney={k.isMoney} label={k.deltaLabel} />
             <span className={s.kpiMore}>{detail === k.detail ? 'Ocultar clientes' : 'Ver clientes'}<Ico.chevron /></span>
           </button>
         ) : (

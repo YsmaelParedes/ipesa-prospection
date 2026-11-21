@@ -55,8 +55,10 @@ export async function GET(req: NextRequest) {
         quoted_at: q?.at ?? null,
         probability,
         days_idle: daysSince(r.last_activity_at, today),
+        // Se cerró su seguimiento sin decir cómo terminó: va arriba para que alguien decida
+        no_followup: !r.next_action_at,
       }
-    })
+    }).sort((a, b) => Number(b.no_followup) - Number(a.no_followup))
     const quoted = opportunities.reduce((s, o) => s + o.quote_amount, 0)
     return NextResponse.json({
       today,

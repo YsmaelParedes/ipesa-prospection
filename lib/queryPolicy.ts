@@ -32,7 +32,8 @@ export const CAMPAIGN_SENT_RESOURCES = ['/api/data/dashboard', '/api/data/contac
 
 export function mutationResources(path: string): string[] {
   if (path.startsWith('/api/whatsapp/campaigns/send')) return ['/api/whatsapp/']
-  if (path.startsWith('/api/data/contacts')) return ['/api/data/contacts', '/api/data/commercial', '/api/data/dashboard', '/api/whatsapp/']
+  // Guardar un contacto con una zona nueva («Otra…») la agrega a los catálogos
+  if (path.startsWith('/api/data/contacts')) return ['/api/data/contacts', '/api/data/commercial', '/api/data/dashboard', '/api/whatsapp/', '/api/data/config']
   if (path.startsWith('/api/data/commercial')) return ['/api/data/commercial', '/api/data/contacts', '/api/data/dashboard']
   if (path.startsWith('/api/data/reminders')) return ['/api/data/reminders', '/api/data/dashboard']
   // Enviar o aceptar una cotización registra la actividad del contacto en

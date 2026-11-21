@@ -3,7 +3,9 @@
  *  · contactRows: renglones de contactos con su estado comercial.
  *  · downloadStoreWorkbook: un solo archivo con Contactos, Historial comercial,
  *    Agenda, Cotizaciones y Catálogos, pedido por partes a /api/data/export.
- *  · downloadSummaryWorkbook: el periodo que se ve en Acumulado, por vendedor.
+ *  · downloadSummaryWorkbook: el periodo que se ve en Acumulado, por vendedor,
+ *    con cada cotización y cada venta del periodo.
+ *  · downloadOpportunitiesWorkbook: las cotizaciones abiertas de Oportunidades.
  */
 import { normalizePhone } from './phone'
 import { dayInZone } from './datetime'
@@ -47,9 +49,10 @@ export const contactRows = (list: Row[], timezone?: string) => list.map(c => ({
 }))
 
 export type SummaryData = {
-  period: string; from: string; end: string
+  period: string; offset: number; from: string; end: string
   totals: DayCounts; prev: DayCounts; goals: Goals; compliance: number; prevCompliance: number
   people: { name: string; counts: DayCounts; goals: Goals; compliance: number }[]
+  quotedOutcome?: { open: number; won: number; lost: number }
 }
 
 const percent = (ratio: number) => Math.round(ratio * 100)
@@ -73,16 +76,65 @@ export const summaryTotalsRows = (d: SummaryData) => [
   ...GOAL_KEYS.map(k => ({ 'Indicador': GOAL_LABELS[k], 'Este periodo': d.totals[k], 'Periodo anterior': d.prev[k], 'Meta': d.goals[k] as number | string })),
   { 'Indicador': 'Correos', 'Este periodo': d.totals.emails ?? 0, 'Periodo anterior': d.prev.emails ?? 0, 'Meta': '' },
   { 'Indicador': 'Monto cotizado', 'Este periodo': d.totals.quoted, 'Periodo anterior': d.prev.quoted, 'Meta': '' },
+  ...(d.quotedOutcome ? [
+    { 'Indicador': 'Cotizado por cerrar', 'Este periodo': d.quotedOutcome.open, 'Periodo anterior': '' as number | string, 'Meta': '' },
+    { 'Indicador': 'Cotizado vendido', 'Este periodo': d.quotedOutcome.won, 'Periodo anterior': '' as number | string, 'Meta': '' },
+    { 'Indicador': 'Cotizado perdido', 'Este periodo': d.quotedOutcome.lost, 'Periodo anterior': '' as number | string, 'Meta': '' },
+  ] : []),
   { 'Indicador': 'Monto vendido', 'Este periodo': d.totals.sold, 'Periodo anterior': d.prev.sold, 'Meta': '' },
   { 'Indicador': 'Cumplimiento %', 'Este periodo': percent(d.compliance), 'Periodo anterior': percent(d.prevCompliance), 'Meta': 100 },
 ]
 
+type AmountItem = { client: string; seller: string; amount: number; at: string; status?: 'abierta' | 'ganada' | 'perdida' }
+const OUTCOME_LABEL = { abierta: 'Abierta', ganada: 'Ganada', perdida: 'Perdida' } as const
+
+/** Cada cotización o venta del periodo (lo mismo que «Ver clientes» en Acumulado). */
+async function amountItems(d: SummaryData, kind: 'quoted' | 'sold'): Promise<AmountItem[]> {
+  const r = await fetch(`/api/data/commercial/summary/detail?period=${d.period}&offset=${d.offset}&kind=${kind}`, { cache: 'no-store' })
+  const body: { items?: AmountItem[]; error?: string } = await r.json().catch(() => ({}))
+  if (!r.ok) throw new Error(body.error || 'No se pudo preparar el detalle')
+  return body.items ?? []
+}
+
 export async function downloadSummaryWorkbook(d: SummaryData) {
   const label = d.from === d.end ? d.from : `${d.from}-a-${d.end}`
+  const [quoted, sold] = await Promise.all([amountItems(d, 'quoted'), amountItems(d, 'sold')])
   await writeWorkbook(`acumulado-${label}.xlsx`, [
     { name: 'Por vendedor', rows: summaryPeopleRows(d) },
     { name: 'Resumen', rows: summaryTotalsRows(d) },
+    { name: 'Cotizaciones', rows: quoted.map(q => ({
+      'Fecha': dateTime(q.at), 'Cliente': q.client, 'Vendedor': q.seller, 'Monto': q.amount,
+      'Estado': q.status ? OUTCOME_LABEL[q.status] : '',
+    })) },
+    { name: 'Ventas', rows: sold.map(v => ({ 'Fecha': dateTime(v.at), 'Cliente': v.client, 'Vendedor': v.seller, 'Monto': v.amount })) },
   ])
+}
+
+export type OpportunityRow = {
+  name: string; company: string | null; phone: string | null; segment: string | null; zone: string | null
+  owner_name: string | null; quote_amount: number; quoted_at: string | null; probability: number
+  days_idle: number | null; next_action: string | null; next_action_at: string | null
+}
+
+/** Las cotizaciones abiertas que se ven en Oportunidades (con el filtro aplicado). */
+export async function downloadOpportunitiesWorkbook(list: OpportunityRow[], today: string) {
+  await writeWorkbook(`oportunidades-${today}.xlsx`, [{
+    name: 'Oportunidades',
+    rows: list.map(o => ({
+      'Cliente': o.company?.trim() || o.name,
+      'Contacto': o.company?.trim() ? o.name : '',
+      'Teléfono': normalizePhone(o.phone),
+      'Segmento': o.segment ?? '',
+      'Zona': o.zone ?? '',
+      'Vendedor': o.owner_name ?? 'Sin asignar',
+      'Cotizado el': dateTime(o.quoted_at).slice(0, 10),
+      'Monto': o.quote_amount,
+      'Probabilidad %': Math.round(o.probability * 100),
+      'Días sin contacto': o.days_idle ?? '',
+      'Próximo seguimiento': o.next_action_at ? o.next_action || 'Dar seguimiento' : 'Sin seguimiento',
+      'Fecha': o.next_action_at ?? '',
+    })),
+  }])
 }
 
 async function writeWorkbook(filename: string, sheets: Sheet[]) {

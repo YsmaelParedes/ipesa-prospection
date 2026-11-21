@@ -11,7 +11,8 @@ import type { Kind } from './RegisterForm'
 import { Filters, Ico, StatusChip, bizName, fmtDay, initials, money, whenOf, type ListContact, type TodayData } from './ui'
 import s from './comercial.module.css'
 
-export type Opened = { id: string; kind?: Kind; result?: ResultChoice }
+/** amount: monto con el que se abre el registro (p. ej. «Ganada» trae el de la cotización). */
+export type Opened = { id: string; kind?: Kind; result?: ResultChoice; amount?: number }
 export type Sub = 'pend' | 'nuevos' | 'visita'
 type Group = { key: string; title: string; color: string; items: ListContact[]; total?: number }
 
@@ -43,7 +44,7 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
   onQuery: (q: string) => void
   onClear: () => void
   onMore: (which: 'fresh' | 'visit') => void
-  onSaved: (c: CommercialContact) => void
+  onSaved: (c: CommercialContact, what?: string) => void
   opened: Opened | null
   onOpen: (o: Opened | null) => void
 }) {
@@ -219,8 +220,8 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
           {selected && (
             <ContactPanel key={`${selected.id}-${selected.kind ?? ''}`} contactId={selected.id} initial={selectedContact} today={today}
               variant="pane" readonly={readonly} waModule={waModule} storeName={storeName} uid={data.uid}
-              kind={selected.kind} result={selected.result}
-              onSaved={c => { onSaved(c); onOpen({ id: c.id }) }} />
+              kind={selected.kind} result={selected.result} amount={selected.amount}
+              onSaved={(c, what) => { onSaved(c, what); onOpen({ id: c.id }) }} />
           )}
         </div>
       </>
@@ -281,8 +282,8 @@ export function HoyView({ data, wide, sub, zone, segment, query, readonly, waMod
       </div>
       {opened && (
         <ContactPanel key={`${opened.id}-${opened.kind ?? ''}`} contactId={opened.id} initial={all.find(c => c.id === opened.id)} today={today}
-          variant="overlay" readonly={readonly} waModule={waModule} storeName={storeName} uid={data.uid} kind={opened.kind} result={opened.result}
-          onSaved={c => { onSaved(c); onOpen(null) }} onClose={() => onOpen(null)} />
+          variant="overlay" readonly={readonly} waModule={waModule} storeName={storeName} uid={data.uid} kind={opened.kind} result={opened.result} amount={opened.amount}
+          onSaved={(c, what) => { onSaved(c, what); onOpen(null) }} onClose={() => onOpen(null)} />
       )}
     </>
   )

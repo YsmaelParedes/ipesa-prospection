@@ -26,15 +26,21 @@ export async function GET(req: NextRequest) {
     if (!isUUID(contactId)) return jsonError('contact_id inválido')
     if (!(await getVisibleContact(ctx, contactId))) return jsonError('Contacto no encontrado', 404)
     try {
-      const [{ data, error }, names] = await Promise.all([
+      const [{ data, error }, changes, names] = await Promise.all([
         supabase.from('commercial_activities').select(ACTIVITY_COLUMNS)
+          .eq('store_id', ctx.storeId).eq('contact_id', contactId)
+          .order('created_at', { ascending: false }).order('id', { ascending: false }).limit(200),
+        // Cambios de fecha, montos corregidos y actividades borradas (no son actividades)
+        supabase.from('commercial_events').select('id, user_id, kind, detail, created_at')
           .eq('store_id', ctx.storeId).eq('contact_id', contactId)
           .order('created_at', { ascending: false }).limit(200),
         getUserNameMap(ctx.storeId).catch(() => new Map<string, string>()),
       ])
       if (error) throw error
-      const activities = (data ?? []).map(a => ({ ...a, user_name: a.user_id ? (names.get(a.user_id) ?? 'Usuario') : null }))
-      return NextResponse.json({ activities })
+      const who = (uid: string | null) => (uid ? (names.get(uid) ?? 'Usuario') : null)
+      const activities = (data ?? []).map(a => ({ ...a, user_name: who(a.user_id) }))
+      const events = (changes.error ? [] : changes.data ?? []).map(e => ({ id: e.id, kind: e.kind, detail: e.detail, created_at: e.created_at, user_name: who(e.user_id) }))
+      return NextResponse.json({ activities, events })
     } catch (error) {
       return serverError('GET /api/data/commercial/activities', error, 'Error al obtener el historial')
     }

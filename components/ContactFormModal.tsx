@@ -12,6 +12,7 @@ import { findContactWithPhone, type IndexContact } from '@/lib/searchIndex'
 import { fmtPhone, normalizePhone } from '@/lib/phone'
 import { segmentColor } from '@/components/CrmUI'
 import { Select, toOptions } from '@/components/Select'
+import { ZoneField } from '@/components/ZoneField'
 import { X } from 'lucide-react'
 
 const CloseIcon = () => <X size={17} />
@@ -69,7 +70,7 @@ export default function ContactFormModal({ initialName = '', initialPhone = '', 
   const visitOnly = form.phone.length === 0
   const askVisit = visitOnly && form.name.trim().length > 0
   const canSave = form.name.trim().length > 0 && (form.phone.length === 10 || (visitOnly && form.address.trim().length > 0)) && !duplicate
-    && (!needSegment || !!form.segment) && (!needCanal || !!form.acquisition_channel) && (!needZone || !!form.zone) && !saving
+    && (!needSegment || !!form.segment) && (!needCanal || !!form.acquisition_channel) && (!needZone || !!form.zone.trim()) && !saving
 
   const save = async () => {
     if (!canSave) return
@@ -77,7 +78,7 @@ export default function ContactFormModal({ initialName = '', initialPhone = '', 
     try {
       const r = await apiFetch('/api/data/contacts', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, name: form.name.trim(), phone: visitOnly ? null : normalizePhone(form.phone), zone: form.zone || null }),
+        body: JSON.stringify({ ...form, name: form.name.trim(), phone: visitOnly ? null : normalizePhone(form.phone), zone: form.zone.trim() || null }),
       })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) { setError(d.error || 'No se pudo guardar el contacto'); return }
@@ -133,12 +134,7 @@ export default function ContactFormModal({ initialName = '', initialPhone = '', 
                 options={toOptions(canales)} placeholder={canales.length ? 'Elegir canal' : 'Sin canales'} />
             </div>
           </div>
-          {needZone && (
-            <div className="field">
-              <label htmlFor="c-zone">Zona *</label>
-              <Select id="c-zone" value={form.zone} onChange={v => upd('zone', v)} options={toOptions(zones)} placeholder="Elegir zona" />
-            </div>
-          )}
+          <ZoneField id="c-zone" value={form.zone} zones={zones} required={needZone} onChange={v => upd('zone', v)} />
           {!needSegment && !needCanal && (
             <div className="field-hint" style={{ marginTop: -6, marginBottom: 12 }}>
               Agrega segmentos y canales en Configuración → Catálogos para clasificar a tus clientes.

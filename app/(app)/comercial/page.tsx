@@ -123,7 +123,8 @@ function ComercialContent() {
 
   const today = data?.today
   // Al guardar: sale de la lista si ya no toca hoy; luego se recargan avance y lista
-  const onSaved = useCallback((c: CommercialContact) => {
+  // what: qué pasó (por omisión, se registró una actividad)
+  const onSaved = useCallback((c: CommercialContact, what = 'guardado') => {
     setData(d => {
       if (!d) return d
       // Sigue en Nuevos / Para visita mientras nadie lo trabaje y sea tuyo o sin asignar
@@ -140,8 +141,8 @@ function ComercialContent() {
     })
     // Dice a dónde se fue: vuelve en su fecha a Pendientes y a la Agenda
     showToast(c.next_action_at && today && c.commercial_status !== 'depurar'
-      ? `${bizName(c)}: guardado · vuelve ${whenPhrase(c.next_action_at, today)}, también en tu Agenda`
-      : `${bizName(c)}: guardado`)
+      ? `${bizName(c)}: ${what} · vuelve ${whenPhrase(c.next_action_at, today)}, también en tu Agenda`
+      : `${bizName(c)}: ${what}`)
     notifyDataChanged('commercial')
   }, [showToast, today])
 
@@ -239,7 +240,7 @@ function ComercialContent() {
         <CarteraView uid={data.uid} isAdmin={isAdmin && salesTeam} zones={data.zones} segments={data.segments ?? []}
           zone={zone} segment={segment} onZone={setZone} onSegment={setSegment} onOpen={setOverlay} />
       ) : current === 'oportunidades' ? (
-        <OportunidadesView isAdmin={isAdmin} segments={data.segments ?? []} onOpen={setOverlay} />
+        <OportunidadesView isAdmin={isAdmin} reports={reports} segments={data.segments ?? []} onOpen={setOverlay} />
       ) : current === 'acumulado' ? (
         reports ? <AcumuladoView onOpen={id => setOverlay({ id })} /> : <LockedPanel feature="acumulado" />
       ) : (
@@ -248,8 +249,8 @@ function ComercialContent() {
 
       {overlay && data && (
         <ContactPanel key={`${overlay.id}-${overlay.result ?? ''}`} contactId={overlay.id} today={data.today} variant="overlay"
-          readonly={readonly} waModule={waModule} storeName={session?.store?.name} uid={data.uid} kind={overlay.kind} result={overlay.result}
-          onSaved={c => { onSaved(c); closeOverlay() }} onClose={closeOverlay} />
+          readonly={readonly} waModule={waModule} storeName={session?.store?.name} uid={data.uid} kind={overlay.kind} result={overlay.result} amount={overlay.amount}
+          onSaved={(c, what) => { onSaved(c, what); closeOverlay() }} onClose={closeOverlay} />
       )}
 
       {toast && <div className="toast-fixed"><Ico.check /> {toast}</div>}

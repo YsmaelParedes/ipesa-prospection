@@ -14,6 +14,7 @@ import { Avatar, TipoChip, CanalChip, FilterDropdown, fmtDateLong, fmtPhone, nor
 import { waMeLink } from '@/lib/phone'
 import { StatusChip, fmtDay } from '@/components/CommercialUI'
 import { Select, toOptions } from '@/components/Select'
+import { ZoneField } from '@/components/ZoneField'
 import { phoneDigits } from '@/components/ContactFormModal'
 import { useSession } from '@/lib/profile'
 import { dayInZone } from '@/lib/datetime'
@@ -536,7 +537,7 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
     setSaving(true); setSaveError('')
     const r = await apiFetch(`/api/data/contacts/${c.id}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...editForm, phone: editForm.phone ? normalizePhone(editForm.phone) : null, zone: editForm.zone || null }),
+      body: JSON.stringify({ ...editForm, phone: editForm.phone ? normalizePhone(editForm.phone) : null, zone: editForm.zone.trim() || null }),
     })
     if (r.ok) {
       const updated = await r.json()
@@ -610,13 +611,7 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
                     options={toOptions(opt(canales, editForm.acquisition_channel))} placeholder="Elegir canal" />
                 </div>
               </div>
-              {(zones.length > 0 || editForm.zone) && (
-                <div className="field">
-                  <label>Zona</label>
-                  <Select value={editForm.zone} onChange={v => upd('zone', v)} aria-label="Zona"
-                    options={toOptions(opt(zones, editForm.zone))} placeholder="Elegir zona" />
-                </div>
-              )}
+              <ZoneField id="edit-zone" value={editForm.zone} zones={zones} onChange={v => upd('zone', v)} />
               <div className="field">
                 <label>Empresa</label>
                 <input value={editForm.company} onChange={e => upd('company', e.target.value)} />

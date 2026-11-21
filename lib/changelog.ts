@@ -36,6 +36,22 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.63.0',
+    date: '21 de noviembre, 2026',
+    title: 'Seguimientos y oportunidades más claros',
+    items: [
+      'Cambia la fecha de un seguimiento sin registrar una actividad: «Cambiar fecha» en la ficha del cliente y en cada seguimiento de la Agenda. Si no tiene, «Poner fecha». Queda anotado en su historial y no cuenta para las metas.',
+      'Al cerrar el seguimiento de una cotización, Matices pregunta cómo terminó: se vendió, no se vendió o sigue abierta. Oportunidades muestra arriba las que se quedaron sin seguimiento.',
+      '«Ganada» en Oportunidades ya trae el monto de la cotización como monto de la venta.',
+      'En Acumulado, la tarjeta de cotizado muestra lo que falta por cerrar y cuánto de lo cotizado ya se vendió o se perdió.',
+      'Descarga en Excel tus Oportunidades, y desde Acumulado cada cotización y cada venta del periodo.',
+      'Los administradores pueden corregir el monto de una cotización o venta registrada y borrar la última actividad de un cliente, que vuelve a como estaba. Todo queda anotado en su historial.',
+      'Al dar de alta o editar un contacto puedes escribir una zona que no está en la lista con «Otra…».',
+      'El botón Correo recuerda con qué lo abres: Outlook u otro programa de tu computadora, Gmail u Outlook en el navegador.',
+      'Al marcar una cotización como rechazada puedes registrar al cliente como No interesado, para que salga de Oportunidades.',
+    ],
+  },
+  {
     version: '1.62.1',
     date: '20 de noviembre, 2026',
     title: 'Los planes, más claros',

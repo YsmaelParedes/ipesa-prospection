@@ -1,0 +1,13 @@
+/* Atajos de fecha de «Cambiar la fecha del seguimiento» (dentro de ConfirmDialog). */
+.quick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
+.quick button {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 6px; padding: 8px 10px;
+  border: 1px solid var(--line-strong); border-radius: 8px; background: var(--card); color: var(--ink-2);
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; text-align: left;
+  transition-property: background-color, border-color, color; transition-duration: 150ms;
+}
+.quick button small { font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.quick button[aria-pressed='true'] { border-color: var(--brand); background: var(--brand-softer); color: var(--brand-strong); }
+.quick button[aria-pressed='true'] small { color: var(--brand-strong); }
+@media (hover: hover) { .quick button[aria-pressed='false']:hover { background: var(--paper); } }
+.second { margin-top: 12px; }

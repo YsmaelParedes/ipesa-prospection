@@ -83,6 +83,7 @@ export default function QuoteEditorPage() {
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState('')
   const [registerSale, setRegisterSale] = useState(true)
+  const [registerLost, setRegisterLost] = useState(true)
   const [menuOpen, setMenuOpen] = useState(false)
   const [toast, setToast] = useState('')
 
@@ -257,8 +258,14 @@ export default function QuoteEditorPage() {
   }
 
   async function decide(next: 'accepted' | 'rejected' | 'sent') {
-    const d = await act('/status', { status: next, registerSale: next === 'accepted' && registerSale && !!quote?.contact_id },
-      next === 'accepted' ? 'Cotización aceptada' : next === 'rejected' ? 'Cotización rechazada' : 'Cotización reabierta')
+    const d = await act('/status', {
+      status: next,
+      registerSale: next === 'accepted' && registerSale && !!quote?.contact_id,
+      registerLost: next === 'rejected' && registerLost && !!quote?.contact_id,
+    },
+      next === 'accepted' ? 'Cotización aceptada'
+        : next === 'rejected' ? (registerLost && quote?.contact_id ? 'Cotización rechazada · el cliente pasó a No interesado' : 'Cotización rechazada')
+        : 'Cotización reabierta')
     if (!d) return
     setQuote(d.quote); setDraft(draftOf(d.quote)); setDialog(null)
     notifyDataChanged('commercial')
@@ -422,8 +429,16 @@ export default function QuoteEditorPage() {
       <ConfirmDialog open={dialog === 'reject'} tone="warn" icon={XCircle} busy={busy} error={actionError}
         title={`¿Marcar la cotización ${folioLabel(quote?.folio ?? 0)} como rechazada?`}
         confirmLabel="Marcar rechazada" busyLabel="Guardando…"
+        field={quote?.contact_id ? (
+          <label className={s.saleCheck}>
+            <input type="checkbox" checked={registerLost} onChange={e => setRegisterLost(e.target.checked)} />
+            Registrar como No interesado en el sistema comercial
+          </label>
+        ) : undefined}
         onConfirm={() => decide('rejected')} onCancel={() => { setDialog(null); setActionError('') }}>
-        No cambia nada del cliente en el sistema comercial.
+        {quote?.contact_id && registerLost
+          ? 'El cliente sale de Oportunidades y te recordamos volver a ofrecerle en 90 días.'
+          : 'No cambia nada del cliente en el sistema comercial.'}
       </ConfirmDialog>
 
       <ConfirmDialog open={dialog === 'reopen'} tone="warn" icon={RotateCcw} busy={busy} error={actionError}

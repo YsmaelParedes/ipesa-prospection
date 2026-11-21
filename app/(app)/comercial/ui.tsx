@@ -3,6 +3,7 @@ import { cleanAddress, parseColonia } from '@/lib/address'
 import type { CommercialContact, DayCounts, Goals } from '@/lib/commercial'
 import { Select, type SelectOption } from '@/components/Select'
 import { fmtDay } from '@/components/CommercialUI'
+import { moneyText } from '@/lib/commercialChanges'
 import s from './comercial.module.css'
 import { X, ChevronRight, Phone, MessageCircle, MapPin, Mail, Search, Check, User, ArrowRight, Calendar, SquarePen, type LucideIcon } from 'lucide-react'
 
@@ -78,7 +79,8 @@ export function whenPhrase(day: string, today: string): string {
 /** Día (AAAA-MM-DD) de un instante, en la hora de quien lo ve (no en UTC: de noche cae al día siguiente). */
 export const localDay = (iso: string) => new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso))
 
-export const money = (n: number | string | null | undefined) => `$${Number(n || 0).toLocaleString('es-MX')}`
+/** $32,500 o $7,012.50: centavos (siempre los dos) solo cuando los hay. */
+export const money = (n: number | string | null | undefined) => moneyText(Number(n || 0))
 export const pct = (n: number) => `${Math.round(n * 100)} %`
 
 /** Negocio: la empresa si la hay; si no, el nombre. */

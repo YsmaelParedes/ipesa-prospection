@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
 import { storeDays, teamActivities } from '@/lib/storeActivity'
 import { jsonError, serverError } from '@/lib/validation'
-import { fetchPaged } from '@/lib/paged'
 import { periodRange, type Period } from '@/lib/commercial'
-import { activityClient, liveContactIds } from '@/lib/commercialServer'
+import { activityClient, liveContactIds, quoteOutcomes, type QuoteOutcome } from '@/lib/commercialServer'
+import { fetchPaged } from '@/lib/paged'
 
 type Activity = {
   /** null si el contacto se borró: contact_name dice cómo se llamaba */
@@ -12,11 +12,10 @@ type Activity = {
   quote_amount: number | string | null; sale_amount: number | string | null
 }
 type Contact = { id: string; name: string; company: string | null; commercial_status: string }
-export type QuoteStatus = 'abierta' | 'ganada' | 'perdida'
+export type QuoteStatus = QuoteOutcome
 
 const MAX_OFFSET = 400
 const CHUNK = 200
-const LOST = new Set(['no_interesado', 'depurar'])
 
 /**
  * GET /api/data/commercial/summary/detail?period=day|week|month&offset=0&kind=quoted|sold
@@ -60,33 +59,23 @@ export async function GET(req: NextRequest) {
     // …y sin montos en cero
     const rows = withValue.filter(r => Number(r[column]) > 0)
 
-    const ids = liveContactIds(rows)
-    const contacts = new Map<string, Contact>()
-    // Para el estado de cada cotización: la venta más reciente de cada cliente
-    const lastSale = new Map<string, string>()
-    for (let i = 0; i < ids.length; i += CHUNK) {
-      const part = ids.slice(i, i + CHUNK)
-      const [found, sales] = await Promise.all([
-        fetchPaged<Contact>((f, t) => supabase.from('contacts').select('id, name, company, commercial_status')
-          .eq('store_id', ctx.storeId).in('id', part).order('id', { ascending: true }).range(f, t), 5000),
-        kind === 'quoted'
-          ? fetchPaged<{ contact_id: string; created_at: string }>((f, t) => supabase.from('commercial_activities')
-            .select('contact_id, created_at').eq('store_id', ctx.storeId).in('contact_id', part)
-            .not('sale_amount', 'is', null).gte('created_at', calendar.startOf(from))
-            .order('created_at', { ascending: false }).order('id', { ascending: false }).range(f, t), 200000)
-          : Promise.resolve([]),
-      ])
-      for (const c of found) contacts.set(c.id, c)
-      for (const s of sales) if (!lastSale.has(s.contact_id)) lastSale.set(s.contact_id, s.created_at)
+    // Cotizado: cómo terminó cada una; vendido: solo los nombres de los clientes
+    let contacts = new Map<string, Contact>()
+    let outcome = new Map<string, QuoteStatus>()
+    if (kind === 'quoted') {
+      ({ contacts, outcome } = await quoteOutcomes(ctx, rows, calendar.startOf(from)))
+    } else {
+      const ids = liveContactIds(rows)
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        const found = await fetchPaged<Contact>((f, t) => supabase.from('contacts').select('id, name, company, commercial_status')
+          .eq('store_id', ctx.storeId).in('id', ids.slice(i, i + CHUNK)).order('id', { ascending: true }).range(f, t), 5000)
+        for (const c of found) contacts.set(c.id, c)
+      }
     }
 
     const items = rows.map(r => {
       const c = r.contact_id ? contacts.get(r.contact_id) : undefined
-      let status: QuoteStatus | undefined
-      if (kind === 'quoted') {
-        const sale = r.contact_id ? lastSale.get(r.contact_id) : undefined
-        status = sale && sale >= r.created_at ? 'ganada' : c && LOST.has(c.commercial_status) ? 'perdida' : 'abierta'
-      }
+      const status = kind === 'quoted' ? outcome.get(r.id) : undefined
       return {
         id: r.id,
         contact_id: r.contact_id,

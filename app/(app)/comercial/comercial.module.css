@@ -171,6 +171,17 @@
 .hItem > span { color: var(--muted); }
 .hItem b { font-weight: 700; }
 .hMuted { color: var(--muted); }
+.hActs { display: flex; gap: 14px; margin-top: 3px; }
+.closePick { display: flex; flex-direction: column; gap: 6px; }
+.closePick button {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 9px 12px; text-align: left;
+  border: 1px solid var(--line-strong); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; cursor: pointer;
+  transition-property: background-color, border-color; transition-duration: 150ms;
+}
+.closePick button b { font-size: 13.5px; font-weight: 700; }
+.closePick button small { font-size: 12px; color: var(--muted); }
+.closePick button[aria-checked='true'] { border-color: var(--brand); background: var(--brand-softer); }
+@media (hover: hover) { .closePick button[aria-checked='false']:hover { background: var(--paper); } }
 
 /* ── Oportunidades ── */
 .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
@@ -238,6 +249,8 @@
   .stats { width: 100%; }
   .stat { flex: 1; min-width: 0; }
   .goal { grid-template-columns: 110px 1fr 56px; }
+  /* En celular la Agenda ya está en la barra de abajo: así caben Cambiar fecha y Cerrar seguimiento */
+  .nextAgenda { display: none; }
 }
 
 /* ── Franja tocable y "Lo que hiciste hoy" ── */
@@ -262,7 +275,8 @@
 .fixRow { display: flex; gap: 8px; margin-top: 8px; }
 .fixRow input { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--card); font-size: 14px; }
 .fixRow input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-ring); }
-.nextBox a { margin-left: auto; font-weight: 700; color: var(--brand-strong); }
+.nextBox a { font-weight: 700; color: var(--brand-strong); }
+.nextActs { margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 .nextClose { font: inherit; font-weight: 700; color: var(--ink-3); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .nextClose:disabled { opacity: .6; cursor: default; }
 @media (hover: hover) { .nextClose:hover { color: var(--ink); } }
@@ -295,6 +309,7 @@
 .kpiTap { display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; }
 .kpiTap[aria-expanded='true'] { box-shadow: 0 0 0 2px var(--brand); }
 @media (hover: hover) { .kpiTap:hover { background: var(--paper); } }
+.kpiSub { display: block; margin-top: 2px; font-size: 11.5px; font-weight: 600; color: var(--muted); line-height: 1.35; font-variant-numeric: tabular-nums; }
 .kpiMore { display: inline-flex; align-items: center; gap: 2px; margin-top: 8px; font-size: 11.5px; font-weight: 800; color: var(--brand-strong); }
 
 .detailPanel { padding: 14px 16px 6px; margin: -2px 0 14px; }
@@ -367,6 +382,12 @@
 .mailG { background: #FDE8E7; color: #B3261E; }
 .mailO { background: #E3EEFA; color: #0F5AA8; }
 .mailApp { background: var(--paper-2); color: var(--ink-2); }
+.mailMenuFoot { margin: 6px 8px 4px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 11.5px; font-weight: 600; line-height: 1.4; color: var(--muted); text-wrap: pretty; }
+.mailNotice {
+  position: fixed; z-index: 1600; display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 16px); padding: 8px 10px;
+  border-radius: 8px; background: var(--ink); color: #fff; font-size: 12.5px; font-weight: 600; box-shadow: var(--shadow-md, 0 8px 20px -8px rgba(0,0,0,.4));
+}
+.mailNotice button { font: inherit; font-weight: 800; color: #fff; background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 
 /* Skeleton de Hoy: lista con ficha en computadora (como useWide, 1100 px) y tarjetas en celular */
 .skWide { display: none; }

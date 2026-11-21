@@ -1,4 +1,5 @@
 import { withServerTiming } from '@/lib/serverTiming'
+import { ensureZone } from '@/lib/zonesServer'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
@@ -180,6 +181,11 @@ export async function POST(req: NextRequest) {
   // Observaciones del alta de prospecto: quedan como primera nota de su historial comercial
   const note = typeof body.note === 'string' ? body.note.trim() : ''
   if (note.length > 2000) return jsonError('Las observaciones exceden 2000 caracteres')
+  // Zona escrita con «Otra…»: se agrega a las zonas de la tienda (o se usa la que ya existe)
+  if (typeof parsed.data.zone === 'string' && parsed.data.zone.trim()) {
+    try { parsed.data.zone = await ensureZone(ctx.storeId, parsed.data.zone) }
+    catch (error) { return serverError('POST /api/data/contacts (zona)', error, 'No se pudo guardar la zona') }
+  }
 
   const { data, error } = await supabase.from('contacts')
     .insert([{ ...parsed.data, store_id: ctx.storeId, owner_id: ownerId, ...(note ? { last_note: note } : {}) }])

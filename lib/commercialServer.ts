@@ -1,6 +1,7 @@
 import { getServerSupabase, getUserNameMap, type StoreContext } from './supabase-server'
 import { PLAN_FEATURE_REQUIRED, planOf } from './stores'
 import { parseGoalsConfig, type GoalsConfig } from './commercial'
+import { fetchPaged } from './paged'
 
 export const COMMERCIAL_COLUMNS =
   'id, name, phone, email, company, address, postal_code, colonia, zone, segment, acquisition_channel, line_type, owner_id, commercial_status, ' +
@@ -69,4 +70,43 @@ export function zonedDayStart(isoDate: string, timeZone: string): Date {
 export async function withOwnerNames<T extends Record<string, unknown>>(storeId: string, rows: T[]): Promise<(T & { owner_name: string | null })[]> {
   const names = rows.some(r => r.owner_id) ? await getUserNameMap(storeId).catch(() => new Map<string, string>()) : new Map<string, string>()
   return rows.map(r => ({ ...r, owner_name: r.owner_id ? (names.get(r.owner_id as string) ?? 'Usuario') : null }))
+}
+
+export type QuoteOutcome = 'abierta' | 'ganada' | 'perdida'
+type QuotedRow = { id: string; contact_id: string | null; created_at: string }
+type OutcomeContact = { id: string; name: string; company: string | null; commercial_status: string }
+const LOST_STATUSES = new Set(['no_interesado', 'depurar'])
+
+/**
+ * Cómo terminó cada cotización registrada (Acumulado: tarjeta y detalle).
+ * «Ganada» si después hubo una venta a ese cliente, «perdida» si el cliente
+ * quedó como no interesado o por depurar, y si no, «abierta». `since`: inicio
+ * del periodo (una venta anterior no la gana). Devuelve también los contactos
+ * que siguen existiendo, para no volver a pedirlos.
+ */
+export async function quoteOutcomes(ctx: StoreContext, rows: QuotedRow[], since: string) {
+  const supabase = getServerSupabase()
+  const ids = liveContactIds(rows)
+  const contacts = new Map<string, OutcomeContact>()
+  const lastSale = new Map<string, string>()
+  for (let i = 0; i < ids.length; i += 200) {
+    const part = ids.slice(i, i + 200)
+    const [found, sales] = await Promise.all([
+      fetchPaged<OutcomeContact>((f, t) => supabase.from('contacts').select('id, name, company, commercial_status')
+        .eq('store_id', ctx.storeId).in('id', part).order('id', { ascending: true }).range(f, t), 5000),
+      fetchPaged<{ contact_id: string; created_at: string }>((f, t) => supabase.from('commercial_activities')
+        .select('contact_id, created_at').eq('store_id', ctx.storeId).in('contact_id', part)
+        .not('sale_amount', 'is', null).gte('created_at', since)
+        .order('created_at', { ascending: false }).order('id', { ascending: false }).range(f, t), 200000),
+    ])
+    for (const c of found) contacts.set(c.id, c)
+    for (const s of sales) if (!lastSale.has(s.contact_id)) lastSale.set(s.contact_id, s.created_at)
+  }
+  const outcome = new Map<string, QuoteOutcome>()
+  for (const r of rows) {
+    const sale = r.contact_id ? lastSale.get(r.contact_id) : undefined
+    const c = r.contact_id ? contacts.get(r.contact_id) : undefined
+    outcome.set(r.id, sale && sale >= r.created_at ? 'ganada' : c && LOST_STATUSES.has(c.commercial_status) ? 'perdida' : 'abierta')
+  }
+  return { outcome, contacts }
 }

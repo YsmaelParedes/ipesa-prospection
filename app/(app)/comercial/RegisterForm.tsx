@@ -54,11 +54,13 @@ function dateChoices(result: ResultChoice, today: string): { value: string; labe
  * cotización o venta) → nota y fecha sugerida. Al guardar, el contacto pasa
  * al avance que corresponde y quien lo registra se queda con él.
  */
-export function RegisterForm({ contact, today, initialKind = 'llamada', initialResult, wide, onSaved }: {
+export function RegisterForm({ contact, today, initialKind = 'llamada', initialResult, initialAmount, wide, onSaved }: {
   contact: CommercialContact
   today: string
   initialKind?: Kind
   initialResult?: ResultChoice
+  /** Monto ya escrito (la venta de una cotización ganada trae su monto). */
+  initialAmount?: number
   /** Resultados en 3 columnas (ficha de la computadora). */
   wide?: boolean
   onSaved: (contact: CommercialContact) => void
@@ -66,7 +68,7 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
   const [kind, setKind] = useState<Kind>(initialKind)
   const [result, setResult] = useState<ResultChoice | null>(
     initialResult && resultChoicesFor(initialKind).includes(initialResult) ? initialResult : null)
-  const [amount, setAmount] = useState('')
+  const [amount, setAmount] = useState(initialAmount && initialAmount > 0 ? String(initialAmount) : '')
   const [note, setNote] = useState('')
   const [nextAt, setNextAt] = useState(initialResult ? suggestNext(initialResult, today).nextAt ?? '' : '')
   const [picking, setPicking] = useState(false)

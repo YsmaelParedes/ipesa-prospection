@@ -1,4 +1,5 @@
 import { withServerTiming } from '@/lib/serverTiming'
+import { ensureZone } from '@/lib/zonesServer'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore, type StoreContext } from '@/lib/supabase-server'
 import { storeDays } from '@/lib/storeActivity'
@@ -57,6 +58,11 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     updates.wa_opt_out_at = body.wa_opt_out ? new Date().toISOString() : null
   }
   if (Object.keys(updates).length === 0) return jsonError('No se proporcionaron campos válidos para actualizar')
+  // Zona escrita con «Otra…»: se agrega a las zonas de la tienda (o se usa la que ya existe)
+  if (typeof updates.zone === 'string' && updates.zone.trim()) {
+    try { updates.zone = await ensureZone(ctx.storeId, updates.zone) }
+    catch (error) { return serverError('PUT /api/data/contacts/[id] (zona)', error, 'No se pudo guardar la zona') }
+  }
 
   if ('phone' in updates || 'address' in updates) {
     const { data: prev } = await getServerSupabase().from('contacts').select('phone, address, commercial_status').eq('id', id).eq('store_id', ctx.storeId).maybeSingle()

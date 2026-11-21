@@ -9,13 +9,14 @@ import { REMINDER_TYPES, REMINDER_TYPE_INFO, remTypeInfo, reminderSubject, remin
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
 import { MESES, QUICK_WHEN, isSameDay, pad, quickDate, toDbLocal, type QuickWhen } from '@/lib/datetime'
 import { addDays, type CommercialContact } from '@/lib/commercial'
-import { StatusChip } from '@/components/CommercialUI'
-import s from './agenda.module.css'
-import { AgendaListSkeleton } from './AgendaSkeleton'
+import { StatusChip, fmtDay } from '@/components/CommercialUI'
+import s from './agenda.module.css'
+import { AgendaListSkeleton } from './AgendaSkeleton'
 import { SkText } from '@/components/Skeleton'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { FollowupDateDialog } from '@/components/FollowupDateDialog'
 import { LoadFailed } from '@/components/LoadFailed'
-import { Plus, Check, Trash2, SquarePen, AlarmClock, ChevronRight, UserRound } from 'lucide-react'
+import { Plus, Check, Trash2, SquarePen, AlarmClock, ChevronRight, UserRound, CalendarClock } from 'lucide-react'
 
 /** GET /api/data/commercial/agenda: seguimientos del sistema comercial con su fecha. */
 type CommercialData = { today: string; followUps: CommercialContact[]; total?: number }
@@ -29,6 +30,7 @@ const Ico = {
   trash:   () => <Trash2 size={15} />,
   edit:    () => <SquarePen size={15} />,
   snooze:  () => <AlarmClock size={15} />,
+  date:    () => <CalendarClock size={15} />,
   chevron: () => <ChevronRight className={s.chev} />,
   client:  () => <UserRound size={15} />,
 }
@@ -142,9 +144,14 @@ function RemRow({ r, overdue, showDate, readonly, onComplete, onDelete, onSnooze
   )
 }
 
-/* ── Seguimiento del sistema comercial: se registra ahí; aquí se ve en su día ── */
-function FollowRow({ c, overdue, showDate }: { c: CommercialContact; overdue: boolean; showDate: boolean }) {
+/* ── Seguimiento del sistema comercial: se registra ahí; aquí se ve en su día y se le cambia la fecha ── */
+function FollowRow({ c, overdue, showDate, readonly, today, onDateSaved }: {
+  c: CommercialContact; overdue: boolean; showDate: boolean; readonly: boolean; today: string
+  onDateSaved: (msg: string) => void
+}) {
   const date = new Date(`${c.next_action_at}T12:00`)
+  const [changing, setChanging] = useState(false)
+  const name = c.company?.trim() || c.name
   return (
     <div className={`${s.row} ${overdue ? s.overdue : ''}`}>
       <When date={date} time={null} showDate={showDate} />
@@ -156,15 +163,28 @@ function FollowRow({ c, overdue, showDate }: { c: CommercialContact; overdue: bo
           <StatusChip value={c.commercial_status} />
         </span>
       </Link>
-      <div className={s.actions}><Ico.chevron /></div>
+      <div className={s.actions}>
+        {!readonly && today && (
+          // Siempre a la vista (no solo al pasar el mouse): es lo único que se hace aquí con un seguimiento
+          <button onClick={() => setChanging(true)} title="Cambiar fecha" aria-label={`Cambiar la fecha del seguimiento de ${name}`}
+            className={`${s.icon} ${s.press}`}><Ico.date /></button>
+        )}
+        <Ico.chevron />
+      </div>
+      {!readonly && today && (
+        <FollowupDateDialog open={changing} today={today} onClose={() => setChanging(false)}
+          onSaved={nc => onDateSaved(nc.next_action_at ? `${name}: ahora el ${fmtDay(nc.next_action_at)}` : `${name}: fecha cambiada`)}
+          contact={{ id: c.id, name, next_action: c.next_action, next_action_at: c.next_action_at }} />
+      )}
     </div>
   )
 }
 
 /* ── Grupo de un día ── */
-function AgendaGroup({ label, overdue, showDate, items, readonly, onComplete, onDelete, onSnooze }: {
-  label: string; overdue?: boolean; showDate?: boolean; items: AgendaItem[]; readonly: boolean
+function AgendaGroup({ label, overdue, showDate, items, readonly, today, onComplete, onDelete, onSnooze, onDateSaved }: {
+  label: string; overdue?: boolean; showDate?: boolean; items: AgendaItem[]; readonly: boolean; today: string
   onComplete: (id: string) => void; onDelete: (id: string) => void; onSnooze: (r: Reminder, when: QuickWhen) => void
+  onDateSaved: (msg: string) => void
 }) {
   if (items.length === 0) return null
   return (
@@ -176,7 +196,7 @@ function AgendaGroup({ label, overdue, showDate, items, readonly, onComplete, on
       </div>
       <div className={s.list}>
         {items.map(it => it.kind === 'com' ? (
-          <FollowRow key={`c-${it.c.id}`} c={it.c} overdue={!!overdue} showDate={!!showDate} />
+          <FollowRow key={`c-${it.c.id}`} c={it.c} overdue={!!overdue} showDate={!!showDate} readonly={readonly} today={today} onDateSaved={onDateSaved} />
         ) : (
           <RemRow key={it.r.id} r={it.r} overdue={!!overdue} showDate={!!showDate} readonly={readonly}
             onComplete={() => onComplete(it.r.id)} onDelete={() => onDelete(it.r.id)} onSnooze={when => onSnooze(it.r, when)} />
@@ -272,7 +292,7 @@ export default function AgendaPage() {
     return m
   }, [tab, pending, done])
 
-  const groupProps = { readonly, onComplete: handleComplete, onDelete: handleDelete, onSnooze: handleSnooze }
+  const groupProps = { readonly, today: comToday, onComplete: handleComplete, onDelete: handleDelete, onSnooze: handleSnooze, onDateSaved: showToast }
 
   return (
     <>

@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getStoreMembers, getTestUserIds, requireStore } from '@/lib/supabase-server'
 import { storeDays, teamActivities } from '@/lib/storeActivity'
 import { jsonError, serverError } from '@/lib/validation'
-import { storeGoals } from '@/lib/commercialServer'
+import { quoteOutcomes, storeGoals } from '@/lib/commercialServer'
 import {
   GOAL_KEYS, addDays, compliance, countActivities, goalsFor, periodRange, previousSameDays,
   workDaysBetween, type ActivityForCount, type Goals, type Period,
 } from '@/lib/commercial'
 
-type Row = ActivityForCount & { user_id: string | null; created_at: string }
+type Row = ActivityForCount & { id: string; contact_id: string | null; user_id: string | null; created_at: string }
 
 const MAX_OFFSET = 400
 
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     const [rows, members, store, tests] = await Promise.all([
       // Del periodo anterior a hoy, de todo el equipo sin cuentas de prueba
       teamActivities<Row>(ctx, {
-        columns: 'user_id, kind, result, is_followup, quote_amount, sale_amount, created_at',
+        columns: 'id, contact_id, user_id, kind, result, is_followup, quote_amount, sale_amount, created_at',
         range: calendar.days(prev.from, end), scope: 'store',
       }),
       getStoreMembers(ctx.storeId).catch(() => []),
@@ -92,6 +92,15 @@ export async function GET(req: NextRequest) {
     const totals = countActivities(current)
     const before = countActivities(previous)
 
+    // Lo cotizado del periodo según cómo terminó: «Por cerrar» es lo que sigue abierto
+    const quotedRows = current.filter(r => Number(r.quote_amount) > 0)
+    const { outcome } = await quoteOutcomes(ctx, quotedRows, calendar.startOf(from))
+    const quotedOutcome = { open: 0, won: 0, lost: 0 }
+    for (const r of quotedRows) {
+      const o = outcome.get(r.id)
+      quotedOutcome[o === 'ganada' ? 'won' : o === 'perdida' ? 'lost' : 'open'] += Number(r.quote_amount)
+    }
+
     return NextResponse.json({
       period, offset, from, to, end, today,
       // goalDays: días hábiles ya transcurridos (o los del periodo completo si aún no hay ninguno)
@@ -100,7 +109,7 @@ export async function GET(req: NextRequest) {
       elapsedDays: Math.round((Date.parse(end) - Date.parse(from)) / 86_400_000) + 1,
       partial: end < to,
       prevFrom: prev.from, prevEnd,
-      totals, prev: before,
+      totals, prev: before, quotedOutcome,
       goals: scale(teamGoals, goalDays),
       compliance: compliance(totals, teamGoals, goalDays),
       prevCompliance: compliance(before, teamGoals, prevGoalDays),

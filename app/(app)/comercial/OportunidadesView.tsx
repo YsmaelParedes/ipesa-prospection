@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/apiClient'
 import { useQueryEffect } from '@/lib/useCachedQuery'
 import { useDataChanged } from '@/lib/crmEvents'
 import type { ResultChoice } from '@/lib/commercial'
+import { downloadOpportunitiesWorkbook } from '@/lib/exportData'
 import { Select } from '@/components/Select'
 import type { Opened } from './HoyView'
 import { bizName, fmtDay, localDay, money, type ListContact } from './ui'
@@ -12,19 +13,27 @@ import s from './comercial.module.css'
 import { OportunidadesSkeleton } from './Skeletons'
 import { Check } from 'lucide-react'
 
-type Opportunity = ListContact & { owner_name: string | null; quote_amount: number; quoted_at: string | null; probability: number; days_idle: number | null }
+type Opportunity = ListContact & {
+  owner_name: string | null; quote_amount: number; quoted_at: string | null; probability: number; days_idle: number | null
+  /** Se cerró su seguimiento sin decir cómo terminó (va arriba). */
+  no_followup?: boolean
+}
 type Data = { today: string; team: boolean; opportunities: Opportunity[]; totals: { open: number; quoted: number; expected: number; stale: number } }
 
 /**
  * Oportunidades: cotizaciones abiertas, la más vieja primero. "Ganada" y
  * "Perdida" abren el registro con el resultado ya elegido (Venta / No
  * interesado); "Seguimiento" lo abre para anotar cualquier otro avance.
+ * Las que no tienen seguimiento van arriba, marcadas, para que alguien decida.
+ * `reports`: el plan incluye reportes en Excel.
  */
-export function OportunidadesView({ isAdmin, segments, onOpen }: { isAdmin: boolean; segments: string[]; onOpen: (o: Opened) => void }) {
+export function OportunidadesView({ isAdmin, reports, segments, onOpen }: { isAdmin: boolean; reports: boolean; segments: string[]; onOpen: (o: Opened) => void }) {
   const [team, setTeam] = useState(false)
   const [segment, setSegment] = useState('')
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState('')
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -39,7 +48,8 @@ export function OportunidadesView({ isAdmin, segments, onOpen }: { isAdmin: bool
   useQueryEffect(() => { load() }, [load])
   useDataChanged(['commercial'], load)
 
-  const open = (o: Opportunity, result?: ResultChoice) => onOpen({ id: o.id, result })
+  // «Ganada» abre la venta con el monto de la cotización (se puede cambiar)
+  const open = (o: Opportunity, result?: ResultChoice) => onOpen({ id: o.id, result, amount: result === 'venta' && o.quote_amount > 0 ? o.quote_amount : undefined })
 
   // Con segmento elegido se filtra aquí mismo y los totales se recalculan igual que en el servidor
   const view = useMemo(() => {
@@ -56,6 +66,18 @@ export function OportunidadesView({ isAdmin, segments, onOpen }: { isAdmin: bool
     }
   }, [data, segment])
 
+  const download = async () => {
+    if (!view) return
+    setExporting(true); setExportError('')
+    try {
+      await downloadOpportunitiesWorkbook(view.opportunities, view.today)
+    } catch {
+      setExportError('No se pudo descargar. Inténtalo de nuevo.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   if (error) return <div className={`${s.elev} ${s.emptyList}`} role="alert">{error}</div>
   if (!view) return <OportunidadesSkeleton filters={isAdmin || segments.length > 0} />
   const { totals } = view
@@ -69,7 +91,7 @@ export function OportunidadesView({ isAdmin, segments, onOpen }: { isAdmin: bool
         <div className={`${s.elev} ${s.kpi}`}><small>Más de 7 días sin contacto</small><b className={s.num} style={{ color: totals.stale ? 'var(--danger)' : undefined }}>{totals.stale}</b></div>
       </div>
 
-      {(isAdmin || segments.length > 0) && (
+      {(isAdmin || segments.length > 0 || reports) && (
         <div className={s.filters}>
           {isAdmin && (
             <>
@@ -83,8 +105,14 @@ export function OportunidadesView({ isAdmin, segments, onOpen }: { isAdmin: bool
                 options={[{ value: '', label: 'Todos los segmentos' }, ...segments.map(x => ({ value: x, label: x }))]} />
             </div>
           )}
+          {reports && view.opportunities.length > 0 && (
+            <button className={`${s.ghostBtn} ${s.press}`} style={{ marginLeft: 'auto' }} disabled={exporting} onClick={download}>
+              {exporting ? 'Preparando…' : 'Descargar Excel'}
+            </button>
+          )}
         </div>
       )}
+      {exportError && <p className={s.hMuted} role="alert" style={{ fontSize: 12, margin: '0 0 8px' }}>{exportError}</p>}
 
       <div className={`${s.elev} ${s.listCard}`}>
         {view.opportunities.length === 0 ? (
@@ -107,7 +135,7 @@ export function OportunidadesView({ isAdmin, segments, onOpen }: { isAdmin: bool
               return (
                 <div key={o.id} className={s.oppRow}>
                   <span style={{ minWidth: 0 }}>
-                    <span className={s.name}>{bizName(o)}</span>
+                    <span className={s.name}>{bizName(o)}{o.no_followup && <span className={`${s.tag} ${s.tagWarn}`} style={{ marginLeft: 6 }}>Sin seguimiento</span>}</span>
                     <span className={s.meta}>
                       <span>{[o.segment, o.zone].filter(Boolean).join(' · ')}</span>
                       <b className={`${s.num} ${s.mobileOnly}`}>{money(o.quote_amount)}</b>
