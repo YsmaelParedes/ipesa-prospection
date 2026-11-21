@@ -36,6 +36,14 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.62.1',
+    date: '20 de noviembre, 2026',
+    title: 'Los planes, más claros',
+    items: [
+      'En Configuración → Plan y pagos, cada plan muestra primero sus funciones principales, cada una con lo que hace, y al final lo demás que incluye.',
+    ],
+  },
+  {
     version: '1.62.0',
     date: '20 de noviembre, 2026',
     title: 'Fórmulas de Vintek con el abanico INFINITE 2000',

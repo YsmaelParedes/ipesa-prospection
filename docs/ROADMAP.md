@@ -134,7 +134,7 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 - **Reglas:** dejar de pagar o cancelar baja a Litro (no a solo lectura); solo lectura queda para suspendidas o canceladas a mano. En Litro solo entra el dueño. De Cubeta a Galón se desactivan los usuarios más recientes que sobran. Una cortesía a mano de Galón/Cubeta vence con su `paid_until` (+3 días) y baja a Litro (`store_effective_plan`).
 - **Registro abierto:** `/registro` crea la cuenta y `/bienvenida` la tienda en Litro. El alta con invitación desde `/admin` queda para casos especiales; los pagos a mano, para cortesías.
 - **Migración** `20261018141228_stripe_plans.sql`.
-- **Dos planes (1.61.0, 20 de noviembre de 2026):** Galón se retira. Litro gratis para trabajar solo (con Oportunidades) y Cubeta de paga (equipo, WhatsApp, Actividad diaria, metas, Acumulado). En Litro lo de Cubeta se ve con candado y el aviso abre Stripe directo, mensual o anual. Correos 3 días antes y al terminar la prueba de 14 días. Marca de Matices al pie de toda cotización. Migración `20261120033000_dos_planes.sql`.
+- **Dos planes (1.61.0, 20 de noviembre de 2026):** Galón se retira. Litro gratis para trabajar solo (con Oportunidades) y Cubeta de paga (equipo, WhatsApp, Actividad diaria, metas, Acumulado). En Litro lo de Cubeta se ve con candado y el aviso abre Stripe directo, mensual o anual. Correos 3 días antes y al terminar la prueba de 14 días. Marca de Matices al pie de toda cotización. Migración `20261121024310_dos_planes.sql`.
 - **Variables nuevas:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
 
 ### Etapa 8. Listo para vender

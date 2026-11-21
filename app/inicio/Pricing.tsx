@@ -3,12 +3,16 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { fmtMoney, monthlyEquivalent, monthsSaved, formatPlanPrice, type PlanInterval, type PriceTable } from '@/lib/billing'
-import { PLAN_COMPARE, PLAN_COPY, featureKey } from '@/lib/planFeatures'
+import { PLAN_COMPARE, PLAN_COPY } from '@/lib/planFeatures'
 import { PAID_PLAN, PLANS, PUBLIC_PLANS, TRIAL_DAYS } from '@/lib/stores'
 import { EVENTS, trackAttrs } from '@/lib/analytics'
 import { Ic } from './_ui'
+import { NAV } from './links'
 import { PlanIcon } from '@/components/PlanIcon'
 import s from './inicio.module.css'
+
+/** Funciones del menú «Producto» por nombre: el ícono y el color de cada una. */
+const MENU_ITEMS = new Map(NAV.flatMap(e => ('groups' in e ? e.groups.flatMap(g => g.items) : [])).map(i => [i.label, i]))
 
 /**
  * Precios de Cubeta, mensual y anual (null = aún no carga). La página
@@ -80,14 +84,27 @@ export function PricingCards({ initial = null }: { initial?: PriceTable | null }
                 </small>
                 {copy.pitch && <p className={s.pricePitch}>{copy.pitch}</p>}
               </div>
-              <ul className={s.planList}>
-                {copy.features.map(f => (
-                  <li key={featureKey(f)} className={f.name ? undefined : s.planListMinor}>
-                    <span className={s.bulletIcon}><Ic.check /></span>
-                    <span>{f.name && <strong>{f.name}</strong>}{f.text}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className={s.planBody}>
+                {copy.lead && <p className={s.planLead}>{copy.lead}</p>}
+                <ul className={s.planMain}>
+                  {copy.features.map(f => {
+                    const item = MENU_ITEMS.get(f.name)
+                    return (
+                      <li key={f.name}>
+                        <span className={`${s.megaIcon} ${item?.tone ?? s.tBrand}`} aria-hidden="true">{item ? <item.icon /> : <Ic.check />}</span>
+                        <span><strong>{f.name}</strong><small>{f.text}</small></span>
+                      </li>
+                    )
+                  })}
+                </ul>
+                {copy.extras.length > 0 && (
+                  <ul className={s.planExtras}>
+                    {copy.extras.map(t => (
+                      <li key={t}><span className={s.bulletIcon}><Ic.check /></span>{t}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               <Link href={href} className={`${s.btn} ${copy.highlight ? s.btnPrimary : s.btnLight} ${s.priceBtn}`} {...trackAttrs(EVENTS.signupClick, { donde: `plan-${id}` })}>
                 {paid ? `Probar ${TRIAL_DAYS} días gratis` : 'Crear cuenta gratis'}
               </Link>

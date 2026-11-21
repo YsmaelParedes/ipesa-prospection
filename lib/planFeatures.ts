@@ -9,44 +9,55 @@ const fmt = (n: number) => n.toLocaleString('es-MX')
 export type PublicPlanId = typeof PUBLIC_PLANS[number]
 
 /**
- * Un renglón de beneficios: primero la función principal en negritas, con el
- * mismo nombre que en el menú del sitio (Sistema Comercial, Cotizaciones…), y
- * luego su detalle. Los renglones secundarios van sin nombre.
+ * Función principal de un plan. `name` es el mismo que en el menú «Producto»
+ * del sitio (app/inicio/links.ts): de ahí salen su ícono y su color en las
+ * tarjetas. `text` es la línea de qué es, como en el menú.
  */
-export type FeatureLine = { name?: string; text: string }
-export const featureKey = (f: FeatureLine) => `${f.name ?? ''}${f.text}`
+export type MainFeature = { name: string; text: string }
 
 /**
- * Tarjetas de los planes: solo lo que decide la compra (máximo 6 renglones:
- * las funciones principales y al final alguna secundaria). Lo demás va en la
+ * Tarjetas de los planes: solo lo que decide la compra. Lo demás va en la
  * tabla comparativa (PLAN_COMPARE).
+ *  · lead: renglón antes de las funciones («Todo lo de Litro, y además:»).
+ *  · features: funciones principales, destacadas con su ícono.
+ *  · extras: secundarias, más chicas al final.
  *  · pitch: frase corta debajo del precio.
  */
-export type PlanCopy = { tagline: string; features: FeatureLine[]; highlight?: boolean; pitch?: string }
+export type PlanCopy = {
+  tagline: string
+  lead?: string
+  features: MainFeature[]
+  extras: string[]
+  highlight?: boolean
+  pitch?: string
+}
 
 export const PLAN_COPY: Record<PublicPlanId, PlanCopy> = {
   litro: {
     tagline: 'Para trabajar tú solo, gratis.',
     features: [
-      { name: 'Sistema Comercial', text: ': a quién llamar hoy y cada llamada en 3 toques' },
-      { name: 'Cotizaciones', text: ' en PDF por WhatsApp y correo' },
-      { name: 'Oportunidades', text: ': cada cotización abierta, con su monto' },
-      { name: 'Contactos', text: ` por zonas, hasta ${fmt(PLANS.litro.maxContacts ?? 0)} clientes` },
-      { name: 'Agenda y avisos', text: ' en tu celular' },
-      { text: '1 usuario e importación desde Excel' },
+      { name: 'Sistema Comercial', text: 'A quién llamar hoy, cada llamada en 3 toques' },
+      { name: 'Cotizaciones', text: 'En PDF por WhatsApp y correo' },
+      { name: 'Oportunidades', text: 'Cada cotización abierta, con su monto' },
+      { name: 'Contactos', text: `Tu base por zonas, hasta ${fmt(PLANS.litro.maxContacts ?? 0)} clientes` },
+      { name: 'Agenda y avisos', text: 'El resumen de tu día en el celular' },
     ],
+    extras: ['1 usuario', 'Importación desde Excel'],
   },
   cubeta: {
     tagline: 'Para tu tienda, con tu equipo y tu WhatsApp.',
     highlight: true,
     pitch: `${TRIAL_DAYS} días gratis, sin tarjeta.`,
+    lead: 'Todo lo de Litro, y además:',
     features: [
-      { name: 'Todo lo de Litro', text: ', con clientes sin límite' },
-      { name: 'WhatsApp', text: ': los chats de tu tienda en el CRM' },
-      { name: 'Equipo y metas', text: `: hasta ${PLANS.cubeta.maxUsers} usuarios, cada vendedor contra su meta` },
-      { name: 'Permisos', text: ': tu base se queda en tu tienda' },
-      { text: 'Acumulado y reportes en Excel por vendedor' },
-      { text: 'Te ayudamos a importar tu base y a capacitar a tu equipo' },
+      { name: 'WhatsApp', text: 'Los chats de tu tienda en el CRM' },
+      { name: 'Equipo y metas', text: 'Cada vendedor contra su meta del día' },
+      { name: 'Permisos', text: 'Tu base se queda en tu tienda' },
+    ],
+    extras: [
+      `Hasta ${PLANS.cubeta.maxUsers} usuarios y clientes sin límite`,
+      'Acumulado y reportes en Excel por vendedor',
+      'Te ayudamos a importar tu base y a capacitar a tu equipo',
     ],
   },
 }

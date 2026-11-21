@@ -43,7 +43,7 @@ before(async () => {
   const migration = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261019232657_stripe_billing_reliability.sql'), 'utf8')
   await db.exec(migration)
   // Dos planes (1.61.0): Galón ya no existe; las funciones y la regla de precios vigentes
-  const dosPlanes = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261120033000_dos_planes.sql'), 'utf8')
+  const dosPlanes = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261121024310_dos_planes.sql'), 'utf8')
   for (const name of ['store_effective_plan', 'apply_stripe_subscription']) {
     await db.exec(dosPlanes.match(new RegExp(`create or replace function public\\.${name}\\([\\s\\S]*?\\$\\$;`))[0])
   }

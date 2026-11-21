@@ -37,7 +37,7 @@ before(async () => {
   `)
   await db.exec(fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261021120000_store_retention.sql'), 'utf8'))
   // Dos planes (1.61.0): la versión vigente de store_retention_protected
-  const dosPlanes = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261120033000_dos_planes.sql'), 'utf8')
+  const dosPlanes = fs.readFileSync(path.join(__dirname, '../supabase/migrations/20261121024310_dos_planes.sql'), 'utf8')
   await db.exec(dosPlanes.match(/create or replace function public\.store_retention_protected[\s\S]*?\$\$;/)[0])
   await db.exec('grant select, insert, update, delete on all tables in schema public to service_role;')
 })

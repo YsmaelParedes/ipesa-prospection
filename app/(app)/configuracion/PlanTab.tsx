@@ -8,7 +8,7 @@ import type { ClientStore } from '@/lib/profile'
 import { invalidateSession } from '@/lib/profile'
 import { useCachedQuery } from '@/lib/useCachedQuery'
 import { fmtMoney, formatPlanPrice, monthlyEquivalent, monthsSaved, type PlanInterval, type PlanPrice } from '@/lib/billing'
-import { PLAN_COPY, featureKey, type FeatureLine } from '@/lib/planFeatures'
+import { PLAN_COPY, type MainFeature } from '@/lib/planFeatures'
 import { clearPlanIntent, readPlanIntent, type PlanIntent } from '@/lib/planIntent'
 import { PlanIcon } from '@/components/PlanIcon'
 import { SkText } from '@/components/Skeleton'
@@ -26,7 +26,8 @@ type PriceMap = Partial<Record<PaidPlanId, PlanPrice>>
 type Prices = { available: boolean; prices: PriceMap; annual?: PriceMap }
 
 const fmtCount = (n: number) => n.toLocaleString('es-MX')
-const Feature = ({ f }: { f: FeatureLine }) => <li><Ico.check /><span>{f.name && <strong>{f.name}</strong>}{f.text}</span></li>
+/** Función principal: el nombre destacado y abajo qué es, como en el sitio. */
+const Feature = ({ f }: { f: MainFeature }) => <li><Ico.check /><span><strong>{f.name}</strong><small>{f.text}</small></span></li>
 /** Al volver de Stripe el webhook puede tardar: se revisa la sesión varias veces durante un minuto. */
 const PAID_CHECKS = [2000, 5000, 10_000, 20_000, 35_000, 60_000]
 
@@ -215,8 +216,10 @@ export function PlanTab({ store }: { store: ClientStore }) {
         <Card title="Plan de cortesía" description="Tu tienda tiene todas las funciones sin cobro. Si necesitas cambiar algo, escríbenos.">
           <div className={s.cardBody}>
             <ul className={s.features}>
-              {PLAN_COPY.cubeta.features.slice(1).map(f => <Feature key={featureKey(f)} f={f} />)}
+              {PLAN_COPY.cubeta.features.map(f => <li key={f.name}><Ico.check />{f.name}</li>)}
               <li><Ico.check />Hasta {store.maxUsers} usuarios con roles</li>
+              <li><Ico.check />Clientes sin límite</li>
+              <li><Ico.check />Acumulado y reportes en Excel</li>
             </ul>
           </div>
         </Card>
@@ -265,9 +268,15 @@ export function PlanTab({ store }: { store: ClientStore }) {
                     </div>
                     {yearly && a && <p className={s.planYear}>Pagas {fmtMoney(a.amount, a.currency)} al año</p>}
                     <p className={s.planTagline}>{copy.tagline}</p>
+                    {copy.lead && <p className={s.planLead}>{copy.lead}</p>}
                     <ul className={s.planFeatures}>
-                      {copy.features.map(f => <Feature key={featureKey(f)} f={f} />)}
+                      {copy.features.map(f => <Feature key={f.name} f={f} />)}
                     </ul>
+                    {copy.extras.length > 0 && (
+                      <ul className={s.planExtras}>
+                        {copy.extras.map(t => <li key={t}><Ico.check />{t}</li>)}
+                      </ul>
+                    )}
                     {action && <div className={s.planAction}>{action}</div>}
                   </div>
                 )

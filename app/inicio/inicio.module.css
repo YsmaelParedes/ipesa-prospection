@@ -515,11 +515,17 @@ a.feature:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--brand-ring)
 .billingToggle button[aria-pressed='true'] { background: var(--ink); color: #fff; }
 .billingSave { padding: 2px 8px; border-radius: 999px; background: var(--c-lime-soft); color: var(--c-lime-ink); font-size: 11.5px; font-weight: 800; }
 .billingToggle button[aria-pressed='true'] .billingSave { background: rgba(255, 255, 255, .16); color: #fff; }
-.priceCard .planList { flex: 1; }
-.priceCard .planList li { align-items: flex-start; font-size: 14.5px; line-height: 1.45; font-weight: 500; }
-.priceCard .planList li > span:last-child { padding-top: 2px; }
-.priceCard .planList strong { font-weight: 800; color: var(--ink); }
-.planListMinor { color: var(--muted) !important; }
+/* Lo que incluye cada plan: las funciones principales como en el menú del sitio, y las secundarias más chicas */
+.planBody { flex: 1; display: flex; flex-direction: column; }
+.planLead { margin: 0 0 14px !important; font-size: 14px !important; font-weight: 700; color: var(--ink); }
+.planMain { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.planMain li { display: flex; align-items: center; gap: 12px; }
+.planMain strong { display: block; font-size: 15px; font-weight: 800; color: var(--ink); }
+.planMain small { display: block; margin-top: 2px; font-size: 13px; font-weight: 500; line-height: 1.4; color: var(--muted); }
+.planExtras { list-style: none; margin: 20px 0 0; padding: 16px 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.planExtras li { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; line-height: 1.45; font-weight: 500; color: var(--muted); }
+.planExtras .bulletIcon { width: 20px; height: 20px; }
+.planExtras .bulletIcon svg { width: 11px; height: 11px; }
 .priceBtn { width: 100%; justify-content: center; margin-top: 24px; }
 .compareWrap { position: relative; max-width: 880px; margin: 44px auto 0; overflow-x: auto; border-radius: 20px; background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
 .compare { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 14.5px; }
