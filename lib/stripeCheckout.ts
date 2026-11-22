@@ -152,7 +152,9 @@ export async function openStripeCheckout(ctx: StoreContext, plan: PaidPlanId, or
       billing_address_collection: 'auto', phone_number_collection: { enabled: false },
       automatic_tax: { enabled: true }, allow_promotion_codes: false,
       payment_method_collection: 'always', submit_type: 'auto',
-      integration_identifier: 'hosted_mobile_app_0002', origin_context: 'mobile_app',
+      // El pago se abre desde la app web (antes decía mobile_app, de la plantilla de Stripe).
+      // integration_identifier solo agrupa las sesiones en los reportes de Stripe.
+      integration_identifier: 'hosted_mobile_app_0002', origin_context: 'web',
       success_url: `${origin}/configuracion?tab=plan&pago=ok`,
       cancel_url: `${origin}/configuracion?tab=plan`,
       expires_at: Math.floor(Date.now() / 1000) + 3600,
