@@ -2115,6 +2115,7 @@ body[data-wa-thread="1"] .plan-banner.push { display: none; }
 .qc-icon.tone-brand { background: var(--brand-soft);  color: var(--brand-strong); }
 .qc-icon.tone-amber { background: var(--warning-soft); color: var(--warning); }
 .qc-icon.tone-magenta { background: var(--c-magenta-soft); color: var(--c-magenta-ink); }
+.qc-icon.tone-teal { background: var(--c-teal-soft); color: var(--c-teal-ink); }
 .qc-text { display: flex; flex-direction: column; min-width: 0; }
 .qc-text strong { font-size: 13.5px; color: var(--ink); }
 .qc-text small { font-size: 12px; color: var(--muted); }

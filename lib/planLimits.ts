@@ -1,21 +1,21 @@
 /**
- * Límites de contactos y leads del plan Litro. La base los hace cumplir con
- * un trigger (enforce_plan_quota) que rechaza la inserción con el mensaje
- * "PLAN_LIMIT:<tipo>:<límite>"; aquí se traduce a una respuesta clara.
+ * Límites de contactos, productos y leads del plan Litro. La base los hace
+ * cumplir con un trigger (enforce_plan_quota) que rechaza la inserción con el
+ * mensaje "PLAN_LIMIT:<tipo>:<límite>"; aquí se traduce a una respuesta clara.
  * Compartido por cliente y servidor (sin dependencias de Node).
  */
 
-export type LimitKind = 'contacts'
+export type LimitKind = 'contacts' | 'products'
 
-const NOUN: Record<LimitKind, string> = { contacts: 'contactos' }
+export const LIMIT_NOUN: Record<LimitKind, string> = { contacts: 'contactos', products: 'productos' }
 
 export function planLimitMessage(kind: LimitKind, limit: number): string {
-  return `Llegaste a los ${limit} ${NOUN[kind]} del plan Litro. Cambia a Cubeta para registrar sin límite.`
+  return `Llegaste a los ${limit} ${LIMIT_NOUN[kind]} del plan Litro. Cambia a Cubeta para registrar sin límite.`
 }
 
 /** Si el error de la base es el límite del plan, devuelve tipo y límite. */
 export function parsePlanLimitError(error: { code?: string; message?: string } | null | undefined): { kind: LimitKind; limit: number } | null {
-  const m = /^PLAN_LIMIT:(contacts):(\d+)$/.exec(error?.message ?? '')
+  const m = /^PLAN_LIMIT:(contacts|products):(\d+)$/.exec(error?.message ?? '')
   return m ? { kind: m[1] as LimitKind, limit: Number(m[2]) } : null
 }
 

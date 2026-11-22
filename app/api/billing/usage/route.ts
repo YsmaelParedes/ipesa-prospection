@@ -16,14 +16,15 @@ export async function GET() {
       if (filter) q = filter(q)
       return q
     }
-    const [contacts, members] = await Promise.all([
+    const [contacts, members, products] = await Promise.all([
       count('contacts'),
       count('store_members', q => q.eq('status', 'active')),
+      count('products'),
     ])
-    const error = contacts.error ?? members.error
+    const error = contacts.error ?? members.error ?? products.error
     if (error) throw error
     return NextResponse.json(
-      { contacts: contacts.count ?? 0, members: members.count ?? 0 },
+      { contacts: contacts.count ?? 0, members: members.count ?? 0, products: products.count ?? 0 },
       { headers: { 'Cache-Control': 'private, no-store' } },
     )
   } catch (error) {

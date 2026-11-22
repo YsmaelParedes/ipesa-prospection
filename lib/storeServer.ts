@@ -53,7 +53,7 @@ export function publicStore(store: StoreRow) {
     /** El plan permite más de un administrador */
     allowAdmins: def.allowAdmins,
     /** Límites del plan (null = sin límite) */
-    limits: { contacts: def.maxContacts },
+    limits: { contacts: def.maxContacts, products: def.maxProducts },
     /** Reparto de contactos, metas y control diario del sistema comercial (Cubeta) */
     salesTeam: def.salesTeam,
     /** El plan incluye la bandeja de WhatsApp (Cubeta); además hay que conectar el número */

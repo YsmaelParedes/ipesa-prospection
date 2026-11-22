@@ -2,7 +2,8 @@
  * Exportar la información de la tienda a Excel (solo navegador).
  *  · contactRows: renglones de contactos con su estado comercial.
  *  · downloadStoreWorkbook: un solo archivo con Contactos, Historial comercial,
- *    Agenda, Cotizaciones y Catálogos, pedido por partes a /api/data/export.
+ *    Agenda, Cotizaciones, Productos y Catálogos, pedido por partes a /api/data/export.
+ *  · downloadProductsWorkbook: los productos con las columnas que se importan.
  *  · downloadSummaryWorkbook: el periodo que se ve en Acumulado, por vendedor,
  *    con cada cotización y cada venta del periodo.
  *  · downloadOpportunitiesWorkbook: las cotizaciones abiertas de Oportunidades.
@@ -14,6 +15,7 @@ import { FAILURE_KINDS, type CampaignBucket, type CampaignDetail, type CampaignR
 import { dayInZone } from './datetime'
 import { GOAL_KEYS, GOAL_LABELS, KIND_LABELS, resultLabel, statusInfo, type ActivityKind, type DayCounts, type Goals } from './commercial'
 import { STATUS_INFO, displayStatus, fmtMoney, fmtQty, isFilled, type QuoteItem, type QuoteStatus } from './quotes'
+import { productFromRow, productRows, type PriceList, type ProductRow } from './products'
 
 type Row = Record<string, any>
 type Sheet = { name: string; rows: Row[] }
@@ -214,6 +216,7 @@ export async function downloadStoreWorkbook(slug: string, onStep?: (label: strin
   onStep?.('Historial comercial'); const activities = await fetchPart('activities')
   onStep?.('Agenda'); const reminders = await fetchPart('reminders')
   onStep?.('Cotizaciones'); const quotes = await fetchPart('quotes')
+  onStep?.('Productos'); const products = await fetchPart('products'); const lists = await fetchPart('price_lists')
   onStep?.('Catálogos'); const catalogs = await fetchPart('catalogs')
 
   const contactName = new Map(contacts.map(c => [c.id, c.company?.trim() || c.name]))
@@ -261,7 +264,24 @@ export async function downloadStoreWorkbook(slug: string, onStep?: (label: strin
       'Hizo':         q.user_name || '',
       'Condiciones':  q.notes || '',
     })) },
+    { name: 'Productos', rows: productRows(products.map(p => productFromRow(p as ProductRow, true)), priceListsOf(lists), { withCost: true }) },
     { name: 'Catálogos', rows: catalogs.map(c => ({ 'Tipo': c.type === 'segment' ? 'Segmento' : 'Canal', 'Valor': c.label })) },
   ])
-  return { contacts: contacts.length, activities: activities.length, reminders: reminders.length, quotes: quotes.length }
+  return { contacts: contacts.length, activities: activities.length, reminders: reminders.length, quotes: quotes.length, products: products.length }
+}
+
+/** La principal primero, como en la app. */
+const priceListsOf = (rows: Row[]): PriceList[] =>
+  rows.map(l => ({ id: l.id, name: l.name, is_main: !!l.is_main })).sort((a, b) => Number(b.is_main) - Number(a.is_main))
+
+/**
+ * Todos los productos (Productos → Descargar), con las mismas columnas que se
+ * importan: se edita en Excel y se vuelve a subir. El costo, solo si `withCost`.
+ */
+export async function downloadProductsWorkbook(slug: string, opts: { withCost: boolean }) {
+  const [products, lists] = await Promise.all([fetchPart('products'), fetchPart('price_lists')])
+  await writeWorkbook(`${slug}-productos-${new Date().toLocaleDateString('en-CA')}.xlsx`, [
+    { name: 'Productos', rows: productRows(products.map(p => productFromRow(p as ProductRow, opts.withCost)), priceListsOf(lists), opts) },
+  ])
+  return products.length
 }

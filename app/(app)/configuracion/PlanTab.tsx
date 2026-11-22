@@ -21,7 +21,7 @@ export const STATUS_BADGE: Record<string, string> = {
   pending: s.bWarn, trial: s.bTrial, active: s.bActive, suspended: s.bDanger, cancelled: s.bMuted,
 }
 
-type Usage = { contacts: number; members: number }
+type Usage = { contacts: number; members: number; products?: number }
 type PriceMap = Partial<Record<PaidPlanId, PlanPrice>>
 type Prices = { available: boolean; prices: PriceMap; annual?: PriceMap }
 
@@ -132,6 +132,7 @@ export function PlanTab({ store }: { store: ClientStore }) {
 
   const meters = [
     { label: 'Contactos', used: usage?.contacts, max: store.limits.contacts },
+    { label: 'Productos', used: usage?.products, max: store.limits.products },
     { label: 'Usuarios', used: usage?.members, max: store.maxUsers },
   ]
 

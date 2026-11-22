@@ -6,7 +6,7 @@ import { waChatPhone } from '@/lib/phone'
 import { isWindowOpen } from '@/lib/whatsappSafety'
 import { removeQuoteFile } from '@/lib/quoteFilesServer'
 import {
-  QUOTE_COLUMNS, clientFromContact, getQuote, getQuoteSettings, parseQuoteInput, quoteStoreOf, quoteToClient, storeToday, totalsFor,
+  QUOTE_COLUMNS, clientFromContact, getQuote, getQuoteSettings, parseQuoteInput, priceListBelongs, quoteStoreOf, quoteToClient, storeToday, totalsFor,
   type QuoteRow,
 } from '@/lib/quotesServer'
 
@@ -69,6 +69,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     if (!q) return jsonError('Cotización no encontrada', 404)
     if (q.status === 'accepted' || q.status === 'rejected') return jsonError('Reabre la cotización para editarla', 409)
     if (input.valid_until && input.valid_until < q.issued_on) return jsonError('La validez no puede ser antes de la fecha de la cotización')
+    if (input.price_list_id && input.price_list_id !== q.price_list_id && !(await priceListBelongs(ctx.storeId, input.price_list_id))) {
+      return jsonError('Esa lista de precios ya no existe', 404)
+    }
 
     // Una subida no tiene renglones: solo cambian el cliente, la validez y el total que se escribió
     const uploaded = !!q.file_path

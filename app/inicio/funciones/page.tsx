@@ -79,7 +79,7 @@ export default function FuncionesPage() {
           <div>
             <h2 className={s.h2}>Cotizaciones en PDF, listas para WhatsApp</h2>
             <p className={s.sub}>Arma la cotización con tus productos y tu último precio, con tu logo, descuento e IVA. Mándala por WhatsApp o correo y queda en Oportunidades para darle seguimiento.</p>
-            <Bullets items={['Mira la hoja tal como la recibirá tu cliente', 'Sabes cuándo la abrió', 'Aceptada, Rechazada o Vencida, a la vista', 'En todos los planes, también en Litro']} />
+            <Bullets items={['Importa tu catálogo de Excel y elige tus productos con su lista de precios', 'Mira la hoja tal como la recibirá tu cliente', 'Sabes cuándo la abrió', 'Aceptada, Rechazada o Vencida, a la vista', 'En todos los planes, también en Litro']} />
             <MoreLink href="/inicio/cotizaciones">Conoce Cotizaciones</MoreLink>
           </div>
           <QuoteListMock />

@@ -137,6 +137,12 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 - **Dos planes (1.61.0, 20 de noviembre de 2026):** Galón se retira. Litro gratis para trabajar solo (con Oportunidades) y Cubeta de paga (equipo, WhatsApp, Actividad diaria, metas, Acumulado). En Litro lo de Cubeta se ve con candado y el aviso abre Stripe directo, mensual o anual. Correos 3 días antes y al terminar la prueba de 14 días. Marca de Matices al pie de toda cotización. Migración `20261121024310_dos_planes.sql`.
 - **Variables nuevas:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
 
+### Productos (1.66.0, 22 de noviembre de 2026)
+- **Qué es:** el catálogo de la tienda (`/productos`) con listas de precios por tienda (`price_lists`, una principal; toda tienda tiene «Público»). Los precios se guardan con IVA en `products.prices` (id de lista → precio). Existencias solo de consulta; sin movimientos ni fotos. Todo el equipo consulta; los administradores importan, agregan, editan, borran, descargan y ven costo y margen.
+- **Importar:** cualquier Excel o CSV, columnas sugeridas por su nombre (`lib/products.ts`, reconoce el de Pulpos y nuestra descarga); cada columna «Precio …» es una lista. `import_products` actualiza por clave (o SKU), lo vacío no borra y lo nuevo entra mientras quepa en el plan (Litro 200, `plan_quota`).
+- **Cotizaciones:** cada cotización tiene su lista (`quotes.price_list_id`); el buscador del renglón sugiere productos con su precio sin IVA y lo ya cotizado. Un producto sin precio en la lista usa el de la principal (`fallback`). Cambiar la lista actualiza los renglones del catálogo; un precio escrito a mano ya no la sigue.
+- **Migración** `20261122191359_productos.sql`. Pruebas: `tests/products.test.cjs` y `tests/products-db.test.cjs`.
+
 ### Etapa 8. Listo para vender
 - Nombre del producto centralizado en un archivo ✅ (Matices, 2.9.0) y dominio propio ✅ (`www.matices.app`, 19 de octubre).
 - Botón "Ayuda" ✅ (3.2.0, solo correo a soporte@matices.app).

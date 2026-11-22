@@ -46,6 +46,8 @@ export function mutationResources(path: string): string[] {
       : ['/api/data/quotes']
   }
   if (path.startsWith('/api/data/config')) return ['/api/data/config']
+  // Productos y listas de precios: también el uso del plan (Configuración → Plan)
+  if (path.startsWith('/api/data/products')) return ['/api/data/products', '/api/billing/usage']
   if (path.startsWith('/api/whatsapp/')) return ['/api/whatsapp/', '/api/data/dashboard', '/api/data/contacts', '/api/data/commercial']
   if (path.startsWith('/api/store') || path === '/api/me') return ['/api/']
   return []

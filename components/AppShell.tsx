@@ -29,7 +29,7 @@ import { Sk, SkCircle, SkText } from '@/components/Skeleton'
 import { RouteSkeleton } from '@/components/skeletons/RouteSkeleton'
 import {
   House, Users, Activity, CalendarCheck, Settings, Bell, Menu, Plus, CircleHelp, LogOut, Check, ArrowUp,
-  Sparkles, X, Wrench, FlaskConical, Store, ChevronsUpDown, Lock, BellOff, Search, FileText, Megaphone,
+  Sparkles, X, Wrench, FlaskConical, Store, ChevronsUpDown, Lock, BellOff, Search, FileText, Megaphone, Package,
 } from 'lucide-react'
 
 /** Estado de los avisos push en este dispositivo. */
@@ -47,7 +47,7 @@ const Icon = {
   home: House, contacts: Users, commercial: Activity, calendar: CalendarCheck, settings: Settings,
   bell: Bell, menu: Menu, plus: Plus, help: CircleHelp, logout: LogOut, check: Check, arrowUp: ArrowUp,
   sparkles: Sparkles, close: X, wrench: Wrench, flask: FlaskConical, store: Store, chevrons: ChevronsUpDown,
-  lock: Lock, bellOff: BellOff, whatsapp: WhatsAppIcon, quote: FileText, megaphone: Megaphone,
+  lock: Lock, bellOff: BellOff, whatsapp: WhatsAppIcon, quote: FileText, megaphone: Megaphone, product: Package,
 }
 
 function initials(name: string) {
@@ -65,6 +65,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'comercial', href: '/comercial',     label: 'Sistema Comercial', short: 'Comercial', icon: Icon.commercial, mobile: true },
   // En el celular va en el menú (abajo ya no caben más)
   { id: 'cotizaciones', href: '/cotizaciones', label: 'Cotizaciones', icon: Icon.quote, mobile: false },
+  { id: 'productos', href: '/productos',     label: 'Productos', icon: Icon.product,  mobile: false },
   { id: 'agenda',    href: '/recordatorios', label: 'Agenda',    icon: Icon.calendar, mobile: true },
 ]
 const TOOL_ITEMS: NavItem[] = [
@@ -78,14 +79,17 @@ const TITLE_MAP: Record<string, { t: string; s: string }> = {
   '/contactos':      { t: 'Contactos',     s: 'Tu base de clientes'                },
   '/comercial':      { t: 'Sistema Comercial', s: 'Hoy, oportunidades y equipo'     },
   '/cotizaciones':   { t: 'Cotizaciones',  s: 'Arma, envía y da seguimiento'      },
+  '/productos':      { t: 'Productos',     s: 'Tu catálogo y sus listas de precios' },
   '/recordatorios':  { t: 'Agenda',        s: 'Recordatorios y seguimientos'       },
   '/formulas':       { t: 'Fórmulas',      s: 'Igualación de colores'              },
   '/configuracion':  { t: 'Configuración', s: 'Tu tienda, equipo e integraciones'  },
 }
 
-/** Título de la barra superior (el editor de una cotización usa el de Cotizaciones). */
+/** Título de la barra superior (el editor de una cotización y la ficha de un producto usan el de su sección). */
 const titleFor = (pathname: string) =>
-  TITLE_MAP[pathname] ?? (pathname.startsWith('/cotizaciones/') ? TITLE_MAP['/cotizaciones'] : undefined) ?? { t: APP_NAME, s: '' }
+  TITLE_MAP[pathname]
+  ?? (pathname.startsWith('/cotizaciones/') ? TITLE_MAP['/cotizaciones'] : pathname.startsWith('/productos/') ? TITLE_MAP['/productos'] : undefined)
+  ?? { t: APP_NAME, s: '' }
 
 // Páginas tipo "app" que ocupan exactamente el alto de la pantalla
 const FILL_ROUTES = ['/whatsapp', '/campanas']

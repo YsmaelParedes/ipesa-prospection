@@ -5,7 +5,7 @@ import { randomToken } from '@/lib/crypto'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 import { addDaysIso } from '@/lib/quotes'
 import {
-  QUOTE_COLUMNS, clientFromContact, getQuoteSettings, parseQuoteInput, quoteToClient, storeToday, totalsFor,
+  QUOTE_COLUMNS, clientFromContact, getQuoteSettings, parseQuoteInput, priceListBelongs, quoteToClient, storeToday, totalsFor,
   type QuoteRow,
 } from '@/lib/quotesServer'
 
@@ -105,6 +105,7 @@ export async function POST(req: NextRequest) {
       if (!(await getVisibleContact(ctx, input.contact_id))) return jsonError('Cliente no encontrado', 404)
       client = (await clientFromContact(ctx.storeId, input.contact_id)) ?? client
     }
+    if (input.price_list_id && !(await priceListBelongs(ctx.storeId, input.price_list_id))) return jsonError('Esa lista de precios ya no existe', 404)
     const row = {
       ...client,
       ...Object.fromEntries(Object.entries({
@@ -117,6 +118,7 @@ export async function POST(req: NextRequest) {
       notes: input.notes ?? settings.terms,
       issued_on: today,
       valid_until: input.valid_until && input.valid_until >= today ? input.valid_until : addDaysIso(today, settings.validDays),
+      price_list_id: input.price_list_id ?? null,
     }
     const totals = totalsFor(row)
     if (!totals) return jsonError('El total es demasiado grande')

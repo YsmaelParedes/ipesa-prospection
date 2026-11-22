@@ -10,12 +10,14 @@ import { fmtSize } from '@/lib/whatsappFiles'
 import { apiFetch } from '@/lib/apiClient'
 import { useSession } from '@/lib/profile'
 import { notifyDataChanged } from '@/lib/crmEvents'
+import { useCachedQuery } from '@/lib/useCachedQuery'
 import { fmtPhone } from '@/lib/phone'
 import { findContacts, type IndexContact } from '@/lib/searchIndex'
 import {
   UNIT_SUGGESTIONS, addDaysIso, computeTotals, fmtMoney, folioLabel, isFilled, lineTotal,
   type QuoteDoc, type QuoteSettings, type QuoteStore,
 } from '@/lib/quotes'
+import { mainListOf, quoteUnit, type PriceList } from '@/lib/products'
 import { QuoteSheet } from '@/components/QuoteSheet'
 import { Select } from '@/components/Select'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
@@ -26,16 +28,25 @@ import { SendDialog } from '../SendDialog'
 import { StatusBadge, viewedAt, type Quote } from '../ui'
 import s from '../cotizaciones.module.css'
 
-type ItemDraft = { key: string; description: string; quantity: string; unit: string; price: string }
+/** Un renglón mientras se edita. `product_id`: salió del catálogo y su precio sigue a la lista de la cotización. */
+type ItemDraft = { key: string; description: string; quantity: string; unit: string; price: string; product_id?: string | null; fallback?: boolean }
 type Draft = {
   contact_id: string | null; client_name: string; client_phone: string; client_email: string
   items: ItemDraft[]; discount_kind: 'percent' | 'amount'; discount_value: string; tax_rate: number
   notes: string; valid_until: string
   /** Solo en una subida: el total que se escribe (no hay renglones). */
   total: string
+  /** Lista de precios de los renglones del catálogo (null = la principal). */
+  price_list_id: string | null
 }
 type Chat = { available: boolean; open: boolean }
 type Suggestion = { description: string; unit: string; price: number }
+/** Un producto del catálogo para un renglón, con su precio en la lista de la cotización. */
+type ProductHit = {
+  id: string; name: string; unit: string | null; sku: string | null; kind: 'product' | 'service'; stock: number | null
+  price: number | null; net: number | null; fallback: boolean
+}
+type ListsData = { lists: PriceList[]; total: number }
 type Dialog = null | 'send' | 'accept' | 'reject' | 'reopen' | 'delete' | 'contact'
 
 let keySeq = 0
@@ -47,10 +58,14 @@ const numText = (n: number) => (n ? String(n) : '')
 function draftOf(q: Quote): Draft {
   return {
     contact_id: q.contact_id, client_name: q.client_name, client_phone: q.client_phone, client_email: q.client_email,
-    items: q.items.length ? q.items.map(i => ({ key: newKey(), description: i.description, quantity: numText(i.quantity), unit: i.unit, price: numText(i.price) })) : [blankItem()],
+    items: q.items.length ? q.items.map(i => ({
+      key: newKey(), description: i.description, quantity: numText(i.quantity), unit: i.unit, price: numText(i.price),
+      product_id: i.product_id ?? null, fallback: !!i.fallback,
+    })) : [blankItem()],
     discount_kind: q.discount_kind, discount_value: numText(q.discount_value), tax_rate: q.tax_rate,
     // El total de una subida con sus centavos (4250.50, no 4250.5)
     notes: q.notes, valid_until: q.valid_until, total: q.total ? (Number.isInteger(q.total) ? String(q.total) : q.total.toFixed(2)) : '',
+    price_list_id: q.price_list_id ?? null,
   }
 }
 const payloadOf = (d: Draft, uploaded: boolean) => {
@@ -59,8 +74,12 @@ const payloadOf = (d: Draft, uploaded: boolean) => {
   if (uploaded) return { ...client, total: num(d.total), valid_until: d.valid_until }
   return {
     ...client,
-    items: d.items.map(i => ({ description: i.description, quantity: num(i.quantity), unit: i.unit, price: num(i.price) })),
+    items: d.items.map(i => ({
+      description: i.description, quantity: num(i.quantity), unit: i.unit, price: num(i.price),
+      ...(i.product_id ? { product_id: i.product_id, fallback: !!i.fallback } : {}),
+    })),
     discount_kind: d.discount_kind, discount_value: num(d.discount_value), tax_rate: d.tax_rate, notes: d.notes, valid_until: d.valid_until,
+    price_list_id: d.price_list_id,
   }
 }
 /** Una cotización nueva se guarda (y toma su folio) hasta que tiene un producto. */
@@ -98,6 +117,8 @@ export default function QuoteEditorPage() {
   const [registerLost, setRegisterLost] = useState(true)
   const [menuOpen, setMenuOpen] = useState(false)
   const [toast, setToast] = useState('')
+  // Listas de precios de la tienda: los renglones del catálogo toman el precio de la elegida
+  const { data: listsData } = useCachedQuery<ListsData>('/api/data/products/lists')
 
   const quoteId = useRef<string | null>(null)
   const loaded = useRef<string | null>(null)
@@ -128,7 +149,7 @@ export default function QuoteEditorPage() {
           contact_id: client?.contact_id ?? null, client_name: client?.client_name ?? '',
           client_phone: client?.client_phone ?? '', client_email: client?.client_email ?? '', items: [blankItem()],
           discount_kind: 'percent', discount_value: '', tax_rate: st.taxDefault ? st.taxRate : 0,
-          notes: st.terms, valid_until: addDaysIso(d.today, st.validDays), total: '',
+          notes: st.terms, valid_until: addDaysIso(d.today, st.validDays), total: '', price_list_id: null,
         })
         loaded.current = 'nueva'
         return
@@ -245,6 +266,31 @@ export default function QuoteEditorPage() {
   const taxOptions = [...new Set([settings.taxRate, ...(draft.tax_rate ? [draft.tax_rate] : [])])]
     .map(r => ({ value: String(r), label: `IVA ${r} %` })).concat({ value: '0', label: 'Sin IVA' })
   const ready = !!draft.client_name.trim() && (uploaded ? num(draft.total) > 0 : doc.items.some(isFilled))
+  const lists = listsData?.lists ?? []
+  const mainList = mainListOf(lists)
+  const activeList = lists.find(l => l.id === draft.price_list_id) ?? mainList
+  const hasCatalog = (listsData?.total ?? 0) > 0
+
+  /** Otra lista de precios: los renglones del catálogo toman su precio (los escritos a mano no cambian). */
+  async function changeList(listId: string) {
+    change(d => ({ ...d, price_list_id: listId }))
+    const ids = [...new Set((draftRef.current?.items ?? []).map(i => i.product_id).filter((x): x is string => !!x))]
+    if (!ids.length) return
+    try {
+      const r = await apiFetch(`/api/data/products/suggest?ids=${ids.join(',')}&list=${listId}`)
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) return
+      const byId = new Map((d.products as ProductHit[]).map(p => [p.id, p]))
+      // Si mientras tanto se eligió otra lista, manda la última
+      change(dr => (dr.price_list_id !== listId ? dr : {
+        ...dr,
+        items: dr.items.map(it => {
+          const hit = it.product_id ? byId.get(it.product_id) : undefined
+          return hit && hit.net !== null ? { ...it, price: numText(hit.net), fallback: hit.fallback } : it
+        }),
+      }))
+    } catch { /* sin conexión: los precios se quedan como estaban */ }
+  }
 
   // ── Acciones ─────────────────────────────────────────────────────────────
   async function act(path: string, body: unknown, note: string, method = 'POST') {
@@ -386,10 +432,21 @@ export default function QuoteEditorPage() {
             </section>
           ) : <>
           <section className={s.card} aria-labelledby="items-title">
-            <div className={s.cardHead}><h3 id="items-title">Productos</h3><span className={`${s.aside} label-muted`}>Precios sin IVA</span></div>
+            <div className={s.cardHead}>
+              <h3 id="items-title">Productos</h3>
+              {hasCatalog && activeList ? <>
+                <span className={`label-muted ${s.taxNote}`}>Precios sin IVA</span>
+                <div className={s.listPick}>
+                  <span>Lista de precios</span>
+                  <Select value={activeList.id} disabled={locked} aria-label="Lista de precios"
+                    options={lists.map(l => ({ value: l.id, label: l.name }))} onChange={v => void changeList(v)} />
+                </div>
+              </> : <span className={`${s.aside} label-muted`}>Precios sin IVA</span>}
+            </div>
             <div className={s.items}>
               {draft.items.map((it, i) => (
                 <ItemRow key={it.key} item={it} index={i} locked={locked} canRemove={draft.items.length > 1}
+                  catalog={hasCatalog && activeList ? { listId: activeList.id, listName: activeList.name, mainName: mainList?.name ?? 'la principal' } : null}
                   onChange={next => change(d => ({ ...d, items: d.items.map(x => (x.key === it.key ? { ...x, ...next } : x)) }))}
                   onRemove={() => change(d => ({ ...d, items: d.items.filter(x => x.key !== it.key) }))} />
               ))}
@@ -605,15 +662,26 @@ function ClientCard({ draft, locked, onChange, onSaveContact }: {
   )
 }
 
-/** Un renglón: descripción (con lo ya cotizado en la tienda), cantidad, unidad y precio. */
-function ItemRow({ item, index, locked, canRemove, onChange, onRemove }: {
+type Option = { type: 'product'; hit: ProductHit } | { type: 'past'; sg: Suggestion }
+const stockText = (h: ProductHit) => (h.kind === 'service' ? 'servicio' : h.stock === null ? null : `${h.stock.toLocaleString('es-MX')} en existencia`)
+
+/**
+ * Un renglón: descripción, cantidad, unidad y precio. Al escribir la
+ * descripción sugiere productos del catálogo (con su precio en la lista de la
+ * cotización, sin IVA) y lo ya cotizado en la tienda. Un producto del
+ * catálogo sigue a la lista; si se cambia su precio a mano, ya no.
+ */
+function ItemRow({ item, index, locked, canRemove, catalog, onChange, onRemove }: {
   item: ItemDraft; index: number; locked: boolean; canRemove: boolean
+  catalog: { listId: string; listName: string; mainName: string } | null
   onChange: (next: Partial<ItemDraft>) => void; onRemove: () => void
 }) {
   const [focused, setFocused] = useState(false)
-  const [list, setList] = useState<Suggestion[]>([])
+  const [past, setPast] = useState<Suggestion[]>([])
+  const [products, setProducts] = useState<ProductHit[]>([])
   const [active, setActive] = useState(-1)
   const q = item.description.trim()
+  const listId = catalog?.listId ?? null
 
   useEffect(() => {
     if (!focused || locked) return
@@ -621,41 +689,81 @@ function ItemRow({ item, index, locked, canRemove, onChange, onRemove }: {
     const t = setTimeout(() => {
       apiFetch(`/api/data/quotes/suggestions?q=${encodeURIComponent(q)}`)
         .then(r => (r.ok ? r.json() : { suggestions: [] }))
-        .then(d => { if (alive) { setList((d.suggestions as Suggestion[]).filter(x => x.description.toLowerCase() !== q.toLowerCase())); setActive(-1) } })
+        .then(d => { if (alive) { setPast((d.suggestions as Suggestion[]).filter(x => x.description.toLowerCase() !== q.toLowerCase())); setActive(-1) } })
         .catch(() => {})
+      if (listId && q) {
+        apiFetch(`/api/data/products/suggest?q=${encodeURIComponent(q)}&list=${listId}`)
+          .then(r => (r.ok ? r.json() : { products: [] }))
+          .then(d => { if (alive) { setProducts((d.products as ProductHit[]).filter(p => p.id !== item.product_id)); setActive(-1) } })
+          .catch(() => {})
+      } else setProducts([])
     }, 160)
     return () => { alive = false; clearTimeout(t) }
-  }, [q, focused, locked])
+  }, [q, focused, locked, listId, item.product_id])
 
-  const choose = (sg: Suggestion) => {
-    onChange({ description: sg.description, ...(item.unit ? {} : { unit: sg.unit }), ...(num(item.price) ? {} : { price: numText(sg.price) }) })
-    setList([])
+  const options: Option[] = [...products.map(hit => ({ type: 'product' as const, hit })), ...past.map(sg => ({ type: 'past' as const, sg }))]
+  const choose = (o: Option) => {
+    if (o.type === 'product') {
+      const h = o.hit
+      onChange({
+        description: h.name, unit: quoteUnit(h.unit) || item.unit, price: h.net === null ? item.price : numText(h.net),
+        product_id: h.id, fallback: h.fallback,
+      })
+    } else {
+      const sg = o.sg
+      onChange({ description: sg.description, ...(item.unit ? {} : { unit: sg.unit }), ...(num(item.price) ? {} : { price: numText(sg.price) }) })
+    }
+    setPast([]); setProducts([])
   }
-  const open = focused && list.length > 0 && !locked
+  const open = focused && options.length > 0 && !locked
   const n = index + 1
+  let idx = -1
 
   return (
     <div className={s.item}>
       <div className={s.descWrap}>
-        <input value={item.description} maxLength={300} disabled={locked} placeholder="Producto, color o servicio"
+        <input value={item.description} maxLength={300} disabled={locked} placeholder={catalog ? 'Busca un producto o escribe' : 'Producto, color o servicio'}
           aria-label={`Producto ${n}`} role="combobox" aria-expanded={open} aria-autocomplete="list"
           onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => setFocused(false), 120)}
           onChange={e => onChange({ description: e.target.value })}
           onKeyDown={e => {
             if (!open) return
-            if (e.key === 'ArrowDown') { e.preventDefault(); setActive(a => Math.min(list.length - 1, a + 1)) }
+            if (e.key === 'ArrowDown') { e.preventDefault(); setActive(a => Math.min(options.length - 1, a + 1)) }
             else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(a => Math.max(-1, a - 1)) }
-            else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); choose(list[active]) }
-            else if (e.key === 'Escape') setList([])
+            else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); choose(options[active]) }
+            else if (e.key === 'Escape') { setPast([]); setProducts([]) }
           }} />
         {open && (
-          <div className={s.suggest} role="listbox" aria-label="Ya cotizado en tu tienda">
-            {list.map((sg, i) => (
-              <button key={sg.description} type="button" role="option" aria-selected={i === active}
-                onMouseDown={e => { e.preventDefault(); choose(sg) }}>
-                <span>{sg.description}</span><small>{sg.price ? fmtMoney(sg.price) : ''}{sg.unit ? ` / ${sg.unit}` : ''}</small>
-              </button>
-            ))}
+          <div className={s.suggest} role="listbox" aria-label="Sugerencias">
+            {products.length > 0 && <>
+              <div className={s.suggestGroup} role="presentation">Productos · {catalog?.listName}</div>
+              {products.map(h => {
+                const i = ++idx
+                const meta = [h.unit, h.sku ? `SKU ${h.sku}` : null, stockText(h)].filter(Boolean).join(' · ')
+                return (
+                  <button key={h.id} type="button" role="option" aria-selected={i === active} className={s.suggestProduct}
+                    onMouseDown={e => { e.preventDefault(); choose({ type: 'product', hit: h }) }}>
+                    <span><b>{h.name}</b>{meta && <em>{meta}</em>}</span>
+                    <small>
+                      {h.price === null ? 'Sin precio' : <><strong>{fmtMoney(h.price)}</strong> con IVA</>}
+                      {h.net !== null && <em>{h.fallback ? `precio de ${catalog?.mainName} · ` : ''}entra a {fmtMoney(h.net)}</em>}
+                    </small>
+                  </button>
+                )
+              })}
+            </>}
+            {past.length > 0 && <>
+              {products.length > 0 && <div className={s.suggestGroup} role="presentation">Cotizado antes</div>}
+              {past.map(sg => {
+                const i = ++idx
+                return (
+                  <button key={sg.description} type="button" role="option" aria-selected={i === active}
+                    onMouseDown={e => { e.preventDefault(); choose({ type: 'past', sg }) }}>
+                    <span>{sg.description}</span><small>{sg.price ? fmtMoney(sg.price) : ''}{sg.unit ? ` / ${sg.unit}` : ''}</small>
+                  </button>
+                )
+              })}
+            </>}
           </div>
         )}
       </div>
@@ -664,12 +772,17 @@ function ItemRow({ item, index, locked, canRemove, onChange, onRemove }: {
       <UnitInput value={item.unit} disabled={locked} label={`Unidad del producto ${n}`} onChange={unit => onChange({ unit })} />
       <span className={`${s.price} ${s.money}`}>
         <input className={s.num} inputMode="decimal" value={item.price} disabled={locked} placeholder="Precio" aria-label={`Precio unitario del producto ${n}, sin IVA`}
-          title="Precio unitario sin IVA" onChange={e => onChange({ price: e.target.value.replace(/[^\d.]/g, '') })} />
+          title="Precio unitario sin IVA"
+          // Un precio escrito a mano ya no sigue a la lista de precios
+          onChange={e => onChange({ price: e.target.value.replace(/[^\d.]/g, ''), product_id: null, fallback: false })} />
       </span>
       <span className={s.lineTotal}>{fmtMoney(lineTotal({ quantity: num(item.quantity), price: num(item.price) }))}</span>
       {!locked && canRemove
         ? <button type="button" className={s.remove} onClick={onRemove} aria-label={`Quitar el producto ${n}`}><Trash2 aria-hidden="true" /></button>
         : null}
+      {item.product_id && item.fallback && catalog && (
+        <p className={s.itemNote}>Precio de {catalog.mainName}: este producto no tiene precio en {catalog.listName}.</p>
+      )}
     </div>
   )
 }

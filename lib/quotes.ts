@@ -42,7 +42,14 @@ export type SendVia = typeof SEND_VIAS[number]
 export const activityKindFor = (via: SendVia | null | undefined): 'whatsapp' | 'correo' | 'visita' =>
   via === 'correo' ? 'correo' : via === 'en_persona' || !via ? 'visita' : 'whatsapp'
 
-export type QuoteItem = { description: string; quantity: number; unit: string; price: number }
+/**
+ * Un renglón. `product_id`: salió del catálogo (Productos) y su precio sigue a
+ * la lista de precios de la cotización; `fallback`: ese producto no tenía
+ * precio en la lista y se usó el de la principal. El cliente no ve ninguno.
+ */
+export type QuoteItem = { description: string; quantity: number; unit: string; price: number; product_id?: string; fallback?: boolean }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export type QuoteSettings = {
   /** Días de validez de una cotización nueva. */
@@ -117,7 +124,12 @@ export function parseItems(raw: unknown): { ok: true; items: QuoteItem[] } | { o
     const price = Number(o.price ?? 0)
     if (!Number.isFinite(quantity) || quantity < 0 || quantity > 1_000_000) return { ok: false, error: 'Revisa la cantidad de los renglones' }
     if (!Number.isFinite(price) || price < 0 || price > 100_000_000) return { ok: false, error: 'Revisa el precio de los renglones' }
-    items.push({ description, quantity: round(quantity, 3), unit, price: round(price, 2) })
+    const item: QuoteItem = { description, quantity: round(quantity, 3), unit, price: round(price, 2) }
+    if (typeof o.product_id === 'string' && UUID.test(o.product_id)) {
+      item.product_id = o.product_id.toLowerCase()
+      if (o.fallback === true) item.fallback = true
+    }
+    items.push(item)
   }
   return { ok: true, items }
 }

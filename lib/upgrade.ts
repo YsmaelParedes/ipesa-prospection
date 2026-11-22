@@ -5,7 +5,7 @@
  */
 import { PLANS } from './stores'
 
-export type LockedFeature = 'equipo' | 'whatsapp' | 'actividad' | 'acumulado' | 'contactos' | 'prueba'
+export type LockedFeature = 'equipo' | 'whatsapp' | 'actividad' | 'acumulado' | 'contactos' | 'productos' | 'prueba'
 
 export type LockCopy = {
   /** Título del aviso */
@@ -38,6 +38,10 @@ export const LOCKS: Record<LockedFeature, LockCopy> = {
   contactos: {
     title: 'Clientes sin límite con Cubeta',
     text: `Litro incluye ${PLANS.litro.maxContacts?.toLocaleString('es-MX')} clientes. Con Cubeta registras todos los que necesites, y los que ya tienes se quedan como están.`,
+  },
+  productos: {
+    title: 'Todo tu catálogo con Cubeta',
+    text: `Litro incluye ${PLANS.litro.maxProducts?.toLocaleString('es-MX')} productos. Con Cubeta importas y cotizas todo tu catálogo, sin límite, y los que ya tienes se quedan como están.`,
   },
 }
 

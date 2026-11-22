@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import ContactFormModal from '@/components/ContactFormModal'
 import ReminderModal from '@/components/ReminderModal'
+import ProductFormModal from '@/components/ProductFormModal'
 import { QuoteStartDialog } from '@/components/QuoteStartDialog'
+import { useSession } from '@/lib/profile'
 import {
   notifyDataChanged, openQuickCreate, useQuickCreateRequests,
   type DataKind, type QuickCreateRequest,
 } from '@/lib/crmEvents'
-import { Check, ChevronDown, Clock, FileText, Plus, UserPlus } from 'lucide-react'
+import { Check, ChevronDown, Clock, FileText, Package, Plus, UserPlus } from 'lucide-react'
 
 const Ico = {
   plus:     () => <Plus aria-hidden="true" />,
@@ -17,20 +19,25 @@ const Ico = {
   contact:  () => <UserPlus aria-hidden="true" />,
   reminder: () => <Clock aria-hidden="true" />,
   quote:    () => <FileText aria-hidden="true" />,
+  product:  () => <Package aria-hidden="true" />,
   check:    () => <Check aria-hidden="true" />,
 }
 
-const ITEMS: { kind: QuickCreateRequest['kind']; label: string; hint: string; icon: React.ComponentType; tone: string }[] = [
+const ITEMS: { kind: QuickCreateRequest['kind']; label: string; hint: string; icon: React.ComponentType; tone: string; admin?: boolean }[] = [
   { kind: 'contact',  label: 'Contacto',     hint: 'Un cliente nuevo en tu base',  icon: Ico.contact,  tone: 'cyan' },
   { kind: 'reminder', label: 'Recordatorio', hint: 'Una llamada, visita o tarea',  icon: Ico.reminder, tone: 'amber' },
   // Pregunta si se hace en Matices (su propia pantalla) o se sube una ya hecha
   { kind: 'quote',    label: 'Cotización',   hint: 'Hazla aquí o sube una ya hecha', icon: Ico.quote,  tone: 'magenta' },
+  // El catálogo lo cambian los administradores
+  { kind: 'product',  label: 'Producto',     hint: 'Agrégalo a tu catálogo',       icon: Ico.product,  tone: 'teal', admin: true },
 ]
 
 function QuickItems({ onPick }: { onPick: () => void }) {
+  const session = useSession()
+  const items = ITEMS.filter(it => !it.admin || (session?.isAdmin && session.store?.access !== 'readonly'))
   return (
     <>
-      {ITEMS.map(it => (
+      {items.map(it => (
         <button key={it.kind} role="menuitem" className="qc-item" onClick={() => { onPick(); openQuickCreate({ kind: it.kind } as QuickCreateRequest) }}>
           <span className={`qc-icon tone-${it.tone}`}><it.icon /></span>
           <span className="qc-text"><strong>{it.label}</strong><small>{it.hint}</small></span>
@@ -122,6 +129,10 @@ export function QuickCreateHost() {
           onSaved={() => done('reminder', req.reminder ? 'Recordatorio actualizado' : 'Recordatorio creado', '/recordatorios', 'Ver agenda')} />
       )}
       {req?.kind === 'quote' && <QuoteStartDialog onClose={close} />}
+      {req?.kind === 'product' && (
+        <ProductFormModal product={req.product} onClose={close}
+          onSaved={p => done('product', req.product ? 'Producto guardado' : 'Producto agregado', `/productos/${p.id}`, 'Ver ficha')} />
+      )}
       {toast && (
         <div className="toast-fixed" role="status">
           <span className="toast-check"><Ico.check /></span>

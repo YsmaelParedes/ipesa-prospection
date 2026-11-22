@@ -16,6 +16,8 @@ export type Quote = {
   created_at: string; updated_at: string
   seller_name: string | null; display_status: QuoteDisplayStatus
   file: { name: string; mime: string; size: number } | null
+  /** Lista de precios de los renglones del catálogo (null = la principal). */
+  price_list_id: string | null
 }
 
 export function StatusBadge({ status }: { status: QuoteDisplayStatus }) {

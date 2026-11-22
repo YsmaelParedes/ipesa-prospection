@@ -36,6 +36,18 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.66.0',
+    date: '22 de noviembre, 2026',
+    title: 'Productos: tu catálogo con sus listas de precios',
+    items: [
+      'Nueva sección Productos en el menú: tu catálogo con existencias, categoría, marca y el precio de cada lista (Público, Tarjeta, Mayoreo…). Búscalo por nombre, SKU o código de barras.',
+      'Los administradores importan el Excel de su punto de venta o uno propio: Matices reconoce las columnas y cada columna de precio se vuelve una lista. Al volver a importar se actualiza lo que ya tenías, sin duplicar ni borrar nada.',
+      'Cada producto tiene su ficha con sus precios. Los administradores ven además el costo, el margen y la ganancia, y pueden agregar, editar y descargar los productos en Excel.',
+      'Al hacer una cotización, escribe el nombre o el SKU y elige el producto: se llena con su unidad y su precio sin IVA. Arriba eliges la lista de precios; si la cambias, se actualizan los productos del catálogo.',
+      'El plan Litro incluye hasta 200 productos; Cubeta, sin límite.',
+    ],
+  },
+  {
     version: '1.65.0',
     date: '21 de noviembre, 2026',
     title: 'Campañas de Mkt y teléfonos fijos',

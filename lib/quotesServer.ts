@@ -15,7 +15,7 @@ import {
 export const QUOTE_COLUMNS =
   'id, store_id, folio, created_by, contact_id, client_name, client_phone, client_email, items, discount_kind, discount_value, ' +
   'tax_rate, notes, issued_on, valid_until, status, subtotal, discount, tax, total, share_token, sent_at, sent_via, viewed_at, ' +
-  'decided_at, activity_id, sale_activity_id, created_at, updated_at, file_path, file_name, file_mime, file_size'
+  'decided_at, activity_id, sale_activity_id, created_at, updated_at, file_path, file_name, file_mime, file_size, price_list_id'
 
 export type QuoteRow = {
   id: string; store_id: string; folio: number | null; created_by: string | null; contact_id: string | null
@@ -28,6 +28,8 @@ export type QuoteRow = {
   created_at: string; updated_at: string
   /** Solo las subidas: su archivo en el almacenamiento (sin folio de Matices). */
   file_path: string | null; file_name: string | null; file_mime: string | null; file_size: number | null
+  /** Lista de precios con la que se arma (los renglones del catálogo toman su precio). */
+  price_list_id: string | null
 }
 
 /** Lo que recibe el navegador (sin store_id ni la ruta del archivo; con el vendedor y el estado a mostrar). */
@@ -102,10 +104,18 @@ const QUOTE_SCHEMA: Schema = {
   valid_until:    { type: 'date', label: 'Válida hasta' },
   // Solo en una subida: el total lo escribe el vendedor (no hay renglones)
   total:          { type: 'number', min: 0, max: MAX_TOTAL, label: 'Total' },
+  price_list_id:  { type: 'uuid', nullable: true, label: 'Lista de precios' },
 }
 
-export type QuoteInput = Partial<Pick<QuoteRow, 'contact_id' | 'client_name' | 'client_phone' | 'client_email' | 'items' | 'discount_kind' | 'notes' | 'valid_until'>>
+export type QuoteInput = Partial<Pick<QuoteRow, 'contact_id' | 'client_name' | 'client_phone' | 'client_email' | 'items' | 'discount_kind' | 'notes' | 'valid_until' | 'price_list_id'>>
   & { discount_value?: number; tax_rate?: number; total?: number }
+
+/** ¿La lista de precios es de la tienda? (la base también lo exige) */
+export async function priceListBelongs(storeId: string, listId: string): Promise<boolean> {
+  const { data, error } = await getServerSupabase().from('price_lists').select('id').eq('id', listId).eq('store_id', storeId).maybeSingle()
+  if (error) throw error
+  return !!data
+}
 
 /** Campos que manda el editor, validados (solo los presentes). */
 export function parseQuoteInput(body: Record<string, unknown>): { ok: true; data: QuoteInput } | { ok: false; error: string } {

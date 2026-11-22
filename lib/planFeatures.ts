@@ -66,6 +66,7 @@ export const PLAN_COPY: Record<PublicPlanId, PlanCopy> = {
 export const PLAN_COMPARE: { label: string; values: Record<PublicPlanId, string | boolean> }[] = [
   { label: 'Usuarios', values: { litro: '1', cubeta: String(PLANS.cubeta.maxUsers) } },
   { label: 'Contactos', values: { litro: fmt(PLANS.litro.maxContacts ?? 0), cubeta: 'Sin límite' } },
+  { label: 'Productos con listas de precios (importa tu Excel)', values: { litro: fmt(PLANS.litro.maxProducts ?? 0), cubeta: 'Sin límite' } },
   { label: 'Sistema Comercial: lista de Hoy y registro de llamadas', values: { litro: true, cubeta: true } },
   { label: 'Oportunidades: cada cotización abierta, con su monto', values: { litro: true, cubeta: true } },
   { label: 'Agenda y avisos en el celular', values: { litro: true, cubeta: true } },

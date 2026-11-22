@@ -24,6 +24,7 @@ export async function POST(_req: NextRequest, { params }: Ctx) {
     const row = {
       contact_id: q.contact_id, client_name: q.client_name, client_phone: q.client_phone, client_email: q.client_email,
       items: q.items, discount_kind: q.discount_kind, discount_value: q.discount_value, tax_rate: q.tax_rate, notes: q.notes,
+      price_list_id: q.price_list_id,
     }
     const { data, error } = await db.from('quotes').insert([{
       ...row, ...totalsFor(row), store_id: ctx.storeId, folio: folioRes.data, created_by: ctx.uid,

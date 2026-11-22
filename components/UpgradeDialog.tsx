@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Lock, MessageCircle, PaintBucket, TrendingUp, Users, X, type LucideIcon } from 'lucide-react'
+import { Lock, MessageCircle, Package, PaintBucket, TrendingUp, Users, X, type LucideIcon } from 'lucide-react'
 import { EVENTS, track } from '@/lib/analytics'
 import { fmtMoney, monthsSaved, type PlanInterval, type PlanPrice } from '@/lib/billing'
 import { startCheckout } from '@/lib/checkout'
@@ -15,7 +15,7 @@ import s from './Upgrade.module.css'
 type Prices = { available: boolean; prices: Partial<Record<string, PlanPrice>>; annual?: Partial<Record<string, PlanPrice>> }
 
 const ICONS: Record<LockedFeature, LucideIcon> = {
-  equipo: Users, whatsapp: MessageCircle, actividad: TrendingUp, acumulado: TrendingUp, contactos: Lock, prueba: PaintBucket,
+  equipo: Users, whatsapp: MessageCircle, actividad: TrendingUp, acumulado: TrendingUp, contactos: Lock, productos: Package, prueba: PaintBucket,
 }
 
 /**

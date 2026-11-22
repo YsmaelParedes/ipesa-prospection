@@ -6,8 +6,9 @@
  */
 import { useEffect, useRef } from 'react'
 import type { Reminder, ReminderType } from './crm'
+import type { Product } from './products'
 
-export type DataKind = 'contact' | 'lead' | 'reminder' | 'activity' | 'commercial'
+export type DataKind = 'contact' | 'lead' | 'reminder' | 'activity' | 'commercial' | 'product'
 
 const CHANGED = 'crm:data-changed'
 const QUICK   = 'crm:quick-create'
@@ -46,6 +47,8 @@ export type QuickCreateRequest =
   | { kind: 'reminder'; reminder?: Reminder; defaults?: ReminderDefaults }
   // «Cotizar» sin cliente: hacerla en Matices o subir una ya hecha
   | { kind: 'quote' }
+  // Agregar un producto o editar uno (solo administradores)
+  | { kind: 'product'; product?: Product }
 
 export function openQuickCreate(req: QuickCreateRequest) {
   window.dispatchEvent(new CustomEvent(QUICK, { detail: req }))

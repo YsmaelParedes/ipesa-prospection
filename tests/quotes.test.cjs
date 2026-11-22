@@ -39,6 +39,18 @@ test('renglones: limpia y redondea; rechaza lo inválido', () => {
   assert.equal(parseItems(Array.from({ length: 101 }, () => ({}))).ok, false)
 })
 
+test('renglones del catálogo: conservan el producto y si su precio es de la principal', () => {
+  const id = 'AAAAAAAA-BBBB-4CCC-8DDD-EEEEEEEEEEEE'
+  const { items } = parseItems([
+    { description: 'Vinílica', quantity: 1, unit: 'galón', price: 716.38, product_id: id, fallback: true },
+    { description: 'Mano de obra', quantity: 1, unit: 'servicio', price: 2500, product_id: 'no-es-un-id', fallback: true },
+    { description: 'Rodillo', quantity: 2, unit: 'pza', price: 74.14, product_id: id, fallback: 'sí' },
+  ])
+  assert.deepEqual(items[0], { description: 'Vinílica', quantity: 1, unit: 'galón', price: 716.38, product_id: id.toLowerCase(), fallback: true })
+  assert.deepEqual(items[1], { description: 'Mano de obra', quantity: 1, unit: 'servicio', price: 2500 })
+  assert.equal(items[2].fallback, undefined)
+})
+
 test('ajustes: valores por defecto y validación', () => {
   assert.deepEqual(parseQuoteSettings(null), { validDays: 15, terms: DEFAULT_TERMS, taxDefault: true, taxRate: 16, rfc: '', legalName: '' })
   assert.equal(parseQuoteSettings({ validDays: 0, taxRate: 8 }).validDays, 15)

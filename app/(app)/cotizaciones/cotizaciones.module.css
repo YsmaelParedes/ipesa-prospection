@@ -153,6 +153,21 @@
 .suggest button span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
 .suggest button small { flex-shrink: 0; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .addItem { align-self: flex-start; margin-top: 4px; }
+/* Productos del catálogo: la lista de precios de la cotización y el buscador por grupos */
+.cardHead:has(.listPick) { flex-wrap: wrap; row-gap: 8px; }
+.taxNote { font-size: 12px; white-space: nowrap; }
+.listPick { margin-left: auto; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.listPick > span { font-size: 12px; font-weight: 700; color: var(--ink-3); white-space: nowrap; }
+.listPick :global(.sel-trigger) { min-width: 150px; max-width: 220px; }
+.suggestGroup { padding: 8px 11px 4px; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.suggest button + .suggestGroup { border-top: 1px solid var(--line); margin-top: 2px; }
+.suggest .suggestProduct { align-items: flex-start; }
+.suggestProduct span { display: flex; flex-direction: column; gap: 1px; }
+.suggestProduct span b { font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.suggestProduct em, .suggestProduct small em { font-style: normal; font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.suggestProduct small { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.suggestProduct small strong { color: var(--ink); font-weight: 700; }
+.itemNote { grid-column: 1 / -1; margin: 2px 0 0; padding: 6px 9px; border-radius: var(--radius-sm); background: var(--warning-soft); color: var(--warning); font-size: 12px; font-weight: 600; }
 
 .discount { display: flex; gap: 8px; }
 .seg { display: flex; gap: 2px; padding: 3px; border-radius: 8px; background: var(--paper-2); flex-shrink: 0; }
