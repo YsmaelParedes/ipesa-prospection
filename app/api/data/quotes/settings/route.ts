@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
-import { jsonError, readJson, serverError } from '@/lib/validation'
+import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
+import { getVisibleContact } from '@/lib/commercialServer'
 import { validateQuoteSettings } from '@/lib/quotes'
-import { getQuoteSettings, quoteStoreOf, storeToday } from '@/lib/quotesServer'
+import { clientFromContact, getQuoteSettings, quoteStoreOf, storeToday } from '@/lib/quotesServer'
 
-/** GET /api/data/quotes/settings — ajustes de cotizaciones y encabezado de la hoja (para una cotización nueva). */
-export async function GET() {
+/**
+ * GET /api/data/quotes/settings[?contact=] — ajustes de cotizaciones y
+ * encabezado de la hoja (para una cotización nueva) y, desde la ficha de un
+ * cliente, sus datos. La cotización se guarda hasta que tiene un producto.
+ */
+export async function GET(req: NextRequest) {
   const ctx = await requireStore()
   if (ctx instanceof Response) return ctx
+  const contact = req.nextUrl.searchParams.get('contact')
+  if (contact && !isUUID(contact)) return jsonError('Cliente inválido')
   try {
-    const settings = await getQuoteSettings(ctx.storeId)
-    return NextResponse.json({ settings, header: quoteStoreOf(ctx.store, settings), today: storeToday(ctx) })
+    const [settings, client] = await Promise.all([
+      getQuoteSettings(ctx.storeId),
+      contact ? getVisibleContact(ctx, contact).then(ok => (ok ? clientFromContact(ctx.storeId, contact) : null)) : null,
+    ])
+    return NextResponse.json({ settings, header: quoteStoreOf(ctx.store, settings), today: storeToday(ctx), client })
   } catch (error) {
     return serverError('GET /api/data/quotes/settings', error, 'No se pudieron cargar los ajustes')
   }

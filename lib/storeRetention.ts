@@ -16,7 +16,7 @@ import { RETENTION_IDLE_DAYS, RETENTION_IDLE_MONTHS, RETENTION_LAST_NOTICE_DAYS,
 import { getServerSupabase, invalidateStoreContextCache } from './supabase-server'
 
 const DAY = 86_400_000
-const BUCKETS = ['store-assets', 'whatsapp-media']
+const BUCKETS = ['store-assets', 'whatsapp-media', 'quote-files']
 /** Freno: si un día salen más, algo anda mal (fechas, datos); se detiene y se reporta. */
 const MAX_DELETIONS_PER_RUN = 10
 

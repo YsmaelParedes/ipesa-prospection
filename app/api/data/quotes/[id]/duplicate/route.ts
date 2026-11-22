@@ -16,6 +16,7 @@ export async function POST(_req: NextRequest, { params }: Ctx) {
   try {
     const q = await getQuote(ctx, id)
     if (!q) return jsonError('Cotización no encontrada', 404)
+    if (q.file_path) return jsonError('Una cotización subida no se puede duplicar', 409)
     const db = getServerSupabase()
     const [settings, folioRes] = await Promise.all([getQuoteSettings(ctx.storeId), db.rpc('next_quote_folio', { p_store: ctx.storeId })])
     if (folioRes.error) throw folioRes.error

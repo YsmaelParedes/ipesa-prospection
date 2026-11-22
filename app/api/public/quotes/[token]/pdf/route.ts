@@ -3,6 +3,7 @@ import { clientIp, rateLimit } from '@/lib/rateLimit'
 import { jsonError, serverError } from '@/lib/validation'
 import { pdfFilename } from '@/lib/quotes'
 import { getPublicQuote, pdfResponse, quoteStoreOf, renderQuotePdf } from '@/lib/quotesServer'
+import { quoteFileResponse } from '@/lib/quoteFilesServer'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -17,8 +18,11 @@ export async function GET(req: NextRequest, { params }: Ctx) {
   try {
     const found = await getPublicQuote(token)
     if (!found) return jsonError('Esta cotización no existe o ya no está disponible', 404)
+    const inline = req.nextUrl.searchParams.get('inline') === '1'
+    // Una subida lleva a su archivo (PDF o foto)
+    if (found.quote.file_path) return await quoteFileResponse(found.quote, inline)
     const pdf = await renderQuotePdf(found.quote, quoteStoreOf(found.store, found.settings), found.seller, req.nextUrl.origin)
-    return pdfResponse(pdf, pdfFilename(found.quote.folio, found.store.name), req.nextUrl.searchParams.get('inline') === '1')
+    return pdfResponse(pdf, pdfFilename(found.quote.folio ?? 0, found.store.name), inline)
   } catch (error) {
     return serverError('GET /api/public/quotes/[token]/pdf', error, 'No se pudo generar el PDF')
   }

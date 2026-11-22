@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { FileText, Plus, Search } from 'lucide-react'
 import { useSession } from '@/lib/profile'
+import { openQuickCreate } from '@/lib/crmEvents'
 import { useCachedQuery } from '@/lib/useCachedQuery'
 import { fmtMoney, folioLabel } from '@/lib/quotes'
 import { Select } from '@/components/Select'
@@ -20,6 +21,7 @@ type ListData = {
 type Member = { user_id: string; display_name: string; status: string }
 
 const productCount = (q: Quote) => {
+  if (q.file) return q.file.mime === 'application/pdf' ? 'PDF subido' : 'Foto subida'
   const n = q.items.filter(i => i.description.trim()).length
   return n ? `${n} producto${n === 1 ? '' : 's'}` : 'Sin productos'
 }
@@ -72,7 +74,7 @@ export default function CotizacionesPage() {
         <h2>Cotizaciones</h2>
         {!readonly && (
           <div className={s.headActions}>
-            <Link href="/cotizaciones/nueva" className={`btn btn-primary ${s.press}`}><Plus aria-hidden="true" /> Nueva cotización</Link>
+            <button className={`btn btn-primary ${s.press}`} onClick={() => openQuickCreate({ kind: 'quote' })}><Plus aria-hidden="true" /> Nueva cotización</button>
           </div>
         )}
       </div>
@@ -121,15 +123,15 @@ export default function CotizacionesPage() {
         <div className={s.empty}>
           <div className={s.mark}><FileText aria-hidden="true" /></div>
           <h3>{filtered ? 'Sin cotizaciones con ese filtro' : 'Todavía no hay cotizaciones'}</h3>
-          <p>{filtered ? 'Prueba con otro estado o búsqueda.' : 'Arma una con tus productos y precios, y mándala por WhatsApp o correo.'}</p>
-          {!filtered && !readonly && <Link href="/cotizaciones/nueva" className="btn btn-primary"><Plus aria-hidden="true" /> Nueva cotización</Link>}
+          <p>{filtered ? 'Prueba con otro estado o búsqueda.' : 'Arma una con tus productos y precios, o sube una que ya hiciste, y mándala por WhatsApp o correo.'}</p>
+          {!filtered && !readonly && <button className="btn btn-primary" onClick={() => openQuickCreate({ kind: 'quote' })}><Plus aria-hidden="true" /> Nueva cotización</button>}
         </div>
       ) : (
         <>
           <div className={s.list}>
             {data.quotes.map(qt => (
               <div key={qt.id} className={s.row}>
-                <div className={s.folio}>{folioLabel(qt.folio)}<small>{shortDay(qt.issued_on)}</small></div>
+                <div className={s.folio}>{qt.folio ? folioLabel(qt.folio) : 'Subida'}<small>{shortDay(qt.issued_on)}</small></div>
                 <div className={s.client}>
                   <Link href={`/cotizaciones/${qt.id}`} className={s.rowLink}><b>{qt.client_name.trim() || 'Sin cliente'}</b></Link>
                   <small>

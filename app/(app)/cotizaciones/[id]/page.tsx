@@ -4,8 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import {
-  ArrowLeft, Check, CheckCircle2, ChevronDown, CircleAlert, Copy, Download, Eye, Lock, MoreHorizontal, Plus, RotateCcw, Send, Trash2, UserPlus, X, XCircle,
+  ArrowLeft, Check, CheckCircle2, ChevronDown, CircleAlert, Copy, Download, ExternalLink, Eye, FileText, Lock, MoreHorizontal, Plus, RotateCcw, Send, Trash2, UserPlus, X, XCircle,
 } from 'lucide-react'
+import { fmtSize } from '@/lib/whatsappFiles'
 import { apiFetch } from '@/lib/apiClient'
 import { useSession } from '@/lib/profile'
 import { notifyDataChanged } from '@/lib/crmEvents'
@@ -30,6 +31,8 @@ type Draft = {
   contact_id: string | null; client_name: string; client_phone: string; client_email: string
   items: ItemDraft[]; discount_kind: 'percent' | 'amount'; discount_value: string; tax_rate: number
   notes: string; valid_until: string
+  /** Solo en una subida: el total que se escribe (no hay renglones). */
+  total: string
 }
 type Chat = { available: boolean; open: boolean }
 type Suggestion = { description: string; unit: string; price: number }
@@ -46,20 +49,29 @@ function draftOf(q: Quote): Draft {
     contact_id: q.contact_id, client_name: q.client_name, client_phone: q.client_phone, client_email: q.client_email,
     items: q.items.length ? q.items.map(i => ({ key: newKey(), description: i.description, quantity: numText(i.quantity), unit: i.unit, price: numText(i.price) })) : [blankItem()],
     discount_kind: q.discount_kind, discount_value: numText(q.discount_value), tax_rate: q.tax_rate,
-    notes: q.notes, valid_until: q.valid_until,
+    // El total de una subida con sus centavos (4250.50, no 4250.5)
+    notes: q.notes, valid_until: q.valid_until, total: q.total ? (Number.isInteger(q.total) ? String(q.total) : q.total.toFixed(2)) : '',
   }
 }
-const payloadOf = (d: Draft) => ({
-  contact_id: d.contact_id, client_name: d.client_name, client_phone: d.client_phone, client_email: d.client_email,
-  items: d.items.map(i => ({ description: i.description, quantity: num(i.quantity), unit: i.unit, price: num(i.price) })),
-  discount_kind: d.discount_kind, discount_value: num(d.discount_value), tax_rate: d.tax_rate, notes: d.notes, valid_until: d.valid_until,
-})
-const isBlank = (d: Draft) => !d.client_name.trim() && !d.contact_id && d.items.every(i => !i.description.trim() && !num(i.price))
+const payloadOf = (d: Draft, uploaded: boolean) => {
+  const client = { contact_id: d.contact_id, client_name: d.client_name, client_phone: d.client_phone, client_email: d.client_email }
+  // Una subida solo guarda el cliente, el total y la validez
+  if (uploaded) return { ...client, total: num(d.total), valid_until: d.valid_until }
+  return {
+    ...client,
+    items: d.items.map(i => ({ description: i.description, quantity: num(i.quantity), unit: i.unit, price: num(i.price) })),
+    discount_kind: d.discount_kind, discount_value: num(d.discount_value), tax_rate: d.tax_rate, notes: d.notes, valid_until: d.valid_until,
+  }
+}
+/** Una cotización nueva se guarda (y toma su folio) hasta que tiene un producto. */
+const hasProduct = (d: Draft | null) =>
+  !!d && d.items.some(i => isFilled({ description: i.description, quantity: num(i.quantity), unit: i.unit, price: num(i.price) }))
 
 /**
  * Editor de una cotización: el formulario a la izquierda y la hoja en vivo a
  * la derecha (en celular, en pestañas). Se guarda sola mientras se escribe;
- * una nueva se crea (y toma su folio) al escribir lo primero.
+ * una nueva se crea (y toma su folio) al agregar el primer producto. Una
+ * subida muestra su archivo y solo se cambian el cliente, el total y la validez.
  */
 export default function QuoteEditorPage() {
   const { id } = useParams<{ id: string }>()
@@ -95,7 +107,7 @@ export default function QuoteEditorPage() {
   const inFlight = useRef<Promise<boolean> | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const menuRef = useRef<HTMLDivElement>(null)
-  const creating = useRef(false)
+  const uploadedRef = useRef(false)
 
   const showToast = (text: string) => { setToast(text); setTimeout(() => setToast(''), 2600) }
 
@@ -104,26 +116,19 @@ export default function QuoteEditorPage() {
     setLoadError('')
     try {
       if (id === 'nueva') {
+        // Desde la ficha del cliente llegan sus datos; no se guarda nada hasta el primer producto
         const contact = search.get('contact')
-        if (contact) {
-          // Desde la ficha del cliente: se crea de una vez con sus datos (una sola vez)
-          if (creating.current) return
-          creating.current = true
-          const r = await apiFetch('/api/data/quotes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contact_id: contact }) })
-          const d = await r.json().catch(() => ({}))
-          if (!r.ok) throw new Error(d.error || 'No se pudo crear la cotización')
-          router.replace(`/cotizaciones/${d.quote.id}`)
-          return
-        }
-        const r = await apiFetch('/api/data/quotes/settings', { cache: 'reload' })
+        const r = await apiFetch(`/api/data/quotes/settings${contact ? `?contact=${encodeURIComponent(contact)}` : ''}`, { cache: 'reload' })
         const d = await r.json().catch(() => ({}))
         if (!r.ok) throw new Error(d.error || 'No se pudo abrir el cotizador')
         const st = d.settings as QuoteSettings
+        const client = d.client as { contact_id: string; client_name: string; client_phone: string; client_email: string } | null
         setHeader(d.header); setSettings(st); setToday(d.today); setQuote(null)
         setDraft({
-          contact_id: null, client_name: '', client_phone: '', client_email: '', items: [blankItem()],
+          contact_id: client?.contact_id ?? null, client_name: client?.client_name ?? '',
+          client_phone: client?.client_phone ?? '', client_email: client?.client_email ?? '', items: [blankItem()],
           discount_kind: 'percent', discount_value: '', tax_rate: st.taxDefault ? st.taxRate : 0,
-          notes: st.terms, valid_until: addDaysIso(d.today, st.validDays),
+          notes: st.terms, valid_until: addDaysIso(d.today, st.validDays), total: '',
         })
         loaded.current = 'nueva'
         return
@@ -134,11 +139,12 @@ export default function QuoteEditorPage() {
       setQuote(d.quote); setHeader(d.header); setSettings(d.settings); setChat(d.chat); setToday(d.today)
       setDraft(draftOf(d.quote))
       quoteId.current = d.quote.id
+      uploadedRef.current = !!d.quote.file
       loaded.current = d.quote.id
     } catch (e) {
       setLoadError((e as Error).message || 'No se pudo abrir la cotización')
     }
-  }, [id, search, router])
+  }, [id, search])
 
   useEffect(() => {
     // Ya cargada: al crearla, la dirección cambia a su id (y los parámetros
@@ -154,14 +160,14 @@ export default function QuoteEditorPage() {
     while (inFlight.current) await inFlight.current
     const d = draftRef.current
     if (!dirty.current || !d) return true
-    if (!quoteId.current && isBlank(d)) { dirty.current = false; return true }
+    if (!quoteId.current && !hasProduct(d)) { dirty.current = false; return true }
     dirty.current = false
     setSaveState('saving')
     const run = (async () => {
       try {
         const existing = quoteId.current
         const r = await apiFetch(existing ? `/api/data/quotes/${existing}` : '/api/data/quotes', {
-          method: existing ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadOf(d)),
+          method: existing ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadOf(d, uploadedRef.current)),
         })
         const res = await r.json().catch(() => ({}))
         if (!r.ok) throw new Error(res.error || 'No se pudieron guardar los cambios')
@@ -194,9 +200,10 @@ export default function QuoteEditorPage() {
     timer.current = setTimeout(() => void flush(), 700)
   }, [flush])
 
-  // Que no se pierda nada al cerrar la pestaña o salir del editor
+  // Que no se pierda nada al cerrar la pestaña o salir del editor (sin productos no hay nada que guardar)
   useEffect(() => {
-    const before = (e: BeforeUnloadEvent) => { if (dirty.current || inFlight.current) { void flush(); e.preventDefault() } }
+    const pending = () => (dirty.current && (!!quoteId.current || hasProduct(draftRef.current))) || !!inFlight.current
+    const before = (e: BeforeUnloadEvent) => { if (pending()) { void flush(); e.preventDefault() } }
     const hide = () => { if (document.visibilityState === 'hidden' && dirty.current) void flush() }
     window.addEventListener('beforeunload', before)
     document.addEventListener('visibilitychange', hide)
@@ -228,6 +235,8 @@ export default function QuoteEditorPage() {
   if (!draft || !doc || !header || !settings) return <QuoteEditorSkeleton />
 
   const status = quote?.status ?? 'draft'
+  const uploaded = !!quote?.file
+  const photo = uploaded && quote?.file?.mime !== 'application/pdf'
   const decided = status === 'accepted' || status === 'rejected'
   const locked = storeReadonly || decided
   const totals = computeTotals(doc.items.filter(isFilled), doc.discount_kind, doc.discount_value, doc.tax_rate)
@@ -235,7 +244,7 @@ export default function QuoteEditorPage() {
   const canDelete = !!quote && !storeReadonly && (isAdmin || (mine && status === 'draft'))
   const taxOptions = [...new Set([settings.taxRate, ...(draft.tax_rate ? [draft.tax_rate] : [])])]
     .map(r => ({ value: String(r), label: `IVA ${r} %` })).concat({ value: '0', label: 'Sin IVA' })
-  const ready = !!draft.client_name.trim() && doc.items.some(isFilled)
+  const ready = !!draft.client_name.trim() && (uploaded ? num(draft.total) > 0 : doc.items.some(isFilled))
 
   // ── Acciones ─────────────────────────────────────────────────────────────
   async function act(path: string, body: unknown, note: string, method = 'POST') {
@@ -287,7 +296,11 @@ export default function QuoteEditorPage() {
 
   async function openSend() {
     setActionError('')
-    if (!ready) { setActionError(!draft?.client_name.trim() ? 'Escribe el nombre del cliente antes de enviarla.' : 'Agrega al menos un producto antes de enviarla.'); return }
+    if (!ready) {
+      setActionError(!draft?.client_name.trim() ? 'Escribe el nombre del cliente antes de enviarla.'
+        : uploaded ? 'Escribe el total antes de enviarla.' : 'Agrega al menos un producto antes de enviarla.')
+      return
+    }
     if (await flush()) setDialog('send')
   }
 
@@ -296,7 +309,8 @@ export default function QuoteEditorPage() {
     window.location.href = `/api/data/quotes/${quoteId.current}/pdf`
   }
 
-  const saveLabel = saveState === 'saving' ? 'Guardando…' : saveState === 'saved' ? 'Guardado' : null
+  const saveLabel = saveState === 'saving' ? 'Guardando…' : saveState === 'saved' ? 'Guardado'
+    : !quote ? 'Se guarda al agregar el primer producto' : null
 
   return (
     <>
@@ -311,7 +325,7 @@ export default function QuoteEditorPage() {
             : saveLabel && <span className={s.saved} aria-live="polite">{saveState === 'saved' && <Check aria-hidden="true" />}{saveLabel}</span>}
         </div>
         <div className={s.headActions}>
-          <button className={`btn btn-ghost ${s.press}`} onClick={download} disabled={!quote && isBlank(draft)}><Download aria-hidden="true" /> PDF</button>
+          <button className={`btn btn-ghost ${s.press}`} onClick={download} disabled={!quote && !hasProduct(draft)}><Download aria-hidden="true" /> {photo ? 'Foto' : 'PDF'}</button>
           {!storeReadonly && !decided && (
             <button className={`btn btn-primary ${s.press}`} onClick={openSend} disabled={busy}><Send aria-hidden="true" /> {status === 'draft' ? 'Enviar' : 'Volver a enviar'}</button>
           )}
@@ -327,8 +341,8 @@ export default function QuoteEditorPage() {
                     <button role="menuitem" onClick={() => { setMenuOpen(false); setDialog('reject') }}><XCircle aria-hidden="true" />Marcar como rechazada</button>
                   </>}
                   {decided && <button role="menuitem" onClick={() => { setMenuOpen(false); setDialog('reopen') }}><RotateCcw aria-hidden="true" />Reabrir</button>}
-                  <button role="menuitem" onClick={duplicate}><Copy aria-hidden="true" />Duplicar</button>
-                  {canDelete && <><hr /><button role="menuitem" className={s.danger} onClick={() => { setMenuOpen(false); setDialog('delete') }}><Trash2 aria-hidden="true" />Borrar</button></>}
+                  {!uploaded && <button role="menuitem" onClick={duplicate}><Copy aria-hidden="true" />Duplicar</button>}
+                  {canDelete && <>{(!uploaded || status === 'sent' || decided) && <hr />}<button role="menuitem" className={s.danger} onClick={() => { setMenuOpen(false); setDialog('delete') }}><Trash2 aria-hidden="true" />Borrar</button></>}
                 </div>
               )}
             </div>
@@ -352,6 +366,25 @@ export default function QuoteEditorPage() {
 
           <ClientCard draft={draft} locked={locked} onChange={change} onSaveContact={() => setDialog('contact')} />
 
+          {uploaded ? (
+            <section className={s.card} aria-labelledby="upload-title">
+              <div className={s.cardHead}><h3 id="upload-title">Cotización subida</h3></div>
+              <div className={s.grid2}>
+                <div className="field">
+                  <label htmlFor="q-total">Total <span className="label-muted">(con IVA)</span></label>
+                  <span className={s.money}>
+                    <input id="q-total" className={s.num} inputMode="decimal" value={draft.total} disabled={locked} placeholder="0"
+                      onChange={e => change(d => ({ ...d, total: e.target.value.replace(/[^\d.]/g, '') }))} />
+                  </span>
+                </div>
+                <div className="field">
+                  <label htmlFor="q-valid">Válida hasta</label>
+                  <input id="q-valid" type="date" value={draft.valid_until} min={quote?.issued_on ?? today} disabled={locked}
+                    onChange={e => { const v = e.target.value; if (v) change(d => ({ ...d, valid_until: v })) }} />
+                </div>
+              </div>
+            </section>
+          ) : <>
           <section className={s.card} aria-labelledby="items-title">
             <div className={s.cardHead}><h3 id="items-title">Productos</h3><span className={`${s.aside} label-muted`}>Precios sin IVA</span></div>
             <div className={s.items}>
@@ -399,11 +432,16 @@ export default function QuoteEditorPage() {
             </div>
             <div className={s.totalLine}><span>Total</span><strong>{fmtMoney(totals.total)}</strong></div>
           </section>
+          </>}
         </div>
 
         <div className={s.previewCol}>
-          <div className={s.previewBox}><QuoteSheet doc={doc} store={header} /></div>
-          <p className={s.previewHint}>Así la verá tu cliente. El PDF sale igual.</p>
+          {quote?.file ? (
+            <UploadedFile quoteId={quote.id} file={quote.file} />
+          ) : <>
+            <div className={s.previewBox}><QuoteSheet doc={doc} store={header} /></div>
+            <p className={s.previewHint}>Así la verá tu cliente. El PDF sale igual.</p>
+          </>}
         </div>
       </div>
 
@@ -414,7 +452,7 @@ export default function QuoteEditorPage() {
       )}
 
       <ConfirmDialog open={dialog === 'accept'} tone="warn" icon={CheckCircle2} busy={busy} error={actionError}
-        title={`¿Marcar la cotización ${folioLabel(quote?.folio ?? 0)} como aceptada?`}
+        title={`¿Marcar la cotización ${folioLabel(quote ? quote.folio : 0)} como aceptada?`}
         confirmLabel="Marcar aceptada" busyLabel="Guardando…"
         field={quote?.contact_id ? (
           <label className={s.saleCheck}>
@@ -427,7 +465,7 @@ export default function QuoteEditorPage() {
       </ConfirmDialog>
 
       <ConfirmDialog open={dialog === 'reject'} tone="warn" icon={XCircle} busy={busy} error={actionError}
-        title={`¿Marcar la cotización ${folioLabel(quote?.folio ?? 0)} como rechazada?`}
+        title={`¿Marcar la cotización ${folioLabel(quote ? quote.folio : 0)} como rechazada?`}
         confirmLabel="Marcar rechazada" busyLabel="Guardando…"
         field={quote?.contact_id ? (
           <label className={s.saleCheck}>
@@ -442,13 +480,13 @@ export default function QuoteEditorPage() {
       </ConfirmDialog>
 
       <ConfirmDialog open={dialog === 'reopen'} tone="warn" icon={RotateCcw} busy={busy} error={actionError}
-        title={`¿Reabrir la cotización ${folioLabel(quote?.folio ?? 0)}?`} confirmLabel="Reabrir" busyLabel="Reabriendo…"
+        title={`¿Reabrir la cotización ${folioLabel(quote ? quote.folio : 0)}?`} confirmLabel="Reabrir" busyLabel="Reabriendo…"
         onConfirm={() => decide('sent')} onCancel={() => { setDialog(null); setActionError('') }}>
         Vuelve a quedar como enviada y la puedes editar.{quote?.sale_activity_id ? ' La venta que ya se registró en el sistema comercial se queda.' : ''}
       </ConfirmDialog>
 
       <ConfirmDialog open={dialog === 'delete'} busy={busy} error={actionError}
-        title={`¿Borrar la cotización ${folioLabel(quote?.folio ?? 0)}?`} confirmLabel="Borrar" busyLabel="Borrando…"
+        title={`¿Borrar la cotización ${folioLabel(quote ? quote.folio : 0)}?`} confirmLabel="Borrar" busyLabel="Borrando…"
         onConfirm={remove} onCancel={() => { setDialog(null); setActionError('') }}>
         {status === 'draft' ? 'No se puede deshacer.' : 'El enlace que recibió el cliente deja de funcionar. Lo registrado en el sistema comercial se queda. No se puede deshacer.'}
       </ConfirmDialog>
@@ -461,6 +499,25 @@ export default function QuoteEditorPage() {
 
       {toast && <div className="toast-fixed"><Check size={14} strokeWidth={2.4} style={{ color: 'var(--warning-fill)' }} />{toast}</div>}
     </>
+  )
+}
+
+/** El archivo de una subida: la foto tal cual o, si es PDF, para abrirlo en otra pestaña. */
+function UploadedFile({ quoteId, file }: { quoteId: string; file: NonNullable<Quote['file']> }) {
+  const src = `/api/data/quotes/${quoteId}/pdf?inline=1`
+  if (file.mime !== 'application/pdf') {
+    return <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <div className={s.previewBox}><img src={src} alt={`Cotización subida: ${file.name}`} className={s.photo} /></div>
+      <p className={s.previewHint}>Así la verá tu cliente.</p>
+    </>
+  }
+  return (
+    <div className={`${s.card} ${s.fileCard}`}>
+      <FileText aria-hidden="true" />
+      <div><strong>{file.name}</strong><small>PDF · {fmtSize(file.size)}</small></div>
+      <a href={src} target="_blank" rel="noopener noreferrer" className={`btn btn-ghost ${s.press}`}><ExternalLink aria-hidden="true" /> Ver PDF</a>
+    </div>
   )
 }
 

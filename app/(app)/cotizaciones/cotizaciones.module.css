@@ -133,7 +133,15 @@
 /* Precio con «$» dentro del campo */
 .money { position: relative; display: block; min-width: 0; }
 .money::before { content: '$'; position: absolute; left: 10px; top: 50%; translate: 0 -50%; font-size: 13.5px; color: var(--muted); pointer-events: none; }
-.item .money input { padding-left: 21px; }
+.card .money input { padding-left: 21px; }
+/* Cotización subida: la foto tal cual o la tarjeta del PDF */
+.photo { display: block; width: 100%; height: auto; }
+.fileCard { display: flex; align-items: center; gap: 12px; }
+.fileCard > svg { width: 26px; height: 26px; color: var(--brand-strong); flex-shrink: 0; }
+.fileCard div { min-width: 0; flex: 1; }
+.fileCard strong { display: block; font-size: 14px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fileCard small { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+.fileCard :global(.btn) svg { width: 15px; height: 15px; }
 .lineTotal { font-size: 13.5px; font-weight: 700; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 2px; }
 .remove { width: 30px; height: 30px; display: grid; place-items: center; border-radius: var(--radius-sm); color: var(--muted-2); }
 .remove svg { width: 15px; height: 15px; }

@@ -4,6 +4,9 @@ import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-
 import { isUUID, jsonError, parseFields, readJson, rpcUserError, serverError, type Schema } from '@/lib/validation'
 import { ACTIVITY_COLUMNS, COMMERCIAL_COLUMNS, activityClient, getVisibleContact, liveContactIds } from '@/lib/commercialServer'
 import { ACTIVITY_KINDS, COMMERCIAL_STATUSES, EMAIL_RESULT_CHOICES, RESULTS } from '@/lib/commercial'
+import { addDaysIso, type SendVia } from '@/lib/quotes'
+import { clientFromContact, getQuoteSettings, storeToday } from '@/lib/quotesServer'
+import { insertUploadedQuote, removeQuoteFile, verifyQuoteFile, type QuoteFile } from '@/lib/quoteFilesServer'
 
 const LOG_LIMIT = 500
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -126,6 +129,16 @@ export async function POST(req: NextRequest) {
   const emailOnly = emailResult && d.result !== 'cotizacion' && d.result !== 'venta' && d.result !== 'no_interesado'
   if (d.kind !== 'nota' && (d.kind === 'correo' ? !emailResult : emailOnly)) return jsonError('Ese resultado no corresponde al tipo de actividad')
 
+  // «Cotización enviada» con su PDF o foto: el archivo se revisa antes de registrar nada
+  const rawFile = body.quote_file && typeof body.quote_file === 'object' ? body.quote_file as { path?: unknown; name?: unknown } : null
+  let quoteFile: QuoteFile | null = null
+  if (rawFile) {
+    if (d.result !== 'cotizacion' || !(Number(d.quote_amount) > 0)) return jsonError('Escribe el monto de la cotización para adjuntarla')
+    const checked = await verifyQuoteFile(ctx.storeId, rawFile.path)
+    if (!checked.ok) return jsonError(checked.error)
+    quoteFile = checked.file
+  }
+
   const supabase = getServerSupabase()
   const { data: activity, error } = await supabase.rpc('log_commercial_activity', {
     p_store: ctx.storeId, p_actor: ctx.uid, p_contact: d.contact_id,
@@ -135,12 +148,37 @@ export async function POST(req: NextRequest) {
     p_status: d.status ?? null, p_claim: true,
   })
   if (error) {
+    if (quoteFile) await removeQuoteFile(quoteFile.path)
     const known = rpcUserError(error)
     if (known) return jsonError(known.message, known.status)
     return serverError('POST /api/data/commercial/activities', error, 'No se pudo registrar la actividad')
   }
 
+  // La cotización subida queda ligada a esta actividad (no registra otra)
+  let quoteError = false
+  if (quoteFile) {
+    try {
+      const contactId = d.contact_id as string
+      const [client, settings] = await Promise.all([clientFromContact(ctx.storeId, contactId), getQuoteSettings(ctx.storeId)])
+      await insertUploadedQuote(ctx, {
+        file: quoteFile,
+        fileName: typeof rawFile?.name === 'string' && rawFile.name.trim() ? rawFile.name : 'Cotizacion',
+        client: client ?? { contact_id: contactId, client_name: 'Cliente', client_phone: '', client_email: '' },
+        total: Number(d.quote_amount),
+        validUntil: addDaysIso(storeToday(ctx), settings.validDays),
+        sent: { via: VIA_BY_KIND[d.kind as string] ?? null, activityId: (activity as { id: string }).id },
+      })
+    } catch (e) {
+      quoteError = true
+      console.error('[POST /api/data/commercial/activities] no se pudo guardar la cotización subida', e)
+      await removeQuoteFile(quoteFile.path)
+    }
+  }
+
   const { data: contact } = await supabase.from('contacts').select(COMMERCIAL_COLUMNS)
     .eq('id', d.contact_id as string).eq('store_id', ctx.storeId).maybeSingle()
-  return NextResponse.json({ activity, contact })
+  return NextResponse.json({ activity, contact, ...(quoteError ? { quoteError: true } : {}) })
 }
+
+/** Cómo se mandó la cotización, según el tipo de actividad (una llamada no la manda). */
+const VIA_BY_KIND: Record<string, SendVia> = { whatsapp: 'whatsapp', correo: 'correo', visita: 'en_persona' }

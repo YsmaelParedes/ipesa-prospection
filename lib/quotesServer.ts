@@ -15,10 +15,10 @@ import {
 export const QUOTE_COLUMNS =
   'id, store_id, folio, created_by, contact_id, client_name, client_phone, client_email, items, discount_kind, discount_value, ' +
   'tax_rate, notes, issued_on, valid_until, status, subtotal, discount, tax, total, share_token, sent_at, sent_via, viewed_at, ' +
-  'decided_at, activity_id, sale_activity_id, created_at, updated_at'
+  'decided_at, activity_id, sale_activity_id, created_at, updated_at, file_path, file_name, file_mime, file_size'
 
 export type QuoteRow = {
-  id: string; store_id: string; folio: number; created_by: string | null; contact_id: string | null
+  id: string; store_id: string; folio: number | null; created_by: string | null; contact_id: string | null
   client_name: string; client_phone: string; client_email: string; items: QuoteItem[]
   discount_kind: 'percent' | 'amount'; discount_value: number | string; tax_rate: number | string
   notes: string; issued_on: string; valid_until: string; status: QuoteStatus
@@ -26,17 +26,20 @@ export type QuoteRow = {
   share_token: string; sent_at: string | null; sent_via: SendVia | null; viewed_at: string | null
   decided_at: string | null; activity_id: string | null; sale_activity_id: string | null
   created_at: string; updated_at: string
+  /** Solo las subidas: su archivo en el almacenamiento (sin folio de Matices). */
+  file_path: string | null; file_name: string | null; file_mime: string | null; file_size: number | null
 }
 
-/** Lo que recibe el navegador (sin store_id; con el nombre del vendedor y el estado a mostrar). */
+/** Lo que recibe el navegador (sin store_id ni la ruta del archivo; con el vendedor y el estado a mostrar). */
 export function quoteToClient(q: QuoteRow, names: Map<string, string>, today: string) {
-  const { store_id: _store, ...rest } = q
+  const { store_id: _store, file_path, file_name, file_mime, file_size, ...rest } = q
   return {
     ...rest,
     discount_value: Number(q.discount_value), tax_rate: Number(q.tax_rate),
     subtotal: Number(q.subtotal), discount: Number(q.discount), tax: Number(q.tax), total: Number(q.total),
     seller_name: q.created_by ? names.get(q.created_by) ?? 'Otro usuario' : null,
     display_status: displayStatus(q.status, q.valid_until, today),
+    file: file_path ? { name: file_name ?? 'archivo', mime: file_mime ?? '', size: Number(file_size) || 0 } : null,
   }
 }
 export type ClientQuote = ReturnType<typeof quoteToClient>
@@ -73,7 +76,7 @@ export function quoteStoreOf(store: StoreRow, settings: QuoteSettings): QuoteSto
 
 export function quoteDocOf(q: QuoteRow, sellerName: string | null): QuoteDoc {
   return {
-    folio: q.folio, status: q.status,
+    folio: q.folio ?? 0, status: q.status,
     client_name: q.client_name, client_phone: q.client_phone, client_email: q.client_email,
     items: Array.isArray(q.items) ? q.items : [],
     discount_kind: q.discount_kind, discount_value: Number(q.discount_value), tax_rate: Number(q.tax_rate),
@@ -97,10 +100,12 @@ const QUOTE_SCHEMA: Schema = {
   tax_rate:       { type: 'number', min: 0, max: 16, label: 'IVA' },
   notes:          { type: 'text', max: 2000, label: 'Condiciones' },
   valid_until:    { type: 'date', label: 'Válida hasta' },
+  // Solo en una subida: el total lo escribe el vendedor (no hay renglones)
+  total:          { type: 'number', min: 0, max: MAX_TOTAL, label: 'Total' },
 }
 
 export type QuoteInput = Partial<Pick<QuoteRow, 'contact_id' | 'client_name' | 'client_phone' | 'client_email' | 'items' | 'discount_kind' | 'notes' | 'valid_until'>>
-  & { discount_value?: number; tax_rate?: number }
+  & { discount_value?: number; tax_rate?: number; total?: number }
 
 /** Campos que manda el editor, validados (solo los presentes). */
 export function parseQuoteInput(body: Record<string, unknown>): { ok: true; data: QuoteInput } | { ok: false; error: string } {

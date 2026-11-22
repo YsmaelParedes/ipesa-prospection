@@ -30,7 +30,8 @@ import type { ChosenContact } from '@/lib/campaignAudience'
 import { MessageText, StatusTicks, WindowBadge, fmtTime, mediaCaption } from '@/components/WhatsAppUI'
 import { WhatsAppIcon } from '@/components/icons'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import { ClientQuotesList, newQuoteHref, useClientQuotes } from '@/components/ClientQuotes'
+import { ClientQuotesList, useClientQuotes } from '@/components/ClientQuotes'
+import { QuoteStartDialog } from '@/components/QuoteStartDialog'
 import { LoadFailed } from '@/components/LoadFailed'
 import { Sk } from '@/components/Skeleton'
 import { ContactsPageSkeleton, ContactsTableSkeleton } from '@/components/skeletons/ContactsSkeleton'
@@ -513,6 +514,7 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
     address: c.address || '', postal_code: c.postal_code || '', colonia: c.colonia || '', zone: c.zone || '',
   })
   const [saveError, setSaveError] = useState('')
+  const [quoteOpen, setQuoteOpen] = useState(false)
   const phone = normalizePhone(c.phone)
   const quotes = useClientQuotes(c.id)
 
@@ -656,10 +658,12 @@ function ContactDetail({ contact: c, readonly, canDelete, waModule, onClose, onU
               <div className="detail-section">
                 <div className="detail-section-head">
                   <h4>Cotizaciones</h4>
-                  {!readonly && <Link href={newQuoteHref(c.id)} className="link-btn">Cotizar →</Link>}
+                  {!readonly && <button type="button" className="link-btn" onClick={() => setQuoteOpen(true)}>Cotizar →</button>}
                 </div>
                 <ClientQuotesList quotes={quotes} />
               </div>
+              {/* Al subirla se queda aquí: la lista de cotizaciones se actualiza sola */}
+              {quoteOpen && <QuoteStartDialog client={{ id: c.id, name: c.company?.trim() || c.name }} onClose={() => setQuoteOpen(false)} onUploaded={() => {}} />}
 
               {waModule && phone.length === 10 && <ContactWhatsApp contact={c} readonly={readonly} onUpdated={onUpdated} />}
 

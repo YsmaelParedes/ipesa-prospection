@@ -19,7 +19,8 @@ import { EmailButton } from './EmailButton'
 import { Ico, StatusChip, addressOf, bizName, fmtDay, initials, localDay, money, personName, whenPhrase, type ListContact } from './ui'
 import s from './comercial.module.css'
 import { ContactPaneSkeleton, HistorySkeleton } from './Skeletons'
-import { ClientQuotesList, newQuoteHref, useClientQuotes } from '@/components/ClientQuotes'
+import { ClientQuotesList, useClientQuotes } from '@/components/ClientQuotes'
+import { QuoteStartDialog } from '@/components/QuoteStartDialog'
 import { FileText, PencilLine, Trash2 } from 'lucide-react'
 
 type Activity = {
@@ -71,6 +72,7 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
   const [formResult, setFormResult] = useState<ResultChoice | undefined>(result)
   const [formAmount, setFormAmount] = useState<number | undefined>(amount)
   const [dateOpen, setDateOpen] = useState(false)
+  const [quoteOpen, setQuoteOpen] = useState(false)
   const [closeAsk, setCloseAsk] = useState(false)
   const [closeChoice, setCloseChoice] = useState<'venta' | 'perdida' | 'abierta'>('venta')
   // Correcciones del administrador: monto de una actividad o borrar la última
@@ -84,15 +86,17 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
   const contact = detail?.contact ?? initial ?? null
   const quotes = useClientQuotes(contactId)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<Detail | null> => {
     try {
       const [d, h] = await Promise.all([
         apiFetch(`/api/data/commercial/contacts/${contactId}`).then(r => r.ok ? r.json() : Promise.reject(r)),
         apiFetch(`/api/data/commercial/activities?contact_id=${contactId}`).then(r => r.ok ? r.json() : { activities: [] }),
       ])
       setDetail(d); setHistory(h.activities ?? []); setEvents(h.events ?? [])
+      return d
     } catch {
       setError('No se pudo abrir este contacto')
+      return null
     }
   }, [contactId])
   useQueryEffect(() => { setDetail(null); setHistory(null); setError(''); load() }, [load])
@@ -255,7 +259,7 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
           <Ico.mail /> Correo
         </EmailButton>
         {!readonly && (
-          <Link href={newQuoteHref(contact.id)} className={`${s.act} ${s.actMore} ${s.press}`} aria-label="Hacer una cotización" title="Cotizar"><FileText size={16} aria-hidden="true" /></Link>
+          <button type="button" onClick={() => setQuoteOpen(true)} className={`${s.act} ${s.actMore} ${s.press}`} aria-label="Cotizar" title="Cotizar"><FileText size={16} aria-hidden="true" /></button>
         )}
         <Link href={`/contactos?id=${contact.id}`} className={`${s.act} ${s.actMore} ${s.press}`} aria-label="Ver en Contactos" title="Ver en Contactos"><Ico.user /></Link>
       </div>
@@ -269,7 +273,7 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
           )}
           <RegisterForm key={`${contact.id}-${formKind ?? ''}-${formResult ?? ''}`} contact={contact} today={today} initialKind={formKind}
             initialResult={formResult} initialAmount={formAmount}
-            wide={variant === 'pane'} onSaved={c => { onSaved(c); load() }} />
+            wide={variant === 'pane'} onSaved={(c, what) => { onSaved(c, what); load() }} />
         </div>
       )}
 
@@ -285,10 +289,14 @@ export function ContactPanel({ contactId, initial, today, variant, readonly, waM
       <div className={s.section}>
         <div className={s.sectionHead}>
           <div className={s.sectionTitle}>Cotizaciones</div>
-          {!readonly && <Link href={newQuoteHref(contact.id)} className="link-btn">Cotizar</Link>}
+          {!readonly && <button type="button" onClick={() => setQuoteOpen(true)} className="link-btn">Cotizar</button>}
         </div>
         <ClientQuotesList quotes={quotes} />
       </div>
+      {quoteOpen && (
+        <QuoteStartDialog client={{ id: contact.id, name: bizName(contact) }} onClose={() => setQuoteOpen(false)}
+          onUploaded={async () => { const d = await load(); if (d?.contact) onSaved(d.contact, 'cotización subida') }} />
+      )}
 
       <div className={s.section}>
         <div className={s.sectionTitle}>Historial</div>

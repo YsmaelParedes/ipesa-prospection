@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import { cache } from 'react'
 import { notFound } from 'next/navigation'
-import { Download, Mail, MessageCircle, Phone } from 'lucide-react'
+import { Download, FileText, Mail, MessageCircle, Phone } from 'lucide-react'
 import { getMemberships, getSessionUser } from '@/lib/supabase-server'
 import { getPublicQuote, quoteDocOf, quoteStoreOf } from '@/lib/quotesServer'
-import { fmtLongDate, fmtMoney, folioLabel } from '@/lib/quotes'
+import { clientQuoteName, fmtLongDate, fmtMoney } from '@/lib/quotes'
+import { isImageFile } from '@/lib/quoteFiles'
 import { todayISO } from '@/lib/commercial'
 import { normalizePhone, waMeLink } from '@/lib/phone'
 import { QuoteSheet } from '@/components/QuoteSheet'
@@ -23,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!found) return { title: 'Cotización', robots, referrer: 'no-referrer' }
   const { quote, store } = found
   const header = quoteStoreOf(store, found.settings)
-  const title = `Cotización ${folioLabel(quote.folio)} · ${store.name}`
+  const title = `${clientQuoteName(quote.folio)} · ${store.name}`
   const description = `Total ${fmtMoney(quote.total)} · válida hasta el ${fmtLongDate(quote.valid_until)}`
   return {
     title, description, robots, referrer: 'no-referrer',
@@ -51,6 +52,8 @@ export default async function PublicQuotePage({ params }: Props) {
 
   const phone = normalizePhone(store.phone)
   const pdfUrl = `/api/public/quotes/${token}/pdf`
+  const name = clientQuoteName(quote.folio)
+  const image = !!quote.file_mime && isImageFile(quote.file_mime)
 
   return (
     <div className={s.wrap}>
@@ -58,9 +61,11 @@ export default async function PublicQuotePage({ params }: Props) {
         <div className={s.barInner}>
           <div className={s.brand}>
             <strong>{store.name}</strong>
-            <span>Cotización {folioLabel(quote.folio)} · {fmtMoney(quote.total)}</span>
+            <span>{name} · {fmtMoney(quote.total)}</span>
           </div>
-          <a href={pdfUrl} className={`btn btn-dark ${s.download}`} download><Download aria-hidden="true" /> Descargar PDF</a>
+          <a href={pdfUrl} className={`btn btn-dark ${s.download}`} download>
+            <Download aria-hidden="true" /> {quote.file_path && image ? 'Descargar' : 'Descargar PDF'}
+          </a>
         </div>
       </header>
 
@@ -72,17 +77,34 @@ export default async function PublicQuotePage({ params }: Props) {
         )}
         {quote.status === 'accepted' && <p className={`${s.notice} ${s.ok}`} role="status">Esta cotización ya fue aceptada. ¡Gracias por tu compra!</p>}
 
-        <div className={s.paper}>
-          <QuoteSheet doc={quoteDocOf(quote, seller)} store={header} />
-        </div>
+        {!quote.file_path ? (
+          <div className={s.paper}>
+            <QuoteSheet doc={quoteDocOf(quote, seller)} store={header} />
+          </div>
+        ) : image ? (
+          // La foto de la cotización (la dirección firmada la da la ruta del PDF)
+          <div className={s.paper}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`${pdfUrl}?inline=1`} alt={`${name} de ${store.name}`} className={s.photo} />
+          </div>
+        ) : (
+          <div className={s.fileCard}>
+            <FileText aria-hidden="true" />
+            <div>
+              <strong>{name} de {store.name}</strong>
+              <span>Total {fmtMoney(quote.total)} · válida hasta el {fmtLongDate(quote.valid_until)}</span>
+            </div>
+            <a href={`${pdfUrl}?inline=1`} className="btn btn-primary" target="_blank" rel="noopener noreferrer">Ver cotización</a>
+          </div>
+        )}
 
         {(store.phone || store.email) && (
           <section className={s.contact} aria-label={`Contactar a ${store.name}`}>
             <p>¿Tienes dudas o quieres hacer tu pedido? Contacta a <b>{store.name}</b>.</p>
             <div className={s.contactActions}>
-              {phone.length === 10 && <a className="btn btn-ghost" href={`${waMeLink(phone)}?text=${encodeURIComponent(`Hola, tengo una pregunta sobre la cotización ${folioLabel(quote.folio)}.`)}`} target="_blank" rel="noopener noreferrer"><MessageCircle aria-hidden="true" /> WhatsApp</a>}
+              {phone.length === 10 && <a className="btn btn-ghost" href={`${waMeLink(phone)}?text=${encodeURIComponent(`Hola, tengo una pregunta sobre la ${name.toLowerCase()} por ${fmtMoney(quote.total)}.`)}`} target="_blank" rel="noopener noreferrer"><MessageCircle aria-hidden="true" /> WhatsApp</a>}
               {store.phone && <a className="btn btn-ghost" href={`tel:${phone || store.phone}`}><Phone aria-hidden="true" /> Llamar</a>}
-              {store.email && <a className="btn btn-ghost" href={`mailto:${store.email}?subject=${encodeURIComponent(`Cotización ${folioLabel(quote.folio)}`)}`}><Mail aria-hidden="true" /> Correo</a>}
+              {store.email && <a className="btn btn-ghost" href={`mailto:${store.email}?subject=${encodeURIComponent(name)}`}><Mail aria-hidden="true" /> Correo</a>}
             </div>
           </section>
         )}

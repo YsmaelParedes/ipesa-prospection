@@ -167,15 +167,20 @@ export const addDaysIso = (iso: string, days: number) => {
   return d.toISOString().slice(0, 10)
 }
 
-/** #31 (una cotización que aún no se guarda no tiene folio). */
-export const folioLabel = (folio: number) => (folio > 0 ? `#${folio}` : 'Nueva')
+/**
+ * #31 para usarlo tras «Cotización». Una que aún no se guarda es «Nueva»; una
+ * subida (PDF o foto de otro sistema) no tiene folio de Matices: «subida».
+ */
+export const folioLabel = (folio: number | null) => (folio == null ? 'subida' : folio > 0 ? `#${folio}` : 'Nueva')
+/** Lo que lee el cliente: «Cotización #31» o, si es subida, solo «Cotización». */
+export const clientQuoteName = (folio: number | null) => (folio ? `Cotización #${folio}` : 'Cotización')
 export const pdfFilename = (folio: number, storeName: string) =>
   `Cotizacion-${folio}-${storeName.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'tienda'}.pdf`
 
 /** El mensaje que se propone para WhatsApp (el vendedor lo puede cambiar). */
-export function whatsappMessage(q: { folio: number; client_name: string; total: number }, storeName: string, link: string): string {
+export function whatsappMessage(q: { folio: number | null; client_name: string; total: number }, storeName: string, link: string): string {
   const first = q.client_name.trim().split(/\s+/)[0]
-  return `Hola${first ? ` ${first}` : ''}, te comparto la cotización ${folioLabel(q.folio)} de ${storeName} por ${fmtMoney(q.total)}. Puedes verla y descargarla aquí: ${link}`
+  return `Hola${first ? ` ${first}` : ''}, te comparto la ${clientQuoteName(q.folio).toLowerCase()} de ${storeName} por ${fmtMoney(q.total)}. Puedes verla y descargarla aquí: ${link}`
 }
 
 /** El mensaje que se propone para el correo (va arriba del resumen y el PDF). */

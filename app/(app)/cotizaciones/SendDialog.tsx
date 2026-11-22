@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/apiClient'
 import { EVENTS, track } from '@/lib/analytics'
 import { notifyDataChanged } from '@/lib/crmEvents'
 import { toWhatsAppNumber, waChatPhone } from '@/lib/phone'
-import { emailMessage, folioLabel, pdfFilename, quotePublicPath, whatsappMessage, type SendVia } from '@/lib/quotes'
+import { clientQuoteName, emailMessage, folioLabel, pdfFilename, quotePublicPath, whatsappMessage, type SendVia } from '@/lib/quotes'
 import type { Quote } from './ui'
 import s from './send.module.css'
 
@@ -32,7 +32,7 @@ export function SendDialog({ quote, storeName, userEmail, chat, onClose, onSent 
   const [waFrom, setWaFrom] = useState<'mine' | 'store'>(chat.available && chat.open ? 'store' : 'mine')
   const [waText, setWaText] = useState(() => whatsappMessage(quote, storeName, url))
   const [to, setTo] = useState(quote.client_email)
-  const [subject, setSubject] = useState(`Cotización ${folioLabel(quote.folio)} de ${storeName}`)
+  const [subject, setSubject] = useState(`${clientQuoteName(quote.folio)} de ${storeName}`)
   const [mailText, setMailText] = useState(() => emailMessage(quote, storeName))
   const [busy, setBusy] = useState<SendVia | null>(null)
   const [error, setError] = useState('')
@@ -40,18 +40,21 @@ export function SendDialog({ quote, storeName, userEmail, chat, onClose, onSent 
   const pdf = useRef<File | null>(null)
   const [canShare, setCanShare] = useState(false)
   const phone = waChatPhone(quote.client_phone)
+  // Una subida manda su archivo (PDF o foto); una de Matices, su PDF
+  const photo = !!quote.file && quote.file.mime !== 'application/pdf'
+  const fileWord = photo ? 'la foto' : 'el PDF'
 
-  // El PDF se pide al abrir «Otra forma»: compartir tiene que pasar justo al tocar el botón
+  // El archivo se pide al abrir «Otra forma»: compartir tiene que pasar justo al tocar el botón
   useEffect(() => {
     if (tab !== 'otro' || pdf.current || typeof navigator === 'undefined' || !navigator.canShare) return
     let alive = true
     fetch(`/api/data/quotes/${quote.id}/pdf`).then(r => (r.ok ? r.blob() : null)).then(blob => {
       if (!alive || !blob) return
-      const file = new File([blob], pdfFilename(quote.folio, storeName), { type: 'application/pdf' })
+      const file = new File([blob], quote.file?.name ?? pdfFilename(quote.folio ?? 0, storeName), { type: quote.file?.mime || 'application/pdf' })
       if (navigator.canShare({ files: [file] })) { pdf.current = file; setCanShare(true) }
     }).catch(() => {})
     return () => { alive = false }
-  }, [tab, quote.id, quote.folio, storeName])
+  }, [tab, quote.id, quote.folio, quote.file, storeName])
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && !busy) onClose() }
@@ -95,10 +98,10 @@ export function SendDialog({ quote, storeName, userEmail, chat, onClose, onSent 
   async function share() {
     if (!pdf.current) return
     try {
-      await navigator.share({ files: [pdf.current], title: `Cotización ${folioLabel(quote.folio)}`, text: waText.trim() })
+      await navigator.share({ files: [pdf.current], title: clientQuoteName(quote.folio), text: waText.trim() })
       await mark('compartir', {}, 'Cotización compartida')
     } catch (e) {
-      if ((e as Error)?.name !== 'AbortError') setError('No se pudo compartir el PDF.')
+      if ((e as Error)?.name !== 'AbortError') setError(`No se pudo compartir ${fileWord}.`)
     }
   }
 
@@ -142,7 +145,7 @@ export function SendDialog({ quote, storeName, userEmail, chat, onClose, onSent 
                   <label className={`radio-card ${waFrom === 'store' ? 'active' : ''} ${!chat.open ? s.off : ''}`}>
                     <input type="radio" name="wa-from" checked={waFrom === 'store'} disabled={!chat.open} onChange={() => setWaFrom('store')} />
                     <span>
-                      <strong>Desde el WhatsApp de la tienda, con el PDF</strong>
+                      <strong>Desde el WhatsApp de la tienda, con {fileWord}</strong>
                       <small>{chat.open ? 'Queda en el chat del cliente en Matices.' : 'Disponible cuando el cliente te escribe: WhatsApp solo deja mandar archivos dentro de las 24 h desde su último mensaje.'}</small>
                     </span>
                   </label>
@@ -158,7 +161,7 @@ export function SendDialog({ quote, storeName, userEmail, chat, onClose, onSent 
 
           {tab === 'correo' && (
             <>
-              <p className={s.lead}>Lo mandamos a nombre de <b>{storeName}</b> con el PDF adjunto. Si el cliente responde, te llega a <b>{userEmail}</b>.</p>
+              <p className={s.lead}>Lo mandamos a nombre de <b>{storeName}</b> con {fileWord} adjunt{photo ? 'a' : 'o'}. Si el cliente responde, te llega a <b>{userEmail}</b>.</p>
               <div className="field">
                 <label htmlFor="mail-to">Para</label>
                 <input id="mail-to" type="email" inputMode="email" autoComplete="off" value={to} onChange={e => setTo(e.target.value)} placeholder="correo@cliente.com" maxLength={254} />
@@ -179,12 +182,12 @@ export function SendDialog({ quote, storeName, userEmail, chat, onClose, onSent 
               {canShare && (
                 <button className={s.option} onClick={share} disabled={!!busy}>
                   <Share2 aria-hidden="true" />
-                  <span><strong>Compartir el PDF</strong><small>Por WhatsApp, Telegram o la app que elijas.</small></span>
+                  <span><strong>Compartir {fileWord}</strong><small>Por WhatsApp, Telegram o la app que elijas.</small></span>
                 </button>
               )}
               <button className={s.option} onClick={copyLink} disabled={!!busy}>
                 <Copy aria-hidden="true" />
-                <span><strong>{copied ? 'Enlace copiado' : 'Copiar el enlace'}</strong><small>El cliente la ve en línea y descarga el PDF.</small></span>
+                <span><strong>{copied ? 'Enlace copiado' : 'Copiar el enlace'}</strong><small>El cliente la ve en línea y descarga {fileWord}.</small></span>
               </button>
               <button className={s.option} onClick={() => mark('en_persona', {}, 'Cotización marcada como entregada')} disabled={!!busy}>
                 <Handshake aria-hidden="true" />

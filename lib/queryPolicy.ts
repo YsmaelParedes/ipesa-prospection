@@ -34,12 +34,14 @@ export function mutationResources(path: string): string[] {
   if (path.startsWith('/api/whatsapp/campaigns/send')) return ['/api/whatsapp/']
   // Guardar un contacto con una zona nueva («Otra…») la agrega a los catálogos
   if (path.startsWith('/api/data/contacts')) return ['/api/data/contacts', '/api/data/commercial', '/api/data/dashboard', '/api/whatsapp/', '/api/data/config']
+  // Registrar una actividad puede adjuntar una cotización subida
+  if (path.startsWith('/api/data/commercial/activities')) return ['/api/data/commercial', '/api/data/contacts', '/api/data/dashboard', '/api/data/quotes']
   if (path.startsWith('/api/data/commercial')) return ['/api/data/commercial', '/api/data/contacts', '/api/data/dashboard']
   if (path.startsWith('/api/data/reminders')) return ['/api/data/reminders', '/api/data/dashboard']
-  // Enviar o aceptar una cotización registra la actividad del contacto en
-  // Comercial; el guardado automático del editor solo cambia cotizaciones
+  // Enviar, subir o aceptar una cotización registra la actividad del contacto
+  // en Comercial; el guardado automático del editor solo cambia cotizaciones
   if (path.startsWith('/api/data/quotes')) {
-    return /\/(send|status)$/.test(path.split('?')[0])
+    return /\/(send|status|upload)$/.test(path.split('?')[0])
       ? ['/api/data/quotes', '/api/data/commercial', '/api/data/contacts', '/api/data/dashboard']
       : ['/api/data/quotes']
   }

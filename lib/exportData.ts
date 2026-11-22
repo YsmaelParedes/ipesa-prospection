@@ -196,13 +196,13 @@ export async function downloadStoreWorkbook(slug: string, onStep?: (label: strin
       'Responsable':   r.user_name || '',
     })) },
     { name: 'Cotizaciones', rows: quotes.map(q => ({
-      'Folio':        q.folio,
+      'Folio':        q.folio ?? 'Subida',
       'Fecha':        q.issued_on || '',
       'Válida hasta': q.valid_until || '',
       'Cliente':      q.client_name || '',
       'Teléfono':     q.client_phone || '',
       'Correo':       q.client_email || '',
-      'Productos':    ((q.items ?? []) as QuoteItem[]).filter(isFilled)
+      'Productos':    q.file_name ? `Archivo subido: ${q.file_name}` : ((q.items ?? []) as QuoteItem[]).filter(isFilled)
         .map(i => [fmtQty(i.quantity), i.unit, i.description, `a ${fmtMoney(i.price)}`].filter(Boolean).join(' ')).join(' | '),
       'Subtotal':     amount(q.subtotal),
       'Descuento':    amount(q.discount),

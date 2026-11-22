@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react'
 import { apiFetch } from '@/lib/apiClient'
+import { QUOTE_FILE_ACCEPT, quoteFileProblem } from '@/lib/quoteFiles'
+import { uploadQuoteFile } from '@/lib/quoteUpload'
 import {
   RESULT_RULES, addDays, outcomeText, resultChoicesFor, suggestNext,
   type CommercialContact, type ResultChoice,
@@ -9,7 +11,7 @@ import {
 import { fmtDay } from './ui'
 import s from './comercial.module.css'
 import {
-  Phone, MessageCircle, MapPin, Mail, PhoneMissed, Smile, FileText, CircleDollarSign, Hand, TriangleAlert, Send, MailX,
+  Phone, MessageCircle, MapPin, Mail, PhoneMissed, Smile, FileText, CircleDollarSign, Hand, TriangleAlert, Send, MailX, Paperclip, X,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -63,7 +65,8 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
   initialAmount?: number
   /** Resultados en 3 columnas (ficha de la computadora). */
   wide?: boolean
-  onSaved: (contact: CommercialContact) => void
+  /** what: qué pasó, para el aviso (por omisión, «guardado»). */
+  onSaved: (contact: CommercialContact, what?: string) => void
 }) {
   const [kind, setKind] = useState<Kind>(initialKind)
   const [result, setResult] = useState<ResultChoice | null>(
@@ -74,6 +77,9 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
   const [picking, setPicking] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  // «Cotización enviada» puede llevar el PDF o la foto: queda como cotización subida
+  const [file, setFile] = useState<File | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
   const noteRef = useRef<HTMLTextAreaElement>(null)
   const rule = result ? RESULT_RULES[result] : null
   const asksAmount = result === 'cotizacion' || result === 'venta'
@@ -96,6 +102,7 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
     setPicking(false)
     setError('')
     if (r !== 'cotizacion' && r !== 'venta') setAmount('')
+    if (r !== 'cotizacion') setFile(null)
   }
 
   async function save() {
@@ -106,9 +113,13 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
     if (needsDate && !nextAt) { setError('Elige cuándo volver a contactar'); return }
     setSaving(true); setError('')
     try {
+      const attach = result === 'cotizacion' ? file : null
+      // El archivo va directo al almacenamiento; la actividad solo lleva su ruta
+      const quoteFile = attach ? { path: await uploadQuoteFile(attach), name: attach.name } : null
       const r = await apiFetch('/api/data/commercial/activities', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ...(quoteFile ? { quote_file: quoteFile } : {}),
           contact_id: contact.id, kind, result,
           note: note.trim() || null,
           quote_amount: result === 'cotizacion' ? value : null,
@@ -120,10 +131,11 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
       })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) { setError(d.error || 'No se pudo guardar'); return }
-      setResult(null); setAmount(''); setNote(''); setNextAt('')
-      onSaved(d.contact ?? contact)
-    } catch {
-      setError('Sin conexión. Intenta de nuevo.')
+      setResult(null); setAmount(''); setNote(''); setNextAt(''); setFile(null)
+      onSaved(d.contact ?? contact, d.quoteError ? 'guardado, pero el archivo no se adjuntó' : quoteFile ? 'cotización guardada con su archivo' : undefined)
+    } catch (e) {
+      const msg = (e as Error).message
+      setError(!msg || msg === 'Failed to fetch' ? 'Sin conexión. Intenta de nuevo.' : msg)
     } finally {
       setSaving(false)
     }
@@ -160,6 +172,27 @@ export function RegisterForm({ contact, today, initialKind = 'llamada', initialR
               <input id={`amount-${contact.id}`} inputMode="decimal" className={s.num} value={amount} placeholder="0"
                 onChange={e => setAmount(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') noteRef.current?.focus() }} />
             </div>
+          </div>
+        )}
+        {result === 'cotizacion' && (
+          <div className={s.attach}>
+            <input ref={fileRef} type="file" accept={QUOTE_FILE_ACCEPT} hidden
+              onChange={e => {
+                const f = e.target.files?.[0]; e.target.value = ''
+                if (!f) return
+                const problem = quoteFileProblem(f)
+                setError(problem ?? ''); setFile(problem ? null : f)
+              }} />
+            {file ? (
+              <span className={s.attached}>
+                <Paperclip size={14} aria-hidden="true" /><span>{file.name}</span>
+                <button type="button" onClick={() => setFile(null)} aria-label="Quitar el archivo"><X size={14} /></button>
+              </span>
+            ) : (
+              <button type="button" className="link-btn" onClick={() => fileRef.current?.click()}>
+                <Paperclip size={14} aria-hidden="true" /> Adjuntar la cotización <span className="label-muted">(PDF o foto, opcional)</span>
+              </button>
+            )}
           </div>
         )}
       </div>

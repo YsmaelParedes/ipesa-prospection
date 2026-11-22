@@ -4,6 +4,7 @@ import { getVisibleContact } from '@/lib/commercialServer'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
 import { waChatPhone } from '@/lib/phone'
 import { isWindowOpen } from '@/lib/whatsappSafety'
+import { removeQuoteFile } from '@/lib/quoteFilesServer'
 import {
   QUOTE_COLUMNS, clientFromContact, getQuote, getQuoteSettings, parseQuoteInput, quoteStoreOf, quoteToClient, storeToday, totalsFor,
   type QuoteRow,
@@ -69,7 +70,15 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     if (q.status === 'accepted' || q.status === 'rejected') return jsonError('Reabre la cotización para editarla', 409)
     if (input.valid_until && input.valid_until < q.issued_on) return jsonError('La validez no puede ser antes de la fecha de la cotización')
 
-    const changes: Record<string, unknown> = { ...input }
+    // Una subida no tiene renglones: solo cambian el cliente, la validez y el total que se escribió
+    const uploaded = !!q.file_path
+    const { total, ...rest } = input
+    const changes: Record<string, unknown> = uploaded
+      ? Object.fromEntries(Object.entries({
+          contact_id: input.contact_id, client_name: input.client_name, client_phone: input.client_phone,
+          client_email: input.client_email, valid_until: input.valid_until,
+        }).filter(([, v]) => v !== undefined))
+      : { ...rest }
     // Al elegir otro contacto se copian sus datos (los que no vengan en la petición)
     if (input.contact_id && input.contact_id !== q.contact_id) {
       if (!(await getVisibleContact(ctx, input.contact_id))) return jsonError('Cliente no encontrado', 404)
@@ -77,7 +86,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       for (const [k, v] of Object.entries(client ?? {})) if (changes[k] === undefined) changes[k] = v
     }
     const next = { ...q, ...changes } as QuoteRow
-    const totals = totalsFor(next)
+    const amount = total ?? Number(q.total)
+    const totals = uploaded ? { subtotal: amount, discount: 0, tax: 0, total: amount } : totalsFor(next)
     if (!totals) return jsonError('El total es demasiado grande')
 
     const { data, error } = await getServerSupabase().from('quotes')
@@ -96,7 +106,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 /**
  * DELETE /api/data/quotes/[id] — un borrador lo borra quien lo hizo (o un
  * administrador); una ya enviada, solo un administrador. Lo registrado en el
- * sistema comercial se queda.
+ * sistema comercial se queda; el archivo de una subida se borra.
  */
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
   const ctx = await requireStore({ write: true })
@@ -109,6 +119,7 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
     if (q.status !== 'draft' && !ctx.isAdmin) return jsonError('Solo un administrador puede borrar una cotización enviada', 403)
     const { error } = await getServerSupabase().from('quotes').delete().eq('id', id).eq('store_id', ctx.storeId)
     if (error) throw error
+    await removeQuoteFile(q.file_path)
     return NextResponse.json({ ok: true })
   } catch (error) {
     return serverError('DELETE /api/data/quotes/[id]', error, 'No se pudo borrar la cotización')

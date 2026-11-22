@@ -5,7 +5,8 @@ import s from './cotizaciones.module.css'
 
 /** Una cotización como la manda la API (lib/quotesServer quoteToClient). */
 export type Quote = {
-  id: string; folio: number; created_by: string | null; contact_id: string | null
+  /** Sin folio: es una cotización subida (PDF o foto de otro sistema). */
+  id: string; folio: number | null; created_by: string | null; contact_id: string | null
   client_name: string; client_phone: string; client_email: string; items: QuoteItem[]
   discount_kind: 'percent' | 'amount'; discount_value: number; tax_rate: number
   notes: string; issued_on: string; valid_until: string; status: QuoteStatus
@@ -14,6 +15,7 @@ export type Quote = {
   decided_at: string | null; activity_id: string | null; sale_activity_id: string | null
   created_at: string; updated_at: string
   seller_name: string | null; display_status: QuoteDisplayStatus
+  file: { name: string; mime: string; size: number } | null
 }
 
 export function StatusBadge({ status }: { status: QuoteDisplayStatus }) {

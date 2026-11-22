@@ -36,6 +36,18 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.64.0',
+    date: '21 de noviembre, 2026',
+    title: 'Sube tus cotizaciones',
+    items: [
+      '«Cotizar» pregunta primero: hacer la cotización en Matices o subir una que ya hiciste en otro sistema o a mano.',
+      'Sube el PDF o la foto de una cotización (hasta 10 MB) con su total. Queda en Cotizaciones como «Subida», cuenta como enviada y te recordamos darle seguimiento en 2 días.',
+      'Una cotización subida se reenvía por WhatsApp, correo o enlace con su archivo, y se marca como aceptada o rechazada igual que las demás.',
+      'Al registrar «Cotización enviada» en Comercial puedes adjuntar el PDF o la foto.',
+      'Una cotización nueva en Matices se guarda, y toma su folio, hasta que le agregas el primer producto. Si sales antes, no queda nada.',
+    ],
+  },
+  {
     version: '1.63.0',
     date: '21 de noviembre, 2026',
     title: 'Seguimientos y oportunidades más claros',

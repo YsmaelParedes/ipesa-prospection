@@ -78,3 +78,28 @@ test('tipo de actividad en Comercial según cómo se envió', () => {
   assert.equal(activityKindFor(null), 'visita')
   for (const via of ['whatsapp', 'chat', 'compartir', 'enlace']) assert.equal(activityKindFor(via), 'whatsapp')
 })
+
+test('una cotización subida: «subida» en la app, «Cotización» para el cliente', () => {
+  const { clientQuoteName } = require('../lib/quotes.ts')
+  assert.equal(folioLabel(null), 'subida')
+  assert.equal(clientQuoteName(31), 'Cotización #31')
+  assert.equal(clientQuoteName(null), 'Cotización')
+  assert.equal(whatsappMessage({ folio: null, client_name: 'Ana', total: 1500 }, 'Pinturas', 'https://x/c/2'),
+    'Hola Ana, te comparto la cotización de Pinturas por $1,500.00. Puedes verla y descargarla aquí: https://x/c/2')
+})
+
+test('archivo de una cotización subida: PDF, JPG o PNG de hasta 10 MB', () => {
+  const { quoteFileMime, quoteFileProblem, QUOTE_FILE_PATH, MAX_QUOTE_FILE } = require('../lib/quoteFiles.ts')
+  assert.equal(quoteFileMime('Cotizacion.PDF', ''), 'application/pdf')
+  assert.equal(quoteFileMime('foto.jpeg', ''), 'image/jpeg')
+  assert.equal(quoteFileMime('x', 'image/png'), 'image/png')
+  assert.equal(quoteFileMime('hoja.xlsx', ''), null)
+  assert.equal(quoteFileProblem({ name: 'a.pdf', type: 'application/pdf', size: 2048 }), null)
+  assert.match(quoteFileProblem({ name: 'a.docx', type: '', size: 2048 }), /PDF o una foto/)
+  assert.match(quoteFileProblem({ name: 'a.pdf', type: 'application/pdf', size: MAX_QUOTE_FILE + 1 }), /10 MB/)
+  assert.match(quoteFileProblem({ name: 'a.pdf', type: 'application/pdf', size: 0 }), /vacío/)
+  const store = '11111111-1111-4111-8111-111111111111'
+  assert.ok(QUOTE_FILE_PATH.test(`${store}/22222222-2222-4222-8222-222222222222.pdf`))
+  assert.ok(!QUOTE_FILE_PATH.test(`${store}/../22222222-2222-4222-8222-222222222222.pdf`))
+  assert.ok(!QUOTE_FILE_PATH.test(`${store}/22222222-2222-4222-8222-222222222222.exe`))
+})

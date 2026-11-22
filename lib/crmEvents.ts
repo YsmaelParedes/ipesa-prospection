@@ -44,6 +44,8 @@ export type ReminderDefaults = {
 export type QuickCreateRequest =
   | { kind: 'contact'; name?: string; phone?: string }
   | { kind: 'reminder'; reminder?: Reminder; defaults?: ReminderDefaults }
+  // «Cotizar» sin cliente: hacerla en Matices o subir una ya hecha
+  | { kind: 'quote' }
 
 export function openQuickCreate(req: QuickCreateRequest) {
   window.dispatchEvent(new CustomEvent(QUICK, { detail: req }))

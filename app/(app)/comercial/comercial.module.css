@@ -158,6 +158,12 @@
 .money { position: relative; }
 .money span { position: absolute; left: 12px; top: 50%; translate: 0 -50%; color: var(--muted); font-weight: 700; }
 .money input { padding-left: 24px; }
+/* «Cotización enviada»: adjuntar el PDF o la foto (queda como cotización subida) */
+.attach { margin-top: 10px; }
+.attach :global(.link-btn) { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.attached { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; padding: 6px 8px 6px 10px; border-radius: 6px; background: var(--paper-2); font-size: 13px; color: var(--ink-2); }
+.attached span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attached button { display: grid; place-items: center; color: var(--muted); }
 .suggest { display: flex; gap: 6px; flex-wrap: wrap; }
 .suggest button { padding: 8px 12px; border-radius: 6px; font-weight: 700; font-size: 12.5px; box-shadow: inset 0 0 0 1px var(--line-strong); background: var(--card); }
 .suggest button[aria-pressed='true'] { background: var(--ink); color: #fff; box-shadow: none; }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import ContactFormModal from '@/components/ContactFormModal'
 import ReminderModal from '@/components/ReminderModal'
+import { QuoteStartDialog } from '@/components/QuoteStartDialog'
 import {
   notifyDataChanged, openQuickCreate, useQuickCreateRequests,
   type DataKind, type QuickCreateRequest,
@@ -22,9 +23,9 @@ const Ico = {
 const ITEMS: { kind: QuickCreateRequest['kind']; label: string; hint: string; icon: React.ComponentType; tone: string }[] = [
   { kind: 'contact',  label: 'Contacto',     hint: 'Un cliente nuevo en tu base',  icon: Ico.contact,  tone: 'cyan' },
   { kind: 'reminder', label: 'Recordatorio', hint: 'Una llamada, visita o tarea',  icon: Ico.reminder, tone: 'amber' },
+  // Pregunta si se hace en Matices (su propia pantalla) o se sube una ya hecha
+  { kind: 'quote',    label: 'Cotización',   hint: 'Hazla aquí o sube una ya hecha', icon: Ico.quote,  tone: 'magenta' },
 ]
-/** La cotización se arma en su propia pantalla (editor con vista previa). */
-const QUOTE_ITEM = { href: '/cotizaciones/nueva', label: 'Cotización', hint: 'Productos y precios para un cliente', icon: Ico.quote, tone: 'magenta' }
 
 function QuickItems({ onPick }: { onPick: () => void }) {
   return (
@@ -35,10 +36,6 @@ function QuickItems({ onPick }: { onPick: () => void }) {
           <span className="qc-text"><strong>{it.label}</strong><small>{it.hint}</small></span>
         </button>
       ))}
-      <Link href={QUOTE_ITEM.href} role="menuitem" className="qc-item" onClick={onPick}>
-        <span className={`qc-icon tone-${QUOTE_ITEM.tone}`}><QUOTE_ITEM.icon /></span>
-        <span className="qc-text"><strong>{QUOTE_ITEM.label}</strong><small>{QUOTE_ITEM.hint}</small></span>
-      </Link>
     </>
   )
 }
@@ -124,6 +121,7 @@ export function QuickCreateHost() {
         <ReminderModal reminder={req.reminder} defaults={req.defaults} onClose={close}
           onSaved={() => done('reminder', req.reminder ? 'Recordatorio actualizado' : 'Recordatorio creado', '/recordatorios', 'Ver agenda')} />
       )}
+      {req?.kind === 'quote' && <QuoteStartDialog onClose={close} />}
       {toast && (
         <div className="toast-fixed" role="status">
           <span className="toast-check"><Ico.check /></span>

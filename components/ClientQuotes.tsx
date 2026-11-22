@@ -6,7 +6,7 @@ import { STATUS_INFO, fmtMoney, folioLabel, type QuoteDisplayStatus } from '@/li
 import { Loading, SkText, skRows } from '@/components/Skeleton'
 import s from './ClientQuotes.module.css'
 
-export type ClientQuote = { id: string; folio: number; total: number; issued_on: string; display_status: QuoteDisplayStatus; activity_id: string | null }
+export type ClientQuote = { id: string; folio: number | null; total: number; issued_on: string; display_status: QuoteDisplayStatus; activity_id: string | null }
 
 const SHORT = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short' })
 const day = (iso: string) => SHORT.format(new Date(`${iso.slice(0, 10)}T12:00:00`)).replace('.', '')
@@ -31,7 +31,7 @@ export function ClientQuotesList({ quotes, limit = 5 }: { quotes: ClientQuote[] 
         const info = STATUS_INFO[q.display_status]
         return (
           <Link key={q.id} href={`/cotizaciones/${q.id}`} className={s.row}>
-            <span className={s.main}><b>{folioLabel(q.folio)}</b> · {day(q.issued_on)}</span>
+            <span className={s.main}><b>{q.folio ? folioLabel(q.folio) : 'Subida'}</b> · {day(q.issued_on)}</span>
             <span className={s.side}>
               <span className={s.amount}>{fmtMoney(q.total)}</span>
               <span className={`${s.status} ${s[info.tone]}`}>{info.label}</span>
