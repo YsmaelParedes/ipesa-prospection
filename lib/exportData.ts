@@ -6,8 +6,11 @@
  *  · downloadSummaryWorkbook: el periodo que se ve en Acumulado, por vendedor,
  *    con cada cotización y cada venta del periodo.
  *  · downloadOpportunitiesWorkbook: las cotizaciones abiertas de Oportunidades.
+ *  · downloadCampaignWorkbook / downloadCampaignsWorkbook: resultados de una
+ *    campaña o de todas las del periodo (Campañas de Mkt → Resultados).
  */
-import { normalizePhone } from './phone'
+import { fmtPhone, normalizePhone } from './phone'
+import { FAILURE_KINDS, type CampaignBucket, type CampaignDetail, type CampaignRecipient, type CampaignSummary } from './campaignKinds'
 import { dayInZone } from './datetime'
 import { GOAL_KEYS, GOAL_LABELS, KIND_LABELS, resultLabel, statusInfo, type ActivityKind, type DayCounts, type Goals } from './commercial'
 import { STATUS_INFO, displayStatus, fmtMoney, fmtQty, isFilled, type QuoteItem, type QuoteStatus } from './quotes'
@@ -135,6 +138,50 @@ export async function downloadOpportunitiesWorkbook(list: OpportunityRow[], toda
       'Fecha': o.next_action_at ?? '',
     })),
   }])
+}
+
+/* ── Campañas de Mkt ──────────────────────────────────────────────────────── */
+const CAMPAIGN_STATE: Record<CampaignBucket, string> = { read: 'Leído', delivered: 'Entregado', pending: 'Pendiente', failed: 'No entregado' }
+const templateName = (t: string) => t.replace(/_/g, ' ')
+/** Por qué no le llegó (como en la pantalla de la campaña). */
+const failReason = (r: CampaignRecipient) =>
+  r.bucket !== 'failed' ? '' : r.kind && r.kind !== 'other' ? FAILURE_KINDS[r.kind].title : r.error ?? ''
+
+const campaignRow = (c: CampaignSummary) => ({
+  'Campaña': templateName(c.template), 'A quién': c.label ?? '', 'Fecha': dateTime(c.startedAt),
+  'Destinatarios': c.total, 'Leídos': c.read, 'Entregados': c.delivered, 'Pendientes': c.pending,
+  'No entregados': c.failed, 'Respondieron': c.replied,
+})
+const recipientRow = (r: CampaignRecipient) => ({
+  'Nombre': r.name ?? '', 'Teléfono': fmtPhone(r.phone), 'Segmento': r.segment ?? '',
+  'Estado': CAMPAIGN_STATE[r.bucket], 'Motivo': failReason(r), 'Respondió': r.replied ? 'Sí' : 'No',
+  'Enviado': dateTime(r.sentAt), 'Última actualización': dateTime(r.updatedAt),
+})
+
+/** Una campaña: su resumen y cada destinatario con su estado y motivo. */
+export async function downloadCampaignWorkbook(c: CampaignDetail) {
+  await writeWorkbook(`campana-${c.template}-${dateTime(c.startedAt).slice(0, 10)}.xlsx`, [
+    { name: 'Resumen', rows: [campaignRow(c)] },
+    { name: 'Destinatarios', rows: c.recipients.map(recipientRow) },
+  ])
+}
+
+/** Hojas del Excel de varias campañas: un resumen y cada destinatario de cada campaña. */
+export const campaignsSheets = (list: CampaignDetail[]): Sheet[] => [
+  { name: 'Resumen', rows: list.map(campaignRow) },
+  { name: 'Destinatarios', rows: list.flatMap(c => c.recipients.map(r => ({
+    'Campaña': templateName(c.template), 'Fecha de la campaña': dateTime(c.startedAt), ...recipientRow(r),
+  }))) },
+]
+
+/** Las campañas del periodo en un archivo. */
+export async function downloadCampaignsWorkbook(list: CampaignDetail[], label: string) {
+  await writeWorkbook(`campanas-${label}.xlsx`, campaignsSheets(list))
+}
+
+/** Una tabla en una hoja (encabezados y renglones tal como se ven). */
+export async function downloadTableWorkbook(filename: string, sheet: string, head: string[], rows: (string | number)[][]) {
+  await writeWorkbook(filename, [{ name: sheet, rows: rows.map(r => Object.fromEntries(head.map((h, i) => [h, r[i] ?? '']))) }])
 }
 
 async function writeWorkbook(filename: string, sheets: Sheet[]) {

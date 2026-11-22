@@ -36,6 +36,18 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.65.0',
+    date: '21 de noviembre, 2026',
+    title: 'Campañas de Mkt y teléfonos fijos',
+    items: [
+      { text: '«Campañas de Mkt» tiene su lugar en el menú, con Campañas y Resultados. WhatsApp se queda con la Bandeja.', module: 'campaigns' },
+      { text: 'Descarga en Excel los resultados de una campaña, o los de todas las del periodo con un resumen y cada destinatario.', module: 'campaigns' },
+      'Al guardar un contacto, Matices reconoce si su teléfono es fijo con el plan de numeración oficial y lo marca «Fijo» para llamarle. Si ya habló por WhatsApp, se queda como WhatsApp.',
+      { text: 'Los teléfonos fijos no entran a las campañas.', module: 'campaigns' },
+      { text: 'La Bandeja ya no muestra los chats de números sin WhatsApp a los que solo se les intentó mandar algo. Aparecen si buscas el número y vuelven si esa persona te escribe.', module: 'whatsapp' },
+    ],
+  },
+  {
     version: '1.64.0',
     date: '21 de noviembre, 2026',
     title: 'Sube tus cotizaciones',

@@ -11,7 +11,8 @@ import Link from 'next/link'
 import { Avatar, TipoChip } from '@/components/CrmUI'
 import { WaIcon } from '@/components/WhatsAppUI'
 import { fmtPhone } from '@/lib/phone'
-import { csvStamp, downloadCsv } from '@/lib/csv'
+import { csvStamp } from '@/lib/csv'
+import { downloadTableWorkbook } from '@/lib/exportData'
 import { PERSON_STATES, PERSON_STATE_ORDER, type CampaignPerson, type PersonState } from '@/lib/campaignKinds'
 import { PeopleSkeleton } from '@/components/skeletons/WhatsAppSkeleton'
 
@@ -93,12 +94,13 @@ export function WhatsAppCampaignPeople({ onOpenChat }: { onOpenChat: (phone: str
   if (!people) return <>{head}<PeopleSkeleton /></>
   if (people.length === 0) return <>{head}<div className="wa-card wa-empty small"><WaIcon.user size={26} /> Aún no le has enviado campañas a nadie.</div></>
 
-  const exportList = () => downloadCsv(
-    `campanas-por-persona-${filter === 'all' ? 'todos' : filter}-${csvStamp(new Date().toISOString()).slice(0, 10)}.csv`,
+  const exportList = () => void downloadTableWorkbook(
+    `campanas-por-persona-${filter === 'all' ? 'todos' : filter}-${csvStamp(new Date().toISOString()).slice(0, 10)}.xlsx`,
+    'Por persona',
     ['Nombre', 'Teléfono', 'Segmento', 'Estado', 'Detalle', 'Plantillas enviadas', 'Último envío', 'Fecha del último envío'],
     visible.map(p => [
       p.name ?? '', fmtPhone(p.phone), p.segment ?? '', PERSON_STATES[p.state].chip, noteFor(p),
-      String(p.sends), p.lastTemplate.replace(/_/g, ' '), csvStamp(p.lastSentAt),
+      p.sends, p.lastTemplate.replace(/_/g, ' '), csvStamp(p.lastSentAt),
     ]),
   )
   const copyPhones = async () => {
@@ -183,7 +185,7 @@ export function WhatsAppCampaignPeople({ onOpenChat }: { onOpenChat: (phone: str
 
       {visible.length > 0 && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingBottom: 8 }}>
-          <button className="btn btn-ghost" onClick={exportList}>Exportar {filter === 'all' && !search ? 'lista' : `estos ${visible.length}`} (CSV)</button>
+          <button className="btn btn-ghost" onClick={exportList}>Descargar Excel{filter === 'all' && !search ? '' : ` (estos ${visible.length})`}</button>
           <button className="btn btn-ghost" onClick={copyPhones}>{copied ? <span className="with-icon"><WaIcon.check size={14} /> Copiados</span> : `Copiar ${visible.length === 1 ? 'el número' : `los ${visible.length} números`}`}</button>
         </div>
       )}

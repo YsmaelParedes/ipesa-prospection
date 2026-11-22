@@ -29,7 +29,7 @@ import { Sk, SkCircle, SkText } from '@/components/Skeleton'
 import { RouteSkeleton } from '@/components/skeletons/RouteSkeleton'
 import {
   House, Users, Activity, CalendarCheck, Settings, Bell, Menu, Plus, CircleHelp, LogOut, Check, ArrowUp,
-  Sparkles, X, Wrench, FlaskConical, Store, ChevronsUpDown, Lock, BellOff, Search, FileText,
+  Sparkles, X, Wrench, FlaskConical, Store, ChevronsUpDown, Lock, BellOff, Search, FileText, Megaphone,
 } from 'lucide-react'
 
 /** Estado de los avisos push en este dispositivo. */
@@ -47,7 +47,7 @@ const Icon = {
   home: House, contacts: Users, commercial: Activity, calendar: CalendarCheck, settings: Settings,
   bell: Bell, menu: Menu, plus: Plus, help: CircleHelp, logout: LogOut, check: Check, arrowUp: ArrowUp,
   sparkles: Sparkles, close: X, wrench: Wrench, flask: FlaskConical, store: Store, chevrons: ChevronsUpDown,
-  lock: Lock, bellOff: BellOff, whatsapp: WhatsAppIcon, quote: FileText,
+  lock: Lock, bellOff: BellOff, whatsapp: WhatsAppIcon, quote: FileText, megaphone: Megaphone,
 }
 
 function initials(name: string) {
@@ -55,10 +55,12 @@ function initials(name: string) {
 }
 
 /* Menú en el orden del día a día. Mismo nombre en computadora y celular (`short` solo si no cabe abajo en el celular). */
-type NavItem = { id: string; href: string; label: string; short?: string; icon: React.ComponentType<IconProps>; mobile: boolean; module?: StoreModule }
+type NavItem = { id: string; href: string; label: string; short?: string; icon: React.ComponentType<IconProps>; mobile: boolean; module?: StoreModule; admin?: boolean }
 const NAV_ITEMS: NavItem[] = [
   { id: 'inicio',    href: '/',              label: 'Inicio',    icon: Icon.home,     mobile: true },
   { id: 'whatsapp',  href: '/whatsapp',      label: 'WhatsApp',  icon: Icon.whatsapp, mobile: true, module: 'whatsapp' },
+  // Envíos masivos y sus resultados: administradores de tiendas con el módulo (en el celular, en el menú)
+  { id: 'campanas',  href: '/campanas',      label: 'Campañas de Mkt', icon: Icon.megaphone, mobile: false, module: 'campaigns', admin: true },
   { id: 'contactos', href: '/contactos',     label: 'Contactos', icon: Icon.contacts, mobile: true },
   { id: 'comercial', href: '/comercial',     label: 'Sistema Comercial', short: 'Comercial', icon: Icon.commercial, mobile: true },
   // En el celular va en el menú (abajo ya no caben más)
@@ -72,6 +74,7 @@ const TOOL_ITEMS: NavItem[] = [
 const TITLE_MAP: Record<string, { t: string; s: string }> = {
   '/':               { t: 'Inicio',        s: 'Lo que hay que atender hoy'         },
   '/whatsapp':       { t: 'WhatsApp',      s: 'Conversaciones con tus clientes'    },
+  '/campanas':       { t: 'Campañas de Mkt', s: 'Envíos por WhatsApp y sus resultados' },
   '/contactos':      { t: 'Contactos',     s: 'Tu base de clientes'                },
   '/comercial':      { t: 'Sistema Comercial', s: 'Hoy, oportunidades y equipo'     },
   '/cotizaciones':   { t: 'Cotizaciones',  s: 'Arma, envía y da seguimiento'      },
@@ -85,7 +88,7 @@ const titleFor = (pathname: string) =>
   TITLE_MAP[pathname] ?? (pathname.startsWith('/cotizaciones/') ? TITLE_MAP['/cotizaciones'] : undefined) ?? { t: APP_NAME, s: '' }
 
 // Páginas tipo "app" que ocupan exactamente el alto de la pantalla
-const FILL_ROUTES = ['/whatsapp']
+const FILL_ROUTES = ['/whatsapp', '/campanas']
 // Botón flotante (celular): qué crea en cada pantalla (en Inicio, a elegir)
 const FAB_ROUTES: Record<string, 'contact' | 'reminder' | undefined> = {
   '/': undefined, '/contactos': 'contact', '/comercial': 'contact', '/recordatorios': 'reminder',
@@ -318,7 +321,9 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   // WhatsApp apagado se le muestra al administrador como "Por activar" para ofrecerlo.
   const waOff        = !!store && !store.modules.whatsapp
   const withModule   = (it: NavItem) => !it.module || !store || store.modules[it.module] || (it.id === 'whatsapp' && !!session?.isAdmin)
-  const navItems     = NAV_ITEMS.filter(withModule)
+  // Campañas de Mkt: solo administradores, y las campañas salen por el WhatsApp de la tienda
+  const allowed      = (it: NavItem) => !it.admin || (!!session?.isAdmin && (it.id !== 'campanas' || !store || store.modules.whatsapp))
+  const navItems     = NAV_ITEMS.filter(it => withModule(it) && allowed(it))
   const toolItems    = TOOL_ITEMS.filter(withModule)
   const readonly     = store?.access === 'readonly'
   // Una sola tienda por cuenta: el menú aparece si hay a dónde cambiar (alguien en varias tiendas)
@@ -692,7 +697,7 @@ function AppFrameSkeleton() {
           <div className="store-switch"><div className="store-current"><Icon.store className="store-switch-icon" /><SkText w={120} /></div></div>
         </div>
         <nav className="nav" aria-label="Menú principal">
-          {NAV_ITEMS.map(it => (
+          {NAV_ITEMS.filter(it => !it.admin).map(it => (
             <Link key={it.id} href={it.href} className={`nav-item ${isActive(it.href) ? 'active' : ''}`} aria-current={isActive(it.href) ? 'page' : undefined}>
               <it.icon className="nav-icon" /><span>{it.label}</span>
             </Link>

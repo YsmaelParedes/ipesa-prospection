@@ -11,7 +11,7 @@ import Link from 'next/link'
 import { Avatar, TipoChip } from '@/components/CrmUI'
 import { WaIcon } from '@/components/WhatsAppUI'
 import { fmtPhone } from '@/lib/phone'
-import { csvStamp, downloadCsv } from '@/lib/csv'
+import { downloadCampaignWorkbook, downloadCampaignsWorkbook } from '@/lib/exportData'
 import { WhatsAppCampaignPeople } from '@/components/WhatsAppCampaignPeople'
 import { Select } from '@/components/Select'
 import {
@@ -102,6 +102,8 @@ export function WhatsAppCampaignResults({ onRetry, onOpenChat }: {
   const [error, setError]   = useState('')
   const [openId, setOpenId] = useState<string | null>(null)
   const [dayFilter, setDayFilter] = useState(ALL_DAYS)
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState('')
 
   useQueryEffect(() => {
     let cancelled = false
@@ -127,6 +129,27 @@ export function WhatsAppCampaignResults({ onRetry, onOpenChat }: {
     (a, c) => ({ total: a.total + c.total, read: a.read + c.read, delivered: a.delivered + c.delivered, pending: a.pending + c.pending, failed: a.failed + c.failed, replied: a.replied + c.replied }),
     { total: 0, read: 0, delivered: 0, pending: 0, failed: 0, replied: 0 },
   ), [shown])
+
+  /** Excel de las campañas que se ven: un resumen y cada destinatario (pide el detalle de 3 en 3). */
+  async function downloadAll() {
+    setExporting(true); setExportError('')
+    try {
+      const details: CampaignDetail[] = []
+      for (let i = 0; i < shown.length; i += 3) {
+        details.push(...await Promise.all(shown.slice(i, i + 3).map(async c => {
+          const r = await apiFetch(`/api/whatsapp/campaigns/history/${encodeURIComponent(c.id)}`)
+          const d = await r.json().catch(() => ({}))
+          if (!r.ok) throw new Error(d.error || 'No se pudo preparar el Excel')
+          return d.campaign as CampaignDetail
+        })))
+      }
+      await downloadCampaignsWorkbook(details, activeDay === ALL_DAYS ? `ultimos-${days}-dias` : activeDay)
+    } catch (e) {
+      setExportError((e as Error).message || 'No se pudo preparar el Excel')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   if (openId) return <CampaignDetailView id={openId} onBack={() => setOpenId(null)} onRetry={onRetry} onOpenChat={onOpenChat} />
 
@@ -162,8 +185,12 @@ export function WhatsAppCampaignResults({ onRetry, onOpenChat }: {
           <div className="wa-seg">
             {[7, 30, 90].map(d => <button key={d} className={days === d ? 'active' : ''} onClick={() => setDays(d)}>{d} días</button>)}
           </div>
+          {shown.length > 0 && (
+            <button className="btn btn-ghost" onClick={() => void downloadAll()} disabled={exporting}>{exporting ? 'Preparando…' : 'Descargar Excel'}</button>
+          )}
         </div>
       </div>
+      {exportError && <div className="wa-card wa-empty small" role="alert"><WaIcon.alert size={20} />{exportError}</div>}
 
       {error ? (
         <div className="wa-card wa-empty small"><WaIcon.alert size={20} />{error}</div>
@@ -230,16 +257,6 @@ function noteFor(r: CampaignRecipient): string {
   }
   if (r.bucket === 'pending') return `Enviado ${clock(r.sentAt)} · Meta aún no confirma la entrega`
   return `${r.bucket === 'read' ? 'Leído' : 'Entregado'} ${when(r.updatedAt)}`
-}
-
-function exportCampaign(c: CampaignDetail) {
-  const head = ['Nombre', 'Teléfono', 'Segmento', 'Estado', 'Motivo', 'Respondió', 'Enviado', 'Última actualización']
-  const rows = c.recipients.map(r => [
-    r.name ?? '', fmtPhone(r.phone), r.segment ?? '', BUCKET_LABEL[r.bucket],
-    r.bucket === 'failed' ? (r.kind && r.kind !== 'other' ? FAILURE_KINDS[r.kind].title : r.error ?? '') : '',
-    r.replied ? 'Sí' : 'No', csvStamp(r.sentAt), csvStamp(r.updatedAt),
-  ])
-  downloadCsv(`campana-${c.template}-${csvStamp(c.startedAt).slice(0, 10)}.csv`, head, rows)
 }
 
 function CampaignDetailView({ id, onBack, onRetry, onOpenChat }: {
@@ -416,7 +433,7 @@ function CampaignDetailView({ id, onBack, onRetry, onOpenChat }: {
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingBottom: 8 }}>
-        <button className="btn btn-ghost" onClick={() => exportCampaign(data)}>Exportar lista (CSV)</button>
+        <button className="btn btn-ghost" onClick={() => void downloadCampaignWorkbook(data)}>Descargar Excel</button>
         {data.failed > 0 && <button className="btn btn-ghost" onClick={copyFailed}>{copied ? <span className="with-icon"><WaIcon.check size={14} /> Copiados</span> : `Copiar los ${data.failed} números no entregados`}</button>}
       </div>
     </div>
