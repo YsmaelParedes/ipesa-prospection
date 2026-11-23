@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Download, UserRound } from 'lucide-react'
 import Link from '@/components/CachedLink'
 import { useCachedQuery } from '@/lib/useCachedQuery'
@@ -34,8 +34,8 @@ function missing(counts: Goals, goals: Goals): string {
  * Reportes › Mi avance (vendedores): su meta de hoy y cómo va en el periodo,
  * con lo que vendió día por día y sus cotizaciones abiertas. Solo lo suyo.
  */
-export function MiAvanceView({ filters, onFilters, compact }: {
-  filters: Filters; onFilters: (f: Filters) => void; compact: boolean
+export function MiAvanceView({ tabs, filters, onFilters, compact }: {
+  tabs: ReactNode; filters: Filters; onFilters: (f: Filters) => void; compact: boolean
 }) {
   const query = filtersQuery(filters)
   const today = useCachedQuery<PerfData>('/api/data/commercial/summary?period=today')
@@ -73,6 +73,14 @@ export function MiAvanceView({ filters, onFilters, compact }: {
 
   return (
     <>
+      <div className={s.row}>
+        {tabs}
+        <div className={s.spacer} />
+        <button type="button" className={`${s.btn} ${compact ? s.iconBtn : ''} ${s.press}`} disabled={!data || exporting} onClick={download}
+          aria-label={compact ? 'Descargar Excel' : undefined}>
+          <Download aria-hidden="true" />{!compact && (exporting ? 'Preparando…' : 'Descargar Excel')}
+        </button>
+      </div>
       <div className={s.mine}><UserRound aria-hidden="true" />Aquí ves solo tus números: tus llamadas, tus cotizaciones y tus clientes.</div>
       {todayCard}
 
@@ -80,11 +88,6 @@ export function MiAvanceView({ filters, onFilters, compact }: {
         <h2 className={s.sectionTitle}>En el periodo</h2>
         <ReportFilters filters={filters} onChange={onFilters} options={data?.options} noSellers compact={compact}
           range={data ? { from: data.from, end: data.end, today: data.today } : undefined} />
-        <div className={s.spacer} />
-        <button type="button" className={`${s.btn} ${compact ? s.iconBtn : ''} ${s.press}`} disabled={!data || exporting} onClick={download}
-          aria-label={compact ? 'Descargar Excel' : undefined}>
-          <Download aria-hidden="true" />{!compact && (exporting ? 'Preparando…' : 'Descargar Excel')}
-        </button>
       </div>
 
       {error && !data ? <div className={`${s.card} ${s.error}`} role="alert">{error.message || 'No se pudo cargar tu avance'}</div>

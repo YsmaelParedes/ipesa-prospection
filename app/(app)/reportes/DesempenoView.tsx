@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { CalendarDays, ChevronRight, Download } from 'lucide-react'
 import { useCachedQuery } from '@/lib/useCachedQuery'
@@ -37,8 +37,8 @@ const goalNote = (d: PerfData) => d.from === d.to ? 'Meta de un día'
  * por día, la actividad, el avance de cada vendedor y lo vendido por zona y
  * segmento. El administrador ve a su equipo; el vendedor, solo lo suyo.
  */
-export function DesempenoView({ filters, onFilters, compact }: {
-  filters: Filters; onFilters: (f: Filters) => void; compact: boolean
+export function DesempenoView({ tabs, filters, onFilters, compact }: {
+  tabs: ReactNode; filters: Filters; onFilters: (f: Filters) => void; compact: boolean
 }) {
   const router = useRouter()
   const query = filtersQuery(filters)
@@ -55,15 +55,20 @@ export function DesempenoView({ filters, onFilters, compact }: {
   }
 
   const bar = (
+    <>
     <div className={s.row}>
-      <ReportFilters filters={filters} onChange={f => { setDetail(null); onFilters(f) }} options={data?.options}
-        noSellers={mine} compact={compact} range={data ? { from: data.from, end: data.end, today: data.today } : undefined} />
+      {tabs}
       <div className={s.spacer} />
       <button type="button" className={`${s.btn} ${compact ? s.iconBtn : ''} ${s.press}`} disabled={!data || exporting} onClick={download}
         aria-label={compact ? 'Descargar Excel' : undefined}>
         <Download aria-hidden="true" />{!compact && (exporting ? 'Preparando…' : 'Descargar Excel')}
       </button>
     </div>
+    <div className={s.row}>
+      <ReportFilters filters={filters} onChange={f => { setDetail(null); onFilters(f) }} options={data?.options}
+        noSellers={mine} compact={compact} range={data ? { from: data.from, end: data.end, today: data.today } : undefined} />
+    </div>
+    </>
   )
 
   if (error && !data) return <>{bar}<div className={`${s.card} ${s.error}`} role="alert">{error.message || 'No se pudo cargar el reporte'}</div></>

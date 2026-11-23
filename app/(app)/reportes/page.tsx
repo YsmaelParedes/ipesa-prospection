@@ -47,18 +47,22 @@ function Reportes() {
   const readonly = session.store.access === 'readonly'
   const onFilters = (f: ReportFilters) => go(tab, f)
 
+  // Cada vista pone las pestañas en su primer renglón, junto a sus botones (Excel, metas)
+  const tabBar = (
+    <div className={s.tabs} role="tablist" aria-label="Reportes">
+      {tabs.map(t => (
+        <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} className={`${s.tab} ${s.press}`} onClick={() => go(t.key, filters)}>
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
+
   return (
     <div className={s.page}>
-      <div className={s.tabs} role="tablist" aria-label="Reportes">
-        {tabs.map(t => (
-          <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} className={`${s.tab} ${s.press}`} onClick={() => go(t.key, filters)}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-      {tab === 'equipo' ? <EquipoHoyView filters={filters} onFilters={onFilters} compact={compact} readonly={readonly} />
-        : tab === 'avance' ? <MiAvanceView filters={filters} onFilters={onFilters} compact={compact} />
-        : <DesempenoView filters={filters} onFilters={onFilters} compact={compact} />}
+      {tab === 'equipo' ? <EquipoHoyView tabs={tabBar} filters={filters} onFilters={onFilters} compact={compact} readonly={readonly} />
+        : tab === 'avance' ? <MiAvanceView tabs={tabBar} filters={filters} onFilters={onFilters} compact={compact} />
+        : <DesempenoView tabs={tabBar} filters={filters} onFilters={onFilters} compact={compact} />}
     </div>
   )
 }

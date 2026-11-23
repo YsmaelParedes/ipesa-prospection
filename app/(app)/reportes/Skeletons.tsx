@@ -26,13 +26,15 @@ function Bars({ title, rows = 4 }: { title: string; rows?: number }) {
     <section className={`${s.card} ${s.chart}`}>
       <h3>{title}</h3>
       <p className={s.sub}><SkText w="70%" /></p>
-      {skRows(rows, i => (
-        <div key={i} className={s.bar}>
-          <span className={s.barLabel}><SkText w={skWidth(i, 0.9)} /></span>
-          <span className={s.track}><Sk w={skWidth(i + 2)} h={16} r="0 4px 4px 0" /></span>
-          <span className={s.barValue}><SkText w={40} style={{ marginLeft: 'auto' }} /></span>
-        </div>
-      ))}
+      <div className={s.bars}>
+        {skRows(rows, i => (
+          <div key={i} className={s.bar}>
+            <span className={s.barLabel}><SkText w={skWidth(i, 0.9)} /></span>
+            <span className={s.track}><Sk w={skWidth(i + 2)} h={16} r="0 4px 4px 0" /></span>
+            <span className={s.barValue}><SkText w={40} style={{ marginLeft: 'auto' }} /></span>
+          </div>
+        ))}
+      </div>
     </section>
   )
 }
@@ -126,9 +128,13 @@ export function MiAvanceSkeleton() {
 export function ReportesPageSkeleton() {
   return (
     <div className={s.page}>
-      <div className={s.tabs}>
-        <span className={s.tab} aria-selected="true">Equipo hoy</span>
-        <span className={s.tab}>Desempeño</span>
+      <div className={s.row}>
+        <div className={s.tabs}>
+          <span className={s.tab} aria-selected="true">Equipo hoy</span>
+          <span className={s.tab}>Desempeño</span>
+        </div>
+        <div className={s.spacer} />
+        <Sk w={140} h={36} r={6} />
       </div>
       <div className={s.row}><Sk w={140} h={36} r={6} /><Sk w={120} h={36} r={6} /><Sk w={120} h={36} r={6} /></div>
       <EquipoHoySkeleton />

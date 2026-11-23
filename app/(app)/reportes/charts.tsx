@@ -47,7 +47,8 @@ export function Delta({ now, before, money: isMoney, points, unit }: {
   const diff = now - before
   if (Math.abs(diff) < (points ? 0.005 : 0.000001)) return <span className={s.delta}>Igual que antes</span>
   const was = isMoney ? money(before) : points ? pct(before) : before.toLocaleString('es-MX')
-  const size = points ? `${Math.round(Math.abs(diff) * 100)} puntos`
+  const pts = Math.round(Math.abs(diff) * 100)
+  const size = points ? `${pts} ${pts === 1 ? 'punto' : 'puntos'}`
     : unit ? `${Math.abs(diff).toLocaleString('es-MX')} ${diff > 0 ? 'más' : 'menos'}`
     : before > 0 ? `${Math.round(Math.abs(diff) / before * 100)} %`
     : isMoney ? money(Math.abs(diff)) : `${Math.abs(diff).toLocaleString('es-MX')} más`

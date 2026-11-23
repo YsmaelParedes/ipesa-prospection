@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Download, Pencil } from 'lucide-react'
 import Link from '@/components/CachedLink'
 import { apiFetch } from '@/lib/apiClient'
@@ -32,8 +32,8 @@ const dayName = (iso: string) => new Intl.DateTimeFormat('es-MX', { day: 'numeri
  * Reportes › Equipo hoy (administradores): cada vendedor contra su meta de
  * hoy, cómo les fue y el detalle por vendedor. Aquí se editan las metas.
  */
-export function EquipoHoyView({ filters, onFilters, compact, readonly }: {
-  filters: Filters; onFilters: (f: Filters) => void; compact: boolean; readonly: boolean
+export function EquipoHoyView({ tabs, filters, onFilters, compact, readonly }: {
+  tabs: ReactNode; filters: Filters; onFilters: (f: Filters) => void; compact: boolean; readonly: boolean
 }) {
   // Equipo hoy no usa periodo: solo vendedor, zona y segmento
   const q = filtersQuery({ ...filters, period: 'month', from: '', to: '', compare: true })
@@ -66,9 +66,9 @@ export function EquipoHoyView({ filters, onFilters, compact, readonly }: {
   }
 
   const bar = (
+    <>
     <div className={s.row}>
-      {data && <span className={s.dayLabel}>Hoy · {dayName(data.today)}</span>}
-      <ReportFilters filters={filters} onChange={onFilters} options={data?.options} noPeriod compact={compact} />
+      {tabs}
       <div className={s.spacer} />
       {!readonly && (
         <button type="button" className={`${s.btn} ${s.press}`} disabled={!data} onClick={() => setEditing(true)}>
@@ -80,6 +80,11 @@ export function EquipoHoyView({ filters, onFilters, compact, readonly }: {
         <Download aria-hidden="true" />{!compact && (exporting ? 'Preparando…' : 'Descargar Excel')}
       </button>
     </div>
+    <div className={s.row}>
+      {data && <span className={s.dayLabel}>Hoy · {dayName(data.today)}</span>}
+      <ReportFilters filters={filters} onChange={onFilters} options={data?.options} noPeriod compact={compact} />
+    </div>
+    </>
   )
 
   if (error && !data) return <>{bar}<div className={`${s.card} ${s.error}`} role="alert">{error.message || 'No se pudo cargar la actividad del día'}</div></>
