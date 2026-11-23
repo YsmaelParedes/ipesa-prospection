@@ -218,7 +218,7 @@ function ComercialContent() {
       </div>
       {guide.open && data && (
         <CommercialTour
-          steps={commercialTour({ isAdmin, salesTeam, reports, readonly, waModule, clientId: tourClient?.id })}
+          steps={commercialTour({ isAdmin, salesTeam, reports, readonly, clientId: tourClient?.id })}
           onStep={step => prepareStep(step as CommercialStep)}
           onClose={endTour} />
       )}

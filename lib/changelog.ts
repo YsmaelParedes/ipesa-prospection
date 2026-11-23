@@ -36,6 +36,14 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.66.1',
+    date: '22 de noviembre, 2026',
+    title: 'Recorrido más corto',
+    items: [
+      'El recorrido del Sistema Comercial ahora es de 5 pasos: lo general para empezar a trabajar.',
+    ],
+  },
+  {
     version: '1.66.0',
     date: '22 de noviembre, 2026',
     title: 'Productos: tu catálogo con sus listas de precios',
