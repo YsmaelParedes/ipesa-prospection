@@ -101,7 +101,7 @@ export function ImportProductsModal({ onClose }: { onClose: () => void }) {
     const n = normText(name)
     if (!n) return { label: 'No se importa', cls: s.tagOff }
     const hit = existing.find(l => normText(l.name) === n)
-    return hit ? { label: hit.is_main ? 'Principal · ya existe' : 'Ya existe', cls: s.tagMain } : { label: 'Nueva', cls: s.tagNew }
+    return hit ? { label: hit.is_main ? 'Principal · ya existe' : 'Ya existe', cls: s.tagSame } : { label: 'Nueva', cls: s.tagNew }
   }
   const newLists = plan ? plan.lists.filter(n => !existing.some(l => normText(l.name) === normText(n))).length : 0
   const limit = session?.store?.limits.products ?? null
@@ -164,7 +164,7 @@ export function ImportProductsModal({ onClose }: { onClose: () => void }) {
               <input type="file" accept=".xlsx,.xls,.csv" onChange={e => { const f = e.target.files?.[0]; if (f) void parseFile(f) }} />
             </label>
             <div className="soft-note" style={{ marginTop: 12, marginBottom: 0 }}>
-              Sirve el Excel que descargas de tu punto de venta o uno propio. La primera fila debe tener los nombres de las columnas; en el siguiente paso eliges qué es cada una.
+              Sirve el Excel que descargas de tu punto de venta o uno propio. Arriba de los productos debe ir una fila con los nombres de las columnas; en el siguiente paso eliges qué es cada una.
             </div>
             {error && <div className="field-error" style={{ marginTop: 10 }}>{error}</div>}
           </>}

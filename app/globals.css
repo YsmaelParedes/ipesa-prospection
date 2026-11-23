@@ -1050,6 +1050,7 @@ a { color: inherit; text-decoration: none; }
 
 /* Import panel additions */
 .import-drop {
+  display: block;
   border: 2px dashed var(--line-strong);
   border-radius: var(--radius);
   padding: 32px;
