@@ -26,7 +26,7 @@ export const liveContactIds = (rows: { contact_id: string | null }[]): string[] 
 
 /** Reparto, metas y control diario: Cubeta e Interno (Litro trabaja solo). */
 export const hasSalesTeam = (ctx: StoreContext) => planOf(ctx.plan).salesTeam
-/** Acumulado y reportes en Excel: Cubeta e Interno. */
+/** Reportes (con su Excel): Cubeta e Interno. */
 export const hasReports = (ctx: StoreContext) => planOf(ctx.plan).reports
 /** Metas propias por vendedor: Cubeta e Interno. */
 export const hasSellerGoals = (ctx: StoreContext) => planOf(ctx.plan).sellerGoals
@@ -78,7 +78,7 @@ type OutcomeContact = { id: string; name: string; company: string | null; commer
 const LOST_STATUSES = new Set(['no_interesado', 'depurar'])
 
 /**
- * Cómo terminó cada cotización registrada (Acumulado: tarjeta y detalle).
+ * Cómo terminó cada cotización registrada (Reportes › Desempeño: tarjeta y detalle).
  * «Ganada» si después hubo una venta a ese cliente, «perdida» si el cliente
  * quedó como no interesado o por depurar, y si no, «abierta». `since`: inicio
  * del periodo (una venta anterior no la gana). Devuelve también los contactos

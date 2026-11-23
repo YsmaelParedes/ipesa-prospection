@@ -2,7 +2,7 @@
  * Cambios a un cliente que no son actividades (cliente y servidor, sin
  * dependencias de Node): cambiar la fecha del seguimiento, corregir un monto y
  * borrar la última actividad. Cada uno deja una línea en el historial
- * (tabla commercial_events) y no cuenta para las metas ni para el Acumulado.
+ * (tabla commercial_events) y no cuenta para las metas ni para Reportes.
  */
 import { RESULT_RULES, isCallResult, resultLabel, KIND_LABELS, type ActivityKind } from './commercial'
 

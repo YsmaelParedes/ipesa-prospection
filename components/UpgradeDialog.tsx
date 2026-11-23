@@ -15,12 +15,12 @@ import s from './Upgrade.module.css'
 type Prices = { available: boolean; prices: Partial<Record<string, PlanPrice>>; annual?: Partial<Record<string, PlanPrice>> }
 
 const ICONS: Record<LockedFeature, LucideIcon> = {
-  equipo: Users, whatsapp: MessageCircle, actividad: TrendingUp, acumulado: TrendingUp, contactos: Lock, productos: Package, prueba: PaintBucket,
+  equipo: Users, whatsapp: MessageCircle, reportes: TrendingUp, contactos: Lock, productos: Package, prueba: PaintBucket,
 }
 
 /**
  * Aviso «Cambiar a Cubeta» que sale al tocar algo con candado en Litro
- * (invitar a tu equipo, conectar WhatsApp, Actividad diaria…). Mensual
+ * (invitar a tu equipo, conectar WhatsApp, Reportes…). Mensual
  * primero y anual como segunda opción; «Cambiar a Cubeta» abre Stripe
  * directo, sin pasar por Configuración → Plan.
  * Solo el administrador paga: a los demás se les dice a quién pedirlo.

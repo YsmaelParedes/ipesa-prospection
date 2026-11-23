@@ -26,7 +26,7 @@ type Trend = { current: number; previous: number }
 
 /**
  * Comparativo contra el mes pasado A ESTA FECHA (del 1 al mismo día): el
- * servidor ya manda `previous` con esos días, igual que el Acumulado.
+ * servidor ya manda `previous` con esos días, igual que Reportes › Desempeño.
  */
 const VS_LAST_MONTH = 'vs el mes pasado a esta fecha'
 function trendOf(t: Trend | undefined, unit: 'count' | 'pts' = 'count'): { up: boolean; delta: string; note: string } | null {

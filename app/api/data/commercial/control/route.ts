@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getStoreMembers, getTestUserIds, requireStore } from '@/lib/supabase-server'
-import { storeDays, teamActivities } from '@/lib/storeActivity'
+import { storeDays } from '@/lib/storeActivity'
 import { isUUID, jsonError, readJson, serverError } from '@/lib/validation'
-import { fetchPaged } from '@/lib/paged'
-import { hasSellerGoals, liveContactIds, sellerGoalsRequired, storeGoals } from '@/lib/commercialServer'
+import { hasSellerGoals, sellerGoalsRequired, storeGoals } from '@/lib/commercialServer'
+import { placeOptions, reportActivities } from '@/lib/reportsServer'
+import { parseFilters } from '@/lib/reports'
 import {
   EMAIL_RESULT_CHOICES, GOAL_KEYS, RESULT_CHOICES, RESULT_RULES, compliance, countActivities, goalsFor, parseGoals,
-  parseGoalsConfig, type ActivityForCount,
+  parseGoalsConfig, type ActivityForCount, type Goals,
 } from '@/lib/commercial'
 
 type Row = ActivityForCount & { user_id: string | null; contact_id: string | null; created_at: string }
@@ -16,82 +17,64 @@ const byResult = (rows: Row[]) => [...new Set([...RESULT_CHOICES, ...EMAIL_RESUL
   .filter(x => x.count > 0)
 
 /**
- * GET /api/data/commercial/control — pantalla "Actividad diaria": solo lo de
- * hoy. Cada persona contra su meta del día, lo cotizado y vendido hoy, y el
- * desglose por resultado y por segmento. Semanas y meses están en Acumulado
- * (/summary). Vendedor: solo lo suyo. Las cuentas de prueba no cuentan.
+ * GET /api/data/commercial/control?sellers=&zone=&segment= — Reportes › Equipo
+ * hoy (administradores): solo lo de hoy. Cada vendedor contra su meta del día,
+ * el equipo completo contra la suma de las metas, lo cotizado y vendido hoy y
+ * cómo les fue. Los periodos están en Desempeño (/summary). Las cuentas de
+ * prueba no cuentan.
  */
-export async function GET() {
-  const ctx = await requireStore({ feature: 'salesTeam' })
+export async function GET(req: NextRequest) {
+  const ctx = await requireStore({ admin: true, feature: 'salesTeam' })
   if (ctx instanceof Response) return ctx
 
+  const f = parseFilters(req.nextUrl.searchParams)
   const calendar = storeDays(ctx)
   const today = calendar.today
-  const range = calendar.days(today, today)
 
   try {
-    const supabase = getServerSupabase()
-    const count = (status: string) => supabase.from('contacts').select('id', { count: 'exact', head: true })
-      .eq('store_id', ctx.storeId).eq('commercial_status', status)
-    const [rows, members, store, prospects, clients, owned, tests] = await Promise.all([
-      // Hoy: todo el equipo sin cuentas de prueba (administrador) o lo propio (vendedor)
-      teamActivities<Row>(ctx, {
+    const [rows, members, store, tests, options] = await Promise.all([
+      reportActivities<Row>(ctx, f, {
         columns: 'user_id, contact_id, kind, result, is_followup, quote_amount, sale_amount, created_at',
-        range, scope: ctx.isAdmin ? 'store' : 'mine',
+        range: calendar.days(today, today),
       }),
       getStoreMembers(ctx.storeId).catch(() => []),
-      supabase.from('stores').select('commercial_goals').eq('id', ctx.storeId).maybeSingle(),
-      count('nuevo'),
-      count('cliente'),
-      fetchPaged<{ owner_id: string | null }>((from, to) => supabase.from('contacts').select('owner_id')
-        .eq('store_id', ctx.storeId).not('owner_id', 'is', null).order('id', { ascending: true }).range(from, to), 200000),
+      getServerSupabase().from('stores').select('commercial_goals').eq('id', ctx.storeId).maybeSingle(),
       getTestUserIds(ctx.storeId),
+      placeOptions(ctx),
     ])
     if (store.error) throw store.error
 
     const cfg = storeGoals(ctx, store.data?.commercial_goals)
-    const ownedBy = new Map<string, number>()
-    for (const o of owned) if (o.owner_id) ownedBy.set(o.owner_id, (ownedBy.get(o.owner_id) ?? 0) + 1)
-
-    // Vendedores: los empleados y quien tenga actividad hoy
-    const people = members
-      .filter(m => m.status === 'active' && !tests.has(m.user_id) && (ctx.isAdmin || m.user_id === ctx.uid))
-      .filter(m => m.role === 'employee' || rows.some(r => r.user_id === m.user_id))
+    const chosen = f.sellers.length ? new Set(f.sellers) : null
+    const team = members.filter(m => m.status === 'active' && !tests.has(m.user_id))
+    // Vendedores: los empleados y quien tenga actividad hoy (o los elegidos)
+    const people = team
+      .filter(m => chosen ? chosen.has(m.user_id) : m.role === 'employee' || rows.some(r => r.user_id === m.user_id))
       .map(m => {
         const goals = goalsFor(cfg, m.user_id)
         const day = countActivities(rows.filter(r => r.user_id === m.user_id))
-        return {
-          user_id: m.user_id, name: m.display_name, role: m.role, goals, custom: !!cfg.byUser[m.user_id],
-          owned: ownedBy.get(m.user_id) ?? 0,
-          day, dayCompliance: compliance(day, goals),
-        }
+        return { user_id: m.user_id, name: m.display_name, role: m.role, goals, custom: !!cfg.byUser[m.user_id], day, dayCompliance: compliance(day, goals) }
       })
+      .sort((a, b) => b.dayCompliance - a.dayCompliance)
 
-    // Segmento solo de los contactos con actividad hoy (no hace falta leer toda la base)
-    const ids = liveContactIds(rows.filter(r => r.kind !== 'nota'))
-    const segmentOf = new Map<string, string>()
-    for (let i = 0; i < ids.length; i += 150) {
-      const { data, error } = await supabase.from('contacts').select('id, segment')
-        .eq('store_id', ctx.storeId).in('id', ids.slice(i, i + 150))
-      if (error) throw error
-      for (const c of data ?? []) segmentOf.set(c.id, c.segment || 'Sin segmento')
-    }
-    const bySegment = new Map<string, number>()
-    for (const r of rows) {
-      if (r.kind === 'nota') continue
-      const s = (r.contact_id && segmentOf.get(r.contact_id)) || 'Sin segmento'
-      bySegment.set(s, (bySegment.get(s) ?? 0) + 1)
-    }
+    const teamGoals = people.reduce((acc, p) => {
+      for (const k of GOAL_KEYS) acc[k] += p.goals[k]
+      return acc
+    }, { calls: 0, effective: 0, quotes: 0, followups: 0, sales: 0 } as Goals)
     const day = countActivities(rows)
 
     return NextResponse.json({
       today,
+      // Metas de la tienda (las usan quienes no tienen metas propias)
       teamGoals: cfg.team,
       sellerGoals: hasSellerGoals(ctx),
       people,
-      totals: { prospects: prospects.count ?? 0, clients: clients.count ?? 0, quoted: day.quoted, sold: day.sold },
+      team: { day, goals: teamGoals, compliance: compliance(day, teamGoals) },
       byResult: byResult(rows),
-      bySegment: Array.from(bySegment, ([segment, count]) => ({ segment, count })).sort((a, b) => b.count - a.count),
+      options: {
+        sellers: team.map(m => ({ id: m.user_id, name: m.display_name })).sort((a, b) => a.name.localeCompare(b.name, 'es')),
+        ...options,
+      },
     })
   } catch (error) {
     return serverError('GET /api/data/commercial/control', error, 'Error al obtener la actividad del día')

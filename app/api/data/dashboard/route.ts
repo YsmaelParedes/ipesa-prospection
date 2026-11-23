@@ -44,7 +44,7 @@ async function GETImpl(req: NextRequest) {
     const startOfToday = calendar.startOf(today)
     const startOfMonth = calendar.monthStart(0)
     // Las tendencias comparan el mes en curso contra los MISMOS días del mes
-    // pasado (del 1 al día de hoy), igual que el Acumulado
+    // pasado (del 1 al día de hoy), igual que Reportes › Desempeño
     const prevDays = previousSameDays('month', startOfMonthDay(today), today)
     const prevFrom = calendar.startOf(prevDays.from)
     const prevTo = calendar.startOf(addDays(prevDays.to, 1))

@@ -10,25 +10,23 @@ import type { CommercialContact } from '@/lib/commercial'
 import { HoyView, type Opened, type Sub } from './HoyView'
 import { CarteraView } from './CarteraView'
 import { OportunidadesView } from './OportunidadesView'
-import { ActividadView } from './ActividadView'
-import { AcumuladoView } from './AcumuladoView'
 import { ContactPanel } from './ContactPanel'
 import { GuideButton, useGuide } from '@/components/GuideModal'
 import { LoadFailed } from '@/components/LoadFailed'
-import { LockedPanel } from '@/components/LockedPanel'
-import { Lock } from 'lucide-react'
 import { CommercialTour } from './CommercialTour'
 import { commercialTour, type CommercialStep } from './tourSteps'
 import { Ico, bizName, useWide, whenPhrase, type TodayData } from './ui'
 import s from './comercial.module.css'
-import { AcumuladoSkeleton, ActividadSkeleton, CarteraSkeleton, HoySkeleton, OportunidadesSkeleton } from './Skeletons'
+import { CarteraSkeleton, HoySkeleton, OportunidadesSkeleton } from './Skeletons'
 
 const PATH = '/api/data/commercial'
 /** Prospectos nuevos por página y lo más que se pide de una vez (igual que el servidor). */
 const FRESH_PAGE = 30
 const MAX_FRESH = 300
-type Tab = 'hoy' | 'cartera' | 'oportunidades' | 'actividad' | 'acumulado'
-const TAB_KEYS: Tab[] = ['hoy', 'cartera', 'oportunidades', 'actividad', 'acumulado']
+type Tab = 'hoy' | 'cartera' | 'oportunidades'
+const TAB_KEYS: Tab[] = ['hoy', 'cartera', 'oportunidades']
+/** Pestañas que se mudaron a Reportes (enlaces viejos y avisos). */
+const MOVED: Record<string, string> = { actividad: 'equipo', equipo: 'equipo', acumulado: 'desempeno' }
 
 export default function ComercialPage() {
   // ?id= abre un contacto (desde el buscador, Inicio, Contactos o WhatsApp); ?tab= abre una pestaña
@@ -47,9 +45,11 @@ function ComercialContent() {
   const [data, setData] = useState<TodayData | null>(() => cachedQueryData<TodayData>(PATH) ?? null)
   const [loading, setLoading] = useState(() => !cachedQueryData(PATH))
   useDataReady(loading, 'comercial')
-  // ?tab=equipo es el nombre anterior de Actividad diaria (enlaces viejos)
-  const wanted = (params.get('tab') === 'equipo' ? 'actividad' : params.get('tab')) as Tab | null
+  const wanted = params.get('tab') as Tab | null
   const [tab, setTab] = useState<Tab>(wanted && TAB_KEYS.includes(wanted) ? wanted : 'hoy')
+  // Actividad diaria y Acumulado ahora están en Reportes
+  const moved = wanted ? MOVED[wanted] : undefined
+  useEffect(() => { if (moved) router.replace(`/reportes?tab=${moved}`) }, [moved, router])
   const [sub, setSub] = useState<Sub>('pend')
   const [zone, setZone] = useState('')
   const [segment, setSegment] = useState('')
@@ -154,14 +154,11 @@ function ComercialContent() {
   const salesTeam = !!data?.salesTeam
   const reports = !!data?.reports
   const isAdmin = !!data?.isAdmin
-  // Oportunidades viene en todos los planes. En Litro, Actividad diaria y
-  // Acumulado se ven con candado: al abrirlos ofrecen Cubeta.
-  const TABS: { key: Tab; label: string; count?: number; locked?: boolean }[] = [
+  // Oportunidades viene en todos los planes. Lo del equipo está en Reportes.
+  const TABS: { key: Tab; label: string; count?: number }[] = [
     { key: 'hoy', label: 'Hoy', count: data?.dueTotal },
     { key: 'cartera', label: 'Cartera' },
     { key: 'oportunidades', label: 'Oportunidades' },
-    ...(isAdmin ? [{ key: 'actividad' as Tab, label: 'Actividad diaria', locked: !salesTeam }] : []),
-    ...(isAdmin ? [{ key: 'acumulado' as Tab, label: 'Acumulado', locked: !reports }] : []),
   ]
   const current: Tab = TABS.some(t => t.key === tab) ? tab : 'hoy'
   // Recorrido: solo la primera vez (no si se llegó directo a una ficha). Clave
@@ -209,7 +206,6 @@ function ComercialContent() {
             {TABS.map(t => (
               <button key={t.key} role="tab" aria-selected={current === t.key} className={`${s.tab} ${s.press}`} onClick={() => setTab(t.key)} data-tour={`tab-${t.key}`}>
                 {t.label}{t.count ? <span className={`${s.tabCount} ${s.num}`}>{t.count}</span> : null}
-                {t.locked && <Lock size={13} strokeWidth={2.4} role="img" aria-label="Con candado" />}
               </button>
             ))}
           </div>
@@ -218,7 +214,7 @@ function ComercialContent() {
       </div>
       {guide.open && data && (
         <CommercialTour
-          steps={commercialTour({ isAdmin, salesTeam, reports, readonly, clientId: tourClient?.id })}
+          steps={commercialTour({ salesTeam, readonly, clientId: tourClient?.id })}
           onStep={step => prepareStep(step as CommercialStep)}
           onClose={endTour} />
       )}
@@ -229,8 +225,6 @@ function ComercialContent() {
         // La pestaña pedida (?tab=) con la forma que tendrá; las demás pestañas aparecen al cargar
         tab === 'cartera' ? <CarteraSkeleton />
           : tab === 'oportunidades' ? <OportunidadesSkeleton />
-          : tab === 'actividad' ? <ActividadSkeleton />
-          : tab === 'acumulado' ? <AcumuladoSkeleton />
           : <HoySkeleton />
       ) : current === 'hoy' ? (
         <HoyView data={data} wide={wide} sub={sub} zone={zone} segment={segment} query={query} readonly={readonly} waModule={waModule} storeName={session?.store?.name} loadingMore={loadingMore}
@@ -239,12 +233,8 @@ function ComercialContent() {
       ) : current === 'cartera' ? (
         <CarteraView uid={data.uid} isAdmin={isAdmin && salesTeam} zones={data.zones} segments={data.segments ?? []}
           zone={zone} segment={segment} onZone={setZone} onSegment={setSegment} onOpen={setOverlay} />
-      ) : current === 'oportunidades' ? (
-        <OportunidadesView isAdmin={isAdmin} reports={reports} segments={data.segments ?? []} onOpen={setOverlay} />
-      ) : current === 'acumulado' ? (
-        reports ? <AcumuladoView onOpen={id => setOverlay({ id })} /> : <LockedPanel feature="acumulado" />
       ) : (
-        salesTeam ? <ActividadView reports={reports} /> : <LockedPanel feature="actividad" />
+        <OportunidadesView isAdmin={isAdmin} reports={reports} segments={data.segments ?? []} onOpen={setOverlay} />
       )}
 
       {overlay && data && (

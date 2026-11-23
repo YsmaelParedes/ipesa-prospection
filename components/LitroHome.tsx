@@ -126,7 +126,7 @@ export function TrialEndedDialog() {
   const locked = [
     ...(wa?.locked ? ['WhatsApp en el CRM: los mensajes siguen llegando'] : []),
     ...(waiting?.length ? [`Tu equipo: ${waiting.length === 1 ? '1 persona queda' : `${waiting.length} personas quedan`} en espera`] : []),
-    'Actividad diaria, metas y Acumulado',
+    'Reportes y metas de tu equipo',
     usage && usage.contacts > limit
       ? `Registrar contactos nuevos: tienes ${fmt(usage.contacts)} y Litro incluye ${fmt(limit)}`
       : `Más de ${fmt(limit)} clientes`,

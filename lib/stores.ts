@@ -85,7 +85,7 @@ export const ROLE_LABELS: Record<StoreRole, string> = {
  *    en la función plan_quota() de la base, que los hace cumplir: cambia los dos.
  *  · whatsapp: incluye la bandeja de WhatsApp (las campañas son un extra aparte).
  *  · paid: se cobra con Stripe.
- *  · reports: Acumulado y reportes en Excel por vendedor.
+ *  · reports: sección Reportes (Equipo hoy, Desempeño, Mi avance) y su Excel.
  * Dos planes a la venta: Litro (gratis, para trabajar solo) y Cubeta (de
  * paga, con equipo y WhatsApp). Oportunidades viene en los dos.
  * Interno = la tienda propia (IPESA): cortesía con todo, se asigna a mano en la base.
@@ -96,7 +96,7 @@ export type PlanDef = {
   maxContacts: number | null
   maxProducts: number | null
   whatsapp: boolean; paid: boolean
-  /** Sistema comercial en equipo: reparto, Actividad diaria y la meta del equipo. */
+  /** Sistema comercial en equipo: reparto, Equipo hoy y la meta del equipo. */
   salesTeam: boolean
   /** Metas propias para cada vendedor (si no, todos usan la meta de la tienda). */
   sellerGoals: boolean
@@ -106,9 +106,9 @@ export type PlanDef = {
 export type PlanFeature = 'salesTeam' | 'sellerGoals' | 'reports'
 /** Lo que se le dice a quien intenta usarlas sin tenerlas en su plan. */
 export const PLAN_FEATURE_REQUIRED: Record<PlanFeature, string> = {
-  salesTeam: 'El reparto de clientes, Actividad diaria y las metas del equipo vienen en el plan Cubeta.',
+  salesTeam: 'El reparto de clientes y las metas del equipo vienen en el plan Cubeta.',
   sellerGoals: 'Las metas propias para cada vendedor vienen en el plan Cubeta.',
-  reports: 'Acumulado y los reportes en Excel vienen en el plan Cubeta.',
+  reports: 'Reportes viene en el plan Cubeta.',
 }
 
 export const PLANS: Record<PlanId, PlanDef> = {

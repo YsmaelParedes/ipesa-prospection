@@ -220,7 +220,7 @@ export function PlanTab({ store }: { store: ClientStore }) {
               {PLAN_COPY.cubeta.features.map(f => <li key={f.name}><Ico.check />{f.name}</li>)}
               <li><Ico.check />Hasta {store.maxUsers} usuarios con roles</li>
               <li><Ico.check />Clientes sin límite</li>
-              <li><Ico.check />Acumulado y reportes en Excel</li>
+              <li><Ico.check />Reportes con gráficas y en Excel</li>
             </ul>
           </div>
         </Card>

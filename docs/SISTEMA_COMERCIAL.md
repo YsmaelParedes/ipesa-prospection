@@ -48,7 +48,7 @@ El sistema vive **sobre Contactos**, sin una segunda base. Se prueba primero en 
 | Excel | Solo la estructura; no se importan sus datos. |
 | Reparto | Cada vendedor trabaja **sus propios** contactos (responsable por contacto). Contactos sigue compartido para consulta. |
 | Distancia | Geolocalizar cada dirección una vez con OpenStreetMap (gratis). Distancia en línea recta a la tienda. |
-| Planes | **Cubeta e Interno:** completo. **Litro:** para trabajar solo (cola, registro de llamada, próxima fecha, notas y Oportunidades); Actividad diaria y Acumulado se ven con candado. Sin reparto, metas, control diario, tablero ni distancia. |
+| Planes | **Cubeta e Interno:** completo. **Litro:** para trabajar solo (cola, registro de llamada, próxima fecha, notas y Oportunidades); Reportes (Equipo hoy y Desempeño, desde 1.67.0) se ve con candado. Sin reparto, metas, control diario, tablero ni distancia. |
 | Leads | Se quita la sección. Las tablas `leads` y `lead_activities` quedan como archivo de solo lectura; no se borran. |
 
 ## Datos (todo con `store_id` y llaves compuestas por tienda, como las actuales)

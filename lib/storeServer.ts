@@ -56,6 +56,8 @@ export function publicStore(store: StoreRow) {
     limits: { contacts: def.maxContacts, products: def.maxProducts },
     /** Reparto de contactos, metas y control diario del sistema comercial (Cubeta) */
     salesTeam: def.salesTeam,
+    /** Sección Reportes: Equipo hoy, Desempeño y Mi avance (Cubeta) */
+    reports: def.reports,
     /** El plan incluye la bandeja de WhatsApp (Cubeta); además hay que conectar el número */
     planIncludesWhatsApp: def.whatsapp,
     /** La tienda puede conectar su WhatsApp sola, en unos clics (Embedded Signup) */

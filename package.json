@@ -1,12 +1,12 @@
 {
   "name": "crm-pinturas",
-  "version": "1.66.1",
+  "version": "1.67.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test:cache": "node --test tests/query-cache.test.cjs tests/api-client.test.cjs tests/server-timing.test.cjs tests/dashboard-whatsapp.test.cjs tests/error-report.test.cjs tests/plans.test.cjs tests/whatsapp-webhook.test.cjs tests/commercial-v2.test.cjs tests/agenda-push.test.cjs tests/session-cache.test.cjs tests/whatsapp-signup.test.cjs tests/campaign-sends.test.cjs tests/whatsapp-outbox.test.cjs tests/campaign-audience.test.cjs tests/store-activity.test.cjs tests/dates.test.cjs tests/phone.test.cjs tests/quotes.test.cjs tests/products.test.cjs tests/commercial-changes.test.cjs tests/campaign-excel.test.cjs",
+    "test:cache": "node --test tests/query-cache.test.cjs tests/api-client.test.cjs tests/server-timing.test.cjs tests/dashboard-whatsapp.test.cjs tests/error-report.test.cjs tests/plans.test.cjs tests/whatsapp-webhook.test.cjs tests/commercial-v2.test.cjs tests/agenda-push.test.cjs tests/session-cache.test.cjs tests/whatsapp-signup.test.cjs tests/campaign-sends.test.cjs tests/whatsapp-outbox.test.cjs tests/campaign-audience.test.cjs tests/store-activity.test.cjs tests/dates.test.cjs tests/phone.test.cjs tests/quotes.test.cjs tests/products.test.cjs tests/commercial-changes.test.cjs tests/campaign-excel.test.cjs tests/reports.test.cjs",
     "test:dashboard": "node --test tests/dashboard-queue-db.test.cjs tests/reserve-whatsapp-template-db.test.cjs tests/whatsapp-thread-state-db.test.cjs tests/keep-activities-db.test.cjs tests/inbox-search-db.test.cjs tests/reminders-contact-db.test.cjs tests/rename-catalog-db.test.cjs tests/quotes-db.test.cjs tests/products-db.test.cjs tests/reminders-due-db.test.cjs tests/observaciones-db.test.cjs tests/quote-uploads-db.test.cjs tests/whatsapp-fijos-db.test.cjs",
     "test:billing": "node --test tests/stripe-billing.test.cjs tests/stripe-billing-db.test.cjs tests/trial-notices.test.cjs",
     "test:retention": "node --test tests/store-retention-db.test.cjs",

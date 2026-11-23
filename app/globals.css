@@ -28,6 +28,8 @@
   --c-magenta: #E51585; --c-magenta-ink: #A80F60; --c-magenta-soft: #FCE6F2;
   --c-purple: #B01C71;  --c-purple-ink: #861456;  --c-purple-soft: #F6E4EE;
   --c-blue: #273DC5;    --c-blue-ink: #24389F;    --c-blue-soft: #E7EAFA;
+  /* Gráficas de Reportes: una serie en azul; la clara es «todo» detrás de «lo logrado» (revisadas para daltonismo) */
+  --chart-1: #273DC5;   --chart-2: #9AA6EC;
 
   /* Estados */
   --success: #1E7A3C; --success-fill: #2FA855; --success-soft: #E5F6E9;

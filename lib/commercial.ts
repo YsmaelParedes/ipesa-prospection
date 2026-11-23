@@ -272,7 +272,7 @@ export function periodRange(period: Period, today: string, offset = 0): { from: 
  * naturales del periodo anterior (si el mes va en el día 14, contra el 1–14
  * del mes pasado), para que un periodo a medias no se compare con uno
  * completo. Un mes anterior más corto (febrero) se topa en su último día.
- * La usan el Acumulado y las tendencias del Inicio.
+ * La usan Reportes y las tendencias del Inicio.
  */
 export function previousSameDays(period: Period, from: string, end: string): { from: string; to: string } {
   const prev = periodRange(period, from, 1)

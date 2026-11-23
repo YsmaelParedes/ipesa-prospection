@@ -4,8 +4,9 @@
  *  · downloadStoreWorkbook: un solo archivo con Contactos, Historial comercial,
  *    Agenda, Cotizaciones, Productos y Catálogos, pedido por partes a /api/data/export.
  *  · downloadProductsWorkbook: los productos con las columnas que se importan.
- *  · downloadSummaryWorkbook: el periodo que se ve en Acumulado, por vendedor,
- *    con cada cotización y cada venta del periodo.
+ *  · downloadPerformanceWorkbook: el periodo que se ve en Reportes › Desempeño
+ *    (o Mi avance), por vendedor, por día, zona y segmento, con cada cotización
+ *    y cada venta del periodo.
  *  · downloadOpportunitiesWorkbook: las cotizaciones abiertas de Oportunidades.
  *  · downloadCampaignWorkbook / downloadCampaignsWorkbook: resultados de una
  *    campaña o de todas las del periodo (Campañas de Mkt → Resultados).
@@ -54,16 +55,23 @@ export const contactRows = (list: Row[], timezone?: string) => list.map(c => ({
 }))
 
 export type SummaryData = {
-  period: string; offset: number; from: string; end: string
+  period: string; from: string; end: string
   totals: DayCounts; prev: DayCounts; goals: Goals; compliance: number; prevCompliance: number
   people: { name: string; counts: DayCounts; goals: Goals; compliance: number }[]
   quotedOutcome?: { open: number; won: number; lost: number }
 }
 
+/** Lo que piden las hojas de gráficas (Desempeño). */
+export type PerformanceData = SummaryData & {
+  series: { axis: string[]; sold: (number | null)[]; prevSold: number[]; activity: { start: string; label: string; count: number }[] }
+  byZone: { name: string; value: number }[]
+  bySegment: { name: string; value: number }[]
+}
+
 const percent = (ratio: number) => Math.round(ratio * 100)
 const countsRow = (name: string, c: DayCounts, ratio: number) => ({
   'Vendedor': name,
-  // Correos junto a Llamadas, como en la tabla de Acumulado
+  // Correos junto a Llamadas, como en la tabla de Desempeño
   ...Object.fromEntries(GOAL_KEYS.flatMap(k => k === 'calls' ? [[GOAL_LABELS[k], c[k]], ['Correos', c.emails ?? 0]] : [[GOAL_LABELS[k], c[k]]])),
   'Monto cotizado': c.quoted,
   'Monto vendido': c.sold,
@@ -93,20 +101,38 @@ export const summaryTotalsRows = (d: SummaryData) => [
 type AmountItem = { client: string; seller: string; amount: number; at: string; status?: 'abierta' | 'ganada' | 'perdida' }
 const OUTCOME_LABEL = { abierta: 'Abierta', ganada: 'Ganada', perdida: 'Perdida' } as const
 
-/** Cada cotización o venta del periodo (lo mismo que «Ver clientes» en Acumulado). */
-async function amountItems(d: SummaryData, kind: 'quoted' | 'sold'): Promise<AmountItem[]> {
-  const r = await fetch(`/api/data/commercial/summary/detail?period=${d.period}&offset=${d.offset}&kind=${kind}`, { cache: 'no-store' })
+/** Cada cotización o venta del periodo (lo mismo que «Ver clientes» en Desempeño). */
+async function amountItems(query: string, kind: 'quoted' | 'sold'): Promise<AmountItem[]> {
+  const r = await fetch(`/api/data/commercial/summary/detail?${query ? `${query}&` : ''}kind=${kind}`, { cache: 'no-store' })
   const body: { items?: AmountItem[]; error?: string } = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(body.error || 'No se pudo preparar el detalle')
   return body.items ?? []
 }
 
-export async function downloadSummaryWorkbook(d: SummaryData) {
+/** Día por día: lo vendido ese día, sumado desde el inicio y lo que se llevaba en el periodo anterior. */
+export const performanceDayRows = (d: PerformanceData) => d.series.axis.flatMap((day, i) => {
+  const acc = d.series.sold[i]
+  if (acc === null) return []
+  const before = i ? d.series.sold[i - 1] ?? 0 : 0
+  return [{
+    'Día': day,
+    'Vendido ese día': Math.round((acc - before) * 100) / 100,
+    'Vendido acumulado': acc,
+    'Periodo anterior acumulado': d.series.prevSold[i] ?? ('' as number | string),
+  }]
+})
+
+/** El periodo de Desempeño (o Mi avance) en un archivo; `query`: los filtros de la pantalla. */
+export async function downloadPerformanceWorkbook(d: PerformanceData, query: string) {
   const label = d.from === d.end ? d.from : `${d.from}-a-${d.end}`
-  const [quoted, sold] = await Promise.all([amountItems(d, 'quoted'), amountItems(d, 'sold')])
-  await writeWorkbook(`acumulado-${label}.xlsx`, [
+  const [quoted, sold] = await Promise.all([amountItems(query, 'quoted'), amountItems(query, 'sold')])
+  await writeWorkbook(`reporte-${label}.xlsx`, [
     { name: 'Por vendedor', rows: summaryPeopleRows(d) },
     { name: 'Resumen', rows: summaryTotalsRows(d) },
+    { name: 'Por día', rows: performanceDayRows(d) },
+    { name: 'Contactos registrados', rows: d.series.activity.map(a => ({ 'Desde': a.start, 'Contactos': a.count })) },
+    { name: 'Por zona', rows: d.byZone.map(z => ({ 'Zona': z.name, 'Vendido': z.value })) },
+    { name: 'Por segmento', rows: d.bySegment.map(z => ({ 'Segmento': z.name, 'Vendido': z.value })) },
     { name: 'Cotizaciones', rows: quoted.map(q => ({
       'Fecha': dateTime(q.at), 'Cliente': q.client, 'Vendedor': q.seller, 'Monto': q.amount,
       'Estado': q.status ? OUTCOME_LABEL[q.status] : '',

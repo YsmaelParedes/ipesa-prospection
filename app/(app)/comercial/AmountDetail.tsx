@@ -4,7 +4,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { apiFetch } from '@/lib/apiClient'
 import { useQueryEffect } from '@/lib/useCachedQuery'
 import { useDataChanged } from '@/lib/crmEvents'
-import type { Period } from '@/lib/commercial'
 import { Ico, initials, useWide } from './ui'
 import s from './comercial.module.css'
 import { AmountRowsSkeleton } from './Skeletons'
@@ -27,12 +26,14 @@ const exact = (n: number) => `$${n.toLocaleString('es-MX', { minimumFractionDigi
 const shortDay = (iso: string) => new Intl.DateTimeFormat('es-MX', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(iso))
 
 /**
- * Detalle de «Cotizado» o «Vendido» en el Acumulado: a qué clientes, quién y
- * cuánto. En el celular es una hoja que sube desde abajo; en computadora, un
- * panel debajo de las tarjetas.
+ * Detalle de «Cotizado» o «Vendido» en Reportes › Desempeño: a qué clientes,
+ * quién y cuánto, con los mismos filtros de la pantalla. En el celular es una
+ * hoja que sube desde abajo; en computadora, un panel debajo de las tarjetas.
  */
-export function AmountDetail({ kind, period, offset, title, onClose, onOpen }: {
-  kind: AmountKind; period: Period; offset: number
+export function AmountDetail({ kind, query, title, onClose, onOpen }: {
+  kind: AmountKind
+  /** Los filtros de Reportes como texto de dirección (filtersQuery). */
+  query: string
   /** "Cotizado en noviembre" */
   title: string
   onClose: () => void
@@ -50,14 +51,14 @@ export function AmountDetail({ kind, period, offset, title, onClose, onOpen }: {
 
   const load = useCallback(async () => {
     try {
-      const r = await apiFetch(`/api/data/commercial/summary/detail?period=${period}&offset=${offset}&kind=${kind}`)
+      const r = await apiFetch(`/api/data/commercial/summary/detail?${query ? `${query}&` : ''}kind=${kind}`)
       const d = await r.json()
       if (!r.ok) throw new Error(d.error)
       setData(d); setError('')
     } catch (e) {
       setError(e instanceof Error && e.message ? e.message : 'No se pudo cargar el detalle')
     }
-  }, [period, offset, kind])
+  }, [query, kind])
   useQueryEffect(() => { setData(null); setWho(''); setMinH(undefined); load() }, [load])
   useDataChanged(['commercial'], load)
 

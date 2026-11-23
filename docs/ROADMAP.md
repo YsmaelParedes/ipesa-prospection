@@ -143,6 +143,9 @@ Hoy solo existe la tienda IPESA, así que nada de esto ha afectado a nadie.
 - **Cotizaciones:** cada cotización tiene su lista (`quotes.price_list_id`); el buscador del renglón sugiere productos con su precio sin IVA y lo ya cotizado. Un producto sin precio en la lista usa el de la principal (`fallback`). Cambiar la lista actualiza los renglones del catálogo; un precio escrito a mano ya no la sigue.
 - **Migración** `20261122191359_productos.sql`. Pruebas: `tests/products.test.cjs` y `tests/products-db.test.cjs`.
 
+### Reportes (1.67.0, 22 de noviembre de 2026)
+Sección nueva en el menú. Actividad diaria pasa a «Equipo hoy» y Acumulado a «Desempeño» (periodos hoy, semana, mes, mes pasado, año o fechas propias; comparar; filtros de vendedor, zona y segmento en la dirección; gráficas propias sin librería; Excel). Los vendedores tienen «Mi avance» y Desempeño solo con lo suyo. Comercial se queda con Hoy, Cartera y Oportunidades. Sin migración. Entrega 2: Cotizaciones, Productos y Clientes.
+
 ### Etapa 8. Listo para vender
 - Nombre del producto centralizado en un archivo ✅ (Matices, 2.9.0) y dominio propio ✅ (`www.matices.app`, 19 de octubre).
 - Botón "Ayuda" ✅ (3.2.0, solo correo a soporte@matices.app).

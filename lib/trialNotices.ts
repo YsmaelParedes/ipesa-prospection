@@ -65,12 +65,12 @@ export function trialNoticeEmail(kind: TrialNoticeKind, f: NoticeFacts) {
     ? [
         ...(f.whatsapp ? ['El WhatsApp de tu tienda ya no se ve en el CRM. Los mensajes se siguen guardando.'] : []),
         ...(people.length ? [`${peopleText} ya no ${people.length === 1 ? 'puede' : 'pueden'} entrar.`] : []),
-        'Actividad diaria, metas y Acumulado quedaron con candado.',
+        'Reportes y las metas del equipo quedaron con candado.',
       ]
     : [
         ...(f.whatsapp ? ['El WhatsApp de tu tienda deja de verse en el CRM. Los mensajes se siguen guardando.'] : []),
         ...(people.length ? [`${peopleText} ya no ${people.length === 1 ? 'podrá' : 'podrán'} entrar.`] : []),
-        'Actividad diaria, metas y Acumulado quedan con candado.',
+        'Reportes y las metas del equipo quedan con candado.',
       ]
   const lines = kind === 'ended'
     ? [`La prueba de Cubeta de ${f.store} terminó el ${fmtDay(f.ends)}. Tu tienda pasó a Litro, gratis, sin borrar nada.`, 'Desde ahora:']

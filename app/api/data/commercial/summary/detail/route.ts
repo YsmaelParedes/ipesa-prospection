@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, getUserNameMap, requireStore } from '@/lib/supabase-server'
-import { storeDays, teamActivities } from '@/lib/storeActivity'
+import { storeDays } from '@/lib/storeActivity'
 import { jsonError, serverError } from '@/lib/validation'
-import { periodRange, type Period } from '@/lib/commercial'
+import { parseFilters, resolveRange } from '@/lib/reports'
+import { reportActivities } from '@/lib/reportsServer'
 import { activityClient, liveContactIds, quoteOutcomes, type QuoteOutcome } from '@/lib/commercialServer'
 import { fetchPaged } from '@/lib/paged'
 
@@ -14,45 +15,42 @@ type Activity = {
 type Contact = { id: string; name: string; company: string | null; commercial_status: string }
 export type QuoteStatus = QuoteOutcome
 
-const MAX_OFFSET = 400
 const CHUNK = 200
 
 /**
- * GET /api/data/commercial/summary/detail?period=day|week|month&offset=0&kind=quoted|sold
- * — lo que hay detrás de las tarjetas «Cotizado» y «Vendido» del Acumulado
- * (solo administradores): cada cotización o venta del periodo, con el cliente,
- * quién la registró y el monto. Usa el mismo periodo y deja fuera las mismas
- * cuentas de prueba que /summary, así que la suma cuadra con la tarjeta.
+ * GET /api/data/commercial/summary/detail?kind=quoted|sold&period=…(filtros de Reportes)
+ * — lo que hay detrás de las tarjetas «Cotizado» y «Vendido» de Reportes ›
+ * Desempeño: cada cotización o venta del periodo, con el cliente, quién la
+ * registró y el monto. Usa los mismos filtros y deja fuera las mismas cuentas
+ * de prueba que /summary, así que la suma cuadra con la tarjeta. El vendedor
+ * solo ve lo suyo.
  *
  * Una cotización está «ganada» si después hubo una venta a ese cliente,
  * «perdida» si el cliente quedó como no interesado o por depurar, y si no,
  * «abierta».
  */
 export async function GET(req: NextRequest) {
-  const ctx = await requireStore({ admin: true, feature: 'reports' })
+  const ctx = await requireStore({ feature: 'reports' })
   if (ctx instanceof Response) return ctx
 
   const sp = req.nextUrl.searchParams
-  const period = (sp.get('period') || 'week') as Period
-  if (period !== 'day' && period !== 'week' && period !== 'month') return jsonError('Periodo inválido')
-  const offset = Number(sp.get('offset') ?? 0)
-  if (!Number.isInteger(offset) || offset < 0 || offset > MAX_OFFSET) return jsonError('Periodo fuera de rango')
+  const f = parseFilters(sp)
   const kind = sp.get('kind')
   if (kind !== 'quoted' && kind !== 'sold') return jsonError('Tipo inválido')
   const column = kind === 'quoted' ? 'quote_amount' : 'sale_amount'
 
   const calendar = storeDays(ctx)
-  const today = calendar.today
-  const { from, to } = periodRange(period, today, offset)
-  const end = to > today ? today : to
+  const range = resolveRange(f, calendar.today)
+  if (!range) return jsonError('Elige un rango de fechas válido, de hasta un año')
+  const { from, to, end } = range
 
   try {
     const supabase = getServerSupabase()
     const [withValue, names] = await Promise.all([
       // Igual que la tarjeta: sin las cuentas de prueba
-      teamActivities<Activity>(ctx, {
+      reportActivities<Activity>(ctx, f, {
         columns: 'id, contact_id, contact_name, user_id, quote_amount, sale_amount, created_at',
-        range: calendar.days(from, end), scope: 'store', newestFirst: true, withValue: column,
+        range: calendar.days(from, end), newestFirst: true, withValue: column,
       }),
       getUserNameMap(ctx.storeId).catch(() => new Map<string, string>()),
     ])
@@ -90,7 +88,7 @@ export async function GET(req: NextRequest) {
     })
 
     return NextResponse.json({
-      kind, period, offset, from, to, end,
+      kind, period: f.period, from, to, end,
       total: items.reduce((s, i) => s + i.amount, 0),
       items,
     })

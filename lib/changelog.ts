@@ -36,6 +36,18 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.67.0',
+    date: '22 de noviembre, 2026',
+    title: 'Reportes',
+    items: [
+      'Nueva sección Reportes en el menú, con gráficas, filtros y descarga a Excel. Actividad diaria y Acumulado se mudaron ahí y el Sistema Comercial se queda con Hoy, Cartera y Oportunidades.',
+      'Equipo hoy: cada vendedor contra su meta del día, cómo les fue y el detalle por vendedor. Aquí se editan las metas.',
+      'Desempeño: elige hoy, la semana, el mes, el mes pasado, el año o tus propias fechas, y compáralo con el periodo anterior. Ve lo vendido día por día, los contactos registrados, la meta de cada vendedor y lo vendido por zona y segmento.',
+      'Filtra por vendedor, zona y segmento. Los filtros quedan en el enlace: si lo compartes, el reporte se abre igual.',
+      'Los vendedores también tienen Reportes: «Mi avance» con su meta de hoy, lo que llevan en el periodo y sus cotizaciones abiertas, y Desempeño solo con lo suyo.',
+    ],
+  },
+  {
     version: '1.66.1',
     date: '22 de noviembre, 2026',
     title: 'Recorrido más corto',

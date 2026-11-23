@@ -1,10 +1,9 @@
 /**
  * Sistema Comercial mientras carga: cada pestaña con las mismas clases que su
- * vista real (HoyView, CarteraView, OportunidadesView, ActividadView,
- * AcumuladoView) para que al llegar los datos nada cambie de lugar.
+ * vista real (HoyView, CarteraView, OportunidadesView) para que al llegar los
+ * datos nada cambie de lugar.
  */
 import { ChevronRight, Search } from 'lucide-react'
-import { GOAL_KEYS, GOAL_LABELS } from '@/lib/commercial'
 import { Loading, Sk, SkText, skRows, skWidth } from '@/components/Skeleton'
 import { STAGES } from './stages'
 import s from './comercial.module.css'
@@ -237,94 +236,6 @@ export function OportunidadesSkeleton({ filters = false }: { filters?: boolean }
       <KpisSkeleton labels={['Cotizaciones abiertas', 'Cotizado', 'Esperado (monto × probabilidad)', 'Más de 7 días sin contacto']} />
       {filters && <div className={s.filters}><Sk w={64} h={33} r={6} /><Sk w={150} h={33} r={6} /><Sk w={190} h={38} r={8} /></div>}
       <div className={`${s.elev} ${s.listCard}`}><OportunidadesRowsSkeleton /></div>
-    </Loading>
-  )
-}
-
-/* ── Actividad diaria ── */
-
-function GoalRows({ wide = false }: { wide?: boolean }) {
-  return (
-    <>
-      {GOAL_KEYS.map((k, i) => (
-        <div key={k} className={`${s.goal} ${wide ? s.goalWide : ''}`}>
-          <span>{GOAL_LABELS[k]}</span>
-          <div className={s.bar} />
-          <em className={s.num}><SkText w={skWidth(i, 0.5)} style={{ marginLeft: 'auto' }} /></em>
-        </div>
-      ))}
-    </>
-  )
-}
-
-function BarRows({ rows = 5 }: { rows?: number }) {
-  return (
-    <>
-      {skRows(rows, i => (
-        <div key={i} className={s.brow}>
-          <span><SkText w={skWidth(i, 0.9)} /></span>
-          <div className={s.bar} />
-          <em className={s.num}><SkText w={20} style={{ marginLeft: 'auto' }} /></em>
-        </div>
-      ))}
-    </>
-  )
-}
-
-export function ActividadSkeleton() {
-  return (
-    <Loading label="Cargando la actividad del día…">
-      <p className={s.dayLabel}><SkText w={140} /></p>
-      <KpisSkeleton labels={['Prospectos', 'Clientes', 'Cotizado hoy', 'Vendido hoy']} />
-      <div className={s.people}>
-        {skRows(2, i => (
-          <article key={i} className={`${s.elev} ${s.person}`}>
-            <div className={s.personHead}>
-              <Av />
-              <div style={{ flex: 1 }}><b><SkText w={skWidth(i, 0.6)} /></b><small><SkText w={skWidth(i + 3, 0.5)} /></small></div>
-              <span className={`${s.bigPct} ${s.num}`}><SkText w={48} /></span>
-            </div>
-            <GoalRows />
-            <div className={s.goal}><span>Correos</span><span aria-hidden="true" /><em className={s.num}><SkText w={16} style={{ marginLeft: 'auto' }} /></em></div>
-          </article>
-        ))}
-      </div>
-      <div className={s.split}>
-        <div className={`${s.elev} ${s.splitCard}`}><h3>Resultados de hoy</h3><BarRows /></div>
-        <div className={`${s.elev} ${s.splitCard}`}><h3>Actividad por segmento (hoy)</h3><BarRows /></div>
-      </div>
-    </Loading>
-  )
-}
-
-/* ── Acumulado (debajo del selector de periodo, que ya se ve) ── */
-
-export function AcumuladoSkeleton() {
-  return (
-    <Loading label="Cargando el acumulado…">
-      <KpisSkeleton labels={['Llamadas', 'Contactos efectivos', 'Cotizado', 'Vendido']} />
-      <p className={s.compareNote}><SkText w={260} /></p>
-      <div className={`${s.elev} ${s.splitCard}`} style={{ marginBottom: 12 }}>
-        <div className={s.cardHead}>
-          <h3>Avance contra la meta</h3>
-          <span className={`${s.bigPct} ${s.num}`}><SkText w={48} /></span>
-        </div>
-        <p className={s.hMuted} style={{ fontSize: 12, margin: '0 0 6px' }}><SkText w={180} /></p>
-        <GoalRows wide />
-      </div>
-      <div className={`${s.elev} ${s.splitCard}`}>
-        <div className={s.cardHead} style={{ alignItems: 'center', marginBottom: 8 }}>
-          <h3>Por vendedor</h3>
-          <Sk w={120} h={32} r={8} />
-        </div>
-        {skRows(3, i => (
-          <div key={i} className={s.brow} style={{ gridTemplateColumns: '26px 1fr 80px' }}>
-            <Sk w={26} h={26} r={6} />
-            <span><SkText w={skWidth(i, 0.5)} /></span>
-            <em className={s.num}><SkText w={40} style={{ marginLeft: 'auto' }} /></em>
-          </div>
-        ))}
-      </div>
     </Loading>
   )
 }

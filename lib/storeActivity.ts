@@ -1,9 +1,9 @@
 /**
  * Actividad comercial de la tienda medida en SUS días: el calendario de la
  * tienda (su zona horaria) y la lectura de actividades de un rango, sin las
- * cuentas de prueba cuando se mira a todo el equipo. Inicio, Comercial,
- * Actividad diaria y Acumulado usan esto para que "hoy" y "este mes" sean lo
- * mismo en todas las pantallas. Solo servidor.
+ * cuentas de prueba cuando se mira a todo el equipo. Inicio, Comercial y
+ * Reportes usan esto para que "hoy" y "este mes" sean lo mismo en todas las
+ * pantallas. Solo servidor.
  */
 import { getServerSupabase, getTestUserIds, type StoreContext } from './supabase-server'
 import { fetchPaged } from './paged'

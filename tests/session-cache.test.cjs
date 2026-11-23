@@ -142,7 +142,7 @@ test('requireStore({ feature }): 403 PLAN_FEATURE si el plan no la incluye', asy
   state.plan = 'litro'
   const res = await api.requireStore({ feature: 'reports' })
   assert.equal(res.status, 403)
-  assert.deepEqual(await res.json(), { error: 'Acumulado y los reportes en Excel vienen en el plan Cubeta.', code: 'PLAN_FEATURE' })
+  assert.deepEqual(await res.json(), { error: 'Reportes viene en el plan Cubeta.', code: 'PLAN_FEATURE' })
   const team = await api.requireStore({ feature: 'salesTeam' })
   assert.equal(team.status, 403)
   assert.match((await team.json()).error, /plan Cubeta/)

@@ -117,7 +117,7 @@ test('avisos push: en Litro solo el administrador principal; con plan de equipo,
   assert.equal(mainAdminOf(null, []), null)
 })
 
-test('the Acumulado report has one row per seller, the store total and the comparison', () => {
+test('the Desempeño report has one row per seller, the store total and the comparison', () => {
   const { summaryPeopleRows, summaryTotalsRows } = require('../lib/exportData.ts')
   const counts = (calls, sold) => ({ calls, effective: 1, quotes: 2, followups: 3, sales: 4, quoted: 100, sold })
   const goals = { calls: 30, effective: 15, quotes: 6, followups: 10, sales: 2 }

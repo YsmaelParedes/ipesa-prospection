@@ -30,6 +30,7 @@ import { RouteSkeleton } from '@/components/skeletons/RouteSkeleton'
 import {
   House, Users, Activity, CalendarCheck, Settings, Bell, Menu, Plus, CircleHelp, LogOut, Check, ArrowUp,
   Sparkles, X, Wrench, FlaskConical, Store, ChevronsUpDown, Lock, BellOff, Search, FileText, Megaphone, Package,
+  ChartColumn,
 } from 'lucide-react'
 
 /** Estado de los avisos push en este dispositivo. */
@@ -47,7 +48,7 @@ const Icon = {
   home: House, contacts: Users, commercial: Activity, calendar: CalendarCheck, settings: Settings,
   bell: Bell, menu: Menu, plus: Plus, help: CircleHelp, logout: LogOut, check: Check, arrowUp: ArrowUp,
   sparkles: Sparkles, close: X, wrench: Wrench, flask: FlaskConical, store: Store, chevrons: ChevronsUpDown,
-  lock: Lock, bellOff: BellOff, whatsapp: WhatsAppIcon, quote: FileText, megaphone: Megaphone, product: Package,
+  lock: Lock, bellOff: BellOff, whatsapp: WhatsAppIcon, quote: FileText, megaphone: Megaphone, product: Package, chart: ChartColumn,
 }
 
 function initials(name: string) {
@@ -66,6 +67,8 @@ const NAV_ITEMS: NavItem[] = [
   // En el celular va en el menú (abajo ya no caben más)
   { id: 'cotizaciones', href: '/cotizaciones', label: 'Cotizaciones', icon: Icon.quote, mobile: false },
   { id: 'productos', href: '/productos',     label: 'Productos', icon: Icon.product,  mobile: false },
+  // Admins y vendedores (cada quien ve lo suyo); en Litro, con candado
+  { id: 'reportes',  href: '/reportes',      label: 'Reportes',  icon: Icon.chart,    mobile: false },
   { id: 'agenda',    href: '/recordatorios', label: 'Agenda',    icon: Icon.calendar, mobile: true },
 ]
 const TOOL_ITEMS: NavItem[] = [
@@ -80,6 +83,7 @@ const TITLE_MAP: Record<string, { t: string; s: string }> = {
   '/comercial':      { t: 'Sistema Comercial', s: 'Hoy, oportunidades y equipo'     },
   '/cotizaciones':   { t: 'Cotizaciones',  s: 'Arma, envía y da seguimiento'      },
   '/productos':      { t: 'Productos',     s: 'Tu catálogo y sus listas de precios' },
+  '/reportes':       { t: 'Reportes',      s: 'Cómo va tu tienda, con números y gráficas' },
   '/recordatorios':  { t: 'Agenda',        s: 'Recordatorios y seguimientos'       },
   '/formulas':       { t: 'Fórmulas',      s: 'Igualación de colores'              },
   '/configuracion':  { t: 'Configuración', s: 'Tu tienda, equipo e integraciones'  },

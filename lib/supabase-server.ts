@@ -346,7 +346,7 @@ const testCache = new Map<string, { at: number; ids: Set<string> }>()
 
 /**
  * Cuentas de prueba de la tienda (store_members.is_test): lo que hacen no
- * cuenta en los números del equipo (Equipo, Acumulado, Inicio, Oportunidades)
+ * cuenta en los números del equipo (Reportes, Inicio, Oportunidades)
  * ni aparecen en las tablas de vendedores. Si la consulta falla, no excluye a
  * nadie: mejor un número con pruebas que una pantalla rota.
  */

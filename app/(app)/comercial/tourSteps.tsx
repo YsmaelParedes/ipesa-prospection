@@ -9,16 +9,14 @@ const at = (id: string) => `[data-tour="${id}"]`
 
 /**
  * Recorrido corto: 5 pasos generales (antes eran hasta 14 y se sentía largo).
- * Se ajusta a lo que ve cada quien: Actividad diaria y Acumulado solo
- * administradores con equipo; registrar solo si puede escribir.
+ * Se ajusta a lo que ve cada quien: registrar solo si puede escribir. Lo del
+ * equipo (metas y periodos) está en Reportes.
  */
-export function commercialTour({ isAdmin, salesTeam, reports, readonly, clientId }: {
-  isAdmin: boolean; salesTeam: boolean; reports: boolean; readonly: boolean
+export function commercialTour({ salesTeam, readonly, clientId }: {
+  salesTeam: boolean; readonly: boolean
   /** Cliente que se usa de ejemplo (el primero de la lista); sin él, ese paso sale al centro. */
   clientId?: string
 }): CommercialStep[] {
-  const team = salesTeam && isAdmin
-  const summary = reports && isAdmin
   return [
     {
       id: 'welcome', title: 'Así funciona el Sistema Comercial',
@@ -40,7 +38,6 @@ export function commercialTour({ isAdmin, salesTeam, reports, readonly, clientId
           <li><b>Hoy:</b> a quién contactar hoy. Empieza por Pendientes.</li>
           <li><b>Cartera:</b> toda tu base, por etapa.</li>
           <li><b>Oportunidades:</b> tus cotizaciones abiertas.</li>
-          {team && <li><b>{summary ? 'Actividad diaria y Acumulado' : 'Actividad diaria'}:</b> cómo va el equipo.</li>}
         </ul>
       ),
     },

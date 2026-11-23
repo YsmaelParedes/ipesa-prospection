@@ -5,7 +5,7 @@
  */
 import { PLANS } from './stores'
 
-export type LockedFeature = 'equipo' | 'whatsapp' | 'actividad' | 'acumulado' | 'contactos' | 'productos' | 'prueba'
+export type LockedFeature = 'equipo' | 'whatsapp' | 'reportes' | 'contactos' | 'productos' | 'prueba'
 
 export type LockCopy = {
   /** Título del aviso */
@@ -23,13 +23,9 @@ export const LOCKS: Record<LockedFeature, LockCopy> = {
     title: 'WhatsApp viene en Cubeta',
     text: 'Conecta el número de tu tienda y contesta sus chats desde el CRM, con el historial y las cotizaciones de cada cliente.',
   },
-  actividad: {
-    title: 'Actividad diaria viene en Cubeta',
-    text: 'Cada vendedor contra su meta del día: lo que llamó, cotizó y vendió, y la meta de todo el equipo.',
-  },
-  acumulado: {
-    title: 'Acumulado viene en Cubeta',
-    text: 'El día, la semana y el mes de cada vendedor contra el periodo anterior, a qué clientes cotizó y vendió, y reportes en Excel.',
+  reportes: {
+    title: 'Reportes viene en Cubeta',
+    text: 'Cada vendedor contra su meta de hoy, y el día, la semana, el mes o el año contra el periodo anterior, con gráficas, filtros y Excel.',
   },
   prueba: {
     title: 'Sigue con Cubeta',
