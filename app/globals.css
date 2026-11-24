@@ -156,6 +156,9 @@ a { color: inherit; text-decoration: none; }
 .nav-item:hover .nav-icon { color: var(--ink-2); }
 .nav-item.active { background: var(--brand-softer); color: var(--brand-strong); }
 .nav-item.active .nav-icon { color: var(--brand); }
+/* Teclado: el recuadro va dentro del renglón, sin pisar la línea ni a los vecinos. Con el ratón no sale (noClickRing) */
+.nav-item:focus-visible { outline-offset: -2px; }
+.sidebar [data-clicked]:focus-visible { outline: none; }
 .nav-item.active::before {
   content: ""; position: absolute; left: -14px; top: 7px; bottom: 7px; width: 4px;
   border-radius: 0 4px 4px 0; background: var(--spectrum-v);

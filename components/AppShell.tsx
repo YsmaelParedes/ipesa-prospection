@@ -12,7 +12,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { BrandLogo } from '@/components/Brand'
 import GlobalSearch from '@/components/GlobalSearch'
 import { QuickCreateFab, QuickCreateHost, QuickCreateMenu } from '@/components/QuickCreate'
-import { BASE_MENU, MENU_ICONS, SideMenu, rememberMenu, useRememberedMenu, type MenuBadge } from '@/components/SideMenu'
+import { BASE_MENU, MENU_ICONS, SideMenu, noClickRing, rememberMenu, useRememberedMenu, type MenuBadge } from '@/components/SideMenu'
 import { APP_NAME } from '@/lib/brand'
 import { invalidateSession, useSession } from '@/lib/profile'
 import { signOut } from '@/lib/signOut'
@@ -353,7 +353,7 @@ Pantalla: ${pathname}`,
       <div className={`sidebar-scrim ${drawerOpen ? 'open' : ''}`} onClick={() => setDrawerOpen(false)} />
 
       {/* ── Sidebar ── */}
-      <aside className={`sidebar ${drawerOpen ? 'open' : ''}`}>
+      <aside className={`sidebar ${drawerOpen ? 'open' : ''}`} {...noClickRing}>
         <div className="brand">
           {store?.logoUrl
             ? <img src={store.logoUrl} alt={store.name} width={480} height={209} className="brand-logo" />

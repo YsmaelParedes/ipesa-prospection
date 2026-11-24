@@ -36,6 +36,15 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.69.1',
+    date: '23 de noviembre, 2026',
+    title: 'Menú sin recuadro rojo',
+    items: [
+      'Al hacer clic en una opción del menú ya no queda un recuadro rojo alrededor.',
+      'Si te mueves con la tecla Tab, el recuadro queda dentro de la opción y no tapa a las demás.',
+    ],
+  },
+  {
     version: '1.69.0',
     date: '23 de noviembre, 2026',
     title: 'Menú más ordenado y compacto',

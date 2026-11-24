@@ -15,6 +15,21 @@ export const MENU_ICONS: Record<MenuIcon, React.ComponentType<IconProps>> = {
 
 export type MenuBadge = { n: number; cls: string }
 
+/**
+ * Lo que se toca con el ratón no lleva el recuadro del teclado. El navegador lo dibuja con la
+ * siguiente tecla (hasta con Mayús, al tomar una captura) y se queda puesto. Con Tab sí se ve.
+ * Al cambiar de ventana el foco no se mueve, así que la marca se queda.
+ */
+export const noClickRing = {
+  onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
+    const el = (e.target as Element).closest<HTMLElement>('a, button')
+    if (el) el.dataset.clicked = ''
+  },
+  onBlur: (e: React.FocusEvent<HTMLElement>) => {
+    if (document.activeElement !== e.target) delete (e.target as HTMLElement).dataset.clicked
+  },
+}
+
 const OPEN_KEY = 'crm:menu:open'
 const readOpen = (): string[] => {
   try {
