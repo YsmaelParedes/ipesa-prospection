@@ -3,7 +3,7 @@ import { storeDays } from '@/lib/storeActivity'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSupabase, requireStore } from '@/lib/supabase-server'
 import { jsonError, serverError } from '@/lib/validation'
-import { COMMERCIAL_COLUMNS, hasReports, hasSalesTeam, storeGoals, withOwnerNames } from '@/lib/commercialServer'
+import { COMMERCIAL_COLUMNS, dueToday, hasReports, hasSalesTeam, storeGoals, withOwnerNames } from '@/lib/commercialServer'
 import { withContactSearch } from '@/lib/contactSearch'
 import { fetchPaged } from '@/lib/paged'
 import { countActivities, goalsFor, type ActivityForCount } from '@/lib/commercial'
@@ -46,9 +46,7 @@ async function GETImpl(req: NextRequest) {
   const supabase = getServerSupabase()
 
   try {
-    let due = supabase.from('contacts').select(COMMERCIAL_COLUMNS, { count: 'exact' }).eq('store_id', ctx.storeId)
-      .or(`owner_id.eq.${ctx.uid},owner_id.is.null`)
-      .not('next_action_at', 'is', null).lte('next_action_at', today).neq('commercial_status', 'depurar')
+    let due = dueToday(ctx, today, COMMERCIAL_COLUMNS)
     if (zone) due = due.eq('zone', zone)
     if (segment) due = due.eq('segment', segment)
     if (q) due = withContactSearch(due, q)

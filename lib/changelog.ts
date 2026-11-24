@@ -36,6 +36,19 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.68.0',
+    date: '23 de noviembre, 2026',
+    title: 'Menú por grupos',
+    items: [
+      'El menú se agrupa: toca un grupo para ver sus pantallas. El grupo donde estás se abre solo y los demás se quedan como los dejes.',
+      'Hoy, Cartera y Oportunidades se eligen desde el menú, dentro de Sistema Comercial. Hoy muestra cuántos pendientes tienes desde cualquier pantalla.',
+      'Cotizaciones y Productos están juntos en Ventas.',
+      'Los reportes se eligen desde el menú. Al pasar de uno a otro se conservan tus filtros.',
+      { text: '«Campañas de Mkt» ahora se llama «Campañas» y está en WhatsApp, junto con Conversaciones y Resultados.', module: 'campaigns' },
+      'En el celular todo sigue igual: las pestañas arriba y la barra de abajo. El botón del menú tiene los mismos grupos.',
+    ],
+  },
+  {
     version: '1.67.0',
     date: '22 de noviembre, 2026',
     title: 'Reportes',

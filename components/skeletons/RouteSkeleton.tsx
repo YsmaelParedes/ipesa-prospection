@@ -14,15 +14,15 @@ import { QuoteEditorSkeleton, QuotesPageSkeleton } from '@/app/(app)/cotizacione
 import { ProductSkeleton, ProductsPageSkeleton } from '@/app/(app)/productos/Skeletons'
 import { ReportesPageSkeleton } from '@/app/(app)/reportes/Skeletons'
 
-export function RouteSkeleton({ pathname }: { pathname: string }) {
+export function RouteSkeleton({ pathname, tab }: { pathname: string; /** ?tab=: cuál de las pantallas de la sección */ tab?: string | null }) {
   const is = (base: string) => pathname === base || pathname.startsWith(`${base}/`)
   if (is('/contactos')) return <ContactsPageSkeleton />
-  if (is('/comercial')) return <ComercialPageSkeleton />
+  if (is('/comercial')) return <ComercialPageSkeleton tab={tab} />
   if (pathname.startsWith('/cotizaciones/')) return <QuoteEditorSkeleton />
   if (is('/cotizaciones')) return <QuotesPageSkeleton />
   if (pathname.startsWith('/productos/')) return <ProductSkeleton />
   if (is('/productos')) return <ProductsPageSkeleton />
-  if (is('/reportes')) return <ReportesPageSkeleton />
+  if (is('/reportes')) return <ReportesPageSkeleton tab={tab} />
   if (is('/recordatorios')) return <AgendaPageSkeleton />
   if (is('/whatsapp')) return <WhatsAppPageSkeleton />
   if (is('/campanas')) return <CampaignsPageSkeleton />

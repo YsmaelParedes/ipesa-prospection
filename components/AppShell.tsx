@@ -3,34 +3,33 @@
 import { apiFetch } from '@/lib/apiClient'
 
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import Link from '@/components/CachedLink'
 import { useQueryEffect } from '@/lib/useCachedQuery'
 import QueryBoundary from '@/components/QueryBoundary'
 import SessionScope from '@/components/SessionScope'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { BrandLogo } from '@/components/Brand'
 import GlobalSearch from '@/components/GlobalSearch'
 import { QuickCreateFab, QuickCreateHost, QuickCreateMenu } from '@/components/QuickCreate'
+import { BASE_MENU, MENU_ICONS, SideMenu, rememberMenu, useRememberedMenu, type MenuBadge } from '@/components/SideMenu'
 import { APP_NAME } from '@/lib/brand'
 import { invalidateSession, useSession } from '@/lib/profile'
 import { signOut } from '@/lib/signOut'
 import { CURRENT_VERSION, changelogFor } from '@/lib/changelog'
 import { SYSTEM_NOTICE } from '@/lib/systemNotice'
+import { CONFIG_PAGE, menuFor, menuPages, pageAt, type MenuPageId } from '@/lib/menu'
 import { EMAILS } from '@/lib/legal'
-import { ROLE_LABELS, STATUS_LABELS, whatsappPendingTag, type StoreModule } from '@/lib/stores'
+import { ROLE_LABELS, STATUS_LABELS, whatsappPendingTag } from '@/lib/stores'
 import { reminderSubject, reminderTitle, type Reminder } from '@/lib/crm'
 import { notifyDataChanged, openQuickCreate, useDataChanged } from '@/lib/crmEvents'
 import { fmtDue, isDueToday, isOverdue } from '@/lib/datetime'
 import { enableDevicePush, pushSupport, resumeDevicePush, testDevicePush } from '@/lib/pushClient'
 import { CopyGuard } from '@/components/CopyGuard'
-import { WhatsAppIcon } from '@/components/icons'
 import { Sk, SkCircle, SkText } from '@/components/Skeleton'
 import { RouteSkeleton } from '@/components/skeletons/RouteSkeleton'
 import {
-  House, Users, Activity, CalendarCheck, Settings, Bell, Menu, Plus, CircleHelp, LogOut, Check, ArrowUp,
-  Sparkles, X, Wrench, FlaskConical, Store, ChevronsUpDown, Lock, BellOff, Search, FileText, Megaphone, Package,
-  ChartColumn,
+  Settings, Bell, Menu, Plus, CircleHelp, LogOut, Check, ArrowUp, Sparkles, X, Wrench, Store, ChevronsUpDown, Lock, BellOff, Search,
 } from 'lucide-react'
 
 /** Estado de los avisos push en este dispositivo. */
@@ -42,58 +41,29 @@ function pushStateOf(sub: PushSubscription | null): 'blocked' | 'off' | 'on' {
 /** Cada cuánto se vuelve a sugerir activar los avisos si alguien cerró la sugerencia. */
 const PUSH_PROMPT_SNOOZE_MS = 7 * 86_400_000
 
-/* ── Iconos (Lucide + logo de WhatsApp) ── */
+/* ── Iconos (Lucide); los del menú están en SideMenu ── */
 type IconProps = { className?: string; style?: React.CSSProperties; strokeWidth?: number }
 const Icon = {
-  home: House, contacts: Users, commercial: Activity, calendar: CalendarCheck, settings: Settings,
-  bell: Bell, menu: Menu, plus: Plus, help: CircleHelp, logout: LogOut, check: Check, arrowUp: ArrowUp,
-  sparkles: Sparkles, close: X, wrench: Wrench, flask: FlaskConical, store: Store, chevrons: ChevronsUpDown,
-  lock: Lock, bellOff: BellOff, whatsapp: WhatsAppIcon, quote: FileText, megaphone: Megaphone, product: Package, chart: ChartColumn,
+  settings: Settings, bell: Bell, menu: Menu, plus: Plus, help: CircleHelp, logout: LogOut, check: Check, arrowUp: ArrowUp,
+  sparkles: Sparkles, close: X, wrench: Wrench, store: Store, chevrons: ChevronsUpDown, lock: Lock, bellOff: BellOff,
 }
 
 function initials(name: string) {
   return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
 }
 
-/* Menú en el orden del día a día. Mismo nombre en computadora y celular (`short` solo si no cabe abajo en el celular). */
-type NavItem = { id: string; href: string; label: string; short?: string; icon: React.ComponentType<IconProps>; mobile: boolean; module?: StoreModule; admin?: boolean }
-const NAV_ITEMS: NavItem[] = [
-  { id: 'inicio',    href: '/',              label: 'Inicio',    icon: Icon.home,     mobile: true },
-  { id: 'whatsapp',  href: '/whatsapp',      label: 'WhatsApp',  icon: Icon.whatsapp, mobile: true, module: 'whatsapp' },
-  // Envíos masivos y sus resultados: administradores de tiendas con el módulo (en el celular, en el menú)
-  { id: 'campanas',  href: '/campanas',      label: 'Campañas de Mkt', icon: Icon.megaphone, mobile: false, module: 'campaigns', admin: true },
-  { id: 'contactos', href: '/contactos',     label: 'Contactos', icon: Icon.contacts, mobile: true },
-  { id: 'comercial', href: '/comercial',     label: 'Sistema Comercial', short: 'Comercial', icon: Icon.commercial, mobile: true },
-  // En el celular va en el menú (abajo ya no caben más)
-  { id: 'cotizaciones', href: '/cotizaciones', label: 'Cotizaciones', icon: Icon.quote, mobile: false },
-  { id: 'productos', href: '/productos',     label: 'Productos', icon: Icon.product,  mobile: false },
-  // Admins y vendedores (cada quien ve lo suyo); en Litro, con candado
-  { id: 'reportes',  href: '/reportes',      label: 'Reportes',  icon: Icon.chart,    mobile: false },
-  { id: 'agenda',    href: '/recordatorios', label: 'Agenda',    icon: Icon.calendar, mobile: true },
+/* Barra de abajo del celular: lo de todos los días. Lo demás, en el menú. */
+const BOTTOM: { id: MenuPageId; label: string; paths: MenuPageId[] }[] = [
+  { id: 'inicio', label: 'Inicio', paths: ['inicio'] },
+  { id: 'conversaciones', label: 'WhatsApp', paths: ['conversaciones'] },
+  { id: 'contactos', label: 'Contactos', paths: ['contactos'] },
+  { id: 'hoy', label: 'Comercial', paths: ['hoy', 'cartera', 'oportunidades'] },
+  { id: 'agenda', label: 'Agenda', paths: ['agenda'] },
 ]
-const TOOL_ITEMS: NavItem[] = [
-  { id: 'formulas',  href: '/formulas',      label: 'Fórmulas',  icon: Icon.flask,    mobile: false, module: 'formulas' },
-]
+const BOTTOM_ICONS = { inicio: MENU_ICONS.home, conversaciones: MENU_ICONS.whatsapp, contactos: MENU_ICONS.contacts, hoy: MENU_ICONS.commercial, agenda: MENU_ICONS.calendar } as Record<MenuPageId, React.ComponentType<IconProps>>
 
-const TITLE_MAP: Record<string, { t: string; s: string }> = {
-  '/':               { t: 'Inicio',        s: 'Lo que hay que atender hoy'         },
-  '/whatsapp':       { t: 'WhatsApp',      s: 'Conversaciones con tus clientes'    },
-  '/campanas':       { t: 'Campañas de Mkt', s: 'Envíos por WhatsApp y sus resultados' },
-  '/contactos':      { t: 'Contactos',     s: 'Tu base de clientes'                },
-  '/comercial':      { t: 'Sistema Comercial', s: 'Hoy, oportunidades y equipo'     },
-  '/cotizaciones':   { t: 'Cotizaciones',  s: 'Arma, envía y da seguimiento'      },
-  '/productos':      { t: 'Productos',     s: 'Tu catálogo y sus listas de precios' },
-  '/reportes':       { t: 'Reportes',      s: 'Cómo va tu tienda, con números y gráficas' },
-  '/recordatorios':  { t: 'Agenda',        s: 'Recordatorios y seguimientos'       },
-  '/formulas':       { t: 'Fórmulas',      s: 'Igualación de colores'              },
-  '/configuracion':  { t: 'Configuración', s: 'Tu tienda, equipo e integraciones'  },
-}
-
-/** Título de la barra superior (el editor de una cotización y la ficha de un producto usan el de su sección). */
-const titleFor = (pathname: string) =>
-  TITLE_MAP[pathname]
-  ?? (pathname.startsWith('/cotizaciones/') ? TITLE_MAP['/cotizaciones'] : pathname.startsWith('/productos/') ? TITLE_MAP['/productos'] : undefined)
-  ?? { t: APP_NAME, s: '' }
+/** Todas las pantallas: el título de una que no está en el menú de esta persona. */
+const FULL_MENU = menuFor({ isAdmin: true, modules: null, reports: true })
 
 // Páginas tipo "app" que ocupan exactamente el alto de la pantalla
 const FILL_ROUTES = ['/whatsapp', '/campanas']
@@ -104,6 +74,7 @@ const FAB_ROUTES: Record<string, 'contact' | 'reminder' | undefined> = {
 
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const search   = useSearchParams()
   const router   = useRouter()
   const session  = useSession()
   const store    = session?.store ?? null
@@ -119,6 +90,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const [waUnread,      setWaUnread]      = useState(0)
   // Litro con número conectado: los chats siguen llegando, pero se ven con candado
   const [waLocked,      setWaLocked]      = useState(false)
+  const [commercialDue, setCommercialDue] = useState(0)
   const [pushState,     setPushState]     = useState<'unsupported' | 'ios-install' | 'blocked' | 'off' | 'on'>('unsupported')
   const [pushPrompt,    setPushPrompt]    = useState(false)
   const [pushBusy,      setPushBusy]      = useState(false)
@@ -161,7 +133,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
   const notes = changelogFor(session?.store?.modules)
 
   /* Cerrar el menú lateral y la campana al navegar */
-  useEffect(() => { setDrawerOpen(false); setBellOpen(false) }, [pathname])
+  const tab = search.get('tab')
+  useEffect(() => { setDrawerOpen(false); setBellOpen(false) }, [pathname, tab])
 
   /* Botón "volver arriba" — visible tras scrollear hacia abajo */
   useEffect(() => {
@@ -202,6 +175,16 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     const base = document.title.replace(/^\(\d+\+?\)\s*/, '')
     document.title = waUnread > 0 ? `(${waUnread > 99 ? '99+' : waUnread}) ${base}` : base
   }, [waUnread, pathname])
+
+  /* Sistema Comercial: los pendientes de hoy (número de «Hoy» en el menú) */
+  const loadCommercialDue = useCallback(() => {
+    apiFetch('/api/data/commercial/due')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d && typeof d.due === 'number') setCommercialDue(d.due) })
+      .catch(() => {})
+  }, [])
+  useQueryEffect(() => { loadCommercialDue() }, [loadCommercialDue])
+  useDataChanged(['contact', 'commercial'], loadCommercialDue)
 
   /* Service Worker (avisos push) — los ajustes viven en Configuración → Mi cuenta */
   const userId = session?.user.id
@@ -322,17 +305,17 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const currentTitle = titleFor(pathname)
-  const isActive     = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
   const fill         = FILL_ROUTES.some(r => pathname.startsWith(r))
   // Menú según los módulos activos de la tienda (mientras carga, todo visible).
   // WhatsApp apagado se le muestra al administrador como "Por activar" para ofrecerlo.
   const waOff        = !!store && !store.modules.whatsapp
-  const withModule   = (it: NavItem) => !it.module || !store || store.modules[it.module] || (it.id === 'whatsapp' && !!session?.isAdmin)
-  // Campañas de Mkt: solo administradores, y las campañas salen por el WhatsApp de la tienda
-  const allowed      = (it: NavItem) => !it.admin || (!!session?.isAdmin && (it.id !== 'campanas' || !store || store.modules.whatsapp))
-  const navItems     = NAV_ITEMS.filter(it => withModule(it) && allowed(it))
-  const toolItems    = TOOL_ITEMS.filter(withModule)
+  const entries      = menuFor({ isAdmin: !!session?.isAdmin, modules: store?.modules ?? null, reports: store?.reports ?? true })
+  const active       = pageAt(entries, pathname, tab)
+  const titlePage    = active ?? pageAt(FULL_MENU, pathname, tab)
+  useEffect(() => {
+    if (session && store) rememberMenu({ isAdmin: !!session.isAdmin, modules: store.modules, reports: store.reports })
+  }, [session, store])
+  const pages        = menuPages(entries)
   const readonly     = store?.access === 'readonly'
   // Una sola tienda por cuenta: el menú aparece si hay a dónde cambiar (alguien en varias tiendas)
   const hasStoreMenu = !!session && session.stores.length > 1
@@ -355,28 +338,14 @@ Pantalla: ${pathname}`,
 
   // Lo que toca hoy (vencidos + hoy): contador de la campana y de Agenda
   const dueCount = reminders.filter(r => isDueToday(r.fecha_recordatorio, now)).length
-  const badgeFor = (id: string): { n: number; cls: string } | null =>
-    id === 'whatsapp' && waUnread > 0 ? { n: waUnread, cls: waLocked ? 'lock' : 'wa' }
+  const badgeFor = (id: MenuPageId): MenuBadge | null =>
+    id === 'conversaciones' && waUnread > 0 ? { n: waUnread, cls: waLocked ? 'lock' : 'wa' }
     : id === 'agenda' && dueCount > 0 ? { n: dueCount, cls: 'due' }
+    : id === 'hoy' && commercialDue > 0 ? { n: commercialDue, cls: 'due' }
     : null
-  const pendingSetup = (id: string) => id === 'whatsapp' && waOff
   // En Cubeta, mientras no esté conectado: "Por activar". Sin el plan que lo incluye (Litro), un candado
   const waTag = store ? whatsappPendingTag(store) : null
-
-  const navLink = (it: NavItem) => {
-    const Ic = it.icon
-    const badge = badgeFor(it.id)
-    return (
-      <Link key={it.id} href={it.href} data-tour={`nav-${it.id}`} className={`nav-item ${isActive(it.href) ? 'active' : ''}`} aria-current={isActive(it.href) ? 'page' : undefined}>
-        <Ic className="nav-icon" />
-        <span>{it.label}</span>
-        {badge && <span className={`nav-count ${badge.cls}`}>{badge.n > 99 ? '99+' : badge.n}</span>}
-        {pendingSetup(it.id) && (waTag
-          ? <span className="nav-count off">{waTag}</span>
-          : <Lock className="nav-lock" role="img" aria-label="Con candado, viene en Cubeta" />)}
-      </Link>
-    )
-  }
+  const pendingSetup = (id: MenuPageId) => id === 'conversaciones' && waOff
 
   return (
     <div className="app">
@@ -424,19 +393,11 @@ Pantalla: ${pathname}`,
           )}
         </div>
 
-        <nav className="nav" aria-label="Menú principal">
-          {navItems.map(navLink)}
-        </nav>
-
-        {toolItems.length > 0 && (
-          <>
-            <div className="nav-label">Herramientas</div>
-            <nav className="nav" aria-label="Herramientas">{toolItems.map(navLink)}</nav>
-          </>
-        )}
+        <SideMenu entries={entries} active={active} at={{ pathname, search: new URLSearchParams(search) }} badgeOf={badgeFor}
+          pending={id => pendingSetup(id) ? waTag : undefined} onNavigate={() => setDrawerOpen(false)} />
 
         <nav className="nav nav-bottom" aria-label="Ajustes">
-          <Link href="/configuracion" className={`nav-item ${isActive('/configuracion') ? 'active' : ''}`} aria-current={isActive('/configuracion') ? 'page' : undefined}>
+          <Link href="/configuracion" className={`nav-item ${active?.id === CONFIG_PAGE.id ? 'active' : ''}`} aria-current={active?.id === CONFIG_PAGE.id ? 'page' : undefined}>
             <Icon.settings className="nav-icon" />
             <span>Configuración</span>
           </Link>
@@ -475,12 +436,14 @@ Pantalla: ${pathname}`,
 
           <div className="topbar-title-block">
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 0 }}>
-              <h1 className="topbar-title">{currentTitle.t}</h1>
-              <div className="topbar-sub">{currentTitle.s}</div>
+              <h1 className="topbar-title">{titlePage?.title ?? APP_NAME}</h1>
+              <div className="topbar-sub">{titlePage?.subtitle}</div>
             </div>
           </div>
 
           <div className="topbar-actions">
+            {/* Lo propio de la pantalla (computadora): «¿Cómo funciona?» del Sistema Comercial */}
+            <div id="topbar-slot" className="topbar-slot" />
             <GlobalSearch />
             {!readonly && <QuickCreateMenu />}
 
@@ -613,15 +576,18 @@ Pantalla: ${pathname}`,
 
       {/* ── Bottom nav (celular) ── */}
       <nav className="bottom-nav" aria-label="Navegación principal">
-        {navItems.filter(it => it.mobile).map(it => {
-          const Ic = it.icon
-          const badge = badgeFor(it.id)
+        {BOTTOM.filter(b => pages.some(p => p.id === b.id)).map(b => {
+          const Ic = BOTTOM_ICONS[b.id]
+          const page = pages.find(p => p.id === b.id)!
+          // El número de Hoy solo va en el menú: aquí no cabe otro
+          const badge = b.id === 'hoy' ? null : badgeFor(b.id)
+          const on = !!active && b.paths.includes(active.id)
           return (
-            <Link key={it.id} href={it.href} data-tour={`nav-${it.id}`} className={isActive(it.href) ? 'active' : ''} aria-current={isActive(it.href) ? 'page' : undefined}>
+            <Link key={b.id} href={page.path} data-tour={`nav-${b.id}`} className={on ? 'active' : ''} aria-current={on ? 'page' : undefined}>
               <Ic />
-              <span>{it.short ?? it.label}</span>
+              <span>{b.label}</span>
               {badge && <span className={`bn-badge ${badge.cls}`}>{badge.n > 99 ? '99+' : badge.n}</span>}
-              {pendingSetup(it.id) && !badge && <span className="bn-badge off" title={waTag ?? 'Viene en Cubeta'}><span className="sr-only">{waTag ?? 'Viene en Cubeta'}</span></span>}
+              {pendingSetup(b.id) && !badge && <span className="bn-badge off" title={waTag ?? 'Viene en Cubeta'}><span className="sr-only">{waTag ?? 'Viene en Cubeta'}</span></span>}
             </Link>
           )
         })}
@@ -683,7 +649,11 @@ Pantalla: ${pathname}`,
 }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  return <SessionScope fallback={<AppFrameSkeleton />}><AppShellContent>{children}</AppShellContent></SessionScope>
+  return (
+    <SessionScope fallback={<AppFrameSkeleton />}>
+      <Suspense fallback={<AppFrameSkeleton />}><AppShellContent>{children}</AppShellContent></Suspense>
+    </SessionScope>
+  )
 }
 
 /**
@@ -692,10 +662,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
  * a la que se entró. Antes era una pantalla en blanco con «Comprobando sesión…».
  */
 function AppFrameSkeleton() {
+  // La dirección completa (?tab=) solo se sabe en el navegador
+  return <Suspense fallback={<FrameSkeleton search={null} />}><FrameSkeletonHere /></Suspense>
+}
+
+function FrameSkeletonHere() {
+  return <FrameSkeleton search={useSearchParams()} />
+}
+
+function FrameSkeleton({ search }: { search: { get(k: string): string | null; toString(): string } | null }) {
   const pathname = usePathname()
-  const title    = titleFor(pathname)
   const fill     = FILL_ROUTES.some(r => pathname.startsWith(r))
-  const isActive = (href: string) => href === '/' ? pathname === '/' : pathname.startsWith(href)
+  const { entries, known } = useRememberedMenu()
+  const tab      = search?.get('tab') ?? null
+  const active   = pageAt(entries, pathname, tab)
+  const page     = active ?? pageAt(FULL_MENU, pathname, tab)
+  // Mientras no se sepa cuál de las pantallas de la sección es, solo el nombre de la sección
+  const several  = menuPages(entries).filter(p => p.path === page?.path).length > 1
+  const unsure   = several && (!search || (page?.path === '/reportes' && !known))
+  const title    = { t: (unsure ? page?.subtitle : page?.title) ?? APP_NAME, s: unsure ? '' : page?.subtitle ?? '' }
   return (
     <div className="app">
       <div className="brand-line" aria-hidden="true" />
@@ -704,15 +689,9 @@ function AppFrameSkeleton() {
           <BrandLogo />
           <div className="store-switch"><div className="store-current"><Icon.store className="store-switch-icon" /><SkText w={120} /></div></div>
         </div>
-        <nav className="nav" aria-label="Menú principal">
-          {NAV_ITEMS.filter(it => !it.admin).map(it => (
-            <Link key={it.id} href={it.href} className={`nav-item ${isActive(it.href) ? 'active' : ''}`} aria-current={isActive(it.href) ? 'page' : undefined}>
-              <it.icon className="nav-icon" /><span>{it.label}</span>
-            </Link>
-          ))}
-        </nav>
+        <SideMenu entries={entries} active={search ? active : null} at={{ pathname, search: new URLSearchParams(search?.toString()) }} badgeOf={() => null} />
         <nav className="nav nav-bottom" aria-label="Ajustes">
-          <Link href="/configuracion" className={`nav-item ${isActive('/configuracion') ? 'active' : ''}`}>
+          <Link href="/configuracion" className={`nav-item ${active?.id === CONFIG_PAGE.id ? 'active' : ''}`}>
             <Icon.settings className="nav-icon" /><span>Configuración</span>
           </Link>
           <a className="nav-item" href={`mailto:${EMAILS.soporte}`}><Icon.help className="nav-icon" /><span>Ayuda</span></a>
@@ -744,15 +723,19 @@ function AppFrameSkeleton() {
             <span className="btn-icon"><Icon.bell style={{ width: 16, height: 16, color: 'var(--ink-2)' }} /></span>
           </div>
         </div>
-        <div className="content"><RouteSkeleton pathname={pathname} /></div>
+        <div className="content"><RouteSkeleton pathname={pathname} tab={tab} /></div>
       </main>
 
       <nav className="bottom-nav" aria-label="Navegación principal">
-        {NAV_ITEMS.filter(it => it.mobile).map(it => (
-          <Link key={it.id} href={it.href} className={isActive(it.href) ? 'active' : ''} aria-current={isActive(it.href) ? 'page' : undefined}>
-            <it.icon /><span>{it.short ?? it.label}</span>
-          </Link>
-        ))}
+        {BOTTOM.map(b => {
+          const Ic = BOTTOM_ICONS[b.id]
+          const on = !!active && b.paths.includes(active.id)
+          return (
+            <Link key={b.id} href={menuPages(BASE_MENU).find(p => p.id === b.id)!.path} className={on ? 'active' : ''} aria-current={on ? 'page' : undefined}>
+              <Ic /><span>{b.label}</span>
+            </Link>
+          )
+        })}
       </nav>
     </div>
   )

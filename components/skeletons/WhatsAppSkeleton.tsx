@@ -108,11 +108,11 @@ export function WhatsAppPageSkeleton() {
   return <div className="wa-page"><InboxSkeleton /></div>
 }
 
-/** Campañas de Mkt: las dos pestañas y la lista para elegir destinatarios. */
+/** Campañas: las dos pestañas (celular) y la lista para elegir destinatarios. */
 export function CampaignsPageSkeleton() {
   return (
     <div className="wa-page">
-      <div className="wa-tabs" aria-hidden="true"><Sk w={112} h={34} r={6} /><Sk w={112} h={34} r={6} /></div>
+      <div className="wa-tabs page-tabs" aria-hidden="true"><Sk w={112} h={34} r={6} /><Sk w={112} h={34} r={6} /></div>
       <RecipientPickSkeleton />
     </div>
   )

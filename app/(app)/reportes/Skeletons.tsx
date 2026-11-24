@@ -125,19 +125,22 @@ export function MiAvanceSkeleton() {
 }
 
 /** La sección completa mientras carga (menú y loading.tsx). */
-export function ReportesPageSkeleton() {
+export function ReportesPageSkeleton({ tab }: { tab?: string | null }) {
+  const second = tab === 'desempeno'
   return (
     <div className={s.page}>
+      <div className={s.head}>
       <div className={s.row}>
-        <div className={s.tabs}>
-          <span className={s.tab} aria-selected="true">Equipo hoy</span>
-          <span className={s.tab}>Desempeño</span>
+        <div className={`${s.tabs} page-tabs`}>
+          <span className={s.tab} aria-selected={!second}>Equipo hoy</span>
+          <span className={s.tab} aria-selected={second}>Desempeño</span>
         </div>
         <div className={s.spacer} />
         <Sk w={140} h={36} r={6} />
       </div>
       <div className={s.row}><Sk w={140} h={36} r={6} /><Sk w={120} h={36} r={6} /><Sk w={120} h={36} r={6} /></div>
-      <EquipoHoySkeleton />
+      </div>
+      {second ? <DesempenoSkeleton /> : <EquipoHoySkeleton />}
     </div>
   )
 }

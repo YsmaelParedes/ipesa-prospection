@@ -1,23 +1,31 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { WhatsAppCampaigns, type CampaignPreset } from '@/components/WhatsAppCampaigns'
 import { WhatsAppCampaignResults } from '@/components/WhatsAppCampaignHistory'
 import { WaIcon } from '@/components/WhatsAppUI'
 import { WhatsAppOffer } from '@/components/WhatsAppOffer'
+import { CampaignsPageSkeleton } from '@/components/skeletons/WhatsAppSkeleton'
 import { useSession } from '@/lib/profile'
 
 type Tab = 'campanas' | 'resultados'
 
-/**
- * Campañas de Mkt: envíos por WhatsApp a muchos contactos y sus resultados.
- * Solo administradores de tiendas con el módulo; la Bandeja se queda en WhatsApp.
- */
 export default function CampanasPage() {
+  // ?tab=resultados abre los resultados
+  return <Suspense fallback={<CampaignsPageSkeleton />}><Campanas /></Suspense>
+}
+
+/**
+ * Campañas: envíos por WhatsApp a muchos contactos y sus resultados. Solo
+ * administradores de tiendas con el módulo; los chats están en Conversaciones.
+ * Campañas y Resultados las cambia el menú (en el celular, las pestañas).
+ */
+function Campanas() {
   const session = useSession()
   const router = useRouter()
-  const [tab, setTab] = useState<Tab>('campanas')
+  const tab: Tab = useSearchParams().get('tab') === 'resultados' ? 'resultados' : 'campanas'
+  const setTab = (t: Tab) => router.replace(t === 'resultados' ? '/campanas?tab=resultados' : '/campanas', { scroll: false })
   const [retry, setRetry] = useState<CampaignPreset | null>(null)
 
   if (session?.store && !session.store.modules.whatsapp) return <div className="wa-page"><WhatsAppOffer /></div>
@@ -35,7 +43,7 @@ export default function CampanasPage() {
 
   return (
     <div className="wa-page">
-      <nav className="wa-tabs" role="tablist" aria-label="Secciones de Campañas de Mkt">
+      <nav className="wa-tabs page-tabs" role="tablist" aria-label="Campañas y resultados">
         <button role="tab" aria-selected={tab === 'campanas'} className={`wa-tab ${tab === 'campanas' ? 'active' : ''}`} onClick={() => setTab('campanas')}>
           <WaIcon.megaphone /> Campañas
         </button>

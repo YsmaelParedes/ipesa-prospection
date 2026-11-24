@@ -24,6 +24,17 @@ export function activityClient(
 export const liveContactIds = (rows: { contact_id: string | null }[]): string[] =>
   Array.from(new Set(rows.map(r => r.contact_id).filter((id): id is string => !!id)))
 
+/**
+ * Los pendientes de hoy de quien consulta: sus seguimientos con fecha de hoy o
+ * vencida y los que no tienen responsable. La usan la lista de Hoy y su número
+ * en el menú, para que siempre cuenten lo mismo.
+ */
+export function dueToday(ctx: StoreContext, today: string, columns: string, head = false) {
+  return getServerSupabase().from('contacts').select(columns, { count: 'exact', head }).eq('store_id', ctx.storeId)
+    .or(`owner_id.eq.${ctx.uid},owner_id.is.null`)
+    .not('next_action_at', 'is', null).lte('next_action_at', today).neq('commercial_status', 'depurar')
+}
+
 /** Reparto, metas y control diario: Cubeta e Interno (Litro trabaja solo). */
 export const hasSalesTeam = (ctx: StoreContext) => planOf(ctx.plan).salesTeam
 /** Reportes (con su Excel): Cubeta e Interno. */

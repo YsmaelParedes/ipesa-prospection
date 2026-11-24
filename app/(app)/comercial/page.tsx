@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { apiFetch, cachedQueryData } from '@/lib/apiClient'
 import { useDataReady, useQueryEffect } from '@/lib/useCachedQuery'
@@ -25,11 +26,12 @@ const FRESH_PAGE = 30
 const MAX_FRESH = 300
 type Tab = 'hoy' | 'cartera' | 'oportunidades'
 const TAB_KEYS: Tab[] = ['hoy', 'cartera', 'oportunidades']
+const tabHref = (t: Tab) => t === 'hoy' ? '/comercial' : `/comercial?tab=${t}`
 /** Pestañas que se mudaron a Reportes (enlaces viejos y avisos). */
 const MOVED: Record<string, string> = { actividad: 'equipo', equipo: 'equipo', acumulado: 'desempeno' }
 
 export default function ComercialPage() {
-  // ?id= abre un contacto (desde el buscador, Inicio, Contactos o WhatsApp); ?tab= abre una pestaña
+  // ?id= abre un contacto (desde el buscador, Inicio, Contactos o WhatsApp); ?tab= abre Cartera u Oportunidades
   return <Suspense fallback={null}><ComercialContent /></Suspense>
 }
 
@@ -45,8 +47,24 @@ function ComercialContent() {
   const [data, setData] = useState<TodayData | null>(() => cachedQueryData<TodayData>(PATH) ?? null)
   const [loading, setLoading] = useState(() => !cachedQueryData(PATH))
   useDataReady(loading, 'comercial')
-  const wanted = params.get('tab') as Tab | null
-  const [tab, setTab] = useState<Tab>(wanted && TAB_KEYS.includes(wanted) ? wanted : 'hoy')
+  // La pantalla (Hoy, Cartera u Oportunidades) vive en la dirección: la cambian el menú y,
+  // en el celular, las pestañas. Una ficha (?id=) se abre encima de la que estaba.
+  const wanted = params.get('tab')
+  const urlTab: Tab | null = TAB_KEYS.find(k => k === wanted) ?? (deepId ? null : 'hoy')
+  const [tab, setTabState] = useState<Tab>(urlTab ?? 'hoy')
+  const [seenTab, setSeenTab] = useState(urlTab)
+  const [overlay, setOverlay] = useState<Opened | null>(deepId ? { id: deepId } : null)
+  if (urlTab !== seenTab) {
+    setSeenTab(urlTab)
+    if (urlTab && urlTab !== tab) { setTabState(urlTab); setOverlay(null) }
+  }
+  const tabRef = useRef(tab)
+  tabRef.current = tab
+  const setTab = useCallback((t: Tab) => {
+    if (t === tabRef.current) return
+    setTabState(t)
+    router.replace(tabHref(t), { scroll: false })
+  }, [router])
   // Actividad diaria y Acumulado ahora están en Reportes
   const moved = wanted ? MOVED[wanted] : undefined
   useEffect(() => { if (moved) router.replace(`/reportes?tab=${moved}`) }, [moved, router])
@@ -57,7 +75,6 @@ function ComercialContent() {
   const [search, setSearch] = useState('')
   const [loadingMore, setLoadingMore] = useState(false)
   const [opened, setOpened] = useState<Opened | null>(null)
-  const [overlay, setOverlay] = useState<Opened | null>(deepId ? { id: deepId } : null)
   const [toast, setToast] = useState('')
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -103,6 +120,10 @@ function ComercialContent() {
   useQueryEffect(() => { load() }, [load])
   useDataChanged(['contact', 'commercial'], () => load(true))
   useEffect(() => { if (deepId) setOverlay({ id: deepId }) }, [deepId])
+  // Si la ficha se abre estando en Cartera u Oportunidades, la dirección lo dice (y el menú las marca)
+  useEffect(() => {
+    if (deepId && !wanted && tabRef.current !== 'hoy') router.replace(`${tabHref(tabRef.current)}&id=${encodeURIComponent(deepId)}`, { scroll: false })
+  }, [deepId, wanted, router])
 
   async function loadMore(which: 'fresh' | 'visit') {
     if (!data) return
@@ -148,7 +169,7 @@ function ComercialContent() {
 
   const closeOverlay = () => {
     setOverlay(null)
-    if (deepId) router.replace('/comercial', { scroll: false })
+    if (deepId) router.replace(tabHref(tab), { scroll: false })
   }
 
   const salesTeam = !!data?.salesTeam
@@ -182,7 +203,7 @@ function ComercialContent() {
     if (b) { setTab(b.tab); setSub(b.sub); setOpened(b.opened) }
     beforeTour.current = null
     guide.close()
-  }, [guide])
+  }, [guide, setTab])
   // Cada paso deja lista la pantalla: en Hoy y, si toca, con el cliente de ejemplo visible o abierto
   const prepareStep = useCallback((step: CommercialStep) => {
     setTab('hoy')
@@ -192,7 +213,10 @@ function ComercialContent() {
     } else if (!wide) {
       setOpened(null)
     }
-  }, [tourClient, wide])
+  }, [tourClient, wide, setTab])
+  // «¿Cómo funciona?» va en la barra de arriba; en el celular, junto a las pestañas
+  const [slot, setSlot] = useState<HTMLElement | null>(null)
+  useEffect(() => { setSlot(document.getElementById('topbar-slot')) }, [])
   // La primera vez sale sola: también hay que recordar cómo estaba la pantalla
   useEffect(() => {
     if (guide.open && !beforeTour.current) beforeTour.current = { tab, sub, opened }
@@ -200,16 +224,15 @@ function ComercialContent() {
 
   return (
     <>
-      <div className={s.tabsRow}>
-        {TABS.length > 1 && (
-          <div className={s.tabs} role="tablist" aria-label="Sistema Comercial" data-tour="tabs">
-            {TABS.map(t => (
-              <button key={t.key} role="tab" aria-selected={current === t.key} className={`${s.tab} ${s.press}`} onClick={() => setTab(t.key)} data-tour={`tab-${t.key}`}>
-                {t.label}{t.count ? <span className={`${s.tabCount} ${s.num}`}>{t.count}</span> : null}
-              </button>
-            ))}
-          </div>
-        )}
+      {slot && createPortal(<GuideButton onClick={startTour} />, slot)}
+      <div className={`${s.tabsRow} page-tabs`}>
+        <div className={s.tabs} role="tablist" aria-label="Sistema Comercial" data-tour="tabs">
+          {TABS.map(t => (
+            <button key={t.key} role="tab" aria-selected={current === t.key} className={`${s.tab} ${s.press}`} onClick={() => setTab(t.key)} data-tour={`tab-${t.key}`}>
+              {t.label}{t.count ? <span className={`${s.tabCount} ${s.num}`}>{t.count}</span> : null}
+            </button>
+          ))}
+        </div>
         <GuideButton onClick={startTour} />
       </div>
       {guide.open && data && (

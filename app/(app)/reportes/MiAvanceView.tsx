@@ -73,6 +73,7 @@ export function MiAvanceView({ tabs, filters, onFilters, compact }: {
 
   return (
     <>
+      <div className={s.head}>
       <div className={s.row}>
         {tabs}
         <div className={s.spacer} />
@@ -82,6 +83,7 @@ export function MiAvanceView({ tabs, filters, onFilters, compact }: {
         </button>
       </div>
       <div className={s.mine}><UserRound aria-hidden="true" />Aquí ves solo tus números: tus llamadas, tus cotizaciones y tus clientes.</div>
+      </div>
       {todayCard}
 
       <div className={s.sectionRow}>

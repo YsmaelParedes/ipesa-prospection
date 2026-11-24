@@ -66,7 +66,7 @@ export function EquipoHoyView({ tabs, filters, onFilters, compact, readonly }: {
   }
 
   const bar = (
-    <>
+    <div className={s.head}>
     <div className={s.row}>
       {tabs}
       <div className={s.spacer} />
@@ -84,7 +84,7 @@ export function EquipoHoyView({ tabs, filters, onFilters, compact, readonly }: {
       {data && <span className={s.dayLabel}>Hoy · {dayName(data.today)}</span>}
       <ReportFilters filters={filters} onChange={onFilters} options={data?.options} noPeriod compact={compact} />
     </div>
-    </>
+    </div>
   )
 
   if (error && !data) return <>{bar}<div className={`${s.card} ${s.error}`} role="alert">{error.message || 'No se pudo cargar la actividad del día'}</div></>

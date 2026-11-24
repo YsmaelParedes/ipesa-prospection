@@ -6,7 +6,7 @@ import { WhatsAppOffer } from '@/components/WhatsAppOffer'
 import { useSession } from '@/lib/profile'
 import { InboxSkeleton } from '@/components/skeletons/WhatsAppSkeleton'
 
-/** WhatsApp: la Bandeja con los chats. Las campañas están en «Campañas de Mkt». */
+/** WhatsApp: la Bandeja con los chats. Las campañas están en «Campañas». */
 export default function WhatsAppPage() {
   const session = useSession()
   const isAdmin = !!session?.isAdmin

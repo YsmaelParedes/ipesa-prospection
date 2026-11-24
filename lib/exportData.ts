@@ -9,7 +9,7 @@
  *    y cada venta del periodo.
  *  · downloadOpportunitiesWorkbook: las cotizaciones abiertas de Oportunidades.
  *  · downloadCampaignWorkbook / downloadCampaignsWorkbook: resultados de una
- *    campaña o de todas las del periodo (Campañas de Mkt → Resultados).
+ *    campaña o de todas las del periodo (WhatsApp → Resultados).
  */
 import { fmtPhone, normalizePhone } from './phone'
 import { FAILURE_KINDS, type CampaignBucket, type CampaignDetail, type CampaignRecipient, type CampaignSummary } from './campaignKinds'
@@ -168,7 +168,7 @@ export async function downloadOpportunitiesWorkbook(list: OpportunityRow[], toda
   }])
 }
 
-/* ── Campañas de Mkt ──────────────────────────────────────────────────────── */
+/* ── Campañas ──────────────────────────────────────────────────────── */
 const CAMPAIGN_STATE: Record<CampaignBucket, string> = { read: 'Leído', delivered: 'Entregado', pending: 'Pendiente', failed: 'No entregado' }
 const templateName = (t: string) => t.replace(/_/g, ' ')
 /** Por qué no le llegó (como en la pantalla de la campaña). */

@@ -55,7 +55,7 @@ export function DesempenoView({ tabs, filters, onFilters, compact }: {
   }
 
   const bar = (
-    <>
+    <div className={s.head}>
     <div className={s.row}>
       {tabs}
       <div className={s.spacer} />
@@ -68,7 +68,7 @@ export function DesempenoView({ tabs, filters, onFilters, compact }: {
       <ReportFilters filters={filters} onChange={f => { setDetail(null); onFilters(f) }} options={data?.options}
         noSellers={mine} compact={compact} range={data ? { from: data.from, end: data.end, today: data.today } : undefined} />
     </div>
-    </>
+    </div>
   )
 
   if (error && !data) return <>{bar}<div className={`${s.card} ${s.error}`} role="alert">{error.message || 'No se pudo cargar el reporte'}</div></>

@@ -47,9 +47,9 @@ function Reportes() {
   const readonly = session.store.access === 'readonly'
   const onFilters = (f: ReportFilters) => go(tab, f)
 
-  // Cada vista pone las pestañas en su primer renglón, junto a sus botones (Excel, metas)
+  // Celular: cada vista pone las pestañas en su primer renglón, junto a sus botones. En la computadora las cambia el menú
   const tabBar = (
-    <div className={s.tabs} role="tablist" aria-label="Reportes">
+    <div className={`${s.tabs} page-tabs`} role="tablist" aria-label="Reportes">
       {tabs.map(t => (
         <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} className={`${s.tab} ${s.press}`} onClick={() => go(t.key, filters)}>
           {t.label}

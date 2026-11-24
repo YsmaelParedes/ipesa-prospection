@@ -4,7 +4,7 @@ const assert = require('node:assert/strict')
 const XLSX = require('xlsx')
 const { campaignsSheets } = require('../lib/exportData.ts')
 
-// Excel de Resultados (Campañas de Mkt): un resumen por campaña y cada
+// Excel de Resultados de campañas: un resumen por campaña y cada
 // destinatario con su estado y el motivo si no le llegó.
 const recipient = (fields) => ({
   phone: '2221234567', contactId: null, name: 'Ana', segment: 'Pintor', bucket: 'read',

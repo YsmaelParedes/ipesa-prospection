@@ -32,7 +32,8 @@ export function commercialTour({ salesTeam, readonly, clientId }: {
       ),
     },
     {
-      id: 'tabs', target: at('tabs'), title: 'Las pestañas',
+      // En la computadora es el grupo del menú; en el celular, las pestañas
+      id: 'tabs', target: `${at('menu-comercial')}, ${at('tabs')}`, title: 'Tus tres pantallas',
       body: (
         <ul>
           <li><b>Hoy:</b> a quién contactar hoy. Empieza por Pendientes.</li>

@@ -275,17 +275,19 @@ export function DoneRowsSkeleton({ rows = 5 }: { rows?: number }) {
   )
 }
 
-/** Sistema Comercial completo (al entrar, antes de que cargue la pantalla). */
-export function ComercialPageSkeleton() {
+/** Sistema Comercial completo (al entrar, antes de que cargue la pantalla). Las pestañas, solo en el celular. */
+export function ComercialPageSkeleton({ tab }: { tab?: string | null }) {
+  const current = tab === 'cartera' || tab === 'oportunidades' ? tab : 'hoy'
   return (
     <>
-      <div className={s.tabsRow}>
+      <div className={`${s.tabsRow} page-tabs`}>
         <div className={s.tabs}>
-          <span className={s.tab} aria-selected="true">Hoy</span>
-          <span className={s.tab}>Cartera</span>
+          <span className={s.tab} aria-selected={current === 'hoy'}>Hoy</span>
+          <span className={s.tab} aria-selected={current === 'cartera'}>Cartera</span>
+          <span className={s.tab} aria-selected={current === 'oportunidades'}>Oportunidades</span>
         </div>
       </div>
-      <HoySkeleton />
+      {current === 'cartera' ? <CarteraSkeleton /> : current === 'oportunidades' ? <OportunidadesSkeleton /> : <HoySkeleton />}
     </>
   )
 }

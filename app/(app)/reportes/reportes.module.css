@@ -2,6 +2,13 @@
 .page { display: flex; flex-direction: column; gap: 14px; }
 .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .spacer { flex: 1 1 auto; }
+/* Arriba de cada reporte. Celular: pestañas con sus botones y, debajo, los filtros. Computadora: filtros a la izquierda y botones a la derecha */
+.head { display: flex; flex-direction: column; gap: 14px; }
+@media (min-width: 961px) {
+  .head { flex-direction: row-reverse; align-items: flex-start; gap: 12px; }
+  .head > :first-child { flex: none; }
+  .head > :last-child { flex: 1; min-width: 0; }
+}
 .press { -webkit-tap-highlight-color: transparent; }
 .num { font-variant-numeric: tabular-nums; }
 
