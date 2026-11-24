@@ -3,7 +3,7 @@
 import { apiFetch } from '@/lib/apiClient'
 
 
-import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
+import { Suspense, useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react'
 import Link from '@/components/CachedLink'
 import { useQueryEffect } from '@/lib/useCachedQuery'
 import QueryBoundary from '@/components/QueryBoundary'
@@ -656,22 +656,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   )
 }
 
+const noSubscribe = () => () => {}
+
 /**
  * La app mientras se comprueba la sesión: el mismo menú y la misma barra de
  * arriba (con lo fijo ya visible) y, en el centro, el skeleton de la sección
  * a la que se entró. Antes era una pantalla en blanco con «Comprobando sesión…».
  */
 function AppFrameSkeleton() {
-  // La dirección completa (?tab=) solo se sabe en el navegador
-  return <Suspense fallback={<FrameSkeleton search={null} />}><FrameSkeletonHere /></Suspense>
-}
-
-function FrameSkeletonHere() {
-  return <FrameSkeleton search={useSearchParams()} />
-}
-
-function FrameSkeleton({ search }: { search: { get(k: string): string | null; toString(): string } | null }) {
   const pathname = usePathname()
+  // La dirección completa (?tab=) solo se sabe en el navegador. Sin useSearchParams: un
+  // Suspense aquí mandaría la pantalla dos veces en el HTML y dejaría una copia oculta.
+  const query    = useSyncExternalStore(noSubscribe, () => window.location.search, () => null)
+  const search   = query === null ? null : new URLSearchParams(query)
   const fill     = FILL_ROUTES.some(r => pathname.startsWith(r))
   const { entries, known } = useRememberedMenu()
   const tab      = search?.get('tab') ?? null
@@ -689,7 +686,7 @@ function FrameSkeleton({ search }: { search: { get(k: string): string | null; to
           <BrandLogo />
           <div className="store-switch"><div className="store-current"><Icon.store className="store-switch-icon" /><SkText w={120} /></div></div>
         </div>
-        <SideMenu entries={entries} active={search ? active : null} at={{ pathname, search: new URLSearchParams(search?.toString()) }} badgeOf={() => null} />
+        <SideMenu entries={entries} active={search ? active : null} at={{ pathname, search: search ?? new URLSearchParams() }} badgeOf={() => null} />
         <nav className="nav nav-bottom" aria-label="Ajustes">
           <Link href="/configuracion" className={`nav-item ${active?.id === CONFIG_PAGE.id ? 'active' : ''}`}>
             <Icon.settings className="nav-icon" /><span>Configuración</span>

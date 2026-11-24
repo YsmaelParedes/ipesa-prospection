@@ -36,6 +36,17 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.69.0',
+    date: '23 de noviembre, 2026',
+    title: 'Menú más ordenado y compacto',
+    items: [
+      'El menú tiene un nuevo orden: Inicio, Agenda y Contactos arriba; después WhatsApp, Sistema Comercial, Ventas y Reportes.',
+      { text: 'Fórmulas está al final, sin grupo: se abre con un clic.', module: 'formulas' },
+      'En la computadora el menú es más angosto y compacto: cabe más en la pantalla y queda más espacio para trabajar.',
+      'Al abrir un grupo, su submenú se despliega con una animación.',
+    ],
+  },
+  {
     version: '1.68.0',
     date: '23 de noviembre, 2026',
     title: 'Menú por grupos',

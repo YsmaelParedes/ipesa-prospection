@@ -10,7 +10,7 @@
  */
 import type { StoreModules } from './stores'
 
-export type MenuIcon = 'home' | 'whatsapp' | 'contacts' | 'commercial' | 'sales' | 'chart' | 'calendar' | 'tools' | 'settings'
+export type MenuIcon = 'home' | 'whatsapp' | 'contacts' | 'commercial' | 'sales' | 'chart' | 'calendar' | 'formulas' | 'settings'
 
 export type MenuPageId =
   | 'inicio' | 'conversaciones' | 'campanas' | 'resultados' | 'contactos' | 'hoy' | 'cartera' | 'oportunidades'
@@ -29,11 +29,13 @@ export type MenuPage = {
   locked?: boolean
 }
 
-export type MenuGroupId = 'whatsapp' | 'comercial' | 'ventas' | 'reportes' | 'herramientas'
+export type MenuGroupId = 'whatsapp' | 'comercial' | 'ventas' | 'reportes'
 
 export type MenuEntry =
   | { kind: 'page'; icon: MenuIcon; page: MenuPage }
   | { kind: 'group'; id: MenuGroupId; label: string; icon: MenuIcon; pages: MenuPage[] }
+  /** Línea entre lo suelto y los grupos. */
+  | { kind: 'divider'; id: string }
 
 export type MenuAccess = {
   isAdmin: boolean
@@ -47,13 +49,16 @@ const single = (id: MenuPageId, label: string, path: string, subtitle: string): 
 
 export const CONFIG_PAGE = single('configuracion', 'Configuración', '/configuracion', 'Tu tienda, equipo e integraciones')
 
-/** Lo que ve esta persona, en orden. */
+/**
+ * Lo que ve esta persona, en orden: arriba lo suelto de todos los días, luego
+ * los grupos y al final las herramientas. Así lo suelto no se mueve al abrir
+ * un grupo.
+ */
 export function menuFor({ isAdmin, modules, reports }: MenuAccess): MenuEntry[] {
-  const group = (id: MenuGroupId, label: string, icon: MenuIcon, pages: (Omit<MenuPage, 'title' | 'subtitle'> | false)[]): MenuEntry[] => {
-    const seen = pages.filter((p): p is Omit<MenuPage, 'title' | 'subtitle'> => !!p)
-    return seen.length ? [{ kind: 'group', id, label, icon, pages: seen.map(p => ({ ...p, title: p.label, subtitle: label })) }] : []
-  }
+  const group = (id: MenuGroupId, label: string, icon: MenuIcon, pages: Omit<MenuPage, 'title' | 'subtitle'>[]): MenuEntry =>
+    ({ kind: 'group', id, label, icon, pages: pages.map(p => ({ ...p, title: p.label, subtitle: label })) })
   const page = (icon: MenuIcon, p: MenuPage): MenuEntry => ({ kind: 'page', icon, page: p })
+  const divider = (id: string): MenuEntry => ({ kind: 'divider', id })
 
   // Apagado se le muestra al administrador, para ofrecérselo
   const whatsapp = !modules || modules.whatsapp || isAdmin
@@ -63,37 +68,40 @@ export function menuFor({ isAdmin, modules, reports }: MenuAccess): MenuEntry[] 
 
   return [
     page('home', single('inicio', 'Inicio', '/', 'Lo que hay que atender hoy')),
+    page('calendar', single('agenda', 'Agenda', '/recordatorios', 'Recordatorios y seguimientos')),
+    page('contacts', single('contactos', 'Contactos', '/contactos', 'Tu base de clientes')),
+    divider('grupos'),
     ...(campaigns
-      ? group('whatsapp', 'WhatsApp', 'whatsapp', [
+      ? [group('whatsapp', 'WhatsApp', 'whatsapp', [
         { id: 'conversaciones', label: 'Conversaciones', path: '/whatsapp' },
         { id: 'campanas', label: 'Campañas', path: '/campanas' },
         { id: 'resultados', label: 'Resultados', path: '/campanas', tab: 'resultados' },
-      ])
+      ])]
       // Con una sola pantalla no hay nada que desplegar
       : whatsapp
         ? [page('whatsapp', { id: 'conversaciones', label: 'WhatsApp', path: '/whatsapp', title: 'WhatsApp', subtitle: 'Conversaciones con tus clientes' })]
         : []),
-    page('contacts', single('contactos', 'Contactos', '/contactos', 'Tu base de clientes')),
-    ...group('comercial', 'Sistema Comercial', 'commercial', [
+    group('comercial', 'Sistema Comercial', 'commercial', [
       { id: 'hoy', label: 'Hoy', path: '/comercial' },
       { id: 'cartera', label: 'Cartera', path: '/comercial', tab: 'cartera' },
       { id: 'oportunidades', label: 'Oportunidades', path: '/comercial', tab: 'oportunidades' },
     ]),
-    ...group('ventas', 'Ventas', 'sales', [
+    group('ventas', 'Ventas', 'sales', [
       { id: 'cotizaciones', label: 'Cotizaciones', path: '/cotizaciones' },
       { id: 'productos', label: 'Productos', path: '/productos' },
     ]),
     // Cada quien ve lo suyo; en Litro, con candado
-    ...group('reportes', 'Reportes', 'chart', [
+    group('reportes', 'Reportes', 'chart', [
       isAdmin ? { id: 'equipo', label: 'Equipo hoy', path: '/reportes', locked } : { id: 'avance', label: 'Mi avance', path: '/reportes', locked },
       { id: 'desempeno', label: 'Desempeño', path: '/reportes', tab: 'desempeno', locked },
     ]),
-    page('calendar', single('agenda', 'Agenda', '/recordatorios', 'Recordatorios y seguimientos')),
-    ...group('herramientas', 'Herramientas', 'tools', [(!modules || modules.formulas) && { id: 'formulas', label: 'Fórmulas', path: '/formulas' }]),
+    ...(!modules || modules.formulas
+      ? [divider('herramientas'), page('formulas', single('formulas', 'Fórmulas', '/formulas', 'Igualación de colores'))]
+      : []),
   ]
 }
 
-export const menuPages = (entries: MenuEntry[]): MenuPage[] => entries.flatMap(e => e.kind === 'page' ? [e.page] : e.pages)
+export const menuPages = (entries: MenuEntry[]): MenuPage[] => entries.flatMap(e => e.kind === 'page' ? [e.page] : e.kind === 'group' ? e.pages : [])
 
 /** En qué pantalla está según la dirección (la ficha de un producto cuenta como Productos). null: ninguna del menú. */
 export function pageAt(entries: MenuEntry[], pathname: string, tab: string | null): MenuPage | null {

@@ -1,16 +1,16 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState, type CSSProperties } from 'react'
 import Link from '@/components/CachedLink'
 import { WhatsAppIcon } from '@/components/icons'
 import { groupOf, menuFor, pageHref, type MenuAccess, type MenuEntry, type MenuIcon, type MenuPage, type MenuPageId } from '@/lib/menu'
-import { Activity, Briefcase, CalendarCheck, ChartColumn, ChevronDown, House, Lock, Settings, Users, Wrench } from 'lucide-react'
+import { Activity, Briefcase, CalendarCheck, ChartColumn, ChevronDown, FlaskConical, House, Lock, Settings, Users } from 'lucide-react'
 
 type IconProps = { className?: string }
 
 export const MENU_ICONS: Record<MenuIcon, React.ComponentType<IconProps>> = {
   home: House, whatsapp: WhatsAppIcon, contacts: Users, commercial: Activity, sales: Briefcase,
-  chart: ChartColumn, calendar: CalendarCheck, tools: Wrench, settings: Settings,
+  chart: ChartColumn, calendar: CalendarCheck, formulas: FlaskConical, settings: Settings,
 }
 
 export type MenuBadge = { n: number; cls: string }
@@ -47,6 +47,7 @@ export function useRememberedMenu(): { entries: MenuEntry[]; known: boolean } {
  * Menú lateral con grupos que se despliegan. El clic en un grupo solo lo abre
  * o lo cierra; el de la pantalla actual se abre solo y los demás se quedan como
  * se dejaron en este equipo. Con el grupo cerrado, su número sale en el grupo.
+ * Al abrir, el submenú baja y sus pantallas aparecen una tras otra (globals.css).
  */
 export function SideMenu({ entries, active, at, badgeOf, pending, onNavigate }: {
   entries: MenuEntry[]
@@ -71,15 +72,22 @@ export function SideMenu({ entries, active, at, badgeOf, pending, onNavigate }: 
     if (!saved) return
     try { window.localStorage.setItem(OPEN_KEY, JSON.stringify(saved)) } catch {}
   }, [saved])
+  // Las animaciones empiezan después de la primera pintada: al cargar, los grupos ya salen abiertos
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 80)
+    return () => clearTimeout(t)
+  }, [])
   const toggle = (id: string) => setSaved(open.includes(id) ? open.filter(x => x !== id) : [...open, id])
 
-  const link = (p: MenuPage, icon?: MenuIcon) => {
+  const link = (p: MenuPage, icon?: MenuIcon, i = 0) => {
     const Ic = icon ? MENU_ICONS[icon] : null
     const badge = badgeOf(p.id)
     const tag = pending?.(p.id)
     const on = active?.id === p.id
     return (
-      <Link key={p.id} href={pageHref(p, at)} data-tour={`nav-${p.id}`} className={`nav-item ${on ? 'active' : ''}`} aria-current={on ? 'page' : undefined} onClick={onNavigate}>
+      <Link key={p.id} href={pageHref(p, at)} data-tour={`nav-${p.id}`} className={`nav-item ${on ? 'active' : ''}`} aria-current={on ? 'page' : undefined} onClick={onNavigate}
+        style={icon ? undefined : { '--i': i } as CSSProperties}>
         {Ic && <Ic className="nav-icon" />}
         <span>{p.label}</span>
         {badge && <Count badge={badge} />}
@@ -90,8 +98,9 @@ export function SideMenu({ entries, active, at, badgeOf, pending, onNavigate }: 
   }
 
   return (
-    <nav className="nav" aria-label="Menú principal">
+    <nav className="nav" aria-label="Menú principal" data-ready={ready || undefined}>
       {entries.map(e => {
+        if (e.kind === 'divider') return <hr key={e.id} className="nav-divider" />
         if (e.kind === 'page') return link(e.page, e.icon)
         const Ic = MENU_ICONS[e.icon]
         const isOpen = open.includes(e.id)
@@ -104,7 +113,9 @@ export function SideMenu({ entries, active, at, badgeOf, pending, onNavigate }: 
               {badge && <Count badge={badge} />}
               <ChevronDown className="nav-chev" aria-hidden="true" />
             </button>
-            <div id={`menu-${e.id}`} className="nav-subs" hidden={!isOpen}>{e.pages.map(p => link(p))}</div>
+            <div id={`menu-${e.id}`} className="nav-fold" data-open={isOpen || undefined} inert={!isOpen}>
+              <div className="nav-subs">{e.pages.map((p, i) => link(p, undefined, i))}</div>
+            </div>
           </div>
         )
       })}

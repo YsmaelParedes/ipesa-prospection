@@ -8,38 +8,34 @@ const NONE = { whatsapp: false, campaigns: false, formulas: false }
 const ADMIN = { isAdmin: true, modules: ALL, reports: true }
 const SELLER = { isAdmin: false, modules: ALL, reports: true }
 
-/** El menú como texto: «Grupo: pantallas» o la pantalla suelta (* = candado). */
-const outline = access => menuFor(access).map(e => e.kind === 'page'
+/** El menú como texto: «Grupo: pantallas» o la pantalla suelta (* = candado, --- = línea). */
+const outline = access => menuFor(access).map(e => e.kind === 'divider' ? '---' : e.kind === 'page'
   ? e.page.label
   : `${e.label}: ${e.pages.map(p => p.label + (p.locked ? '*' : '')).join(', ')}`)
+const LOOSE = ['Inicio', 'Agenda', 'Contactos', '---']
+const SALES = ['Sistema Comercial: Hoy, Cartera, Oportunidades', 'Ventas: Cotizaciones, Productos']
 
-test('administrador con todos los módulos', () => {
+test('administrador con todos los módulos: lo suelto arriba, los grupos y al final Fórmulas', () => {
   assert.deepEqual(outline(ADMIN), [
-    'Inicio', 'WhatsApp: Conversaciones, Campañas, Resultados', 'Contactos',
-    'Sistema Comercial: Hoy, Cartera, Oportunidades', 'Ventas: Cotizaciones, Productos',
-    'Reportes: Equipo hoy, Desempeño', 'Agenda', 'Herramientas: Fórmulas',
+    ...LOOSE, 'WhatsApp: Conversaciones, Campañas, Resultados', ...SALES, 'Reportes: Equipo hoy, Desempeño', '---', 'Fórmulas',
   ])
 })
 
 test('vendedor: sin Campañas, así que WhatsApp no se despliega; Mi avance en lugar de Equipo hoy', () => {
-  assert.deepEqual(outline(SELLER), [
-    'Inicio', 'WhatsApp', 'Contactos', 'Sistema Comercial: Hoy, Cartera, Oportunidades',
-    'Ventas: Cotizaciones, Productos', 'Reportes: Mi avance, Desempeño', 'Agenda', 'Herramientas: Fórmulas',
-  ])
+  assert.deepEqual(outline(SELLER), [...LOOSE, 'WhatsApp', ...SALES, 'Reportes: Mi avance, Desempeño', '---', 'Fórmulas'])
 })
 
-test('Litro: WhatsApp se ofrece al administrador, los reportes llevan candado y no hay herramientas', () => {
+test('Litro: WhatsApp se ofrece al administrador, los reportes llevan candado y sin Fórmulas no queda línea al final', () => {
   assert.deepEqual(outline({ isAdmin: true, modules: NONE, reports: false }), [
-    'Inicio', 'WhatsApp', 'Contactos', 'Sistema Comercial: Hoy, Cartera, Oportunidades',
-    'Ventas: Cotizaciones, Productos', 'Reportes: Equipo hoy*, Desempeño*', 'Agenda',
+    ...LOOSE, 'WhatsApp', ...SALES, 'Reportes: Equipo hoy*, Desempeño*',
   ])
   // Sin WhatsApp, el vendedor no lo ve
   assert.equal(outline({ isAdmin: false, modules: NONE, reports: true }).includes('WhatsApp'), false)
 })
 
 test('campañas piden el módulo y que WhatsApp esté activo', () => {
-  assert.deepEqual(outline({ ...ADMIN, modules: { ...ALL, whatsapp: false } })[1], 'WhatsApp')
-  assert.deepEqual(outline({ ...ADMIN, modules: { ...ALL, campaigns: false } })[1], 'WhatsApp')
+  assert.equal(outline({ ...ADMIN, modules: { ...ALL, whatsapp: false } })[4], 'WhatsApp')
+  assert.equal(outline({ ...ADMIN, modules: { ...ALL, campaigns: false } })[4], 'WhatsApp')
 })
 
 test('una sola pantalla con cada nombre', () => {
