@@ -36,6 +36,15 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.71.1',
+    date: '26 de noviembre, 2026',
+    title: 'Plantillas pausadas',
+    module: 'whatsapp',
+    items: [
+      'Una plantilla pausada ya no muestra «Editar»: WhatsApp solo deja editar las aprobadas y las rechazadas. Puedes duplicarla y mandar la copia a revisión.',
+    ],
+  },
+  {
     version: '1.71.0',
     date: '26 de noviembre, 2026',
     title: 'Plantillas de WhatsApp desde Matices',

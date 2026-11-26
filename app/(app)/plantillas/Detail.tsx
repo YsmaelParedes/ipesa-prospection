@@ -121,7 +121,8 @@ export function TemplateDetail({ t, store, stats, campaigns, onBack, onEdit, onD
             {campaigns && st === 'ok' && !t.unsupported && (
               <Link className={`btn btn-primary ${s.press}`} href={`/campanas?plantilla=${encodeURIComponent(keyOf(t))}`}><Megaphone aria-hidden="true" /> Usar en una campaña</Link>
             )}
-            {!locked && st !== 'off' && st !== 'review' && (
+            {/* WhatsApp solo deja editar las aprobadas y las rechazadas */}
+            {!locked && (st === 'ok' || st === 'rejected') && (
               <button type="button" className={`btn btn-ghost ${s.press}`} onClick={onEdit}><PenLine aria-hidden="true" /> {st === 'rejected' ? 'Corregir' : 'Editar'}</button>
             )}
             {!locked && <button type="button" className={`btn btn-ghost ${s.press}`} onClick={onDuplicate}><Copy aria-hidden="true" /> Duplicar</button>}

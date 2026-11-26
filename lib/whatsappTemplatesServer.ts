@@ -154,9 +154,10 @@ export async function uploadSample(creds: WhatsAppCreds, bytes: Buffer, mime: st
   const appId = process.env.NEXT_PUBLIC_META_APP_ID
   if (!appId) throw new TemplateError('La conexión con WhatsApp no permite subir fotos todavía. Escríbenos para activarla.', 503)
   const base = `https://graph.facebook.com/${GRAPH_VERSION}`
-  const params = new URLSearchParams({ file_name: fileName, file_length: String(bytes.length), file_type: mime })
+  // Como lo documenta Meta: la clave de acceso va en la dirección del primer paso
+  const params = new URLSearchParams({ file_name: fileName, file_length: String(bytes.length), file_type: mime, access_token: creds.token })
   const start = await externalFetch(`${base}/${encodeURIComponent(appId)}/uploads?${params}`, {
-    method: 'POST', headers: { Authorization: `Bearer ${creds.token}` }, cache: 'no-store', signal: AbortSignal.timeout(15_000),
+    method: 'POST', cache: 'no-store', signal: AbortSignal.timeout(15_000),
   })
   const session = await start.json().catch(() => ({}))
   if (!start.ok || typeof session.id !== 'string') throw new TemplateError(metaError(session, 'No se pudo subir la foto de ejemplo a WhatsApp.'), 502)
