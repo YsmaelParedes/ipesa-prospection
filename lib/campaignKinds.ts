@@ -83,6 +83,8 @@ export type CampaignSummary = {
   failed: number
   /** Personas que escribieron dentro de las 72 h siguientes al envío. */
   replied: number
+  /** Les llegó y lo leyeron o respondieron (quien responde lo leyó aunque no mande la palomita azul). */
+  seen: number
   failures: { kind: FailureKind; count: number }[]
 }
 
@@ -97,6 +99,8 @@ export type CampaignRecipient = {
   kind: FailureKind | null
   error: string | null
   replied: boolean
+  /** Lo primero que escribió después del envío (texto; vacío si mandó una foto o audio). */
+  reply: string | null
   /** Veces que ya había fallado por el mismo motivo antes de esta campaña. */
   previousFailures: number
   lastFailedAt: string | null

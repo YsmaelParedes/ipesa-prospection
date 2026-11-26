@@ -1,7 +1,7 @@
 /**
- * WhatsApp mientras carga: bandeja, chat, ficha del CRM, campañas y
- * resultados, con los mismos contenedores que sus componentes reales
- * (WhatsAppInbox, WhatsAppCampaigns, WhatsAppCampaignHistory…).
+ * WhatsApp mientras carga: bandeja, chat y ficha del CRM, con los mismos
+ * contenedores que sus componentes reales (WhatsAppInbox…). Los de Campañas
+ * están en app/(app)/campanas/Skeletons.tsx.
  */
 import { Search } from 'lucide-react'
 import { WhatsAppIcon } from '@/components/icons'
@@ -108,16 +108,6 @@ export function WhatsAppPageSkeleton() {
   return <div className="wa-page"><InboxSkeleton /></div>
 }
 
-/** Campañas: las dos pestañas (celular) y la lista para elegir destinatarios. */
-export function CampaignsPageSkeleton() {
-  return (
-    <div className="wa-page">
-      <div className="wa-tabs page-tabs" aria-hidden="true"><Sk w={112} h={34} r={6} /><Sk w={112} h={34} r={6} /></div>
-      <RecipientPickSkeleton />
-    </div>
-  )
-}
-
 /** Ficha del CRM a la derecha del chat. */
 export function CrmPanelSkeleton() {
   return (
@@ -157,24 +147,6 @@ export function PickListSkeleton({ rows = 6 }: { rows?: number }) {
   )
 }
 
-/** Destinatarios para elegir en Campañas (con casilla). */
-export function RecipientPickSkeleton({ rows = 8 }: { rows?: number }) {
-  return (
-    <Loading label="Cargando contactos…">
-      {skRows(rows, i => (
-        <div className="wa-pick-row" key={i}>
-          <Sk w={16} h={16} r={4} />
-          <SkCircle size={32} />
-          <span className="wa-pick-main" style={{ flex: 1, minWidth: 0 }}>
-            <span className="wa-pick-name"><SkText w={skWidth(i, 0.6)} /></span>
-            <span className="wa-pick-sub"><SkText w={skWidth(i + 5, 0.4)} /></span>
-          </span>
-        </div>
-      ))}
-    </Loading>
-  )
-}
-
 /** Respuestas rápidas en el chat. */
 export function QuickRepliesSkeleton() {
   return (
@@ -188,118 +160,3 @@ export function QuickRepliesSkeleton() {
     </Loading>
   )
 }
-
-/** Estado del número en Meta (arriba de Campañas). */
-export function HealthSkeleton() {
-  return (
-    <Loading label="Consultando el estado del número en Meta…" className="wa-health">
-      <div className="wa-health-main" style={{ flex: 1 }}>
-        <span className="wa-health-dot" />
-        <div style={{ flex: 1 }}>
-          <div className="wa-health-title"><SkText w={200} /></div>
-          <div className="wa-health-tip"><SkText w="70%" /></div>
-        </div>
-      </div>
-    </Loading>
-  )
-}
-
-function KpisSkeleton() {
-  return (
-    <div className="wa-kpis">
-      {skRows(5, i => (
-        <div className="wa-kpi" key={i}>
-          <span><SkText w={skWidth(i, 0.9)} /></span>
-          <strong><SkText w={56} /></strong>
-          <small><SkText w={skWidth(i + 2, 0.7)} /></small>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/** Resultados de campañas: cifras y tarjetas de cada envío. */
-export function CampaignListSkeleton() {
-  return (
-    <Loading label="Cargando resultados…" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <KpisSkeleton />
-      <div className="wa-camp-list">
-        {skRows(3, i => (
-          <div className="wa-card wa-camp-card" key={i} style={{ display: 'flex', flexDirection: 'column' }}>
-            <div className="wa-camp-top">
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div className="wa-camp-name"><SkText w={skWidth(i, 0.5)} /></div>
-                <div className="wa-camp-sub"><SkText w={skWidth(i + 4, 0.35)} /></div>
-              </div>
-              <Sk w={104} h={22} r={4} />
-            </div>
-            <Sk h={9} r={999} />
-            <div className="wa-camp-nums">{skRows(4, n => <SkText key={n} w={70} inline />)}</div>
-          </div>
-        ))}
-      </div>
-    </Loading>
-  )
-}
-
-/** Detalle de una campaña: encabezado, cifras, barra y destinatarios. */
-export function CampaignDetailSkeleton() {
-  return (
-    <Loading label="Cargando la campaña…" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div className="wa-results-head">
-        <div style={{ flex: 1 }}>
-          <div className="wa-results-title"><SkText w={220} /></div>
-          <div className="wa-results-sub"><SkText w={280} /></div>
-        </div>
-      </div>
-      <KpisSkeleton />
-      <Sk h={9} r={999} />
-      <div className="wa-card"><RecipientRows /></div>
-    </Loading>
-  )
-}
-
-function RecipientRows({ rows = 6 }: { rows?: number }) {
-  return (
-    <div className="wa-recips">
-      {skRows(rows, i => (
-        <div className="wa-recip" key={i}>
-          <SkCircle size={34} />
-          <div style={{ minWidth: 0 }}>
-            <div className="wa-recip-name"><SkText w={skWidth(i, 0.8)} /></div>
-            <div className="wa-recip-sub"><SkText w={skWidth(i + 3, 0.6)} /></div>
-          </div>
-          <div className="wa-recip-state"><Sk w={92} h={20} r={4} /></div>
-          <div className="wa-recip-actions"><Sk w={28} h={28} r={6} /></div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/** Resultados por persona: recuadros por estado y la lista. */
-export function PeopleSkeleton() {
-  return (
-    <Loading label="Cargando resultados por persona…" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div className="wa-person-tiles">
-        {skRows(4, i => (
-          <div className="wa-person-tile" key={i}>
-            <span><SkText w={skWidth(i, 0.9)} style={{ minWidth: 60 }} /></span>
-            <strong><SkText w={40} /></strong>
-            <small><SkText w={34} /></small>
-          </div>
-        ))}
-      </div>
-      <div className="wa-card">
-        <div className="wa-list-head">
-          <label className="wa-search">
-            <Search size={15} />
-            <input placeholder="Buscar nombre o teléfono…" aria-label="Buscar persona" disabled />
-          </label>
-        </div>
-        <RecipientRows />
-      </div>
-    </Loading>
-  )
-}
-

@@ -5,7 +5,8 @@
  */
 import { DashboardSkeleton } from './DashboardSkeleton'
 import { ContactsPageSkeleton } from './ContactsSkeleton'
-import { CampaignsPageSkeleton, WhatsAppPageSkeleton } from './WhatsAppSkeleton'
+import { WhatsAppPageSkeleton } from './WhatsAppSkeleton'
+import { CampaignsPageSkeleton } from '@/app/(app)/campanas/Skeletons'
 import { FormulasPageSkeleton } from './FormulasSkeleton'
 import { ComercialPageSkeleton } from '@/app/(app)/comercial/Skeletons'
 import { AgendaPageSkeleton } from '@/app/(app)/recordatorios/AgendaSkeleton'

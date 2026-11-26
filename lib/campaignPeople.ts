@@ -5,7 +5,6 @@
  * fijo útil para llamar): solo deja de recibir campañas. Solo servidor.
  */
 import { getServerSupabase } from './supabase-server'
-import { contactsForPhones } from './whatsappInbox'
 import { bucketOf, failureKindOf, fetchPaged } from './campaignHistory'
 import {
   PEOPLE_WINDOW_DAYS, REPLY_WINDOW_MS,
@@ -126,24 +125,6 @@ export async function loadReach(storeId: string): Promise<Map<string, PersonRow[
     else byPhone.set(r.phone, [r])
   }
   return byPhone
-}
-
-/** Una fila por número al que se le mandó alguna plantilla en el último año (lo más reciente primero). */
-export async function loadPeople(storeId: string): Promise<CampaignPerson[]> {
-  const byPhone = await loadReach(storeId)
-  const sent = [...byPhone].filter(([, list]) => list.some(r => r.direction === 'outbound' && r.template_name))
-
-  // Por teléfono actual: si a un contacto le corrigieron el número, el viejo ya no es suyo
-  const contacts = await contactsForPhones(storeId, sent.map(([phone]) => phone))
-
-  const people: CampaignPerson[] = []
-  for (const [phone, list] of sent) {
-    const contact = contacts.get(phone)
-    const summary = summarizePerson(list, contact?.wa_opt_out ?? false)
-    if (!summary) continue
-    people.push({ ...summary, contactId: contact?.id ?? null, name: contact?.name ?? null, segment: contact?.segment ?? null })
-  }
-  return people.sort((a, b) => (a.lastSentAt < b.lastSentAt ? 1 : -1))
 }
 
 /** Para un solo número, justo antes de mandarle una plantilla. */

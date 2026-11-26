@@ -17,7 +17,7 @@ const SALES = ['Sistema Comercial: Hoy, Cartera, Oportunidades', 'Ventas: Cotiza
 
 test('administrador con todos los módulos: lo suelto arriba, los grupos y al final Fórmulas', () => {
   assert.deepEqual(outline(ADMIN), [
-    ...LOOSE, 'WhatsApp: Conversaciones, Campañas, Resultados', ...SALES, 'Reportes: Equipo hoy, Desempeño', '---', 'Fórmulas',
+    ...LOOSE, 'WhatsApp: Conversaciones, Campañas', ...SALES, 'Reportes: Equipo hoy, Desempeño', '---', 'Fórmulas',
   ])
 })
 
@@ -52,7 +52,8 @@ test('en qué pantalla está según la dirección', () => {
   // Nombres de antes: se quedan en la principal mientras la página redirige
   assert.equal(at('/comercial', 'acumulado'), 'hoy')
   assert.equal(at('/campanas'), 'campanas')
-  assert.equal(at('/campanas', 'resultados'), 'resultados')
+  // Los resultados se abren dentro de Campañas (?c=); el ?tab=resultados de antes queda en Campañas
+  assert.equal(at('/campanas', 'resultados'), 'campanas')
   assert.equal(at('/reportes'), 'equipo')
   assert.equal(at('/reportes', null, SELLER), 'avance')
   assert.equal(at('/reportes', 'desempeno', SELLER), 'desempeno')
@@ -88,7 +89,7 @@ test('direcciones: la principal sin ?tab=; en Reportes se conservan los filtros'
   const get = id => menuPages(entries).find(p => p.id === id)
   assert.equal(pageHref(get('hoy')), '/comercial')
   assert.equal(pageHref(get('cartera')), '/comercial?tab=cartera')
-  assert.equal(pageHref(get('resultados')), '/campanas?tab=resultados')
+  assert.equal(pageHref(get('campanas')), '/campanas')
   const inReports = { pathname: '/reportes', search: new URLSearchParams('tab=desempeno&period=year&zone=Centro') }
   assert.equal(pageHref(get('equipo'), inReports), '/reportes?period=year&zone=Centro')
   assert.equal(pageHref(get('desempeno'), inReports), '/reportes?period=year&zone=Centro&tab=desempeno')

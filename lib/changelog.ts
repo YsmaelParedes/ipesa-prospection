@@ -36,6 +36,21 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.70.0',
+    date: '25 de noviembre, 2026',
+    title: 'Campañas en 3 pasos',
+    module: 'campaigns',
+    items: [
+      'Nueva campaña en 3 pasos: a quién, qué plantilla y enviar. Nada sale hasta que lo confirmas.',
+      'Puedes elegir varios grupos a la vez, todos tus clientes o buscar personas para agregar o quitar.',
+      'Cada plantilla se ve tal como le llega a tu cliente, y los datos que cambian se escriben dentro del mismo mensaje.',
+      'Si eliges a más personas de las que WhatsApp deja escribir en un día, salen las que caben y las demás te esperan en Campañas para enviarlas después con un toque.',
+      'Al abrir una campaña ves cuántas se enviaron, leyeron y respondieron, quién está en cada caso y qué te contestaron. Si la mandaste a varios grupos, puedes ver cada uno por separado.',
+      'Lo que no llegó por un límite temporal de WhatsApp se puede reintentar desde ahí mismo.',
+      'Los resultados ahora están dentro de Campañas: el menú de WhatsApp queda con Conversaciones y Campañas.',
+    ],
+  },
+  {
     version: '1.69.1',
     date: '23 de noviembre, 2026',
     title: 'Menú sin recuadro rojo',

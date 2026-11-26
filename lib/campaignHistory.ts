@@ -170,12 +170,27 @@ export function repliedPhonesOf(batch: Batch, inboundByPhone: ReadonlyMap<string
   return out
 }
 
+/** Lo primero que escribió cada número después de su mensaje (dentro de REPLY_WINDOW_MS). */
+export function firstReplies(batch: Batch, inbound: InboundRow[]): Map<string, string> {
+  const sentAt = new Map(batch.rows.filter(r => r.status !== 'failed').map(r => [r.phone, Date.parse(r.created_at)]))
+  const out = new Map<string, string>()
+  for (const m of inbound) { // ya vienen en orden cronológico
+    const sent = sentAt.get(m.phone)
+    const t = Date.parse(m.created_at)
+    if (sent === undefined || out.has(m.phone) || !(t > sent && t - sent <= REPLY_WINDOW_MS)) continue
+    out.set(m.phone, (m.body ?? '').trim().slice(0, 300))
+  }
+  return out
+}
+
 export function summarizeBatch(batch: Batch, replied: ReadonlySet<string>): CampaignSummary {
   const counts: Record<CampaignBucket, number> = { read: 0, delivered: 0, pending: 0, failed: 0 }
   const kinds = new Map<FailureKind, number>()
+  let seen = 0
   for (const r of batch.rows) {
     const bucket = bucketOf(r.status)
     counts[bucket]++
+    if (bucket === 'read' || (bucket !== 'failed' && replied.has(r.phone))) seen++
     if (bucket === 'failed') {
       const kind = failureKindOf(r.error_message)
       kinds.set(kind, (kinds.get(kind) ?? 0) + 1)
@@ -190,6 +205,7 @@ export function summarizeBatch(batch: Batch, replied: ReadonlySet<string>): Camp
     total: batch.rows.length,
     ...counts,
     replied: replied.size,
+    seen,
     failures: [...kinds].map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count),
   }
 }
@@ -201,11 +217,13 @@ const chunks = <T,>(list: T[], size: number) => Array.from({ length: Math.ceil(l
 // fetchPaged vive en lib/paged.ts; se reexporta aquí porque campaignPeople la importa de este archivo
 export { fetchPaged }
 
-async function inboundFor(storeId: string, phones: string[], fromIso: string, toIso?: string) {
+type InboundRow = { phone: string; created_at: string; body?: string | null }
+
+async function inboundFor(storeId: string, phones: string[], fromIso: string, toIso?: string, withBody = false) {
   const supabase = getServerSupabase()
   const parts = await Promise.all(chunks([...new Set(phones)], 150).map(part =>
-    fetchPaged<{ phone: string; created_at: string }>((from, to) => {
-      let q = supabase.from('whatsapp_messages').select('phone, created_at')
+    fetchPaged<InboundRow>((from, to) => {
+      let q = supabase.from('whatsapp_messages').select(withBody ? 'phone, created_at, body' : 'phone, created_at')
         .eq('store_id', storeId).eq('direction', 'inbound').in('phone', part).gte('created_at', fromIso)
       if (toIso) q = q.lte('created_at', toIso)
       return q.order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, to)
@@ -265,11 +283,12 @@ export async function loadCampaignDetail(storeId: string, id: string): Promise<C
           .eq('store_id', storeId).eq('direction', 'outbound').eq('status', 'failed')
           .in('phone', part).lt('created_at', startIso)
           .order('created_at', { ascending: true }).order('id', { ascending: true }).range(from, to)))).then(p => p.flat()),
-    inboundFor(storeId, okPhones, startIso, new Date(batch.endMs + REPLY_WINDOW_MS).toISOString()),
+    inboundFor(storeId, okPhones, startIso, new Date(batch.endMs + REPLY_WINDOW_MS).toISOString(), true),
   ])
 
   const byId = new Map([...contacts.values()].map(c => [c.id, c]))
   const replied = repliedPhonesOf(batch, indexInbound(inboundRows))
+  const replyOf = firstReplies(batch, inboundRows)
 
   // phone → { motivo → [veces, última fecha] } de los fallos anteriores a esta campaña
   const prior = new Map<string, Map<FailureKind, { count: number; last: string }>>()
@@ -297,6 +316,7 @@ export async function loadCampaignDetail(storeId: string, id: string): Promise<C
       kind,
       error: bucket === 'failed' ? r.error_message : null,
       replied: replied.has(r.phone),
+      reply: replied.has(r.phone) ? replyOf.get(r.phone) ?? null : null,
       previousFailures: before?.count ?? 0,
       lastFailedAt: before?.last ?? null,
       receivedLater: bucket === 'failed' && receivedLater.has(r.phone),

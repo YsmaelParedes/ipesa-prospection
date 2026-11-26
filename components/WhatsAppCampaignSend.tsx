@@ -25,16 +25,22 @@ export function useCampaignSend() {
   const [total, setTotal]       = useState(0)
   const [done, setDone]         = useState(0)
   const [outcomes, setOutcomes] = useState<CampaignOutcome[]>([])
-  const [stopReason, setStopReason] = useState('')
+  const [stopReason, setStopReasonState] = useState('')
+  /** El motivo también por referencia: quien espera `run` lo lee en cuanto termina. */
+  const stopReasonRef = useRef('')
+  const setStopReason = (reason: string) => { stopReasonRef.current = reason; setStopReasonState(reason) }
   const cancelRef = useRef(false)
 
   const askConfirm = () => setPhase('confirm')
   const backToForm = () => setPhase('idle')
 
-  /** label: a quién va (p. ej. el segmento); todos los lotes comparten un id para verse como un solo envío. */
-  const run = async (targets: CampaignTarget[], selection: WhatsAppTemplateSelection, label?: string) => {
+  /**
+   * label: a quién va (p. ej. el segmento); todos los lotes comparten un id para verse como un solo envío.
+   * campaignId: para seguir una campaña ya empezada (lo que faltó por el límite del día o un reintento).
+   */
+  const run = async (targets: CampaignTarget[], selection: WhatsAppTemplateSelection, label?: string, existingId?: string) => {
     cancelRef.current = false
-    const campaignId = crypto.randomUUID()
+    const campaignId = existingId ?? crypto.randomUUID()
     setPhase('sending'); setTotal(targets.length); setDone(0); setOutcomes([]); setStopReason('')
     const out: CampaignOutcome[] = []
     const nameOf = new Map(targets.map(t => [t.id, t.name]))
@@ -91,7 +97,7 @@ export function useCampaignSend() {
   const skipped = outcomes.filter(o => !o.ok && o.skipped).length
   const failed  = outcomes.filter(o => !o.ok && !o.skipped).length
 
-  return { phase, total, done, outcomes, sent, skipped, failed, stopReason, askConfirm, backToForm, run, cancel, reset }
+  return { phase, total, done, outcomes, sent, skipped, failed, stopReason, stopReasonRef, askConfirm, backToForm, run, cancel, reset }
 }
 
 export function CampaignConfirmPanel({

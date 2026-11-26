@@ -36,6 +36,9 @@ function toDef(t: any): WhatsAppTemplateDef {
     variableCount: countTemplateVariables(bodyText),
     footer: footer?.text,
     buttonLabel: buttons[0]?.text,
+    buttons: buttons.map((b: any) => String(b.text ?? '')).filter(Boolean),
+    headerText: header?.format === 'TEXT' && !countTemplateVariables(header.text ?? '') ? header.text : undefined,
+    examples: Array.isArray(body?.example?.body_text?.[0]) ? body.example.body_text[0].map((v: unknown) => String(v ?? '')) : undefined,
     unsupported,
     quality: typeof t.quality_score?.score === 'string' ? t.quality_score.score : undefined,
   }

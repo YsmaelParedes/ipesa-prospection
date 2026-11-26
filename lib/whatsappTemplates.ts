@@ -14,6 +14,12 @@ export type WhatsAppTemplateDef = {
   variableCount?: number       // variables {{n}} del cuerpo
   footer?: string
   buttonLabel?: string
+  /** Texto de todos los botones, en orden (Campañas los muestra en la vista previa). */
+  buttons?: string[]
+  /** Encabezado de texto (sin variables), si tiene. */
+  headerText?: string
+  /** Ejemplos que se dieron a Meta para cada {{n}} del cuerpo (pueden faltar). */
+  examples?: string[]
   unsupported?: string         // motivo si la app no puede llenarla (p. ej. variables en encabezado/botón)
   quality?: string             // calidad en Meta: GREEN | YELLOW | RED | UNKNOWN
 }

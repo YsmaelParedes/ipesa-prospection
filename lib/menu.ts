@@ -13,7 +13,7 @@ import type { StoreModules } from './stores'
 export type MenuIcon = 'home' | 'whatsapp' | 'contacts' | 'commercial' | 'sales' | 'chart' | 'calendar' | 'formulas' | 'settings'
 
 export type MenuPageId =
-  | 'inicio' | 'conversaciones' | 'campanas' | 'resultados' | 'contactos' | 'hoy' | 'cartera' | 'oportunidades'
+  | 'inicio' | 'conversaciones' | 'campanas' | 'contactos' | 'hoy' | 'cartera' | 'oportunidades'
   | 'cotizaciones' | 'productos' | 'equipo' | 'avance' | 'desempeno' | 'agenda' | 'formulas' | 'configuracion'
 
 export type MenuPage = {
@@ -74,8 +74,8 @@ export function menuFor({ isAdmin, modules, reports }: MenuAccess): MenuEntry[] 
     ...(campaigns
       ? [group('whatsapp', 'WhatsApp', 'whatsapp', [
         { id: 'conversaciones', label: 'Conversaciones', path: '/whatsapp' },
+        // Los resultados de cada campaña se abren desde Campañas
         { id: 'campanas', label: 'Campañas', path: '/campanas' },
-        { id: 'resultados', label: 'Resultados', path: '/campanas', tab: 'resultados' },
       ])]
       // Con una sola pantalla no hay nada que desplegar
       : whatsapp

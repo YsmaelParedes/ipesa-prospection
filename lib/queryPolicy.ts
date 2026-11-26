@@ -8,7 +8,10 @@ export function queryPolicy(path: string): QueryPolicy | null {
   if (p.startsWith('/api/data/config') || p.startsWith('/api/formulas') || ['/api/whatsapp/templates', '/api/whatsapp/template-image'].includes(p) || p.startsWith('/api/whatsapp/quick-replies')) return { ...normal, staleTime: 300_000 }
   if (p.startsWith('/api/billing/')) return { staleTime: 15_000, maxAge: 60_000 }
   if (p === '/api/whatsapp/status' || p === '/api/store/whatsapp') return { ...normal, staleTime: 60_000 }
-  if (p.startsWith('/api/whatsapp/campaigns/') || p === '/api/data/dashboard/whatsapp') return { staleTime: 15_000, maxAge: 60_000 }
+  // Campañas: se refrescan seguido, pero mientras llega lo nuevo se sigue viendo lo anterior
+  // (el historial de una tienda grande tarda unos segundos y no debe ocultar la pantalla)
+  if (p.startsWith('/api/whatsapp/campaigns/')) return { staleTime: 15_000, maxAge: 600_000 }
+  if (p === '/api/data/dashboard/whatsapp') return { staleTime: 15_000, maxAge: 60_000 }
   if (p === '/api/whatsapp/unread') return { ...normal, staleTime: 30_000, poll: 30_000 }
   if (p === '/api/whatsapp/conversations') return { ...normal, staleTime: 15_000, poll: 15_000 }
   // Threads can mark messages read. Only explicit preview requests may use the cache.
@@ -32,6 +35,10 @@ export const CAMPAIGN_SENT_RESOURCES = ['/api/data/dashboard', '/api/data/contac
 
 export function mutationResources(path: string): string[] {
   if (path.startsWith('/api/whatsapp/campaigns/send')) return ['/api/whatsapp/']
+  // La foto de una plantilla solo cambia esa foto (no hace falta recargar contactos)
+  if (path.startsWith('/api/whatsapp/template-image')) return ['/api/whatsapp/template-image']
+  // Guardar o descartar lo pendiente de una campaña solo cambia esa lista
+  if (path.startsWith('/api/whatsapp/campaigns/pending')) return ['/api/whatsapp/campaigns/pending']
   // Guardar un contacto con una zona nueva («Otra…») la agrega a los catálogos
   if (path.startsWith('/api/data/contacts')) return ['/api/data/contacts', '/api/data/commercial', '/api/data/dashboard', '/api/whatsapp/', '/api/data/config']
   // Registrar una actividad puede adjuntar una cotización subida

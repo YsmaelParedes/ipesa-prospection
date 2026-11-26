@@ -66,7 +66,7 @@ const BOTTOM_ICONS = { inicio: MENU_ICONS.home, conversaciones: MENU_ICONS.whats
 const FULL_MENU = menuFor({ isAdmin: true, modules: null, reports: true })
 
 // Páginas tipo "app" que ocupan exactamente el alto de la pantalla
-const FILL_ROUTES = ['/whatsapp', '/campanas']
+const FILL_ROUTES = ['/whatsapp']
 // Botón flotante (celular): qué crea en cada pantalla (en Inicio, a elegir)
 const FAB_ROUTES: Record<string, 'contact' | 'reminder' | undefined> = {
   '/': undefined, '/contactos': 'contact', '/comercial': 'contact', '/recordatorios': 'reminder',
