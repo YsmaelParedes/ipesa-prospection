@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { AlertCircle, ArrowLeft, Check, ChevronRight, Clock, PenLine, Search, Send, Users, X } from 'lucide-react'
+import { AlertCircle, ArrowLeft, Check, ChevronRight, Clock, PenLine, Plus, Search, Send, Users, X } from 'lucide-react'
 import { apiFetch } from '@/lib/apiClient'
 import { loadCatalogs } from '@/lib/catalogs'
 import { segmentColor } from '@/components/CrmUI'
@@ -18,13 +18,13 @@ import {
   ALL_CLIENTS, BLOCK_TAG, OUT_WHY, blanksOf, firstNameOf, fullNames, groupContacts, isMarketing, looksLikeName,
   paramsFor, segmentOf, shortNames, templateTitle, variablesOf, type OutReason,
 } from '@/lib/campaignWizard'
-import { Bubble, Chat } from './Bubble'
+import { Bubble, Chat } from '@/components/WhatsAppBubble'
 import { WizardSkeleton } from './Skeletons'
 import s from './campanas.module.css'
 
 /** Cómo empieza el asistente: de cero, con lo que faltó del límite del día o reintentando. */
 export type WizardStart =
-  | { kind: 'new' }
+  | { kind: 'new'; /** name|language de la plantilla elegida desde Plantillas («Usar en una campaña»). */ template?: string }
   | { kind: 'pending'; pending: CampaignPending }
   | { kind: 'retry'; template: string; contactIds: string[]; campaignId: string | null; label: string | null }
 
@@ -85,7 +85,7 @@ export function CampaignWizard({ start, store, onClose, onResults }: {
   const [step, setStep] = useState<Step>(preset ? 'send' : 'who')
   const [picked, setPicked] = useState<Set<string>>(() => new Set(preset?.ids ?? []))
   const [q, setQ] = useState('')
-  const [tplKey, setTplKey] = useState<string | null>(null)
+  const [tplKey, setTplKey] = useState<string | null>(start.kind === 'new' ? start.template ?? null : null)
   const [nameMode, setNameMode] = useState<boolean | null>(start.kind === 'pending' ? start.pending.personalize : null)
   const [values, setValues] = useState<Record<number, string>>(() => {
     if (start.kind !== 'pending') return {}
@@ -115,7 +115,8 @@ export function CampaignWizard({ start, store, onClose, onResults }: {
   const template = templates?.find(t => keyOf(t) === tplKey) ?? null
   const marketing = isMarketing(template?.category)
   const hasFirst = !!template && variablesOf(template.bodyPreview).includes(0)
-  const personalize = hasFirst && (nameMode ?? looksLikeName(template!.bodyPreview))
+  // Hecha en Matices: se sabe si {{1}} es el nombre; si no, se deduce del saludo
+  const personalize = hasFirst && (nameMode ?? (!!template!.clientName || looksLikeName(template!.bodyPreview)))
   const blanks = template ? blanksOf(template.bodyPreview, personalize) : []
   const missing = blanks.filter(v => !(values[v] ?? '').trim())
 
@@ -193,7 +194,7 @@ export function CampaignWizard({ start, store, onClose, onResults }: {
     if (keyOf(t) !== tplKey) { setValues({}); setMiss(false); setNameMode(null) }
     setTplKey(keyOf(t))
     go('send')
-    if (matchMedia('(min-width: 821px)').matches) setTimeout(() => document.querySelector<HTMLInputElement>(`.${s.bl}`)?.focus(), 60)
+    if (matchMedia('(min-width: 821px)').matches) setTimeout(() => document.querySelector<HTMLInputElement>('[data-blank]')?.focus(), 60)
   }
 
   const uploadImage = async (file: File) => {
@@ -218,7 +219,7 @@ export function CampaignWizard({ start, store, onClose, onResults }: {
     if (missing.length || needsImage) {
       setMiss(true)
       if (needsImage) setImage(i => ({ ...i, error: i.error || 'Falta elegir la foto.' }))
-      const first = missing.length ? document.getElementById(`dato-${missing[0]}`) : document.querySelector<HTMLElement>(`.${s.pick} input`)
+      const first = missing.length ? document.getElementById(`dato-${missing[0]}`) : document.querySelector<HTMLElement>('[data-photo-input]')
       first?.focus(); first?.scrollIntoView({ block: 'center', behavior: 'smooth' })
       return
     }
@@ -386,19 +387,18 @@ export function CampaignWizard({ start, store, onClose, onResults }: {
       <div className={`${s.wc} ${s.wide}`}>
         <h2 className={s.tt} ref={title} tabIndex={-1}>¿Qué plantilla?</h2>
         <p className={s.st}>Así le llega a tu cliente. Lo amarillo lo llenas en el siguiente paso.</p>
-        {!list.length ? (
-          <p className={s.mut}>
-            {templatesError || 'Aún no tienes plantillas aprobadas por WhatsApp.'}{' '}
-            <a className={s.lk} href="https://business.facebook.com/wa/manage/message-templates/" target="_blank" rel="noopener noreferrer">Crear una en WhatsApp</a>
-          </p>
-        ) : (
-          <div className={s.tiles}>
-            {list.map(t => (
-              <TemplateTile key={keyOf(t)} t={t} selected={keyOf(t) === tplKey} langTag={sameName(t)}
-                name={firstNameOf(chosen[0]?.name)} onPick={() => chooseTemplate(t)} />
-            ))}
-          </div>
-        )}
+        {!list.length && <p className={s.mut} style={{ marginBottom: 18 }}>{templatesError || 'Aún no tienes plantillas aprobadas por WhatsApp.'}</p>}
+        <div className={s.tiles}>
+          {list.map(t => (
+            <TemplateTile key={keyOf(t)} t={t} selected={keyOf(t) === tplKey} langTag={sameName(t)}
+              name={firstNameOf(chosen[0]?.name)} onPick={() => chooseTemplate(t)} />
+          ))}
+          {/* Se abre aparte: WhatsApp tarda en aprobarla y aquí no se pierde lo elegido */}
+          <a className={`${s.tile} ${s.newTile}`} href="/plantillas?nueva=1" target="_blank" rel="noopener">
+            <span className={s.hd}>&nbsp;</span>
+            <span className={s.bx}><span><Plus aria-hidden="true" />Crear plantilla</span></span>
+          </a>
+        </div>
       </div>
     )
   } else {
@@ -531,7 +531,7 @@ function TemplateTile({ t, selected, langTag, name, onPick }: {
       .then(d => { if (alive) setImg(d.url || null) }).catch(() => {})
     return () => { alive = false }
   }, [t.name, t.hasImageHeader])
-  const personalize = variablesOf(t.bodyPreview).includes(0) && looksLikeName(t.bodyPreview)
+  const personalize = variablesOf(t.bodyPreview).includes(0) && (!!t.clientName || looksLikeName(t.bodyPreview))
   return (
     <button type="button" className={`${s.tile} ${selected ? s.sel : ''}`} disabled={!!t.unsupported} onClick={onPick} aria-pressed={selected}>
       <span className={s.hd}>{templateTitle(t.name)}{langTag && <small>{t.language}</small>}</span>

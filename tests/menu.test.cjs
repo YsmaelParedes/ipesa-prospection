@@ -17,7 +17,7 @@ const SALES = ['Sistema Comercial: Hoy, Cartera, Oportunidades', 'Ventas: Cotiza
 
 test('administrador con todos los módulos: lo suelto arriba, los grupos y al final Fórmulas', () => {
   assert.deepEqual(outline(ADMIN), [
-    ...LOOSE, 'WhatsApp: Conversaciones, Campañas', ...SALES, 'Reportes: Equipo hoy, Desempeño', '---', 'Fórmulas',
+    ...LOOSE, 'WhatsApp: Conversaciones, Campañas, Plantillas', ...SALES, 'Reportes: Equipo hoy, Desempeño', '---', 'Fórmulas',
   ])
 })
 
@@ -35,7 +35,8 @@ test('Litro: WhatsApp se ofrece al administrador, los reportes llevan candado y 
 
 test('campañas piden el módulo y que WhatsApp esté activo', () => {
   assert.equal(outline({ ...ADMIN, modules: { ...ALL, whatsapp: false } })[4], 'WhatsApp')
-  assert.equal(outline({ ...ADMIN, modules: { ...ALL, campaigns: false } })[4], 'WhatsApp')
+  // Sin campañas, el administrador sigue teniendo sus plantillas (para el chat)
+  assert.equal(outline({ ...ADMIN, modules: { ...ALL, campaigns: false } })[4], 'WhatsApp: Conversaciones, Plantillas')
 })
 
 test('una sola pantalla con cada nombre', () => {

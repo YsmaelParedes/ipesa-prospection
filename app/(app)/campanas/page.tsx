@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Megaphone } from 'lucide-react'
 import { WhatsAppOffer } from '@/components/WhatsAppOffer'
@@ -23,8 +23,16 @@ export default function CampanasPage() {
 function Campanas() {
   const session = useSession()
   const router = useRouter()
-  const opened = useSearchParams().get('c')
+  const params = useSearchParams()
+  const opened = params.get('c')
   const [wizard, setWizard] = useState<WizardStart | null>(null)
+  // Desde Plantillas («Usar en una campaña»): el asistente abre con esa plantilla elegida
+  const preset = params.get('plantilla')
+  useEffect(() => {
+    if (!preset || !/^[a-z0-9_]{1,512}\|[a-zA-Z_]{2,10}$/.test(preset)) return
+    setWizard({ kind: 'new', template: preset })
+    router.replace('/campanas', { scroll: false })
+  }, [preset, router])
 
   if (session?.store && !session.store.modules.whatsapp) return <WhatsAppOffer />
   const off = !!session?.store && !session.store.modules.campaigns

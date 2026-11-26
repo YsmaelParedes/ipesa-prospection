@@ -7,6 +7,7 @@ import { DashboardSkeleton } from './DashboardSkeleton'
 import { ContactsPageSkeleton } from './ContactsSkeleton'
 import { WhatsAppPageSkeleton } from './WhatsAppSkeleton'
 import { CampaignsPageSkeleton } from '@/app/(app)/campanas/Skeletons'
+import { TemplatesPageSkeleton } from '@/app/(app)/plantillas/Skeletons'
 import { FormulasPageSkeleton } from './FormulasSkeleton'
 import { ComercialPageSkeleton } from '@/app/(app)/comercial/Skeletons'
 import { AgendaPageSkeleton } from '@/app/(app)/recordatorios/AgendaSkeleton'
@@ -27,6 +28,7 @@ export function RouteSkeleton({ pathname, tab }: { pathname: string; /** ?tab=: 
   if (is('/recordatorios')) return <AgendaPageSkeleton />
   if (is('/whatsapp')) return <WhatsAppPageSkeleton />
   if (is('/campanas')) return <CampaignsPageSkeleton />
+  if (is('/plantillas')) return <TemplatesPageSkeleton />
   if (is('/configuracion')) return <SettingsPageSkeleton />
   if (is('/formulas')) return <FormulasPageSkeleton />
   return <DashboardSkeleton />

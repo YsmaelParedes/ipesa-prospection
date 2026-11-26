@@ -39,7 +39,7 @@ export const PUBLIC_PAGES: { path: string; priority: number; changeFrequency: 'w
 /** Lo que nunca debe indexarse: la app, la API y las pantallas de acceso con datos de una persona. */
 export const PRIVATE_PATHS = [
   '/api/', '/auth/', '/login', '/recuperar', '/restablecer', '/invitacion/', '/bienvenida',
-  '/contactos', '/comercial', '/whatsapp', '/campanas', '/recordatorios', '/formulas', '/configuracion',
+  '/contactos', '/comercial', '/whatsapp', '/campanas', '/plantillas', '/recordatorios', '/formulas', '/configuracion',
 ]
 
 export const absoluteUrl = (path: string) => `${SITE_URL}${path === '/' ? '' : path}`

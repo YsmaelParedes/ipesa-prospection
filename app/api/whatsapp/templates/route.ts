@@ -1,80 +1,26 @@
 import { withServerTiming } from '@/lib/serverTiming'
 import { NextResponse } from 'next/server'
 import { requireStore } from '@/lib/supabase-server'
-import { countTemplateVariables, graphFetch } from '@/lib/whatsapp'
 import { getStoreWhatsAppCreds } from '@/lib/storeWhatsApp'
-import type { WhatsAppTemplateDef } from '@/lib/whatsappTemplates'
-
-// Las plantillas cambian poco: se cachean 5 min por tienda e instancia para
-// no consultar Meta cada vez que alguien abre un selector.
-const cache = new Map<string, { at: number; templates: WhatsAppTemplateDef[] }>()
-const TTL = 5 * 60 * 1000
-
-function toDef(t: any): WhatsAppTemplateDef {
-  const components = t.components ?? []
-  const header  = components.find((c: any) => c.type === 'HEADER')
-  const body    = components.find((c: any) => c.type === 'BODY')
-  const footer  = components.find((c: any) => c.type === 'FOOTER')
-  const buttons = components.find((c: any) => c.type === 'BUTTONS')?.buttons ?? []
-  const bodyText: string = body?.text ?? ''
-
-  // Casos que la app aún no sabe llenar: mejor avisarlo que dejar que Meta
-  // rechace cada envío con "Number of parameters does not match".
-  let unsupported: string | undefined
-  if (header?.format === 'TEXT' && countTemplateVariables(header.text ?? '') > 0) unsupported = 'Tiene variables en el encabezado'
-  else if (header?.format && !['TEXT', 'IMAGE'].includes(header.format)) unsupported = `Encabezado de tipo ${String(header.format).toLowerCase()}`
-  else if (buttons.some((b: any) => b.type === 'URL' && /\{\{\d+\}\}/.test(b.url ?? ''))) unsupported = 'Tiene un botón con URL variable'
-  else if (buttons.some((b: any) => b.type === 'COPY_CODE' || b.type === 'OTP')) unsupported = 'Tiene un botón de código'
-
-  return {
-    name: t.name,
-    language: t.language,
-    label: `${String(t.name).replace(/_/g, ' ')} (${t.language})`,
-    category: t.category,
-    hasImageHeader: header?.format === 'IMAGE',
-    bodyPreview: bodyText,
-    variableCount: countTemplateVariables(bodyText),
-    footer: footer?.text,
-    buttonLabel: buttons[0]?.text,
-    buttons: buttons.map((b: any) => String(b.text ?? '')).filter(Boolean),
-    headerText: header?.format === 'TEXT' && !countTemplateVariables(header.text ?? '') ? header.text : undefined,
-    examples: Array.isArray(body?.example?.body_text?.[0]) ? body.example.body_text[0].map((v: unknown) => String(v ?? '')) : undefined,
-    unsupported,
-    quality: typeof t.quality_score?.score === 'string' ? t.quality_score.score : undefined,
-  }
-}
+import { approvedTemplates } from '@/lib/whatsappTemplatesServer'
 
 /**
  * GET /api/whatsapp/templates — plantillas APROBADAS consultadas en vivo a
- * Meta. Responde 200 con `error` (y templates: []) si falla, para que el
- * selector muestre el motivo sin romper la UI.
+ * Meta (5 min en memoria por tienda). Responde 200 con `error` (y
+ * templates: []) si falla, para que el selector muestre el motivo sin romper
+ * la UI. Todas, con su estado: /api/whatsapp/templates/manage.
  */
 async function GETImpl() {
   const ctx = await requireStore({ module: 'whatsapp' })
   if (ctx instanceof Response) return ctx
 
-  const hit = cache.get(ctx.storeId)
-  if (hit && Date.now() - hit.at < TTL) return NextResponse.json({ templates: hit.templates })
-
   const creds = await getStoreWhatsAppCreds(ctx.storeId)
   if (!creds?.wabaId) {
     return NextResponse.json({ error: 'Falta el ID de la cuenta de WhatsApp Business (WABA) en Configuración → WhatsApp', templates: [] })
   }
-
   try {
-    // quality_score (GREEN/YELLOW/RED/UNKNOWN, ver templates/template-quality) va
-    // aparte del resto: si Meta no lo acepta, las plantillas se cargan sin él.
-    const path = (fields: string) => `${encodeURIComponent(creds.wabaId!)}/message_templates?fields=${fields}&limit=200`
-    let { ok, status, data } = await graphFetch(creds, path('name,status,language,category,components,quality_score'))
-    if (!ok) ({ ok, status, data } = await graphFetch(creds, path('name,status,language,category,components')))
-    if (!ok) {
-      console.error('[GET /api/whatsapp/templates]', data?.error?.message ?? status)
-      return NextResponse.json({ error: `Meta respondió con error ${status} al consultar plantillas`, templates: [] })
-    }
-
-    const templates = (data.data ?? []).filter((t: any) => t.status === 'APPROVED').map(toDef)
-    cache.set(ctx.storeId, { at: Date.now(), templates })
-    return NextResponse.json({ templates })
+    const { templates, error } = await approvedTemplates(ctx.storeId, creds)
+    return NextResponse.json(error ? { error, templates } : { templates })
   } catch {
     return NextResponse.json({ error: 'Error de red al consultar plantillas en Meta', templates: [] })
   }

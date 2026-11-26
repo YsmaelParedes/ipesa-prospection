@@ -36,6 +36,20 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.71.0',
+    date: '26 de noviembre, 2026',
+    title: 'Plantillas de WhatsApp desde Matices',
+    module: 'whatsapp',
+    items: [
+      'Nueva sección WhatsApp › Plantillas: crea tus plantillas sin salir de Matices y ve si WhatsApp ya las aprobó, las está revisando o las rechazó.',
+      'Empieza en blanco o con un modelo de promoción o de aviso pensado para tiendas de pintura.',
+      'El editor muestra cómo le llega a tu cliente mientras escribes: encabezado con título o foto, mensaje con negrita, cursiva y tachado, el nombre de cada cliente, datos que cambian, pie y botones para responder, abrir tu sitio web o llamarte.',
+      '«Antes de enviar» te avisa lo que WhatsApp rechazaría, para corregirlo antes de mandarla a revisión.',
+      'Si WhatsApp rechaza una plantilla, te dice por qué y la corriges ahí mismo. También puedes duplicarlas o eliminarlas.',
+      { text: 'En Campañas, las plantillas hechas en Matices ponen solas el nombre de cada cliente y la foto que elegiste. Desde el paso 2 puedes crear una nueva.', module: 'campaigns' },
+    ],
+  },
+  {
     version: '1.70.0',
     date: '25 de noviembre, 2026',
     title: 'Campañas en 3 pasos',

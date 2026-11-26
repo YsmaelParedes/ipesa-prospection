@@ -6,6 +6,8 @@ export function queryPolicy(path: string): QueryPolicy | null {
   if (p === '/api/data/export' || p.includes('/media/') || p.endsWith('/pdf')) return null
   if (p === '/api/data/reminders') return { ...normal, poll: 60_000 }
   if (p.startsWith('/api/data/config') || p.startsWith('/api/formulas') || ['/api/whatsapp/templates', '/api/whatsapp/template-image'].includes(p) || p.startsWith('/api/whatsapp/quick-replies')) return { ...normal, staleTime: 300_000 }
+  // Plantillas con su estado: WhatsApp las revisa en minutos, así que se vuelven a pedir seguido
+  if (p === '/api/whatsapp/templates/manage') return { staleTime: 20_000, maxAge: 600_000 }
   if (p.startsWith('/api/billing/')) return { staleTime: 15_000, maxAge: 60_000 }
   if (p === '/api/whatsapp/status' || p === '/api/store/whatsapp') return { ...normal, staleTime: 60_000 }
   // Campañas: se refrescan seguido, pero mientras llega lo nuevo se sigue viendo lo anterior
@@ -37,6 +39,8 @@ export function mutationResources(path: string): string[] {
   if (path.startsWith('/api/whatsapp/campaigns/send')) return ['/api/whatsapp/']
   // La foto de una plantilla solo cambia esa foto (no hace falta recargar contactos)
   if (path.startsWith('/api/whatsapp/template-image')) return ['/api/whatsapp/template-image']
+  // Crear, corregir o eliminar una plantilla: las listas de plantillas y sus fotos
+  if (path.startsWith('/api/whatsapp/templates')) return ['/api/whatsapp/templates', '/api/whatsapp/template-image']
   // Guardar o descartar lo pendiente de una campaña solo cambia esa lista
   if (path.startsWith('/api/whatsapp/campaigns/pending')) return ['/api/whatsapp/campaigns/pending']
   // Guardar un contacto con una zona nueva («Otra…») la agrega a los catálogos

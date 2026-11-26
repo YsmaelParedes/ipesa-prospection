@@ -13,7 +13,7 @@ import type { StoreModules } from './stores'
 export type MenuIcon = 'home' | 'whatsapp' | 'contacts' | 'commercial' | 'sales' | 'chart' | 'calendar' | 'formulas' | 'settings'
 
 export type MenuPageId =
-  | 'inicio' | 'conversaciones' | 'campanas' | 'contactos' | 'hoy' | 'cartera' | 'oportunidades'
+  | 'inicio' | 'conversaciones' | 'campanas' | 'plantillas' | 'contactos' | 'hoy' | 'cartera' | 'oportunidades'
   | 'cotizaciones' | 'productos' | 'equipo' | 'avance' | 'desempeno' | 'agenda' | 'formulas' | 'configuracion'
 
 export type MenuPage = {
@@ -64,6 +64,8 @@ export function menuFor({ isAdmin, modules, reports }: MenuAccess): MenuEntry[] 
   const whatsapp = !modules || modules.whatsapp || isAdmin
   // Las campañas salen por el WhatsApp de la tienda y las maneja un administrador
   const campaigns = isAdmin && (!modules || (modules.campaigns && modules.whatsapp))
+  // Las plantillas (crearlas y ver si WhatsApp las aprobó) también son del administrador
+  const templates = isAdmin && (!modules || modules.whatsapp)
   const locked = !reports || undefined
 
   return [
@@ -71,11 +73,12 @@ export function menuFor({ isAdmin, modules, reports }: MenuAccess): MenuEntry[] 
     page('calendar', single('agenda', 'Agenda', '/recordatorios', 'Recordatorios y seguimientos')),
     page('contacts', single('contactos', 'Contactos', '/contactos', 'Tu base de clientes')),
     divider('grupos'),
-    ...(campaigns
+    ...(campaigns || templates
       ? [group('whatsapp', 'WhatsApp', 'whatsapp', [
         { id: 'conversaciones', label: 'Conversaciones', path: '/whatsapp' },
         // Los resultados de cada campaña se abren desde Campañas
-        { id: 'campanas', label: 'Campañas', path: '/campanas' },
+        ...(campaigns ? [{ id: 'campanas' as const, label: 'Campañas', path: '/campanas' }] : []),
+        ...(templates ? [{ id: 'plantillas' as const, label: 'Plantillas', path: '/plantillas' }] : []),
       ])]
       // Con una sola pantalla no hay nada que desplegar
       : whatsapp
