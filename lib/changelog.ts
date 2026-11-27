@@ -36,6 +36,17 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.73.0',
+    date: '26 de noviembre, 2026',
+    title: 'Campañas juntas en la lista',
+    module: 'campaigns',
+    items: [
+      'Si mandas la misma plantilla el mismo día a varios grupos, en Campañas se ve como una sola campaña con los números sumados, en lugar de un renglón por grupo.',
+      'Al abrirla ves los resultados de todos juntos o de cada grupo por separado.',
+      'El aviso de arriba ahora dice el motivo real cuando WhatsApp limita tu número (por ejemplo, mientras aprueba su nombre visible).',
+    ],
+  },
+  {
     version: '1.72.0',
     date: '26 de noviembre, 2026',
     title: 'Reglas de Meta para tu WhatsApp',

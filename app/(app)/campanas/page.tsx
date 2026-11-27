@@ -9,6 +9,7 @@ import { CampaignHome } from './Home'
 import { CampaignResult } from './Result'
 import { CampaignWizard, type WizardStart } from './Wizard'
 import { CampaignsPageSkeleton } from './Skeletons'
+import type { CampaignBundle } from '@/lib/campaignGroups'
 
 export default function CampanasPage() {
   return <Suspense fallback={<CampaignsPageSkeleton />}><Campanas /></Suspense>
@@ -25,6 +26,8 @@ function Campanas() {
   const router = useRouter()
   const params = useSearchParams()
   const opened = params.get('c')
+  // Campaña junta: los envíos de la misma plantilla en el mismo día
+  const bundle = params.get('g')
   const [wizard, setWizard] = useState<WizardStart | null>(null)
   // Desde Plantillas («Usar en una campaña»): el asistente abre con esa plantilla elegida
   const preset = params.get('plantilla')
@@ -46,6 +49,7 @@ function Campanas() {
   }
 
   const open = (id: string) => router.push(`/campanas?c=${encodeURIComponent(id)}`, { scroll: true })
+  const openBundle = (b: CampaignBundle) => (b.ids.length === 1 ? open(b.ids[0]) : router.push(`/campanas?g=${encodeURIComponent(b.key)}`, { scroll: true }))
   const home = () => router.push('/campanas', { scroll: true })
 
   // Mientras está abierto, el asistente cubre la pantalla (lo de abajo no se recarga con cada lote)
@@ -57,13 +61,13 @@ function Campanas() {
     )
   }
 
-  if (opened) {
+  if (opened || bundle) {
     return (
-      <CampaignResult id={opened} onBack={home}
+      <CampaignResult id={opened} group={bundle} onBack={home}
         onRetry={r => setWizard({ kind: 'retry', ...r })}
         onOpenChat={phone => router.push(`/whatsapp?phone=${phone}`)} />
     )
   }
 
-  return <CampaignHome onStart={setWizard} onOpen={open} />
+  return <CampaignHome onStart={setWizard} onOpen={openBundle} />
 }

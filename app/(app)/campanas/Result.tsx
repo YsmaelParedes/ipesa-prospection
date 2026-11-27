@@ -1,14 +1,16 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, Download } from 'lucide-react'
+import { apiFetch } from '@/lib/apiClient'
 import { useCachedQuery } from '@/lib/useCachedQuery'
 import { LoadFailed } from '@/components/LoadFailed'
 import { fmtPhone } from '@/lib/phone'
-import { downloadCampaignWorkbook } from '@/lib/exportData'
+import { downloadCampaignWorkbook, downloadCampaignsWorkbook } from '@/lib/exportData'
 import { FAILURE_KINDS, type CampaignDetail, type CampaignRecipient, type CampaignSummary, type FailureKind } from '@/lib/campaignKinds'
 import { MARKETING_RETRY_HOURS } from '@/lib/whatsappSafety'
 import { segmentOf, templateTitle } from '@/lib/campaignWizard'
+import { bundleCampaigns, localDay, mergeDetails, type GroupedRecipient } from '@/lib/campaignGroups'
 import { ResultSkeleton } from './Skeletons'
 import { campaignWhen, fromTime } from './Home'
 import s from './campanas.module.css'
@@ -47,23 +49,56 @@ const holdEnds = (r: CampaignRecipient) => new Date(r.updatedAt).getTime() + MAR
 /** Lo que se le vuelve a mandar desde Resultados (se revisa y confirma en el paso 3). */
 export type CampaignRetry = { template: string; contactIds: string[]; campaignId: string | null; label: string | null }
 
+/** El detalle de cada envío (uno o varios), con su forma de volver a pedirlos. */
+function useDetails(ids: string[] | null) {
+  const [details, setDetails] = useState<CampaignDetail[] | null>(null)
+  const [error, setError] = useState<Error | null>(null)
+  const [tick, setTick] = useState(0)
+  const key = ids?.join(',') ?? ''
+  useEffect(() => {
+    if (!key) return
+    let alive = true
+    const fresh = tick > 0
+    // Otra campaña: no se muestra la anterior mientras llega
+    if (!fresh) setDetails(null)
+    Promise.all(key.split(',').map(async id => {
+      const r = await apiFetch(`/api/whatsapp/campaigns/history/${encodeURIComponent(id)}`, fresh ? { cache: 'reload' } : undefined)
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(d.error || 'No se pudo cargar la campaña')
+      return d.campaign as CampaignDetail
+    })).then(list => { if (alive) { setDetails(list); setError(null) } })
+      .catch(e => { if (alive) setError(e as Error) })
+    return () => { alive = false }
+  }, [key, tick])
+  const reload = useCallback(() => setTick(t => t + 1), [])
+  return { details, error, reload }
+}
+
 /**
  * Resultados de una campaña: enviadas, leídas y respondieron; quién está en
- * cada caso y, de lo que no llegó, lo que se puede reintentar. `id` es el de
- * la campaña o solo el de su envío (al terminar de enviar).
+ * cada caso y, de lo que no llegó, lo que se puede reintentar.
+ *  · id: un envío (o solo el id de su envío, al terminar de enviar)
+ *  · group: la campaña junta (misma plantilla, mismo día: `plantilla|AAAA-MM-DD`)
  */
-export function CampaignResult({ id, onBack, onRetry, onOpenChat }: {
-  id: string
+export function CampaignResult({ id, group, onBack, onRetry, onOpenChat }: {
+  id?: string | null
+  group?: string | null
   onBack: () => void
   onRetry: (r: CampaignRetry) => void
   onOpenChat: (phone: string) => void
 }) {
-  // Recién enviada solo se conoce el id del envío: se busca en la lista
-  const bySend = UUID.test(id)
-  const list = useCachedQuery<{ campaigns: CampaignSummary[] }>(bySend ? '/api/whatsapp/campaigns/history?days=90' : null)
-  const fullId = bySend ? list.data?.campaigns.find(c => c.id.endsWith(`.${id}`))?.id ?? null : id
-  const { data, error, reload } = useCachedQuery<{ campaign: CampaignDetail }>(fullId ? `/api/whatsapp/campaigns/history/${encodeURIComponent(fullId)}` : null)
-  const c = data?.campaign
+  // Recién enviada solo se conoce el id del envío; la campaña junta se arma con la lista
+  const bySend = !!id && UUID.test(id)
+  const list = useCachedQuery<{ campaigns: CampaignSummary[] }>(bySend || group ? '/api/whatsapp/campaigns/history?days=90' : null)
+  const ids = useMemo(() => {
+    if (group) return list.data ? bundleCampaigns(list.data.campaigns).find(b => b.key === group)?.ids ?? [] : null
+    if (bySend) return list.data ? [list.data.campaigns.find(c => c.id.endsWith(`.${id}`))?.id].filter((x): x is string => !!x) : null
+    return id ? [id] : []
+  }, [group, bySend, id, list.data])
+  const { details, error, reload } = useDetails(ids && ids.length ? ids : null)
+  const c = useMemo(() => (details ? mergeDetails(details) : undefined), [details])
+  // Juntos, cada quien es del grupo del envío en que le llegó; uno solo, de su segmento
+  const groupOf = useCallback((r: GroupedRecipient) => (details && details.length > 1 ? r.sendLabel?.trim() || segmentOf(r) : segmentOf(r)), [details])
 
   const [only, setOnly] = useState('')
   const [tab, setTab] = useState<Tab | null>(null)
@@ -78,8 +113,8 @@ export function CampaignResult({ id, onBack, onRetry, onOpenChat }: {
     return () => clearInterval(t)
   }, [live, reload])
 
-  const groups = useMemo(() => [...new Set((c?.recipients ?? []).map(segmentOf))], [c])
-  const people = useMemo(() => (c?.recipients ?? []).filter(r => !only || segmentOf(r) === only), [c, only])
+  const groups = useMemo(() => [...new Set((c?.recipients ?? []).map(groupOf))], [c, groupOf])
+  const people = useMemo(() => (c?.recipients ?? []).filter(r => !only || groupOf(r) === only), [c, only, groupOf])
   const counts = useMemo(() => {
     const m: Record<Tab, number> = { r: 0, l: 0, n: 0, f: 0 }
     for (const r of people) m[tabOf(r)]++
@@ -90,7 +125,7 @@ export function CampaignResult({ id, onBack, onRetry, onOpenChat }: {
     <button type="button" className={s.back} onClick={onBack} aria-label="Volver a Campañas"><ArrowLeft aria-hidden="true" /></button>
   )
   if (error && !c) return <><div className={s.rhead}>{back}</div><LoadFailed message={error.message || 'No se pudo cargar la campaña'} onRetry={reload} /></>
-  if (bySend && list.data && !fullId) return <><div className={s.rhead}>{back}</div><LoadFailed message="Aún no aparece esta campaña. Intenta en unos segundos." onRetry={() => void list.reload()} /></>
+  if (ids && !ids.length) return <><div className={s.rhead}>{back}</div><LoadFailed message="Aún no aparece esta campaña. Intenta en unos segundos." onRetry={() => void list.reload()} /></>
   if (!c) return <ResultSkeleton />
 
   const active: Tab = tab ?? (counts.r ? 'r' : 'n')
@@ -104,7 +139,8 @@ export function CampaignResult({ id, onBack, onRetry, onOpenChat }: {
   const retryable = active === 'f' ? rows.filter(r => r.kind && FAILURE_KINDS[r.kind].retry && r.contactId && !r.receivedLater) : []
   const ready = retryable.filter(r => r.kind !== 'marketing_limit' || holdEnds(r) <= now)
   const waitUntil = ready.length < retryable.length ? Math.max(...retryable.filter(r => !ready.includes(r)).map(holdEnds)) : 0
-  const sendId = c.id.split('.')[2] ?? null
+  // Un reintento sigue el mismo envío; de varios envíos juntos, es uno nuevo
+  const sendId = details && details.length === 1 ? c.id.split('.')[2] ?? null : null
 
   const subOf = (r: CampaignRecipient) => {
     if (active === 'r') return r.reply ? `«${r.reply}»` : 'Respondió'
@@ -176,7 +212,10 @@ export function CampaignResult({ id, onBack, onRetry, onOpenChat }: {
 
       <div className={s.foot}>
         <span className={s.mut}>{live ? 'WhatsApp sigue confirmando entregas; esto se actualiza solo.' : ''}</span>
-        <button type="button" className={s.lk} onClick={() => void downloadCampaignWorkbook(c)}><Download aria-hidden="true" />Descargar Excel</button>
+        <button type="button" className={s.lk}
+          onClick={() => void (details && details.length > 1 ? downloadCampaignsWorkbook(details, `${c.template}-${localDay(c.startedAt)}`) : downloadCampaignWorkbook(c))}>
+          <Download aria-hidden="true" />Descargar Excel
+        </button>
       </div>
     </>
   )

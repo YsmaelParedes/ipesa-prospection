@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { AlertTriangle, ChevronRight, Clock, Plus, X } from 'lucide-react'
 import { SiWhatsapp } from '@icons-pack/react-simple-icons'
 import { apiFetch } from '@/lib/apiClient'
@@ -11,6 +11,7 @@ import { useWhatsAppCampaignQuota } from '@/components/WhatsAppCampaignQuota'
 import type { CampaignSummary } from '@/lib/campaignKinds'
 import type { CampaignPending } from '@/lib/campaignPending'
 import { templateTitle } from '@/lib/campaignWizard'
+import { bundleCampaigns, bundleLabel, type CampaignBundle } from '@/lib/campaignGroups'
 import type { WizardStart } from './Wizard'
 import { HomeListSkeleton } from './Skeletons'
 import s from './campanas.module.css'
@@ -51,7 +52,7 @@ export function fromTime(ms: number): string {
  * Inicio de Campañas: el botón para empezar, cuántas personas caben hoy, lo
  * que quedó pendiente y las campañas enviadas (al tocar una, sus resultados).
  */
-export function CampaignHome({ onStart, onOpen }: { onStart: (start: WizardStart) => void; onOpen: (id: string) => void }) {
+export function CampaignHome({ onStart, onOpen }: { onStart: (start: WizardStart) => void; onOpen: (bundle: CampaignBundle) => void }) {
   const history = useCachedQuery<{ campaigns: CampaignSummary[] }>('/api/whatsapp/campaigns/history?days=90')
   const pendingQ = useCachedQuery<{ pending: CampaignPending[] }>('/api/whatsapp/campaigns/pending')
   const status = useCachedQuery<Status>('/api/whatsapp/status').data
@@ -60,13 +61,16 @@ export function CampaignHome({ onStart, onOpen }: { onStart: (start: WizardStart
   const [discarding, setDiscarding] = useState(false)
   const [discardError, setDiscardError] = useState('')
 
-  // Un envío desde el chat (una sola persona) no es una campaña
-  const campaigns = (history.data?.campaigns ?? []).filter(c => c.total > 1 || c.label)
+  // Un envío desde el chat (una sola persona) no es una campaña. Los envíos de la
+  // misma plantilla en el mismo día (uno por segmento, por ejemplo) se ven juntos.
+  const campaigns = useMemo(() => bundleCampaigns((history.data?.campaigns ?? []).filter(c => c.total > 1 || c.label)), [history.data])
   const pending = pendingQ.data?.pending[0] ?? null
   const notConnected = status ? !status.config.connected : false
   const blocked = status?.health?.canSendMessage === 'BLOCKED' || quota?.canSendMessage === 'BLOCKED'
   const notes = status?.health?.healthNotes ?? []
-  const lowQuality = status?.health?.qualityRating === 'RED' || (status?.health?.canSendMessage === 'LIMITED' && notes.length > 0)
+  const lowQuality = status?.health?.qualityRating === 'RED'
+  // Meta limita el número por otra razón (p. ej. aún no aprueba su nombre visible)
+  const limited = status?.health?.canSendMessage === 'LIMITED' && notes.length > 0
   const canStart = !notConnected && !blocked
 
   const doDiscard = async () => {
@@ -120,7 +124,14 @@ export function CampaignHome({ onStart, onOpen }: { onStart: (start: WizardStart
     banner = (
       <div className={`${s.banner} ${s.warn}`}><AlertTriangle aria-hidden="true" /><div className={s.g}>
         <b>WhatsApp avisa que la calidad de tu número es baja</b>
-        <span>{notes.length ? notes.join(' ') : 'Algunos clientes bloquearon o reportaron tus mensajes. Envía solo a quien aceptó recibirlos; si sigue así, WhatsApp puede pausar tus plantillas.'}</span>
+        <span>Algunos clientes bloquearon o reportaron tus mensajes. Envía solo a quien aceptó recibirlos; si sigue así, WhatsApp puede pausar tus plantillas.</span>
+      </div></div>
+    )
+  } else if (limited) {
+    banner = (
+      <div className={`${s.banner} ${s.warn}`}><AlertTriangle aria-hidden="true" /><div className={s.g}>
+        <b>WhatsApp limita tu número por ahora</b>
+        <span>{notes.join(' ')}</span>
       </div></div>
     )
   }
@@ -158,10 +169,10 @@ export function CampaignHome({ onStart, onOpen }: { onStart: (start: WizardStart
             {campaigns.map(c => {
               const sent = c.total - c.failed
               return (
-                <button key={c.id} type="button" className={s.lr} onClick={() => onOpen(c.id)}>
+                <button key={c.key} type="button" className={s.lr} onClick={() => onOpen(c)}>
                   <span style={{ minWidth: 0 }}>
                     <b>{templateTitle(c.template)}</b>
-                    <small>{[c.label, campaignWhen(c.startedAt)].filter(Boolean).join(' · ')}</small>
+                    <small>{[bundleLabel(c.labels), campaignWhen(c.startedAt)].filter(Boolean).join(' · ')}</small>
                     <small className={s.ms}>{fmt(c.replied)} de {fmt(sent)} respondieron</small>
                   </span>
                   <span className={s.num} aria-label={`${fmt(sent)} enviadas`}>{fmt(sent)}</span>
