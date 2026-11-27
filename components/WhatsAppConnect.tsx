@@ -6,6 +6,8 @@ import { apiFetch } from '@/lib/apiClient'
 import { WaIcon } from '@/components/WhatsAppUI'
 import { invalidateSession } from '@/lib/profile'
 import { readSessionInfo, signupExtras, type SessionInfo, type SignupMode as Mode } from '@/lib/whatsappSignupParse'
+import { WhatsAppMetaRules } from '@/components/WhatsAppMetaRules'
+import rules from '@/components/WhatsAppMetaRules.module.css'
 
 type Config = { appId: string; configId: string; version: string }
 type Pending = { wabaId: string; phoneNumberId: string | null; coexistence: boolean }
@@ -74,6 +76,8 @@ export function WhatsAppConnect() {
   const [error, setError] = useState('')
   const [coexistence, setCoexistence] = useState(false)
   const [mode, setMode] = useState<Mode>('app')
+  // Antes de abrir la ventana de Meta: confirmar que se leyeron sus reglas
+  const [ack, setAck] = useState(false)
   const info = useRef<SessionInfo | null>(null)
 
   useEffect(() => {
@@ -190,6 +194,17 @@ export function WhatsAppConnect() {
             <li><span className="wa-offer-num wa-connect-ok"><WaIcon.check size={14} /></span><span><strong>Listo</strong>Tus chats empiezan a llegar a Matices.</span></li>
           </ol>
 
+          {!pending && (
+            <div className={rules.before}>
+              <h4>Antes de conectar</h4>
+              <WhatsAppMetaRules when="before" coexistence={mode === 'app'} />
+              <label className={rules.ack}>
+                <input type="checkbox" checked={ack} onChange={e => setAck(e.target.checked)} disabled={phase === 'meta'} />
+                Leí y entiendo estos avisos
+              </label>
+            </div>
+          )}
+
           <div className="wa-connect-foot">
             {phase === 'cancelled' && (
               <p className="wa-connect-msg" role="status">No terminaste la conexión. No se guardó nada; puedes intentarlo cuando quieras.</p>
@@ -203,12 +218,13 @@ export function WhatsAppConnect() {
               </>
             ) : (
               <button type="button" className="btn btn-primary wa-connect-btn" onClick={openMeta}
-                disabled={!sdkReady || !!unavailable || phase === 'meta'}>
+                disabled={!sdkReady || !!unavailable || phase === 'meta' || !ack}>
                 <WaIcon.whatsapp size={18} />
                 {phase === 'meta' ? 'Termina en la ventana de Meta…' : !setup || (!sdkReady && !unavailable && !error) ? 'Preparando…' : phase === 'error' ? 'Intentar otra vez' : 'Conectar con WhatsApp'}
               </button>
             )}
             {unavailable && <p className="wa-connect-msg">Por ahora no se puede conectar desde aquí. Escríbenos a soporte y lo resolvemos.</p>}
+            {!pending && !ack && !unavailable && <p className="wa-connect-note">Marca «Leí y entiendo estos avisos» para conectar.</p>}
             <p className="wa-connect-note">Ten a la mano tu Facebook y el celular con el número. Responderle a tus clientes no cuesta; si les escribes tú primero con plantillas, Meta te cobra aparte. Te recomendamos hacerlo en computadora.</p>
           </div>
         </div>

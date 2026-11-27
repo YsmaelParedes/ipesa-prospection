@@ -36,6 +36,16 @@ export type VisibleEntry = { version: string; date: string; title: string; items
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.72.0',
+    date: '26 de noviembre, 2026',
+    title: 'Reglas de Meta para tu WhatsApp',
+    module: 'whatsapp',
+    items: [
+      'Antes de conectar tu WhatsApp verás las reglas de Meta que conviene conocer (sitio web real, nombre igual al de tu registro, desconexiones, países sin servicio y el riesgo de usar el celular y la plataforma a la vez) y confirmas que las leíste.',
+      'En Configuración › WhatsApp, con tu número conectado, siempre tienes esas reglas a la mano.',
+    ],
+  },
+  {
     version: '1.71.1',
     date: '26 de noviembre, 2026',
     title: 'Plantillas pausadas',

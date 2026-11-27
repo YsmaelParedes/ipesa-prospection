@@ -13,6 +13,7 @@ import { tierLabel } from '@/lib/whatsappSafety'
 import { ExternalLink, Unplug } from 'lucide-react'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { APP_NAME } from '@/lib/brand'
+import { WhatsAppMetaRules } from '@/components/WhatsAppMetaRules'
 
 // Sin datos técnicos ni secretos. selfService: la tienda lo conectó sola (Embedded Signup) y puede desconectarlo
 type Connection = {
@@ -188,6 +189,13 @@ function ConnectionPanel() {
         </div>
       )}
     </Card>
+    {conn.connected && (
+      <Card title="Reglas de Meta para tu número" description="Para que tu conexión siga activa y tus mensajes lleguen.">
+        <div className={s.cardBody}>
+          <WhatsAppMetaRules when="connected" coexistence={conn.coexistence} />
+        </div>
+      </Card>
+    )}
     </>
   )
 }
